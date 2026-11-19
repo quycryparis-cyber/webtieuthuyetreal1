@@ -755,51 +755,7 @@
       this.stopVoicePlayback();
       this._isVoicePlaying = true;
       var startedAudio = false;
-
-      var runLegacyAudioFallback = function () {
-        if (mySeq !== selfHub._voicePlaySeq) return;
-        selfHub._isVoicePlaying = true;
-        selfHub.preloadVoiceAudio();
-        try {
-          var studio = global.NoirStudio && global.NoirStudio.audioStudio;
-          if (studio && typeof studio.playHiddenBuiltInClip === 'function') {
-            var clipInfo = selfHub._syncHiddenClipFromMod21();
-            if (clipInfo) {
-              if (!clipInfo.audioBuffer && selfHub._decodedVoiceBuffer) clipInfo.audioBuffer = selfHub._decodedVoiceBuffer;
-              if (!clipInfo.wavBlobUrl && selfHub._pcmWavBlobUrl) clipInfo.wavBlobUrl = selfHub._pcmWavBlobUrl;
-              var mod21Res = studio.playHiddenBuiltInClip('bao_che_1600k', {
-                onEnded: function () {
-                  if (mySeq === selfHub._voicePlaySeq) {
-                    selfHub._activeVoiceSource = null;
-                    selfHub._isVoicePlaying = false;
-                  }
-                },
-                onFail: function () {
-                  if (mySeq === selfHub._voicePlaySeq) {
-                    selfHub._activeVoiceSource = null;
-                    selfHub._isVoicePlaying = false;
-                  }
-                }
-              });
-              if (mod21Res && mod21Res.ok) {
-                selfHub._lastVoiceEngine = mod21Res.engine || 'webaudio';
-                selfHub._activeVoiceSource = mod21Res.sourceNode || null;
-                if (mod21Res.audioElement) selfHub._wavVoiceAudioEl = mod21Res.audioElement;
-                return;
-              }
-            }
-          }
-        } catch (_eMod21Cue) {}
-        if (typeof runFallbackChain === 'function') {
-          runFallbackChain();
-        }
-      };
-
-      // Ưu tiên #1: AI Tiếng Việt TTS đọc trực tiếp "Mày đã bao che thành công."
-      if (this._speakVietnameseAiVoice(mySeq, runLegacyAudioFallback)) {
-        return;
-      }
-      this.preloadVoiceAudio();
+      var mod21FailHandled = false;
 
       var cleanupElement = function (el) {
         if (!el) return;
@@ -870,6 +826,16 @@
         }
       };
 
+      var triggerAiTtsFallback = function () {
+        if (mySeq !== selfHub._voicePlaySeq) return;
+        selfHub._lastVoiceEngine = 'tts';
+        if (selfHub._speakVietnameseAiVoice(mySeq)) {
+          selfHub._isVoicePlaying = true;
+        } else {
+          selfHub._isVoicePlaying = false;
+        }
+      };
+
       var runFallbackChain = function () {
         if (startedAudio || mySeq !== selfHub._voicePlaySeq) return;
         startedAudio = true;
@@ -879,21 +845,13 @@
           var viEl = selfHub._ensureHiddenAudioNode('_viVoiceAudioEl', 'misc-jumpscare-m4a-audio', primarySrc);
           var ok = playAudioElementClean(viEl, primarySrc, 'm4a-data', function () {
             if (primarySrc !== JUMPSCARE_VOICE_SRC) {
-              playAudioElementClean(viEl, JUMPSCARE_VOICE_SRC, 'm4a-file', function () {
-                selfHub._lastVoiceEngine = 'tts';
-                selfHub._isVoicePlaying = false;
-                selfHub._speakFallbackIfVietnameseVoiceExists();
-              });
+              playAudioElementClean(viEl, JUMPSCARE_VOICE_SRC, 'm4a-file', triggerAiTtsFallback);
             } else {
-              selfHub._lastVoiceEngine = 'tts';
-              selfHub._isVoicePlaying = false;
-              selfHub._speakFallbackIfVietnameseVoiceExists();
+              triggerAiTtsFallback();
             }
           });
           if (!ok) {
-            selfHub._lastVoiceEngine = 'tts';
-            selfHub._isVoicePlaying = false;
-            selfHub._speakFallbackIfVietnameseVoiceExists();
+            triggerAiTtsFallback();
           }
         };
 
@@ -907,7 +865,7 @@
       };
 
       var startBufferSource = function (ctx, buf) {
-        if (startedAudio || mySeq !== selfHub._voicePlaySeq || !ctx || !buf) return false;
+        if (startedAudio || mySeq !== selfHub._voicePlaySeq || !ctx || !buf || ctx.state !== 'running') return false;
         try {
           var src = ctx.createBufferSource();
           src.buffer = buf;
@@ -957,52 +915,52 @@
         }
       } catch (_eAs2) {}
 
-      var ctx = this._ensureVoiceContext();
-      var resumePromise = null;
+      this.preloadVoiceAudio();
+
+      // Ưu tiên #1: Phát bản ghi âm thật (misc_bao_che_voice.m4a -> WAV PCM sạch qua Module 21 HTML5 <audio>)
+      // Đồng bộ 0ms trong click gesture; nếu thất bại mới fallback sang chuỗi dự phòng & AI TTS
       try {
-        if (ctx && ctx.state === 'suspended' && typeof ctx.resume === 'function') {
-          resumePromise = ctx.resume().catch(function () {});
+        var studio = global.NoirStudio && global.NoirStudio.audioStudio;
+        if (studio && typeof studio.playHiddenBuiltInClip === 'function') {
+          var clipInfo = this._syncHiddenClipFromMod21();
+          if (clipInfo) {
+            if (!clipInfo.audioBuffer && this._decodedVoiceBuffer) clipInfo.audioBuffer = this._decodedVoiceBuffer;
+            if (!clipInfo.wavBlobUrl && this._pcmWavBlobUrl) clipInfo.wavBlobUrl = this._pcmWavBlobUrl;
+            var mod21Res = studio.playHiddenBuiltInClip('bao_che_1600k', {
+              onEnded: function () {
+                if (mySeq === selfHub._voicePlaySeq) {
+                  selfHub._activeVoiceSource = null;
+                  selfHub._isVoicePlaying = false;
+                }
+              },
+              onFail: function () {
+                if (mod21FailHandled || mySeq !== selfHub._voicePlaySeq) return;
+                mod21FailHandled = true;
+                selfHub._activeVoiceSource = null;
+                runFallbackChain();
+              }
+            });
+            if (mod21Res && mod21Res.ok) {
+              this._lastVoiceEngine = mod21Res.engine || 'wav-audio';
+              this._activeVoiceSource = mod21Res.sourceNode || null;
+              if (mod21Res.audioElement) this._wavVoiceAudioEl = mod21Res.audioElement;
+              return;
+            }
+          }
         }
-      } catch (_eRes) {}
+      } catch (_eMod21Cue) {}
 
-      // 1) Đồng bộ tức thì 0ms qua WebAudio nếu buffer đã giải mã & AudioContext đang mở
-      if (ctx && typeof ctx.createBufferSource === 'function' && this._decodedVoiceBuffer && ctx.state === 'running') {
-        if (startBufferSource(ctx, this._decodedVoiceBuffer)) return;
-      }
-
-      // 2) Không trì hoãn setTimeout(350ms): phát WAV PCM / M4A faststart ngay ĐỒNG BỘ 0ms
-      // để giữ nguyên UserActivation gesture trên Android Brave / Chrome & iOS Safari.
+      // Ưu tiên #2: Phát đồng bộ 0ms qua thẻ <audio> WAV PCM / M4A faststart nội bộ miscFunHub
       if (this._pcmWavBlobUrl || this._viVoiceDataUri || JUMPSCARE_VOICE_SRC) {
         runFallbackChain();
         return;
       }
 
-      if (!ctx || typeof ctx.createBufferSource !== 'function') {
-        runFallbackChain();
-        return;
+      var ctx = this._ensureVoiceContext();
+      if (ctx && typeof ctx.createBufferSource === 'function' && this._decodedVoiceBuffer && ctx.state === 'running') {
+        if (startBufferSource(ctx, this._decodedVoiceBuffer)) return;
       }
-
-      var settleTimer = global.setTimeout(function () {
-        if (!startedAudio && mySeq === selfHub._voicePlaySeq) {
-          runFallbackChain();
-        }
-      }, 250);
-
-      Promise.all([
-        resumePromise || Promise.resolve(),
-        this._ensureVoiceDecoded()
-      ]).then(function (pair) {
-        global.clearTimeout(settleTimer);
-        if (startedAudio || mySeq !== selfHub._voicePlaySeq) return;
-        var decodedBuf = pair[1] || selfHub._decodedVoiceBuffer;
-        if (decodedBuf && ctx.state === 'running') {
-          if (startBufferSource(ctx, decodedBuf)) return;
-        }
-        runFallbackChain();
-      }).catch(function () {
-        global.clearTimeout(settleTimer);
-        runFallbackChain();
-      });
+      triggerAiTtsFallback();
     },
 
     triggerJumpscare: function () {

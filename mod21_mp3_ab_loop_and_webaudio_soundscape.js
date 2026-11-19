@@ -4252,7 +4252,8 @@
         if (entry) {
           const preloadSrc = entry.wavBlobUrl || entry.m4aBlobUrl || entry.primarySrc || entry.fallbackUrl;
           const el = this.getHiddenClipAudioElement();
-          if (preloadSrc && (!el || el.paused)) {
+          const curSrc = el ? (el.getAttribute('src') || el.src || '') : '';
+          if (preloadSrc && (!el || (el.paused && curSrc !== preloadSrc && el.readyState < 1))) {
             this._ensureHiddenClipAudioElement(preloadSrc);
           }
         }
@@ -4289,11 +4290,10 @@
       if (!entry) return { ok: false, engine: '' };
       const mySeq = ++this._hiddenClipPlaySeq;
       this.stopHiddenBuiltInClip();
+      // Chỉ đặt audioSession playback, KHÔNG bật mod21-mobile-bg-keepalive song song để tránh xung đột AudioFocus trên Android Brave/Chrome
       this.bgAudioBridge.ensureAudioSessionPlayback();
-      this.bgAudioBridge.activateKeepAlive('alarm');
 
       const notifyEnded = () => {
-        this.bgAudioBridge.deactivateKeepAlive('alarm');
         if (mySeq === this._hiddenClipPlaySeq && typeof options.onEnded === 'function') {
           try { options.onEnded({ clipKey }); } catch (_eCb) {}
         }
@@ -4306,26 +4306,19 @@
           if (ctx && ctx.state === 'suspended' && typeof ctx.resume === 'function') {
             ctx.resume().catch(() => {});
           }
-          if (ctx && entry.audioBuffer && typeof ctx.createBufferSource === 'function') {
+          // Tuyệt đối không gọi src.start(0) khi AudioContext đang suspended (sẽ bị dồn hàng đợi và phát chắp vá ở lần bấm sau!)
+          if (ctx && ctx.state === 'running' && entry.audioBuffer && typeof ctx.createBufferSource === 'function') {
             const src = ctx.createBufferSource();
             src.buffer = entry.audioBuffer;
             src.loop = false;
             src.playbackRate.value = 1.0;
             const gain = typeof ctx.createGain === 'function' ? ctx.createGain() : null;
-            const useMediaBridge = Boolean(
-              this.soundscapeGraph?.isRunning &&
-              this.soundscapeGraph._streamBridgeRoutingActive &&
-              this.soundscapeGraph.mediaStreamDest &&
-              this.soundscapeGraph.streamBridgeAudioEl &&
-              !this.soundscapeGraph.streamBridgeAudioEl.paused
-            );
-            const sink = useMediaBridge ? this.soundscapeGraph.mediaStreamDest : ctx.destination;
             if (gain) {
               gain.gain.value = 1.0;
               src.connect(gain);
-              gain.connect(sink);
+              gain.connect(ctx.destination);
             } else {
-              src.connect(sink);
+              src.connect(ctx.destination);
             }
 
             const cleanupNode = () => {
@@ -4424,7 +4417,6 @@
 
       const failChain = () => {
         if (mySeq !== this._hiddenClipPlaySeq) return;
-        this.bgAudioBridge.deactivateKeepAlive('alarm');
         if (typeof options.onFail === 'function') {
           options.onFail({ clipKey });
         } else {
@@ -4434,31 +4426,32 @@
       const tryRawM4aChain = () => {
         if (mySeq !== this._hiddenClipPlaySeq) return;
         const primary = entry.primarySrc || entry.fallbackUrl;
-        if (!playEl(primary, 'm4a-data', () => {
+        let retriedFile = false;
+        const runFileOrWebAudio = () => {
+          if (retriedFile) return;
+          retriedFile = true;
           if (entry.fallbackUrl && primary !== entry.fallbackUrl) {
             playEl(entry.fallbackUrl, 'm4a-file', () => tryWebAudioFallback(failChain));
           } else {
             tryWebAudioFallback(failChain);
           }
-        })) {
-          tryWebAudioFallback(failChain);
-        }
+        };
+        playEl(primary, 'm4a-data', runFileOrWebAudio);
       };
       const tryM4aBlobChain = () => {
         if (mySeq !== this._hiddenClipPlaySeq) return;
         if (entry.m4aBlobUrl && entry.m4aBlobUrl !== entry.wavBlobUrl) {
-          if (playEl(entry.m4aBlobUrl, 'wav-audio', () => tryWebAudioFallback(tryRawM4aChain))) {
+          if (playEl(entry.m4aBlobUrl, 'm4a-blob', () => tryWebAudioFallback(tryRawM4aChain))) {
             return;
           }
         }
-        if (!tryWebAudioFallback(tryRawM4aChain)) {
-          tryRawM4aChain();
-        }
+        tryWebAudioFallback(tryRawM4aChain);
       };
 
       const primaryBlobUrl = entry.wavBlobUrl || entry.m4aBlobUrl;
       if (primaryBlobUrl) {
-        const startedTag = playEl(primaryBlobUrl, 'wav-audio', tryM4aBlobChain);
+        const blobTag = entry.wavBlobUrl ? 'wav-audio' : 'm4a-blob';
+        const startedTag = playEl(primaryBlobUrl, blobTag, tryM4aBlobChain);
         if (startedTag) {
           return { ok: true, engine: startedTag, audioElement: this._hiddenClipAudioEl, durationSec: entry.durationSec };
         }

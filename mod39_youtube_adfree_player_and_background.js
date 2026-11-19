@@ -2685,7 +2685,10 @@
         customRetryMs: Number.isFinite(overrideMs) && overrideMs >= 10 ? Math.floor(overrideMs) : null,
         timerId: null
       };
-      this.statusText = '🔄 Luồng phát công cộng đang bị YouTube giới hạn — Đang tự động kết nối lại liên tục đến khi phát nền được!';
+      this.statusText =
+        this._bgReconnectState.reason === 'auto-public-stream-retry'
+          ? '🔄 Luồng phát công cộng tạm bị YouTube giới hạn — Đang tạm phát qua Luồng phát YouTube và tự động dò lại liên tục đến khi kết nối được!'
+          : '🔄 Luồng phát công cộng đang bị YouTube giới hạn — Đang tự động kết nối lại liên tục đến khi phát nền được!';
       this.syncStatusUi();
       this._scheduleNextAutoReconnectAttempt(initDelayMs);
       return true;
@@ -2766,7 +2769,11 @@
       st.attempts += 1;
       st.inFlight = true;
       st.lastAttemptAtMs = Date.now();
-      this.statusText = '🔄 Luồng phát công cộng đang bị YouTube giới hạn — Đang tự động kết nối lại liên tục đến khi phát nền được!';
+      const retryingMsg =
+        st.reason === 'auto-public-stream-retry'
+          ? '🔄 Luồng phát công cộng tạm bị YouTube giới hạn — Đang tạm phát qua Luồng phát YouTube và tự động dò lại liên tục đến khi kết nối được!'
+          : '🔄 Luồng phát công cộng đang bị YouTube giới hạn — Đang tự động kết nối lại liên tục đến khi phát nền được!';
+      this.statusText = retryingMsg;
       this.syncStatusUi();
 
       try {
@@ -2796,6 +2803,9 @@
             this.playerCtrl.vault?.savePlayerPrefs?.(this.playerCtrl.prefs);
           }
 
+          if (this.playerCtrl) {
+            this.playerCtrl._lockedIframeSessionId = 0;
+          }
           const bridged = await this.activateMod21AudioBridge(video, fresh, {
             sessionId: st.sessionId,
             startTimeSec: curSec,
@@ -2816,6 +2826,27 @@
             safeNotify(okMsgText, 'success', 2800);
             return true;
           }
+          if (st.reason === 'auto-public-stream-retry' && !wantsAudioOnly) {
+            const directHtml5Ok = await this.upgradeActiveVideoToNativePlayer(video, {
+              cachedStream: fresh,
+              autoplay: shouldPlay,
+              startTimeOverrideSec: curSec,
+              manualUserAction: true,
+              sessionId: st.sessionId
+            }).catch(() => false);
+            if (directHtml5Ok && this.playerCtrl?.activeEngine === 'HTML5') {
+              const totalTries = st.attempts;
+              this.stopAutoReconnectLoop({ silent: true });
+              this.syncStatusUi();
+              this.playerCtrl.emitUiSync?.();
+              const okBaseMsg = '✅ Đã tự động kết nối lại Luồng phát công cộng thành công — đang phát trực tiếp!';
+              const okMsgText = NS.i18n?.translateText
+                ? `${NS.i18n.translateText(okBaseMsg)} (#${totalTries})`
+                : `${okBaseMsg} (#${totalTries})`;
+              safeNotify(okMsgText, 'success', 2800);
+              return true;
+            }
+          }
           if (st.reason === 'visibility-bg') {
             const bgOk = await this.activateNativeAudioPlayback('background', { startTimeSec: curSec }).catch(() => false);
             if (bgOk) {
@@ -2833,7 +2864,7 @@
       }
 
       if (this._bgReconnectState === st && st.active) {
-        this.statusText = '🔄 Luồng phát công cộng đang bị YouTube giới hạn — Đang tự động kết nối lại liên tục đến khi phát nền được!';
+        this.statusText = retryingMsg;
         this.syncStatusUi();
         this._scheduleNextAutoReconnectAttempt();
       }
@@ -3726,17 +3757,15 @@
       const fallbackPlay = options.autoplay !== false && !this.playerCtrl?._userDesiredPaused;
       this.syncAudioBridgeStageCard();
       this._restoreForegroundStageFromFallback(fallbackStartSec, fallbackPlay);
-      if (
-        this.playerCtrl?.prefs?.audioOnlyMode ||
-        this._userPreSelectedBgMode ||
-        (typeof document !== 'undefined' && document.hidden)
-      ) {
-        this.startBgBotBlockAutoReconnect(
-          record,
-          this._userPreSelectedBgMode || this.playerCtrl?.prefs?.audioOnlyMode ? 'audio-only' : 'visibility-bg',
-          { attachVisualVideo: false }
-        );
-      }
+      const autoReconnectReason =
+        this._userPreSelectedBgMode || this.playerCtrl?.prefs?.audioOnlyMode
+          ? 'audio-only'
+          : typeof document !== 'undefined' && document.hidden
+            ? 'visibility-bg'
+            : 'auto-public-stream-retry';
+      this.startBgBotBlockAutoReconnect(record, autoReconnectReason, {
+        attachVisualVideo: autoReconnectReason === 'auto-public-stream-retry'
+      });
       this.syncStatusUi();
       this.playerCtrl.emitUiSync?.();
       return false;
@@ -3872,6 +3901,9 @@
         this.mode = 'iframe-fallback';
         this.syncAudioBridgeStageCard();
         this._restoreForegroundStageFromFallback(savedTime, wasPlaying);
+        this.startBgBotBlockAutoReconnect(video, 'auto-public-stream-retry', {
+          attachVisualVideo: true
+        });
         this.syncStatusUi();
         this.playerCtrl.emitUiSync?.();
         return true;

@@ -1598,6 +1598,139 @@
       }
     }
 
+    lookupKnownDistrictCity(lat, lon) {
+      const nLat = Number(lat);
+      const nLon = Number(lon);
+      if (!Number.isFinite(nLat) || !Number.isFinite(nLon)) return '';
+      const boxes = [
+        // Đà Nẵng (Sơn Trà & các quận trung tâm)
+        { minLat: 16.04, maxLat: 16.14, minLon: 108.21, maxLon: 108.32, name: 'Sơn Trà, Đà Nẵng' },
+        { minLat: 16.02, maxLat: 16.09, minLon: 108.18, maxLon: 108.23, name: 'Hải Châu, Đà Nẵng' },
+        { minLat: 15.97, maxLat: 16.045, minLon: 108.23, maxLon: 108.29, name: 'Ngũ Hành Sơn, Đà Nẵng' },
+        { minLat: 16.04, maxLat: 16.08, minLon: 108.16, maxLon: 108.21, name: 'Thanh Khê, Đà Nẵng' },
+        { minLat: 16.05, maxLat: 16.16, minLon: 108.08, maxLon: 108.18, name: 'Liên Chiểu, Đà Nẵng' },
+        { minLat: 15.99, maxLat: 16.05, minLon: 108.16, maxLon: 108.23, name: 'Cẩm Lệ, Đà Nẵng' },
+        { minLat: 15.92, maxLat: 16.22, minLon: 107.90, maxLon: 108.35, name: 'Đà Nẵng, Việt Nam' },
+        // Hà Nội
+        { minLat: 21.01, maxLat: 21.05, minLon: 105.84, maxLon: 105.87, name: 'Hoàn Kiếm, Hà Nội' },
+        { minLat: 21.02, maxLat: 21.06, minLon: 105.81, maxLon: 105.85, name: 'Ba Đình, Hà Nội' },
+        { minLat: 21.01, maxLat: 21.06, minLon: 105.77, maxLon: 105.81, name: 'Cầu Giấy, Hà Nội' },
+        { minLat: 20.99, maxLat: 21.03, minLon: 105.81, maxLon: 105.85, name: 'Đống Đa, Hà Nội' },
+        { minLat: 20.94, maxLat: 21.14, minLon: 105.72, maxLon: 105.94, name: 'Hà Nội, Việt Nam' },
+        // TP. Hồ Chí Minh
+        { minLat: 10.76, maxLat: 10.80, minLon: 106.68, maxLon: 106.72, name: 'Quận 1, TP. Hồ Chí Minh' },
+        { minLat: 10.79, maxLat: 10.89, minLon: 106.73, maxLon: 106.84, name: 'Thủ Đức, TP. Hồ Chí Minh' },
+        { minLat: 10.68, maxLat: 10.90, minLon: 106.58, maxLon: 106.86, name: 'TP. Hồ Chí Minh, Việt Nam' },
+        // Các thành phố lớn khác
+        { minLat: 16.40, maxLat: 16.53, minLon: 107.52, maxLon: 107.66, name: 'Huế, Thừa Thiên Huế' },
+        { minLat: 12.18, maxLat: 12.33, minLon: 109.12, maxLon: 109.25, name: 'Nha Trang, Khánh Hòa' },
+        { minLat: 11.88, maxLat: 11.99, minLon: 108.39, maxLon: 108.50, name: 'Đà Lạt, Lâm Đồng' },
+        { minLat: 10.00, maxLat: 10.10, minLon: 105.72, maxLon: 105.82, name: 'Ninh Kiều, Cần Thơ' },
+        { minLat: 20.80, maxLat: 20.90, minLon: 106.63, maxLon: 106.75, name: 'Hải Phòng, Việt Nam' },
+        { minLat: 10.32, maxLat: 10.42, minLon: 107.05, maxLon: 107.16, name: 'Vũng Tàu, Bà Rịa - Vũng Tàu' },
+        { minLat: 35.60, maxLat: 35.78, minLon: 139.65, maxLon: 139.85, name: 'Tokyo, Nhật Bản' },
+        { minLat: 37.45, maxLat: 37.65, minLon: 126.85, maxLon: 127.15, name: 'Seoul, Hàn Quốc' },
+        { minLat: 1.24, maxLat: 1.44, minLon: 103.68, maxLon: 103.98, name: 'Singapore' },
+      ];
+      for (let i = 0; i < boxes.length; i++) {
+        const b = boxes[i];
+        if (nLat >= b.minLat && nLat <= b.maxLat && nLon >= b.minLon && nLon <= b.maxLon) {
+          return b.name;
+        }
+      }
+      return '';
+    }
+
+    _formatReverseGeocodePlace(parts) {
+      const clean = [];
+      for (let i = 0; i < parts.length; i++) {
+        const raw = String(parts[i] || '')
+          .replace(/^(Thành phố|Tỉnh)\s+/iu, '')
+          .replace(/^(Quận|Huyện|Thị xã)\s+(?!\d)/iu, '')
+          .trim();
+        if (!raw) continue;
+        const normRaw = raw.toLowerCase();
+        const exists = clean.some((c) => {
+          const lc = c.toLowerCase();
+          return lc === normRaw || lc.indexOf(normRaw) !== -1 || normRaw.indexOf(lc) !== -1;
+        });
+        if (!exists) clean.push(raw);
+      }
+      return clean.slice(0, 2).join(', ');
+    }
+
+    formatGpsPlaceLabel(lat, lon, placeName = '') {
+      const coordStr = `${Number(lat).toFixed(2)}°, ${Number(lon).toFixed(2)}°`;
+      const cleanPlace = String(placeName || '').trim();
+      return cleanPlace
+        ? `📍 ${cleanPlace} (${coordStr})`
+        : `📍 Vị trí thực của bạn (${coordStr})`;
+    }
+
+    async reverseGeocodeCoords(lat, lon) {
+      const nLat = Number(lat);
+      const nLon = Number(lon);
+      if (!Number.isFinite(nLat) || !Number.isFinite(nLon)) return '';
+      if (!this._geoNameCache) this._geoNameCache = new Map();
+      const cacheKey = `${nLat.toFixed(3)},${nLon.toFixed(3)}`;
+      if (this._geoNameCache.has(cacheKey)) {
+        return this._geoNameCache.get(cacheKey);
+      }
+
+      const fetchJsonWithTimeout = async (url, timeoutMs) => {
+        if (typeof fetch !== 'function') return null;
+        const abortCtrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timerId = abortCtrl ? setTimeout(() => abortCtrl.abort(), timeoutMs) : null;
+        try {
+          const res = await fetch(url, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            signal: abortCtrl ? abortCtrl.signal : undefined,
+          });
+          if (timerId) clearTimeout(timerId);
+          if (!res || !res.ok) return null;
+          return await res.json();
+        } catch (_eGeo) {
+          if (timerId) clearTimeout(timerId);
+          return null;
+        }
+      };
+
+      let resolvedPlace = '';
+      if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+        const bdc = await fetchJsonWithTimeout(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(nLat.toFixed(5))}&longitude=${encodeURIComponent(nLon.toFixed(5))}&localityLanguage=vi`,
+          2200
+        );
+        if (bdc) {
+          resolvedPlace = this._formatReverseGeocodePlace([
+            bdc.locality,
+            bdc.city || bdc.principalSubdivision,
+          ]);
+        }
+        if (!resolvedPlace) {
+          const nom = await fetchJsonWithTimeout(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(nLat.toFixed(5))}&lon=${encodeURIComponent(nLon.toFixed(5))}&accept-language=vi&zoom=14`,
+            2200
+          );
+          if (nom && nom.address) {
+            const addr = nom.address;
+            resolvedPlace = this._formatReverseGeocodePlace([
+              addr.suburb || addr.city_district || addr.district || addr.town || addr.village || addr.county,
+              addr.city || addr.state || addr.province,
+            ]);
+          }
+        }
+      }
+      if (!resolvedPlace) {
+        resolvedPlace = this.lookupKnownDistrictCity(nLat, nLon);
+      }
+      if (resolvedPlace) {
+        this._geoNameCache.set(cacheKey, resolvedPlace);
+      }
+      return resolvedPlace;
+    }
+
     async requestBrowserGpsCoords() {
       const tryBrowserGeo = (highAccuracy, timeoutMs) =>
         new Promise((resolve) => {
@@ -1619,7 +1752,7 @@
                   lat,
                   lon,
                   source: 'browser_gps',
-                  label: `📍 Vị trí thực của bạn (${lat.toFixed(2)}°, ${lon.toFixed(2)}°)`,
+                  label: this.formatGpsPlaceLabel(lat, lon),
                 });
               },
               (err) => {
@@ -1640,12 +1773,22 @@
           }
         });
 
+      const enrichGpsResultWithPlace = async (res) => {
+        if (!res || !res.ok) return res;
+        const placeName = await this.reverseGeocodeCoords(res.lat, res.lon).catch(() => '');
+        return {
+          ...res,
+          placeName: placeName || '',
+          label: this.formatGpsPlaceLabel(res.lat, res.lon, placeName),
+        };
+      };
+
       const firstTry = await tryBrowserGeo(false, 4500);
-      if (firstTry.ok) return firstTry;
+      if (firstTry.ok) return await enrichGpsResultWithPlace(firstTry);
       // Nếu lỗi không phải PERMISSION_DENIED (code === 1), thử lại 1 nhịp với highAccuracy cho điện thoại di động
       if (firstTry.code !== 1) {
         const secondTry = await tryBrowserGeo(true, 4500);
-        if (secondTry.ok) return secondTry;
+        if (secondTry.ok) return await enrichGpsResultWithPlace(secondTry);
       }
 
       // Dự phòng tự động định vị qua IP / Múi giờ khi người dùng bấm "📍 Vị Trí Thực (GPS)" trên Máy tính hoặc chưa cấp quyền GPS
@@ -1699,14 +1842,15 @@
               const json = await res.json();
               const info = ep.extract(json);
               if (info && Number.isFinite(info.lat) && Number.isFinite(info.lon)) {
-                const citySuffix = info.city ? ` • ${info.city}` : '';
+                const geoName = await this.reverseGeocodeCoords(info.lat, info.lon).catch(() => '');
+                const resolvedName = geoName || info.city || '';
                 return {
                   ok: true,
                   lat: info.lat,
                   lon: info.lon,
                   iana: info.iana || '',
                   source: 'ip_auto_fallback',
-                  label: `📍 Vị trí thực của bạn (${info.lat.toFixed(2)}°, ${info.lon.toFixed(2)}°${citySuffix})`,
+                  label: this.formatGpsPlaceLabel(info.lat, info.lon, resolvedName),
                 };
               }
             }
@@ -1720,13 +1864,16 @@
       const loc = this.resolveTargetLocation(NS.weatherSkyEngine?.state || {});
       const fallbackLat = Number.isFinite(Number(loc?.lat)) ? Number(loc.lat) : MOD43_CONSTANTS.DEFAULT_COORDS.lat;
       const fallbackLon = Number.isFinite(Number(loc?.lon)) ? Number(loc.lon) : MOD43_CONSTANTS.DEFAULT_COORDS.lon;
+      const fallbackPlace =
+        (await this.reverseGeocodeCoords(fallbackLat, fallbackLon).catch(() => '')) ||
+        String(loc?.locationName || '').replace(/^[^\p{L}\p{N}]+/u, '').trim();
       return {
         ok: true,
         lat: fallbackLat,
         lon: fallbackLon,
         iana: loc?.iana || MOD43_CONSTANTS.DEFAULT_COORDS.iana,
         source: 'timezone_auto_fallback',
-        label: `📍 Vị trí thực của bạn (${fallbackLat.toFixed(2)}°, ${fallbackLon.toFixed(2)}°)`,
+        label: this.formatGpsPlaceLabel(fallbackLat, fallbackLon, fallbackPlace),
       };
     }
   }
@@ -3423,6 +3570,24 @@
             label: gps.label,
           };
           this.state.previewFollowsRealtime = true;
+          gpsJustPinned = true;
+          this.saveStateToStorage();
+        }
+      } else if (
+        this.state.gpsCoords &&
+        Number.isFinite(Number(this.state.gpsCoords.lat)) &&
+        Number.isFinite(Number(this.state.gpsCoords.lon)) &&
+        (!this.state.gpsCoords.label || String(this.state.gpsCoords.label).indexOf('Vị trí thực của bạn') !== -1)
+      ) {
+        const upgradedPlace = await this.apiClient
+          .reverseGeocodeCoords(this.state.gpsCoords.lat, this.state.gpsCoords.lon)
+          .catch(() => '');
+        if (upgradedPlace) {
+          this.state.gpsCoords.label = this.apiClient.formatGpsPlaceLabel(
+            this.state.gpsCoords.lat,
+            this.state.gpsCoords.lon,
+            upgradedPlace
+          );
           gpsJustPinned = true;
           this.saveStateToStorage();
         }
