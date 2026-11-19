@@ -1,0 +1,121 @@
+{
+  "id": "./",
+  "name": "Sổ Tay Tiểu Thuyết Của Bi — Studio Sáng Tác Đa Nền Tảng",
+  "short_name": "Studio Tiểu Thuyết Bi",
+  "description": "Không gian sáng tác tiểu thuyết hiện đại dành cho tác giả Việt — Hỗ trợ AI 5 chế độ, Story Bible chống quên, duyệt thay đổi kiểu Google Docs, lưu trữ phiên bản Time-Machine và xuất sách PDF/DOCX chuyên nghiệp.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#09090B",
+  "theme_color": "#10B981",
+  "lang": "vi",
+  "categories": ["books", "productivity", "education", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Bàn Viết Truyện (Tab 1)",
+      "short_name": "Viết Truyện",
+      "url": "./index.html#SCREEN_1_WRITE",
+      "icons": [
+        {
+          "src": "assets/app-icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "YouTube & Nhạc Nền (Tab 5)",
+      "short_name": "Tab 5 Nhạc & YT",
+      "url": "./index.html#SCREEN_5_AMBIENCE",
+      "icons": [
+        {
+          "src": "assets/app-icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Phiên Bản & Xuất File (Tab 6)",
+      "short_name": "Tab 6 Hệ Thống",
+      "url": "./index.html#SCREEN_6_SYSTEM",
+      "icons": [
+        {
+          "src": "assets/app-icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "icons": [
+    {
+      "src": "assets/app-icon-48.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/app-icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/app-icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/app-icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/app-icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/app-icon-256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/app-icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/app-icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/app-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
