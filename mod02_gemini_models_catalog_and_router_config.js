@@ -82,6 +82,35 @@
       editorialAdvice: 'Lựa chọn #1 khuyên dùng mặc định cho toàn bộ 5 chế độ: viết bản thảo sâu (Chế độ 1), tham mưu cốt truyện (Chế độ 2), kiểm toán mâu thuẫn (Chế độ 3), đánh giá độc giả (Chế độ 4) & vẽ sơ đồ (Chế độ 5).'
     },
     {
+      id: 'gemini-4-neon',
+      label: '⚡ Gemini 4 Neon (Mới · Suy Luận XHIGH Siêu Mượt & Phản Hồi Tức Thì)',
+      shortLabel: '⚡ Gemini 4 Neon (Mới)',
+      apiTarget: 'gemini-4-neon',
+      fallbacks: ['gemini-4-neon-preview', 'gemini-4-hydrogen', 'gemini-4-argon', 'gemini-3.1-pro-preview', 'gemini-3.8-flash', 'gemini-flash-latest', 'gemini-2.5-flash'],
+      tier: 'PRO_HIGH',
+      billingTierRequired: 'paid',
+      isLite: false,
+      contextWindowTokens: 1048576,
+      maxOutputTokens: 16384,
+      recommendedWordRange: { min: 2000, optimal: 4200, max: 8500 },
+      recommendedTempRange: { min: 0.72, optimal: 0.85, max: 1.0 },
+      supportsXHighThinking: true,
+      supportedThinkingLevels: ['LOW', 'MEDIUM', 'HIGH', 'XHIGH'],
+      defaultThinkingLevel: 'HIGH',
+      scores: {
+        literaryStyle: 9.8,
+        emotionalResonance: 9.7,
+        psychologicalDepth: 9.8,
+        loreConsistency: 9.8,
+        dialogueNaturalness: 9.8,
+        speedAndResponsiveness: 9.8,
+        antiClicheCompliance: 9.8
+      },
+      idealModes: ['MODE_1_DRAFT', 'MODE_2_BRAINSTORM', 'MODE_3_AUDIT', 'MODE_4_REVIEW', 'MODE_5_DIAGRAM'],
+      strengthsSummary: 'Phiên bản Gemini 4 Neon thế hệ mới tối ưu tốc độ phản hồi cực nhanh kết hợp tư duy đa tầng LOW/MEDIUM/HIGH/XHIGH, giữ nhịp văn sắc nét và bám sát Story Bible.',
+      editorialAdvice: 'Tuyệt vời cho viết chương tốc độ cao mà vẫn đòi hỏi chiều sâu suy luận, hội thoại tự nhiên và kiểm soát mâu thuẫn cốt truyện chặt chẽ.'
+    },
+    {
       id: 'gemini-3.8-flash',
       label: '🌟 Gemini 3.8 Flash (Giàu cảm xúc & Mượt mà)',
       shortLabel: '🌟 Gemini 3.8 Flash',

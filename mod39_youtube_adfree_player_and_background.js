@@ -3033,6 +3033,19 @@
       if (engine === 'RESOLVING_STREAM') {
         audioStage?.classList.add('hidden');
         nativeHost?.classList.add('hidden');
+        const curIfrSrc = String(iframeEl?.getAttribute('src') || '');
+        const hasProvisionalYoutubeIframe = Boolean(
+          !this.playerCtrl?.prefs?.audioOnlyMode &&
+          curIfrSrc &&
+          curIfrSrc !== 'about:blank' &&
+          curIfrSrc.indexOf('youtube') !== -1 &&
+          (!video.videoId || curIfrSrc.indexOf(video.videoId) !== -1)
+        );
+        if (hasProvisionalYoutubeIframe) {
+          resolvingCard?.classList.add('hidden');
+          iframeEl?.classList.remove('hidden');
+          return;
+        }
         iframeEl?.classList.add('hidden');
         if (resolvingCard) {
           const thumbImg = document.getElementById('mod39-resolving-poster-thumb');
@@ -5931,12 +5944,24 @@
       } else if (!isLiveStream && record.videoId && isHttpOrigin && !global.__MOD39_DISABLE_AUTO_RESOLVE__) {
         NS.nativePlayer?.unlockPlaybackGesture?.();
         NS.unlockExternalAudioGesture?.();
+        // Tạm tắt âm thanh MP3 ở Tab 3 & phát tạm ngay khung hình youtube-nocookie để không bao giờ bị màn hình đen trong lúc dò luồng công cộng liên tục
+        this.mobileBgAudio?.emitTab3StreamSignal?.('switch-to-youtube-stream', {
+          engine: 'RESOLVING_STREAM',
+          videoId: record.videoId,
+          sessionId
+        });
+        NS.audioStudio?.pauseExternalAudioStream?.(true);
         if (this.mobileBgAudio) {
           this.mobileBgAudio._iframeMutedVisualCompanion = false;
-          this.mobileBgAudio._silenceForegroundIframeForNativeTakeover?.();
+          this.mobileBgAudio._silencedIframeForBgAudio = false;
         }
         this.activeEngine = 'RESOLVING_STREAM';
-        this.bridge.lastKnownState = MOD39_CONSTANTS.YT_PLAYER_STATES.BUFFERING;
+        if (!this.prefs?.audioOnlyMode) {
+          this.bridge.mountEmbedUrlIntoIframe(record, this.prefs);
+        } else {
+          this.mobileBgAudio?._silenceForegroundIframeForNativeTakeover?.();
+          this.bridge.lastKnownState = MOD39_CONSTANTS.YT_PLAYER_STATES.BUFFERING;
+        }
         this.mobileBgAudio?.syncAudioBridgeStageCard?.();
         this.startPollingLoop();
         this.mobileBgAudio?.onVideoLoaded(record, {
@@ -8343,6 +8368,17 @@
                   </span>
                 </div>
 
+                <!-- Thanh Thu gọn / Mở rộng cụm điều khiển phát, tua ±10s, lặp & tải video -->
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-zinc-800/80">
+                  <span class="text-[11px] font-extrabold text-zinc-300">🎛️ Bộ Điều Khiển Phát, Tua ±10s, Lặp &amp; Tải Video</span>
+                  <button
+                    type="button"
+                    id="btn-mod39-toggle-controls-deck"
+                    class="px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-800/90 hover:bg-zinc-700 text-[10.5px] font-bold text-zinc-200 transition shrink-0"
+                  >▼ Mở rộng</button>
+                </div>
+
+                <div id="mod39-controls-collapsible-body" class="hidden space-y-2.5">
                 <!-- Hàng nút điều khiển chính -->
                 <div class="flex flex-wrap items-center justify-between gap-2">
                   <div class="flex flex-wrap items-center gap-1.5">
@@ -8440,9 +8476,10 @@
                     </div>
                   </div>
                 </div>
+                </div>
               </div>
 
-              <!-- HỘP VÒNG LẶP ĐOẠN A–B TRỰC QUAN KIỂU MP3 (NGAY DƯỚI TRÌNH PHÁT CỘT TRÁI) -->
+              <!-- HỘP VÒNG LẶP ĐOẠN A–B TRỰC QUAN KIỂU MP3 (NGAY DƯỚI TRÌNH PHÁT CỘT TRÁI — MẶC ĐỊNH THU GỌN) -->
               <div id="mod39-left-ab-loop-box" class="p-3.5 rounded-2xl border border-violet-500/45 bg-violet-950/25 space-y-2.5">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                   <div class="flex items-center gap-2">
@@ -8450,9 +8487,17 @@
                       🔁 Lặp Đoạn Cụ Thể A–B (Giống Máy MP3)
                     </span>
                   </div>
-                  <span id="mod39-ab-status-pill" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-400 shrink-0">A–B: Tắt</span>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <span id="mod39-ab-status-pill" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-400 shrink-0">A–B: Tắt</span>
+                    <button
+                      type="button"
+                      id="btn-mod39-toggle-ab-loop-box"
+                      class="px-2 py-0.5 rounded-lg border border-violet-500/40 bg-violet-900/40 hover:bg-violet-800/50 text-[10.5px] font-bold text-violet-200 transition"
+                    >▲ Thu gọn</button>
+                  </div>
                 </div>
 
+                <div id="mod39-left-ab-loop-body" class="space-y-2.5">
                 <!-- Thanh trực quan đoạn lặp A–B trên tổng thời lượng video -->
                 <div class="space-y-1">
                   <div id="mod39-ab-visual-track" class="relative w-full h-2.5 rounded-full bg-zinc-900 border border-zinc-700/80 overflow-hidden">
@@ -8526,6 +8571,7 @@
                     id="btn-mod39-yt-ab-clear"
                     class="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-bold transition"
                   >🧹 Xóa A–B</button>
+                </div>
                 </div>
               </div>
             </div>
@@ -9343,6 +9389,20 @@
         ev.preventDefault();
         this.downloadActiveYoutubeViaYtSave();
       });
+
+      const bindMod39Accordion = (btnId, bodyId) => {
+        const btn = document.getElementById(btnId);
+        const bodyEl = document.getElementById(bodyId);
+        if (!btn || !bodyEl) return;
+        btn.addEventListener('click', () => {
+          const willOpen = bodyEl.classList.contains('hidden');
+          bodyEl.classList.toggle('hidden', !willOpen);
+          const lbl = willOpen ? '▲ Thu gọn' : '▼ Mở rộng';
+          btn.textContent = NS.i18n?.translateText?.(lbl) || lbl;
+        });
+      };
+      bindMod39Accordion('btn-mod39-toggle-controls-deck', 'mod39-controls-collapsible-body');
+      bindMod39Accordion('btn-mod39-toggle-ab-loop-box', 'mod39-left-ab-loop-body');
 
       document.getElementById('mod39-native-video-host')?.addEventListener('click', (ev) => {
         if (!NS.nativePlayer?.isActive?.() || NS.nativePlayer?.mode !== 'video') return;

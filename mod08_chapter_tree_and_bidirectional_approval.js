@@ -296,6 +296,97 @@
     }
 
     /**
+     * Kéo thả sắp xếp lại trình tự chương cực nhanh
+     */
+    async reorderChapterByDrop(sourceId, targetId) {
+      if (!sourceId || !targetId || sourceId === targetId) return false;
+      this.manager.syncEditorToActiveChapter();
+      const fromIdx = this.manager.chapters.findIndex((c) => c.id === sourceId);
+      const toIdx = this.manager.chapters.findIndex((c) => c.id === targetId);
+      if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return false;
+
+      const [moved] = this.manager.chapters.splice(fromIdx, 1);
+      this.manager.chapters.splice(toIdx, 0, moved);
+      this.renumberAllChaptersSequential(false);
+
+      await this.manager.persistAllChaptersToStorage();
+      this.manager.rag.rebuildIndexFromChapters(this.manager.chapters);
+      this.manager.renderChapterTreeAndQuickSwitcher();
+
+      this.manager.utils.showToast(
+        `🔀 Đã kéo "${moved.displayTitle || moved.title}" tới vị trí #${toIdx + 1}!`,
+        'success',
+        2200
+      );
+      return true;
+    }
+
+    /**
+     * Gộp nhiều chương đã chọn thành Quyển (volume) / Chương (chapter) / Cảnh (scene)
+     */
+    async groupChaptersIntoHierarchy(chapterIds = [], level = 'volume', groupLabel = '') {
+      const idSet = new Set(Array.isArray(chapterIds) ? chapterIds : []);
+      if (idSet.size === 0) return false;
+      const safeLevel = ['volume', 'chapter', 'scene'].includes(level) ? level : 'volume';
+      const defaultNameMap = {
+        volume: 'Quyển 1',
+        chapter: 'Chương Gộp 1',
+        scene: 'Cảnh 1'
+      };
+      const cleanName = String(groupLabel || '').trim() || defaultNameMap[safeLevel];
+      const groupId = `${safeLevel}_${Date.now()}`;
+
+      let updated = 0;
+      const persistMap = this.manager.loadHierarchyMapFromStorage();
+      this.manager.chapters.forEach((chap) => {
+        if (!idSet.has(chap.id)) return;
+        chap.hierarchyLevel = safeLevel;
+        chap.hierarchyGroup = cleanName;
+        chap.hierarchyGroupId = groupId;
+        persistMap[chap.id] = {
+          level: safeLevel,
+          group: cleanName,
+          groupId
+        };
+        updated += 1;
+      });
+      if (updated === 0) return false;
+
+      this.manager.saveHierarchyMapToStorage(persistMap);
+      await this.manager.persistAllChaptersToStorage();
+      this.manager.renderChapterTreeAndQuickSwitcher();
+
+      const levelVi = safeLevel === 'volume' ? 'Quyển (Volume)' : safeLevel === 'chapter' ? 'Chương (Chapter)' : 'Cảnh (Scene)';
+      this.manager.utils.showToast(
+        `📚 Đã gộp ${updated} mục vào ${levelVi}: "${cleanName}"!`,
+        'success',
+        2800
+      );
+      return true;
+    }
+
+    /**
+     * Bỏ nhóm phân cấp khỏi các chương đã chọn
+     */
+    async ungroupChapters(chapterIds = []) {
+      const idSet = new Set(Array.isArray(chapterIds) ? chapterIds : []);
+      if (idSet.size === 0) return false;
+      const persistMap = this.manager.loadHierarchyMapFromStorage();
+      this.manager.chapters.forEach((chap) => {
+        if (!idSet.has(chap.id)) return;
+        delete chap.hierarchyLevel;
+        delete chap.hierarchyGroup;
+        delete chap.hierarchyGroupId;
+        delete persistMap[chap.id];
+      });
+      this.manager.saveHierarchyMapToStorage(persistMap);
+      await this.manager.persistAllChaptersToStorage();
+      this.manager.renderChapterTreeAndQuickSwitcher();
+      this.manager.utils.showToast('🧹 Đã tách nhóm phân cấp cho các chương đã chọn.', 'info', 2200);
+      return true;
+    }
+
+    /**
      * Nhân bản (Duplicate) một chương thành bản sao ngay liền sau chương gốc
      */
     async duplicateChapter(chapterId) {
@@ -1966,32 +2057,97 @@
 
       const activeId = this.NS.state?.activeChapterId;
       const esc = (s) => this.utils.escapeHtml(s);
+      const hMap = this.loadHierarchyMapFromStorage();
+      if (!this._selectedHierarchyIds) this._selectedHierarchyIds = new Set();
+      const multiMode = Boolean(this._multiSelectHierarchyMode);
 
-      treeContainer.innerHTML = filtered
+      // Đồng bộ phân cấp đã lưu vào từng chương
+      this.chapters.forEach((c) => {
+        const meta = hMap[c.id];
+        if (meta && !c.hierarchyGroup) {
+          c.hierarchyLevel = meta.level;
+          c.hierarchyGroup = meta.group;
+          c.hierarchyGroupId = meta.groupId;
+        }
+      });
+
+      const hierarchyToolbarHtml = `
+        <div id="mod08-hierarchy-toolbar" class="mb-2 p-2 rounded-xl border border-indigo-500/30 bg-indigo-950/25 space-y-2 text-[11px]">
+          <div class="flex items-center justify-between gap-1.5 flex-wrap">
+            <button type="button" id="btn-mod08-toggle-multiselect" class="px-2.5 py-1 rounded-lg border ${multiMode ? 'border-emerald-400 bg-emerald-600/30 text-emerald-200' : 'border-indigo-400/50 bg-indigo-500/15 text-indigo-200'} font-bold transition">
+              ${multiMode ? '☑️ Đang chọn nhiều (Bấm để tắt)' : '☑️ Chọn nhiều / Gộp Quyển-Chương-Cảnh'}
+            </button>
+            <span class="text-[10px] text-zinc-400">⠿ Kéo thả để đổi thứ tự</span>
+          </div>
+          ${multiMode ? `
+            <div class="space-y-1.5 pt-1.5 border-t border-indigo-500/20">
+              <div class="flex items-center gap-1.5">
+                <input id="input-mod08-group-name" type="text" placeholder="Nhập tên Quyển / Chương / Cảnh..." value="${esc(this._lastHierarchyGroupInput || '')}" class="flex-1 min-w-0 px-2 py-1 rounded-lg border border-zinc-700 bg-zinc-950 text-[11px] text-zinc-100 focus:outline-none focus:border-emerald-400" />
+                <span class="text-[10px] font-mono text-emerald-300 shrink-0">Đã chọn: ${this._selectedHierarchyIds.size}</span>
+              </div>
+              <div class="flex flex-wrap items-center gap-1">
+                <button type="button" data-mod08-group-level="volume" class="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[10px] transition">📚 Gộp Quyển (Volume)</button>
+                <button type="button" data-mod08-group-level="chapter" class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] transition">📖 Gộp Chương (Chapter)</button>
+                <button type="button" data-mod08-group-level="scene" class="px-2 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-[10px] transition">🎬 Gộp Cảnh (Scene)</button>
+                <button type="button" id="btn-mod08-ungroup-selected" class="px-2 py-1 rounded-lg border border-zinc-600 hover:bg-zinc-800 text-zinc-200 font-bold text-[10px] transition">🧹 Tách nhóm</button>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      let lastRenderedGroupKey = '';
+      const cardsHtml = filtered
         .map((chap, displayIdx) => {
           const isActive = chap.id === activeId;
           const isApproved = chap.status === 'APPROVED';
+          const isChecked = this._selectedHierarchyIds.has(chap.id);
           const borderCls = isActive
             ? 'border-emerald-500/60 bg-emerald-500/10 shadow-lg shadow-emerald-950/30'
-            : 'border-zinc-800/80 bg-zinc-900/60 hover:bg-zinc-800/70 hover:border-zinc-700';
+            : isChecked
+              ? 'border-indigo-400/75 bg-indigo-500/15'
+              : 'border-zinc-800/80 bg-zinc-900/60 hover:bg-zinc-800/70 hover:border-zinc-700';
 
-          return `
-            <div data-chap-card="${esc(chap.id)}" class="group rounded-xl border p-2.5 transition cursor-pointer ${borderCls}">
+          const hLevel = chap.hierarchyLevel || '';
+          const hGroup = chap.hierarchyGroup || '';
+          const groupKey = hGroup ? `${hLevel}::${hGroup}` : '';
+          let groupHeaderHtml = '';
+          if (groupKey && groupKey !== lastRenderedGroupKey) {
+            const gBadgeCls =
+              hLevel === 'volume'
+                ? 'border-indigo-400/50 bg-indigo-500/15 text-indigo-200'
+                : hLevel === 'chapter'
+                  ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-200'
+                  : 'border-amber-400/50 bg-amber-500/15 text-amber-200';
+            const gIcon = hLevel === 'volume' ? '📚 Quyển' : hLevel === 'chapter' ? '📖 Chương' : '🎬 Cảnh';
+            groupHeaderHtml = `<div class="mt-2 mb-1 px-2.5 py-1 rounded-lg border ${gBadgeCls} text-[10.5px] font-extrabold flex items-center justify-between"><span>${gIcon}: ${esc(hGroup)}</span></div>`;
+          }
+          lastRenderedGroupKey = groupKey;
+
+          const indentCls = hLevel === 'scene' ? 'ml-4' : hLevel === 'chapter' ? 'ml-2' : '';
+
+          return `${groupHeaderHtml}
+            <div draggable="true" data-chap-card="${esc(chap.id)}" class="group rounded-xl border p-2.5 transition cursor-pointer ${borderCls} ${indentCls}">
               <div class="flex items-start justify-between gap-2">
-                <div class="min-w-0 flex-1" data-action="select-chap" data-chap-id="${esc(chap.id)}">
-                  <div class="flex items-center gap-1.5">
-                    <span class="text-[10px] font-mono text-zinc-500 shrink-0">#${displayIdx + 1}</span>
-                    <span data-i18n-ignore="true" class="text-xs font-bold truncate ${isActive ? 'text-emerald-200' : 'text-zinc-200'}">${esc(this.localizeDefaultChapterTitle(chap.displayTitle || chap.title))}</span>
-                  </div>
-                  <div class="flex items-center gap-2 mt-1 text-[10px] text-zinc-400">
-                    <span class="${isApproved ? 'text-emerald-400' : 'text-amber-400'} font-semibold">${isApproved ? '✅ Đã duyệt' : '📝 Nháp'}</span>
-                    <span>•</span>
-                    <span data-i18n-ignore="true">${esc(window.NoirNovel?.i18n?.translateText ? window.NoirNovel.i18n.translateText(`${window.NoirNovel.i18n.formatNumber(chap.wordCount || 0)} từ`) : `${(chap.wordCount || 0).toLocaleString('vi-VN')} từ`)}</span>
+                <div class="flex items-start gap-1.5 min-w-0 flex-1">
+                  <span class="mod08-drag-handle text-zinc-500 hover:text-emerald-300 cursor-grab select-none text-xs pt-0.5 shrink-0" title="Kéo thả để sắp xếp thứ tự">⠿</span>
+                  ${multiMode ? `<input type="checkbox" data-action="toggle-select-chap" data-chap-id="${esc(chap.id)}" ${isChecked ? 'checked' : ''} class="mt-1 rounded border-indigo-400 text-indigo-500 focus:ring-0 shrink-0" />` : ''}
+                  <div class="min-w-0 flex-1" data-action="select-chap" data-chap-id="${esc(chap.id)}">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-[10px] font-mono text-zinc-500 shrink-0">#${displayIdx + 1}</span>
+                      <span data-i18n-ignore="true" class="text-xs font-bold truncate ${isActive ? 'text-emerald-200' : 'text-zinc-200'}">${esc(this.localizeDefaultChapterTitle(chap.displayTitle || chap.title))}</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-1 text-[10px] text-zinc-400 flex-wrap">
+                      <span class="${isApproved ? 'text-emerald-400' : 'text-amber-400'} font-semibold">${isApproved ? '✅ Đã duyệt' : '📝 Nháp'}</span>
+                      <span>•</span>
+                      <span data-i18n-ignore="true">${esc(window.NoirNovel?.i18n?.translateText ? window.NoirNovel.i18n.translateText(`${window.NoirNovel.i18n.formatNumber(chap.wordCount || 0)} từ`) : `${(chap.wordCount || 0).toLocaleString('vi-VN')} từ`)}</span>
+                    </div>
                   </div>
                 </div>
-                <div class="flex items-center gap-1 opacity-75 group-hover:opacity-100 shrink-0">
+                <div class="flex items-center gap-0.5 opacity-80 group-hover:opacity-100 shrink-0">
                   <button type="button" data-action="toggle-status" data-chap-id="${esc(chap.id)}" title="${isApproved ? 'Chuyển về Bản nháp' : 'Duyệt thành bản chính thức'}" class="p-1 rounded-lg hover:bg-zinc-700/80 text-[11px]">${isApproved ? '↩️' : '✅'}</button>
                   <button type="button" data-action="move-up" data-chap-id="${esc(chap.id)}" title="Đưa lên trên" class="p-1 rounded-lg hover:bg-zinc-700/80 text-[11px]">▲</button>
+                  <button type="button" data-action="move-down" data-chap-id="${esc(chap.id)}" title="Đưa xuống dưới" class="p-1 rounded-lg hover:bg-zinc-700/80 text-[11px]">▼</button>
                   <button type="button" data-action="delete-chap" data-chap-id="${esc(chap.id)}" title="Xóa chương này" class="p-1 rounded-lg hover:bg-rose-500/20 text-rose-400 text-[11px]">🗑️</button>
                 </div>
               </div>
@@ -1999,6 +2155,87 @@
           `;
         })
         .join('');
+
+      treeContainer.innerHTML = hierarchyToolbarHtml + cardsHtml;
+
+      document.getElementById('btn-mod08-toggle-multiselect')?.addEventListener('click', () => {
+        this._multiSelectHierarchyMode = !this._multiSelectHierarchyMode;
+        if (!this._multiSelectHierarchyMode) this._selectedHierarchyIds.clear();
+        this.renderChapterTreeAndQuickSwitcher();
+      });
+
+      const groupNameInput = document.getElementById('input-mod08-group-name');
+      if (groupNameInput) {
+        groupNameInput.addEventListener('input', () => {
+          this._lastHierarchyGroupInput = groupNameInput.value;
+        });
+      }
+
+      treeContainer.querySelectorAll('[data-mod08-group-level]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const level = btn.getAttribute('data-mod08-group-level');
+          const ids = Array.from(this._selectedHierarchyIds || []);
+          if (ids.length === 0) {
+            this.utils.showToast('⚠️ Hãy tick chọn ít nhất 1 chương trước khi gộp phân cấp!', 'warning', 2400);
+            return;
+          }
+          const nameVal = document.getElementById('input-mod08-group-name')?.value || '';
+          this.surgery?.groupChaptersIntoHierarchy?.(ids, level, nameVal);
+        });
+      });
+
+      document.getElementById('btn-mod08-ungroup-selected')?.addEventListener('click', () => {
+        const ids = Array.from(this._selectedHierarchyIds || []);
+        if (ids.length === 0) {
+          this.utils.showToast('⚠️ Hãy tick chọn ít nhất 1 chương để tách nhóm!', 'warning', 2200);
+          return;
+        }
+        this.surgery?.ungroupChapters?.(ids);
+      });
+
+      treeContainer.querySelectorAll('[data-action="toggle-select-chap"]').forEach((chk) => {
+        chk.addEventListener('click', (e) => e.stopPropagation());
+        chk.addEventListener('change', () => {
+          const cid = chk.getAttribute('data-chap-id');
+          if (chk.checked) this._selectedHierarchyIds.add(cid);
+          else this._selectedHierarchyIds.delete(cid);
+          this.renderChapterTreeAndQuickSwitcher();
+        });
+      });
+
+      // Drag & Drop sắp xếp thứ tự chương cực nhanh
+      let draggingChapId = '';
+      treeContainer.querySelectorAll('[data-chap-card]').forEach((card) => {
+        card.addEventListener('dragstart', (e) => {
+          draggingChapId = card.getAttribute('data-chap-card') || '';
+          card.classList.add('opacity-50');
+          try {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', draggingChapId);
+          } catch (_eDt) {}
+        });
+        card.addEventListener('dragend', () => {
+          card.classList.remove('opacity-50');
+          treeContainer.querySelectorAll('[data-chap-card]').forEach((c) => c.classList.remove('ring-2', 'ring-emerald-400'));
+          draggingChapId = '';
+        });
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          card.classList.add('ring-2', 'ring-emerald-400');
+        });
+        card.addEventListener('dragleave', () => {
+          card.classList.remove('ring-2', 'ring-emerald-400');
+        });
+        card.addEventListener('drop', (e) => {
+          e.preventDefault();
+          card.classList.remove('ring-2', 'ring-emerald-400');
+          const targetId = card.getAttribute('data-chap-card') || '';
+          const srcId = draggingChapId || (e.dataTransfer ? e.dataTransfer.getData('text/plain') : '');
+          if (srcId && targetId && srcId !== targetId) {
+            this.surgery?.reorderChapterByDrop?.(srcId, targetId);
+          }
+        });
+      });
 
       treeContainer.querySelectorAll('[data-action="select-chap"]').forEach((el) => {
         el.addEventListener('click', () => {
@@ -2023,6 +2260,16 @@
         });
       });
 
+      treeContainer.querySelectorAll('[data-action="move-down"]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const cid = btn.getAttribute('data-chap-id');
+          if (this.surgery && typeof this.surgery.moveChapter === 'function') {
+            this.surgery.moveChapter(cid, 1);
+          }
+        });
+      });
+
       treeContainer.querySelectorAll('[data-action="delete-chap"]').forEach((btn) => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -2031,6 +2278,21 @@
       });
 
       window.NoirNovel?.i18n?.translateElement?.(treeContainer);
+    }
+
+    loadHierarchyMapFromStorage() {
+      try {
+        const raw = localStorage.getItem('noir_v40_chapter_hierarchy_v1');
+        return raw ? JSON.parse(raw) || {} : {};
+      } catch (_eH) {
+        return {};
+      }
+    }
+
+    saveHierarchyMapToStorage(mapObj) {
+      try {
+        localStorage.setItem('noir_v40_chapter_hierarchy_v1', JSON.stringify(mapObj || {}));
+      } catch (_eHs) {}
     }
 
     bindDomEvents() {

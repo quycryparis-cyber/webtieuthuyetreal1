@@ -3404,6 +3404,216 @@
         };
         if (map[code]) return lead + map[code] + trail;
       }
+
+      // 9. Entry Gate: "🔒 Còn thiếu: ... . Chỉ khi đủ cả 3 bước bạn mới được vào ứng dụng."
+      const mGateMissing = norm.match(/^🔒\s*Còn thiếu:\s*([\s\S]+?)\.\s*Chỉ khi đủ cả 3 bước bạn mới được vào ứng dụng\.?$/i);
+      if (mGateMissing) {
+        const items = mGateMissing[1].split(/\s*\+\s*/).map((s) => this.translateText(s.trim(), code)).join(' + ');
+        const map = {
+          en: `🔒 Missing: ${items}. You can only enter the app once all 3 steps are complete.`,
+          'zh-CN': `🔒 尚未完成：${items}。只有完成全部 3 个步骤后才能进入应用。`,
+          'zh-TW': `🔒 尚未完成：${items}。只有完成全部 3 個步驟後才能進入應用。`,
+          ko: `🔒 미완료: ${items}. 3단계를 모두 완료해야 앱에 입장할 수 있습니다.`,
+          ja: `🔒 未完了：${items}。3つのステップをすべて完了するとアプリに入れます。`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      // 10. Floating Compact Bars close / reopen toasts (mod29)
+      const mCloseBar = norm.match(/^Đã đóng ([\s\S]+?)\.\s*Bạn có thể mở lại bất cứ lúc nào ở ([\s\S]+?)\.?$/i);
+      if (mCloseBar) {
+        const barName = this.translateText(mCloseBar[1].trim(), code);
+        const reopenPlace = this.translateText(mCloseBar[2].trim(), code);
+        const map = {
+          en: `Closed ${barName}. You can reopen it anytime in ${reopenPlace}.`,
+          'zh-CN': `已关闭${barName}。您可以随时在${reopenPlace}重新打开。`,
+          'zh-TW': `已關閉${barName}。您可以隨時在${reopenPlace}重新開啟。`,
+          ko: `${barName}을(를) 닫았습니다. 언제든지 ${reopenPlace}에서 다시 열 수 있습니다.`,
+          ja: `${barName}を閉じました。いつでも${reopenPlace}から再度開けます。`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mReopenBar = norm.match(/^✅\s*Đã bật lại ([\s\S]+?)!?$/i);
+      if (mReopenBar) {
+        const barName = this.translateText(mReopenBar[1].trim(), code);
+        const map = {
+          en: `✅ Reopened ${barName}!`,
+          'zh-CN': `✅ 已重新开启${barName}！`,
+          'zh-TW': `✅ 已重新開啟${barName}！`,
+          ko: `✅ ${barName}을(를) 다시 열었습니다!`,
+          ja: `✅ ${barName}を再表示しました！`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      // 11. Google API Key verification & HTTP error messages (mod15)
+      const mGoogleReject = norm.match(/^(❌\s*)?Google từ chối API Key \(HTTP (\d+) tại (.+?)\):\s*([\s\S]+)$/i);
+      if (mGoogleReject) {
+        const prefix = mGoogleReject[1] ? '❌ ' : '';
+        const [, , status, via, detailRaw] = mGoogleReject;
+        const detail = this.translateText(detailRaw.trim(), code);
+        const map = {
+          en: `${prefix}Google rejected the API Key (HTTP ${status} via ${via}): ${detail}`,
+          'zh-CN': `${prefix}Google 拒绝了 API Key（${via} HTTP ${status}）：${detail}`,
+          'zh-TW': `${prefix}Google 拒絕了 API Key（${via} HTTP ${status}）：${detail}`,
+          ko: `${prefix}Google이 API 키를 거부했습니다 (${via} HTTP ${status}): ${detail}`,
+          ja: `${prefix}Google が API キーを拒否しました（${via} HTTP ${status}）：${detail}`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mGooglePerm = norm.match(/^(❌\s*)?API Key chưa đủ quyền hoặc bị hạn chế \(HTTP (\d+) tại (.+?)\):\s*([\s\S]+)$/i);
+      if (mGooglePerm) {
+        const prefix = mGooglePerm[1] ? '❌ ' : '';
+        const [, , status, via, detailRaw] = mGooglePerm;
+        const map = {
+          en: `${prefix}API Key lacks permissions or is restricted (HTTP ${status} via ${via}): ${detailRaw.trim()}`,
+          'zh-CN': `${prefix}API Key 权限不足或受限（${via} HTTP ${status}）：${detailRaw.trim()}`,
+          'zh-TW': `${prefix}API Key 權限不足或受限（${via} HTTP ${status}）：${detailRaw.trim()}`,
+          ko: `${prefix}API 키 권한이 부족하거나 제한되었습니다 (${via} HTTP ${status}): ${detailRaw.trim()}`,
+          ja: `${prefix}API キーの権限不足または制限されています（${via} HTTP ${status}）：${detailRaw.trim()}`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mGoogle429 = norm.match(/^(❌\s*)?API Key hợp lệ nhưng đang hết hạn ngạch tạm thời \(HTTP (\d+) tại (.+?)\):\s*([\s\S]+)$/i);
+      if (mGoogle429) {
+        const prefix = mGoogle429[1] ? '❌ ' : '';
+        const [, , status, via] = mGoogle429;
+        const map = {
+          en: `${prefix}API Key is valid but temporarily out of quota (HTTP ${status} via ${via}). Please wait 30–60s and verify again.`,
+          'zh-CN': `${prefix}API Key 有效但暂时超出配额（${via} HTTP ${status}）。请等待 30–60 秒后重试验证。`,
+          'zh-TW': `${prefix}API Key 有效但暫時超出配額（${via} HTTP ${status}）。請等待 30–60 秒後重試驗證。`,
+          ko: `${prefix}API 키는 유효하지만 일시적으로 할당량이 초과되었습니다 (${via} HTTP ${status}). 30~60초 후 다시 인증해 주세요.`,
+          ja: `${prefix}API キーは有効ですが一時的にクォータ上限に達しました（${via} HTTP ${status}）。30〜60秒後に再認証してください。`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mGoogle404 = norm.match(/^(❌\s*)?Không tìm thấy mô hình Flash-Lite khả dụng trên tài khoản \(HTTP (\d+) tại (.+?)\):\s*([\s\S]+)$/i);
+      if (mGoogle404) {
+        const prefix = mGoogle404[1] ? '❌ ' : '';
+        const [, , status, via, detailRaw] = mGoogle404;
+        const map = {
+          en: `${prefix}No available Flash-Lite model found on this account (HTTP ${status} via ${via}): ${detailRaw.trim()}`,
+          'zh-CN': `${prefix}此账号未找到可用的 Flash-Lite 模型（${via} HTTP ${status}）：${detailRaw.trim()}`,
+          'zh-TW': `${prefix}此帳號未找到可用的 Flash-Lite 模型（${via} HTTP ${status}）：${detailRaw.trim()}`,
+          ko: `${prefix}계정에서 사용 가능한 Flash-Lite 모델을 찾을 수 없습니다 (${via} HTTP ${status}): ${detailRaw.trim()}`,
+          ja: `${prefix}このアカウントで利用可能な Flash-Lite モデルが見つかりません（${via} HTTP ${status}）：${detailRaw.trim()}`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mGoogleErr = norm.match(/^(❌\s*)?Lỗi từ máy chủ Google \(HTTP (\d+) tại (.+?)\):\s*([\s\S]+)$/i);
+      if (mGoogleErr) {
+        const prefix = mGoogleErr[1] ? '❌ ' : '';
+        const [, , status, via, detailRaw] = mGoogleErr;
+        const map = {
+          en: `${prefix}Google server error (HTTP ${status} via ${via}): ${detailRaw.trim()}`,
+          'zh-CN': `${prefix}Google 服务器错误（${via} HTTP ${status}）：${detailRaw.trim()}`,
+          'zh-TW': `${prefix}Google 伺服器錯誤（${via} HTTP ${status}）：${detailRaw.trim()}`,
+          ko: `${prefix}Google 서버 오류 (${via} HTTP ${status}): ${detailRaw.trim()}`,
+          ja: `${prefix}Google サーバーエラー（${via} HTTP ${status}）：${detailRaw.trim()}`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mGoogleNet = norm.match(/^(❌\s*)?Không kết nối được tới máy chủ Google \(([^)]+)\)\.([\s\S]*)$/i);
+      if (mGoogleNet) {
+        const prefix = mGoogleNet[1] ? '❌ ' : '';
+        const detail = mGoogleNet[2];
+        const map = {
+          en: `${prefix}Cannot reach Google server (${detail}). Please check your internet, VPN, or AdBlock.`,
+          'zh-CN': `${prefix}无法连接到 Google 服务器（${detail}）。请检查网络、VPN 或广告拦截插件。`,
+          'zh-TW': `${prefix}無法連線到 Google 伺服器（${detail}）。請檢查網路、VPN 或廣告攔截套件。`,
+          ko: `${prefix}Google 서버에 연결할 수 없습니다 (${detail}). 인터넷, VPN 또는 광고 차단을 확인해 주세요.`,
+          ja: `${prefix}Google サーバーに接続できません（${detail}）。ネットワーク、VPN、広告ブロックをご確認ください。`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mVerifyOk = norm.match(/^(✅\s*)?Kết nối Gemini API thành công \((\d+)ms\)\s*—\s*([\s\S]+)$/i);
+      if (mVerifyOk) {
+        const prefix = mVerifyOk[1] ? '✅ ' : '';
+        const [, , ms, rest] = mVerifyOk;
+        const map = {
+          en: `${prefix}Gemini API connected (${ms}ms) — ${this.translateText(rest.trim(), code)}`,
+          'zh-CN': `${prefix}Gemini API 连接成功（${ms}ms）— ${this.translateText(rest.trim(), code)}`,
+          'zh-TW': `${prefix}Gemini API 連線成功（${ms}ms）— ${this.translateText(rest.trim(), code)}`,
+          ko: `${prefix}Gemini API 연결 성공 (${ms}ms) — ${this.translateText(rest.trim(), code)}`,
+          ja: `${prefix}Gemini API 接続成功（${ms}ms）— ${this.translateText(rest.trim(), code)}`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      // 12. Billing Tier 403/429 Auto-Fallback & Chapter Hierarchy / Drag-Drop toasts
+      const mFallback = norm.match(/^⚠️\s*Key của bạn hiện bị giới hạn với model ([^\s(]+)\s*\(HTTP (\d+)\),\s*đã tự động chuyển sang bản Flash \(([^)]+)\)!?$/i);
+      if (mFallback) {
+        const [, modelId, status, fallbackEp] = mFallback;
+        const map = {
+          en: `⚠️ Your API Key is restricted on model ${modelId} (HTTP ${status}); auto-switched to Flash (${fallbackEp})!`,
+          'zh-CN': `⚠️ 您的密钥在模型 ${modelId} 上受限（HTTP ${status}），已自动切换至 Flash 版本（${fallbackEp}）！`,
+          'zh-TW': `⚠️ 您的金鑰在模型 ${modelId} 上受限（HTTP ${status}），已自動切換至 Flash 版本（${fallbackEp}）！`,
+          ko: `⚠️ API 키가 ${modelId} 모델에서 제한되어(HTTP ${status}) 자동으로 Flash(${fallbackEp})로 전환되었습니다!`,
+          ja: `⚠️ APIキーはモデル ${modelId} で制限されているため（HTTP ${status}）、自動的に Flash（${fallbackEp}）へ切り替えました！`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mGroupChaps = norm.match(/^📚\s*Đã gộp (\d+) mục vào (Quyển|Chương|Cảnh):\s*"([^"]+)"!?$/i);
+      if (mGroupChaps) {
+        const [, cnt, lvl, grpName] = mGroupChaps;
+        const lvlLoc = this.translateText(lvl, code);
+        const map = {
+          en: `📚 Grouped ${cnt} items into ${lvlLoc}: "${grpName}"!`,
+          'zh-CN': `📚 已将 ${cnt} 项合并到${lvlLoc}：“${grpName}”！`,
+          'zh-TW': `📚 已將 ${cnt} 項合併到${lvlLoc}：「${grpName}」！`,
+          ko: `📚 ${cnt}개 항목을 ${lvlLoc} "${grpName}"에 병합했습니다!`,
+          ja: `📚 ${cnt}件を${lvlLoc}「${grpName}」にまとめました！`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mDragChap = norm.match(/^🔀\s*Đã kéo "([^"]+)" tới vị trí #(\d+)!?$/i);
+      if (mDragChap) {
+        const [, title, pos] = mDragChap;
+        const map = {
+          en: `🔀 Moved "${title}" to position #${pos}!`,
+          'zh-CN': `🔀 已将“${title}”拖动至第 #${pos} 位！`,
+          'zh-TW': `🔀 已將「${title}」拖曳至第 #${pos} 位！`,
+          ko: `🔀 "${title}"을(를) #${pos} 위치로 이동했습니다!`,
+          ja: `🔀 「${title}」を #${pos} 番目に移動しました！`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mPresetInsert = norm.match(/^✨\s*Đã chèn mẫu lệnh:\s*"([^"]+)"!?$/i);
+      if (mPresetInsert) {
+        const [, pname] = mPresetInsert;
+        const map = {
+          en: `✨ Inserted prompt template: "${pname}"!`,
+          'zh-CN': `✨ 已插入指令模板：“${pname}”！`,
+          'zh-TW': `✨ 已插入指令範本：「${pname}」！`,
+          ko: `✨ 프롬프트 템플릿 삽입됨: "${pname}"!`,
+          ja: `✨ プロンプトテンプレートを挿入しました：「${pname}」！`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mAiRunErr = norm.match(/^❌\s*Lỗi khi chạy ([^:]+):\s*([\s\S]+)$/i);
+      if (mAiRunErr) {
+        const [, modeLabel, errDetail] = mAiRunErr;
+        const map = {
+          en: `❌ Error running ${this.translateText(modeLabel.trim(), code)}: ${errDetail.trim()}`,
+          'zh-CN': `❌ 运行${this.translateText(modeLabel.trim(), code)}出错：${errDetail.trim()}`,
+          'zh-TW': `❌ 執行${this.translateText(modeLabel.trim(), code)}出錯：${errDetail.trim()}`,
+          ko: `❌ ${this.translateText(modeLabel.trim(), code)} 실행 오류: ${errDetail.trim()}`,
+          ja: `❌ ${this.translateText(modeLabel.trim(), code)}の実行エラー：${errDetail.trim()}`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
       if (Array.isArray(pack.patterns)) {
         for (let i = 0; i < pack.patterns.length; i++) {
           const rule = pack.patterns[i];

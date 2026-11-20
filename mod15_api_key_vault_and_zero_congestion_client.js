@@ -306,7 +306,18 @@
       id: 'gemini-4-hydrogen',
       label: '🧪 Gemini 4 Hydrogen (Khuyên Dùng #1 · Siêu Suy Luận XHIGH & Văn Phong Cân Bằng)',
       tier: 'RECOMMENDED_FLASH',
-      endpointCandidates: ['gemini-4-hydrogen', 'gemini-4-hydrogen-preview', 'gemini-4-argon', 'gemini-3.1-pro-preview', 'gemini-3.8-flash', 'gemini-2.5-flash'],
+      endpointCandidates: ['gemini-4-hydrogen', 'gemini-4-hydrogen-preview', 'gemini-4-neon', 'gemini-4-argon', 'gemini-3.1-pro-preview', 'gemini-3.8-flash', 'gemini-2.5-flash'],
+      supportsXHighThinking: true,
+      supportedThinkingLevels: ['LOW', 'MEDIUM', 'HIGH', 'XHIGH'],
+      defaultThinkingLevel: 'HIGH',
+      isLite: false
+    },
+    {
+      id: 'gemini-4-neon',
+      label: '⚡ Gemini 4 Neon (Mới · Suy Luận XHIGH Siêu Mượt & Phản Hồi Tức Thì)',
+      tier: 'PRO_HIGH',
+      billingTierRequired: 'paid',
+      endpointCandidates: ['gemini-4-neon', 'gemini-4-neon-preview', 'gemini-4-hydrogen', 'gemini-4-argon', 'gemini-3.1-pro-preview', 'gemini-2.5-flash'],
       supportsXHighThinking: true,
       supportedThinkingLevels: ['LOW', 'MEDIUM', 'HIGH', 'XHIGH'],
       defaultThinkingLevel: 'HIGH',
@@ -1231,6 +1242,16 @@
                 }
               }
 
+              if (ep !== keyEndpoints[0] && (lastError?.httpStatus === 403 || lastError?.httpStatus === 429)) {
+                try {
+                  getUtils().showToast(
+                    `⚠️ Key của bạn hiện bị giới hạn với model ${modelId} (HTTP ${lastError.httpStatus}), đã tự động chuyển sang bản Flash (${ep})!`,
+                    'warning',
+                    4600
+                  );
+                } catch (_eToastFb) {}
+              }
+
               return {
                 text: finalOutText,
                 modelId,
@@ -1238,6 +1259,7 @@
                 transportType: res.transportType || '',
                 thinkingLevel: effectiveThinking,
                 fromFallback: ep !== keyEndpoints[0] || keyIdx > 0,
+                autoDowngradedFrom: ep !== keyEndpoints[0] && (lastError?.httpStatus === 403 || lastError?.httpStatus === 429) ? modelId : '',
                 keyLabel: keyObj.label,
                 durationMs: Date.now() - overallStart,
                 finishReason: res.finishReason,
@@ -1314,6 +1336,26 @@
                 break;
               }
 
+              // Tự động hạ cấp (Auto-Fallback) sang bản Flash an toàn khi gặp 403 Permission Denied hoặc 429 Resource Exhausted (hạn mức Free = 0)
+              if (status === 403 || status === 429) {
+                const isFreeTierZeroLimit =
+                  status === 403 ||
+                  rawLow.includes('limit: 0') ||
+                  rawLow.includes('limit = 0') ||
+                  rawLow.includes('free_tier') ||
+                  rawLow.includes('free tier') ||
+                  rawLow.includes('billing');
+                if (isFreeTierZeroLimit && router?.modelSync?.markModelRestrictedForKey) {
+                  router.modelSync.markModelRestrictedForKey(keyObj.key, modelId, status, rawLow);
+                }
+                const safeFreeFallbacks = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+                safeFreeFallbacks.forEach((safeEp) => {
+                  if (!attemptedEndpoints.has(safeEp) && !keyEndpoints.includes(safeEp)) {
+                    keyEndpoints.push(safeEp);
+                  }
+                });
+              }
+
               // Nếu 429 quá tải, nghỉ jitter ngắn rồi thử endpoint kế tiếp
               if (status === 429 || status === 503) {
                 this.vaultMgr.markKeyRateLimited(keyObj.key, 65000);
@@ -1357,6 +1399,111 @@
         'smart-approve-model-select'
       ]);
       this.liveDiscoveredModels = [];
+      this.keyCapabilityProfile = {
+        keyDigest: '',
+        billingTier: 'unknown', // 'unknown' | 'free' | 'paid'
+        allowedLiveIds: null,
+        restrictedIds: new Set(),
+        probeModel: '',
+        probedAt: 0
+      };
+      this.loadPersistedKeyCapabilityProfile();
+    }
+
+    loadPersistedKeyCapabilityProfile(apiKey = '') {
+      try {
+        const cleanKey = this.router?.vaultMgr?.sanitizeKeyString?.(
+          apiKey || this.router?.vaultMgr?.primaryKey || ''
+        ) || '';
+        const digest = cleanKey ? computeGeminiKeyDigest(cleanKey) : '';
+        const raw = localStorage.getItem('noir_v40_key_billing_tier_v1');
+        if (!raw) return this.keyCapabilityProfile;
+        const parsed = JSON.parse(raw);
+        if (parsed && (!digest || parsed.keyDigest === digest)) {
+          this.keyCapabilityProfile = {
+            keyDigest: String(parsed.keyDigest || ''),
+            billingTier: parsed.billingTier === 'paid' || parsed.billingTier === 'free' ? parsed.billingTier : 'unknown',
+            allowedLiveIds: Array.isArray(parsed.allowedLiveIds) && parsed.allowedLiveIds.length > 0 ? new Set(parsed.allowedLiveIds) : null,
+            restrictedIds: new Set(Array.isArray(parsed.restrictedIds) ? parsed.restrictedIds : []),
+            probeModel: String(parsed.probeModel || ''),
+            probedAt: Number(parsed.probedAt || 0)
+          };
+        }
+      } catch (_eCap) {}
+      return this.keyCapabilityProfile;
+    }
+
+    saveKeyCapabilityProfile() {
+      try {
+        const p = this.keyCapabilityProfile;
+        localStorage.setItem(
+          'noir_v40_key_billing_tier_v1',
+          JSON.stringify({
+            keyDigest: p.keyDigest || '',
+            billingTier: p.billingTier || 'unknown',
+            allowedLiveIds: p.allowedLiveIds ? Array.from(p.allowedLiveIds) : [],
+            restrictedIds: Array.from(p.restrictedIds || []),
+            probeModel: p.probeModel || '',
+            probedAt: p.probedAt || Date.now()
+          })
+        );
+      } catch (_eSaveCap) {}
+    }
+
+    setKeyCapabilityProfile({ keyDigest = '', billingTier = 'unknown', allowedLiveIds = null, probeModel = '', probedAt = Date.now() } = {}) {
+      const prevSameKey = keyDigest && this.keyCapabilityProfile.keyDigest === keyDigest;
+      this.keyCapabilityProfile = {
+        keyDigest: String(keyDigest || ''),
+        billingTier: billingTier === 'paid' || billingTier === 'free' ? billingTier : 'unknown',
+        allowedLiveIds: Array.isArray(allowedLiveIds) && allowedLiveIds.length > 0 ? new Set(allowedLiveIds) : null,
+        restrictedIds: prevSameKey ? new Set(this.keyCapabilityProfile.restrictedIds) : new Set(),
+        probeModel: String(probeModel || ''),
+        probedAt: Number(probedAt || Date.now())
+      };
+      this.saveKeyCapabilityProfile();
+      return this.keyCapabilityProfile;
+    }
+
+    isPaidOnlyModel(modelOrId) {
+      const id = (typeof modelOrId === 'string' ? modelOrId : String(modelOrId?.id || '')).toLowerCase();
+      if (!id) return false;
+      if (typeof modelOrId === 'object' && modelOrId?.billingTierRequired === 'paid') return true;
+      if (id.includes('flash') || id.includes('lite') || id.includes('8b')) return false;
+      return (
+        id.includes('pro') ||
+        id.includes('neon') ||
+        id.includes('argon') ||
+        id.includes('carbon') ||
+        id.includes('ultra') ||
+        id.includes('omni') ||
+        id.includes('imagen') ||
+        id.includes('veo')
+      );
+    }
+
+    markModelRestrictedForKey(apiKey, modelId, httpStatus = 403, rawDetail = '') {
+      const cleanId = String(modelId || '').trim();
+      if (!cleanId || cleanId === DEFAULT_MODEL_FALLBACK_ID || !this.isPaidOnlyModel(cleanId)) return;
+      const digest = apiKey ? computeGeminiKeyDigest(apiKey) : this.keyCapabilityProfile.keyDigest;
+      if (digest && this.keyCapabilityProfile.keyDigest && this.keyCapabilityProfile.keyDigest !== digest) {
+        this.keyCapabilityProfile.keyDigest = digest;
+        this.keyCapabilityProfile.restrictedIds = new Set();
+      } else if (digest) {
+        this.keyCapabilityProfile.keyDigest = digest;
+      }
+      this.keyCapabilityProfile.restrictedIds.add(cleanId);
+      const low = String(rawDetail || '').toLowerCase();
+      if (
+        this.isPaidOnlyModel(cleanId) &&
+        (httpStatus === 403 || low.includes('limit: 0') || low.includes('limit = 0') || low.includes('free_tier') || low.includes('billing'))
+      ) {
+        this.keyCapabilityProfile.billingTier = 'free';
+      }
+      this.keyCapabilityProfile.probedAt = Date.now();
+      this.saveKeyCapabilityProfile();
+      try {
+        this.populateAllDropdowns(this.router?.getSelectedModelId?.() || '');
+      } catch (_ePop) {}
     }
 
     registerLiveDiscoveredModels(modelsDetailList = []) {
@@ -1371,7 +1518,7 @@
         seen.add(id);
         const low = id.toLowerCase();
         const isLite = low.includes('lite') || low.includes('8b');
-        const isGemini4 = low.includes('gemini-4') || low.includes('hydrogen') || low.includes('argon') || low.includes('carbon');
+        const isGemini4 = low.includes('gemini-4') || low.includes('hydrogen') || low.includes('neon') || low.includes('argon') || low.includes('carbon');
         const isPro = low.includes('pro') || isGemini4;
         const disp = typeof item === 'object' && item?.displayName
           ? String(item.displayName)
@@ -1390,6 +1537,7 @@
             ? ['gemini-2.5-pro', 'gemini-pro-latest', 'gemini-flash-latest', 'gemini-2.5-flash']
             : ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-lite-latest'],
           tier: isLite ? 'LITE_FAST' : (isPro ? 'PRO_HIGH' : 'BALANCED'),
+          billingTierRequired: this.isPaidOnlyModel(id) ? 'paid' : 'free',
           isLite,
           priorityRank,
           isLiveDiscovered: true
@@ -1399,17 +1547,50 @@
       this.liveDiscoveredModels = cleaned;
     }
 
-    getCatalog() {
+    getCatalog(options = {}) {
       const baseCatalog =
         Array.isArray(NS.models) && NS.models.length > 0
           ? NS.models
           : SAFE_INLINE_MODELS_CATALOG;
-      if (!Array.isArray(this.liveDiscoveredModels) || this.liveDiscoveredModels.length === 0) {
-        return baseCatalog;
-      }
       const existingIds = new Set(baseCatalog.map((m) => m.id));
-      const extras = this.liveDiscoveredModels.filter((m) => !existingIds.has(m.id));
-      return [...baseCatalog, ...extras];
+      const extras = Array.isArray(this.liveDiscoveredModels)
+        ? this.liveDiscoveredModels.filter((m) => !existingIds.has(m.id))
+        : [];
+      const fullList = [...baseCatalog, ...extras];
+      if (options.includeLocked) {
+        return fullList;
+      }
+
+      const cap = this.keyCapabilityProfile || {};
+      const activeKey = this.router?.vaultMgr?.primaryKey || '';
+      const activeDigest = activeKey ? computeGeminiKeyDigest(activeKey) : '';
+      const capMatchesActiveKey = !cap.keyDigest || !activeDigest || cap.keyDigest === activeDigest;
+
+      if (!capMatchesActiveKey || cap.billingTier === 'unknown') {
+        return fullList;
+      }
+
+      const restricted = cap.restrictedIds instanceof Set ? cap.restrictedIds : new Set();
+      let filtered = fullList.filter((m) => {
+        if (restricted.has(m.id)) return false;
+        if (cap.billingTier === 'free' && this.isPaidOnlyModel(m)) return false;
+        return true;
+      });
+
+      if (cap.billingTier === 'free' && cap.allowedLiveIds instanceof Set && cap.allowedLiveIds.size > 0) {
+        const liveMatched = filtered.filter((m) => {
+          if (m.id === DEFAULT_MODEL_FALLBACK_ID) return true;
+          if (m.isLiveDiscovered) return cap.allowedLiveIds.has(m.id);
+          if (cap.allowedLiveIds.has(m.id) || cap.allowedLiveIds.has(m.apiTarget)) return true;
+          const fbs = Array.isArray(m.fallbacks) ? m.fallbacks : Array.isArray(m.endpointCandidates) ? m.endpointCandidates : [];
+          return fbs.some((fb) => cap.allowedLiveIds.has(fb));
+        });
+        if (liveMatched.length > 0) {
+          filtered = liveMatched;
+        }
+      }
+
+      return filtered.length > 0 ? filtered : fullList.filter((m) => !this.isPaidOnlyModel(m));
     }
 
     isFlashLiteModel(modelId) {
@@ -1467,7 +1648,7 @@
           liteGroup.push(m);
         } else if (m.isLiveDiscovered) {
           liveMainGroup.push(m);
-        } else if (low.includes('hydrogen') || low.includes('argon') || low.includes('carbon') || low.includes('gemini-4')) {
+        } else if (low.includes('hydrogen') || low.includes('neon') || low.includes('argon') || low.includes('carbon') || low.includes('gemini-4')) {
           gemini4Group.push(m);
         } else if (low.includes('pro')) {
           proArgonGroup.push(m);
@@ -1478,7 +1659,7 @@
 
       const sections = [];
       if (gemini4Group.length > 0) {
-        sections.push(`<optgroup label="⭐ Khuyên Dùng #1 & Thế Hệ Gemini 4 (Hydrogen 4 XHIGH · Argon 4 · Carbon 4)">${gemini4Group.map(renderOpt).join('')}</optgroup>`);
+        sections.push(`<optgroup label="⭐ Khuyên Dùng #1 & Thế Hệ Gemini 4 (Hydrogen 4 · Neon 4 · Argon 4 · Carbon 4)">${gemini4Group.map(renderOpt).join('')}</optgroup>`);
       }
       if (flashGroup.length > 0) {
         sections.push(`<optgroup label="🌟 Dòng Flash Cân Bằng (Mượt & Tiết Kiệm)">${flashGroup.map(renderOpt).join('')}</optgroup>`);
@@ -1498,7 +1679,11 @@
     populateAllDropdowns(selectedId) {
       const catalog = this.getCatalog();
       const validId =
-        catalog.find((m) => m.id === selectedId)?.id || DEFAULT_MODEL_FALLBACK_ID;
+        catalog.find((m) => m.id === selectedId)?.id ||
+        catalog.find((m) => m.id === DEFAULT_MODEL_FALLBACK_ID)?.id ||
+        catalog.find((m) => !this.isFlashLiteModel(m.id))?.id ||
+        catalog[0]?.id ||
+        DEFAULT_MODEL_FALLBACK_ID;
       const groupedHtml = this.buildGroupedOptionsHtml(catalog);
 
       for (const domId of this.selectorIds) {
@@ -1546,6 +1731,7 @@
           row.innerHTML = `
             <span class="text-[10px] font-bold text-zinc-300 mr-1">Đổi nhanh sang bản mạnh:</span>
             <button type="button" data-quick-upgrade-model="gemini-4-hydrogen" class="px-2 py-0.5 rounded-lg bg-cyan-600/90 hover:bg-cyan-500 text-white font-bold text-[10px] transition">🧪 Gemini 4 Hydrogen (#1)</button>
+            <button type="button" data-quick-upgrade-model="gemini-4-neon" class="px-2 py-0.5 rounded-lg bg-fuchsia-600/85 hover:bg-fuchsia-500 text-white font-bold text-[10px] transition">⚡ Gemini 4 Neon</button>
             <button type="button" data-quick-upgrade-model="gemini-3.8-flash" class="px-2 py-0.5 rounded-lg bg-emerald-600/80 hover:bg-emerald-500 text-white font-bold text-[10px] transition">🌟 Gemini 3.8 Flash</button>
             <button type="button" data-quick-upgrade-model="gemini-4-argon" class="px-2 py-0.5 rounded-lg bg-indigo-600/80 hover:bg-indigo-500 text-white font-bold text-[10px] transition">💎 Gemini 4 Argon (Pro)</button>
             <button type="button" data-quick-upgrade-model="gemini-3.1-pro-preview" class="px-2 py-0.5 rounded-lg bg-amber-600/80 hover:bg-amber-500 text-white font-bold text-[10px] transition">👑 Gemini 3.1 Pro</button>
@@ -1562,6 +1748,11 @@
           banner.appendChild(row);
           window.NoirStudio?.i18n?.translateElement?.(row);
         }
+        const allowedIds = new Set(this.getCatalog().map((m) => m.id));
+        banner.querySelectorAll('[data-quick-upgrade-model]').forEach((btn) => {
+          const targetId = btn.getAttribute('data-quick-upgrade-model');
+          btn.classList.toggle('hidden', Boolean(targetId && !allowedIds.has(targetId)));
+        });
         window.NoirStudio?.i18n?.translateElement?.(banner);
       } else {
         banner.classList.add('hidden');
@@ -1847,11 +2038,37 @@
 
           if (this.router?.modelSync) {
             this.router.modelSync.registerLiveDiscoveredModels(this.lastLiveModelsDetailed);
-            this.router.modelSync.populateAllDropdowns(this.router.getSelectedModelId());
+          }
+
+          // Kiểm tra trạng thái thanh toán (Billing Tier: Paid vs Free) bằng 1 request siêu nhẹ 1 token
+          let tierProbe = { billingTier: 'unknown', probeModel: '', httpStatus: 0 };
+          try {
+            tierProbe = await this.probeBillingTierForKey(apiKey, tId, this.lastLiveModels);
+          } catch (_eTier) {}
+
+          if (this.router?.modelSync) {
+            this.router.modelSync.setKeyCapabilityProfile({
+              keyDigest: computeGeminiKeyDigest(apiKey),
+              billingTier: tierProbe.billingTier || 'unknown',
+              allowedLiveIds: this.lastLiveModels,
+              probeModel: tierProbe.probeModel || '',
+              probedAt: Date.now()
+            });
+            const syncedSelectedId = this.router.modelSync.populateAllDropdowns(this.router.getSelectedModelId());
+            if (syncedSelectedId && syncedSelectedId !== this.router.getSelectedModelId() && typeof this.router.setSelectedModel === 'function') {
+              this.router.setSelectedModel(syncedSelectedId);
+            }
           }
           if (this.router?.quotaTracker) {
             this.router.quotaTracker.renderRealtimeQuotaWidget();
           }
+
+          const tierBadgeMsg =
+            tierProbe.billingTier === 'paid'
+              ? 'Gói Paid Tier (Đã bật Billing) — Mở khóa đầy đủ Pro / Gemini 4 Neon / Argon.'
+              : tierProbe.billingTier === 'free'
+                ? 'Gói Free Tier — Đã tự động lọc chỉ hiển thị các mô hình miễn phí (Flash / Flash-Lite) để tránh lỗi 403/429.'
+                : `Key của bạn đang mở khóa ${this.lastLiveModels.length} điểm truy cập Gemini.`;
 
           return {
             ok: true,
@@ -1859,9 +2076,11 @@
             transportType: tId,
             latencyMs: Date.now() - started,
             availableCount: this.lastLiveModels.length,
+            billingTier: tierProbe.billingTier || 'unknown',
+            probeModel: tierProbe.probeModel || '',
             sampleModels: this.lastLiveModels.slice(0, 6),
             warningNote: formatCheck.warning || '',
-            message: `Kết nối Gemini API thành công (${Date.now() - started}ms) — Key của bạn đang mở khóa ${this.lastLiveModels.length} điểm truy cập Gemini.`
+            message: `Kết nối Gemini API thành công (${Date.now() - started}ms) — ${tierBadgeMsg}`
           };
         } catch (err) {
           lastFailureResult = {
@@ -1889,6 +2108,64 @@
           message: 'Không thể lấy danh sách mô hình từ Google AI Studio.'
         }
       );
+    }
+
+    async probeBillingTierForKey(apiKey, transportType = 'AI_STUDIO_QUERY', liveModels = []) {
+      const cleanKey = this.vaultMgr.sanitizeKeyString(apiKey || this.vaultMgr.primaryKey);
+      if (!cleanKey) return { billingTier: 'unknown', probeModel: '', httpStatus: 0 };
+      const spec = GEMINI_TRANSPORT_SPECS[transportType] || GEMINI_TRANSPORT_SPECS.AI_STUDIO_QUERY;
+      if (!spec || typeof spec.buildGenerateUrl !== 'function') {
+        return { billingTier: 'unknown', probeModel: '', httpStatus: 0 };
+      }
+
+      const liveSet = new Set(Array.isArray(liveModels) ? liveModels : []);
+      const preferredPaidProbes = ['gemini-3.1-pro-preview', 'gemini-2.5-pro', 'gemini-4-neon', 'gemini-pro-latest'];
+      const orderedProbes = [];
+      for (const m of preferredPaidProbes) {
+        if (liveSet.size === 0 || liveSet.has(m)) orderedProbes.push(m);
+      }
+      if (orderedProbes.length === 0) {
+        const livePro = (Array.isArray(liveModels) ? liveModels : []).find((id) =>
+          /pro|neon|argon|carbon/i.test(id) && !/flash|lite|embedding|imagen/i.test(id)
+        );
+        orderedProbes.push(livePro || 'gemini-3.1-pro-preview');
+      }
+
+      const payload = {
+        contents: [{ role: 'user', parts: [{ text: '.' }] }],
+        generationConfig: { maxOutputTokens: 1, temperature: 0 }
+      };
+
+      for (let i = 0; i < Math.min(2, orderedProbes.length); i++) {
+        const probeModel = orderedProbes[i];
+        const url = spec.buildGenerateUrl(probeModel, 'generateContent', cleanKey, false);
+        const headers = spec.buildPostHeaders ? spec.buildPostHeaders(cleanKey) : { 'Content-Type': 'application/json' };
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 5500);
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload),
+            signal: ctrl.signal
+          });
+          clearTimeout(timer);
+          if (res.ok) {
+            return { billingTier: 'paid', probeModel, httpStatus: 200 };
+          }
+          if (res.status === 403 || res.status === 429) {
+            return { billingTier: 'free', probeModel, httpStatus: res.status };
+          }
+          if (res.status === 404) {
+            continue;
+          }
+          return { billingTier: 'unknown', probeModel, httpStatus: res.status };
+        } catch (_eNet) {
+          clearTimeout(timer);
+          return { billingTier: 'unknown', probeModel, httpStatus: 0 };
+        }
+      }
+      return { billingTier: 'unknown', probeModel: orderedProbes[0] || '', httpStatus: 404 };
     }
 
     async discoverLiveFlashLiteModels(candidateKey = '') {

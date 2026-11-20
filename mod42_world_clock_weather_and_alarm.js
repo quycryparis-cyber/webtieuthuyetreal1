@@ -2041,39 +2041,50 @@
           </div>
         </div>
 
-        <!-- Đối chiếu múi giờ toàn cầu -->
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">🌐 Đối Chiếu Giờ Quốc Tế Nhanh</h3>
-            <span class="text-[10px] text-zinc-500 dark:text-zinc-400">Giờ tại các thị trường Light Novel & WebNovel lớn</span>
+        <!-- Đối chiếu múi giờ toàn cầu (Mặc định thu gọn để tối ưu giao diện) -->
+        <div class="p-3 rounded-2xl border border-zinc-300/80 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/50 space-y-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">🌐 Đối Chiếu Giờ Quốc Tế Nhanh</h3>
+              <span class="text-[10px] text-zinc-500 dark:text-zinc-400">Giờ tại các thị trường Light Novel & WebNovel lớn</span>
+            </div>
+            <button type="button" id="btn-mod42-toggle-world-compare" class="px-2.5 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900 text-[10.5px] font-bold text-zinc-700 dark:text-zinc-200 hover:border-emerald-500 transition">${controller.showWorldCompare ? '▲ Thu gọn' : '▼ Mở rộng'}</button>
           </div>
-          <div id="mod42-world-compare-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+          <div id="mod42-world-compare-grid" class="${controller.showWorldCompare ? '' : 'hidden '}grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
             ${worldCompareHtml}
           </div>
         </div>
 
-        <!-- Chia 2 cột: Cột chọn Múi giờ & Cột chọn Định dạng ngày giờ -->
+        <!-- Chia 2 cột: Cột chọn Múi giờ & Cột chọn Định dạng ngày giờ (Có nút Thu gọn / Mở rộng) -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <div class="lg:col-span-7 space-y-2.5 p-3 rounded-2xl border border-zinc-300/80 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/50">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <h3 class="text-xs font-extrabold text-zinc-800 dark:text-zinc-100">🗺️ Chọn Múi Giờ Quốc Tế (GMT -11 đến +14)</h3>
-              <select id="mod42-fixed-gmt-select" class="px-2 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[11px] font-monoCode text-zinc-800 dark:text-zinc-200">
-                <option value="AUTO" ${state.customOffsetMinutes === null ? 'selected' : ''}>Theo thành phố / IANA chuẩn</option>
-                ${fixedGmtOptions.join('')}
-              </select>
+              <button type="button" id="btn-mod42-toggle-tz-picker" class="px-2.5 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900 text-[10.5px] font-bold text-zinc-700 dark:text-zinc-200 hover:border-emerald-500 transition">${controller.showTzPicker ? '▲ Thu gọn' : '▼ Mở rộng'}</button>
             </div>
-            <div class="flex flex-wrap items-center gap-1.5">
-              <input type="text" id="mod42-tz-search-input" value="${escapeHtml(controller.tzSearchQuery || '')}" placeholder="🔍 Tìm thành phố, quốc gia hoặc GMT +9, New York, Tokyo..." class="w-full px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs text-zinc-800 dark:text-zinc-100 focus:outline-none focus:border-emerald-500" />
-            </div>
-            <div class="flex flex-wrap gap-1">${regionButtons}</div>
-            <div id="mod42-tz-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
-              ${zoneCardsHtml || '<div class="col-span-full text-xs text-zinc-500 py-4 text-center">Không tìm thấy múi giờ phù hợp từ khóa.</div>'}
+            <div id="mod42-tz-picker-body" class="${controller.showTzPicker ? '' : 'hidden '}space-y-2.5">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <select id="mod42-fixed-gmt-select" class="px-2 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[11px] font-monoCode text-zinc-800 dark:text-zinc-200">
+                  <option value="AUTO" ${state.customOffsetMinutes === null ? 'selected' : ''}>Theo thành phố / IANA chuẩn</option>
+                  ${fixedGmtOptions.join('')}
+                </select>
+              </div>
+              <div class="flex flex-wrap items-center gap-1.5">
+                <input type="text" id="mod42-tz-search-input" value="${escapeHtml(controller.tzSearchQuery || '')}" placeholder="🔍 Tìm thành phố, quốc gia hoặc GMT +9, New York, Tokyo..." class="w-full px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs text-zinc-800 dark:text-zinc-100 focus:outline-none focus:border-emerald-500" />
+              </div>
+              <div class="flex flex-wrap gap-1">${regionButtons}</div>
+              <div id="mod42-tz-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
+                ${zoneCardsHtml || '<div class="col-span-full text-xs text-zinc-500 py-4 text-center">Không tìm thấy múi giờ phù hợp từ khóa.</div>'}
+              </div>
             </div>
           </div>
 
           <div class="lg:col-span-5 space-y-2.5 p-3 rounded-2xl border border-zinc-300/80 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/50">
-            <h3 class="text-xs font-extrabold text-zinc-800 dark:text-zinc-100">📅 Định Dạng Ngày &amp; Giờ</h3>
-            <div id="mod42-format-list" class="space-y-2 max-h-80 overflow-y-auto pr-1">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-xs font-extrabold text-zinc-800 dark:text-zinc-100">📅 Định Dạng Ngày &amp; Giờ</h3>
+              <button type="button" id="btn-mod42-toggle-format-picker" class="px-2.5 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900 text-[10.5px] font-bold text-zinc-700 dark:text-zinc-200 hover:border-emerald-500 transition">${controller.showFormatPicker ? '▲ Thu gọn' : '▼ Mở rộng'}</button>
+            </div>
+            <div id="mod42-format-list" class="${controller.showFormatPicker ? '' : 'hidden '}space-y-2 max-h-80 overflow-y-auto pr-1">
               ${formatOptionsHtml}
             </div>
           </div>
@@ -2221,16 +2232,22 @@
           </div>
         </div>
 
-        <!-- Theo giờ -->
-        <div>
-          <h4 class="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-2">⏱️ Dự Báo Ngắn Hạn Theo Giờ</h4>
-          <div class="flex gap-2 overflow-x-auto pb-1">${hourlyHtml}</div>
+        <!-- Theo giờ (Có nút Thu gọn / Mở rộng) -->
+        <div class="p-3 rounded-2xl border border-zinc-300/80 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/50 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <h4 class="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">⏱️ Dự Báo Ngắn Hạn Theo Giờ</h4>
+            <button type="button" id="btn-mod42-toggle-weather-hourly" class="px-2.5 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900 text-[10.5px] font-bold text-zinc-700 dark:text-zinc-200 hover:border-sky-500 transition">${controller.showWeatherHourly ? '▲ Thu gọn' : '▼ Mở rộng'}</button>
+          </div>
+          <div id="mod42-weather-hourly-body" class="${controller.showWeatherHourly ? '' : 'hidden '}flex gap-2 overflow-x-auto pb-1">${hourlyHtml}</div>
         </div>
 
-        <!-- 5 ngày tới -->
-        <div>
-          <h4 class="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-2">📆 Xu Hướng 5 Ngày Tới</h4>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">${dailyHtml}</div>
+        <!-- 5 ngày tới (Có nút Thu gọn / Mở rộng) -->
+        <div class="p-3 rounded-2xl border border-zinc-300/80 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/50 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <h4 class="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">📆 Xu Hướng 5 Ngày Tới</h4>
+            <button type="button" id="btn-mod42-toggle-weather-daily" class="px-2.5 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900 text-[10.5px] font-bold text-zinc-700 dark:text-zinc-200 hover:border-sky-500 transition">${controller.showWeatherDaily ? '▲ Thu gọn' : '▼ Mở rộng'}</button>
+          </div>
+          <div id="mod42-weather-daily-body" class="${controller.showWeatherDaily ? '' : 'hidden '}grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">${dailyHtml}</div>
         </div>
 
         <!-- Module 43: Mô phỏng bầu trời 6 khung giờ × 28 thời tiết WMO & Nền Website Real-Time -->
@@ -3109,6 +3126,21 @@
           this.setDateFormat(btn.getAttribute('data-mod42-select-format'));
         });
       });
+
+      const bindCollapseBtn = (btnId, bodyId, stateKey) => {
+        const btn = container.querySelector(`#${btnId}`);
+        const bodyEl = container.querySelector(`#${bodyId}`);
+        if (!btn || !bodyEl) return;
+        btn.addEventListener('click', () => {
+          this[stateKey] = !this[stateKey];
+          bodyEl.classList.toggle('hidden', !this[stateKey]);
+          const lbl = this[stateKey] ? '▲ Thu gọn' : '▼ Mở rộng';
+          btn.textContent = NS.i18n?.translateText?.(lbl) || lbl;
+        });
+      };
+      bindCollapseBtn('btn-mod42-toggle-world-compare', 'mod42-world-compare-grid', 'showWorldCompare');
+      bindCollapseBtn('btn-mod42-toggle-tz-picker', 'mod42-tz-picker-body', 'showTzPicker');
+      bindCollapseBtn('btn-mod42-toggle-format-picker', 'mod42-format-list', 'showFormatPicker');
     }
 
     bindWeatherTabEvents(container) {
@@ -3165,6 +3197,20 @@
       container.querySelector('#mod42-btn-weather-follow-tz')?.addEventListener('click', () => {
         this.clearGpsWeatherOverride(true, true);
       });
+
+      const bindWeatherCollapseBtn = (btnId, bodyId, stateKey) => {
+        const btn = container.querySelector(`#${btnId}`);
+        const bodyEl = container.querySelector(`#${bodyId}`);
+        if (!btn || !bodyEl) return;
+        btn.addEventListener('click', () => {
+          this[stateKey] = !this[stateKey];
+          bodyEl.classList.toggle('hidden', !this[stateKey]);
+          const lbl = this[stateKey] ? '▲ Thu gọn' : '▼ Mở rộng';
+          btn.textContent = NS.i18n?.translateText?.(lbl) || lbl;
+        });
+      };
+      bindWeatherCollapseBtn('btn-mod42-toggle-weather-hourly', 'mod42-weather-hourly-body', 'showWeatherHourly');
+      bindWeatherCollapseBtn('btn-mod42-toggle-weather-daily', 'mod42-weather-daily-body', 'showWeatherDaily');
     }
 
     bindAlarmTabEvents(container) {

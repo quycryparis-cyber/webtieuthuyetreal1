@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover, interactive-widget=resizes-content" />
   <meta name="theme-color" content="#09090b" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -77,7 +77,22 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    html, body {
+    html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      max-width: 100%;
+      height: 100%;
+      min-height: 100%;
+      background-color: #F7F4EB;
+      overflow: hidden;
+      overflow: clip !important;
+      overscroll-behavior: none;
+    }
+    html.dark {
+      background-color: #09090B;
+    }
+    body {
       margin: 0;
       padding: 0;
       width: 100%;
@@ -86,16 +101,21 @@
       height: 100dvh;
       height: calc(var(--studio-vh, 1dvh) * 100) !important;
       max-height: calc(var(--studio-vh, 1dvh) * 100) !important;
+      min-height: 100%;
       overflow: hidden;
       overflow: clip !important;
       overscroll-behavior: none;
       font-feature-settings: "cv02", "cv03", "cv04", "cv11";
       -webkit-font-smoothing: antialiased;
     }
-    html[data-keyboard-open="true"],
+    html[data-keyboard-open="true"] {
+      height: 100% !important;
+      min-height: 100% !important;
+    }
     html[data-keyboard-open="true"] body {
       height: calc(var(--studio-vh, 1dvh) * 100) !important;
       max-height: calc(var(--studio-vh, 1dvh) * 100) !important;
+      min-height: 100% !important;
     }
 
     /* Bảo vệ toàn cục cho mọi cửa sổ popup / modal trên mọi màn hình (không bao giờ cắt mất đỉnh & nút Đóng) */
@@ -822,6 +842,47 @@
     html:not(.dark) select:not(.noir-dark-select) {
       color-scheme: light;
     }
+
+    /* Chế độ Viết Tập Trung Hoàn Toàn (Focused Writing Mode) */
+    body.noir-focus-writing-mode #s14-master-top-nav,
+    body.noir-focus-writing-mode #mobile-bottom-nav,
+    body.noir-focus-writing-mode #floating-pomodoro-pill,
+    body.noir-focus-writing-mode #floating-audio-mini-bar,
+    body.noir-focus-writing-mode #floating-ai-assistant-btn,
+    body.noir-focus-writing-mode #btn-toggle-tab1-toolbar,
+    body.noir-focus-writing-mode #tab1-collapsible-tools-body,
+    body.noir-focus-writing-mode #daily-goal-progress-pill {
+      display: none !important;
+    }
+    body.noir-focus-writing-mode #tab1-focus-writing-topbar {
+      display: flex !important;
+    }
+    /* Tối thiểu hóa Cửa sổ Chọn Mô Hình AI khi ở Chế độ Viết Tập Trung: chỉ giữ Chế độ, Mô hình, Khung Prompt mẫu & Ô nhập lệnh */
+    body.noir-focus-writing-mode #modal-fullscreen-ai-command #ai-realtime-quota-widget,
+    body.noir-focus-writing-mode #modal-fullscreen-ai-command #btn-toggle-cmd-params-drawer,
+    body.noir-focus-writing-mode #modal-fullscreen-ai-command #cmd-params-collapsible-body,
+    body.noir-focus-writing-mode #modal-fullscreen-ai-command #btn-cmd-open-bible-drawer {
+      display: none !important;
+    }
+    body.noir-focus-writing-mode #modal-fullscreen-ai-command #cmd-params-essential-bar > div:nth-child(3),
+    body.noir-focus-writing-mode #modal-fullscreen-ai-command #cmd-params-essential-bar > div:nth-child(4) {
+      display: none !important;
+    }
+    body.noir-focus-writing-mode #modal-fullscreen-ai-command #cmd-params-essential-bar {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    /* Cửa sổ Story Bible tối giản khi mở từ Chế độ Viết Tập Trung */
+    body.noir-focus-writing-mode.noir-focus-bible-open #right-bible-pane {
+      display: block !important;
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 75 !important;
+      overflow-y: auto !important;
+      padding-top: 56px !important;
+    }
+    body.noir-focus-writing-mode.noir-focus-bible-open #tab4-focus-bible-close-bar {
+      display: flex !important;
+    }
   </style>
   <script>
     /* Lớp khiên sớm chặn mọi tín hiệu WebSocket Live-Server 'reload' làm văng người dùng ra ngoài Cổng kết nối khi đang gõ/lưu */
@@ -920,7 +981,7 @@
         }, true);
       } catch (_eSub) {}
       try {
-        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v92';
+        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v98';
         if (typeof window !== 'undefined' && 'caches' in window && window.caches && typeof window.caches.keys === 'function') {
           window.caches.keys().then(function (keys) {
             for (var i = 0; i < keys.length; i++) {
@@ -1625,14 +1686,31 @@
         <!-- =============================================================== -->
         <div id="pane-right-manuscript" class="lg:col-span-12 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden min-w-0 bg-studioLightBg dark:bg-noirBg">
 
+          <!-- Thanh điều khiển tối giản khi bật Chế Độ Viết Tập Trung Hoàn Toàn -->
+          <div id="tab1-focus-writing-topbar" class="hidden px-3 lg:px-5 py-1.5 border-b border-emerald-500/35 bg-zinc-950/95 text-xs flex-wrap items-center justify-between gap-2 shrink-0">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 font-extrabold text-[10.5px]">🎯 Viết Tập Trung</span>
+              <button type="button" id="btn-focus-open-ai-cmd" class="px-2.5 py-1 rounded-lg border border-indigo-400/50 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-200 font-bold text-[11px] transition">🤖 Mô hình &amp; Lệnh AI</button>
+              <button type="button" id="btn-focus-open-bible" class="px-2.5 py-1 rounded-lg border border-amber-400/50 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-bold text-[11px] transition">🏛️ Story Bible</button>
+              <button type="button" id="btn-focus-toggle-split" class="px-2.5 py-1 rounded-lg border border-cyan-400/50 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-200 font-bold text-[11px] transition">⚡ Split Bible &amp; Lệnh</button>
+            </div>
+            <button type="button" id="btn-exit-focus-writing-mode" class="px-2.5 py-1 rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white font-bold text-[11px] transition shrink-0">✕ Thoát Tập Trung</button>
+          </div>
+
           <!-- Thanh công cụ Bàn viết Tab 1 (Mặc định rút gọn sẵn khi đăng nhập lần đầu, bấm để bung đầy đủ) -->
           <div id="stage6-reader-typography-bar" class="px-3 lg:px-5 py-1.5 border-b border-studioLightBorder dark:border-noirBorder bg-studioLightPanel/80 dark:bg-zinc-900/80 space-y-1.5 text-xs shrink-0">
-            <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
               <button type="button" id="btn-toggle-tab1-toolbar" data-noir-collapse-target="tab1-collapsible-tools-body" data-noir-collapse-key="tab1_toolbar" class="noir-collapse-toggle px-2.5 py-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-[11px] font-bold flex items-center gap-1.5 transition" title="Mở rộng / Rút gọn thanh công cụ biên tập (Hoàn tác, Chuẩn hóa thoại, Tìm thay thế, Soát sáo rỗng, Từ điển Ngũ quan, Xuất sách)">
                 <span>🛠️ Công cụ biên tập &amp; Xuất sách</span>
                 <span class="noir-collapse-arrow">▾</span>
               </button>
-              <div class="flex items-center gap-1.5">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <button type="button" id="btn-tab1-focus-writing-mode" class="px-2.5 py-1 rounded-lg border border-emerald-500/45 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-[11px] font-bold transition" title="Bật Chế độ Viết Tập Trung Hoàn Toàn (chỉ giữ Tab 1 + nút Mô hình AI tối giản & Story Bible)">
+                  <span>🎯 Viết Tập Trung</span>
+                </button>
+                <button type="button" id="btn-tab1-split-bible-cmd" class="px-2.5 py-1 rounded-lg border border-cyan-500/45 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-200 text-[11px] font-bold transition" title="Mở bảng chia đôi (Split Table) xem Story Bible hiện tại & Câu lệnh AI hiện tại ngay tại Tab 1">
+                  <span>⚡ Split Bible &amp; Lệnh</span>
+                </button>
                 <button type="button" id="btn-tab1-quick-ai-open" class="px-2.5 py-1 rounded-lg border border-indigo-500/40 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 text-[11px] font-bold transition" title="Mở nhanh Trợ lý AI viết tiếp chương">
                   <span>🤖 AI Hỗ Trợ</span>
                 </button>
@@ -1726,28 +1804,54 @@
             </div>
           </div>
 
-          <!-- Vùng soạn thảo chính: Gồm Khung Soạn Thảo Textarea & Bề Mặt Duyệt Màu AI (Google Docs) -->
-          <div class="flex-1 flex flex-col min-h-[44vh] lg:min-h-[280px] overflow-hidden relative px-2 sm:px-6 lg:px-10 py-3">
-            <!-- Bề mặt hiển thị phân biệt màu sắc Người viết vs AI viết (Hiện khi có đoạn AI chờ duyệt) -->
-            <div id="ai-diff-review-surface" class="hidden w-full flex-1 p-5 sm:p-8 rounded-2xl border-2 border-emerald-500/40 bg-studioLightPanel/90 dark:bg-zinc-950/95 novel-editor-textarea overflow-y-auto whitespace-pre-wrap select-text shadow-inner"></div>
+          <!-- Vùng soạn thảo chính: Gồm Khung Soạn Thảo Textarea, Bề Mặt Duyệt Màu AI & Bảng Split (Story Bible + Câu Lệnh AI) -->
+          <div class="flex-1 flex flex-col lg:flex-row gap-3 min-h-[44vh] lg:min-h-[280px] overflow-hidden relative px-2 sm:px-6 lg:px-10 py-3">
+            <div class="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+              <!-- Bề mặt hiển thị phân biệt màu sắc Người viết vs AI viết (Hiện khi có đoạn AI chờ duyệt) -->
+              <div id="ai-diff-review-surface" class="hidden w-full flex-1 p-5 sm:p-8 rounded-2xl border-2 border-emerald-500/40 bg-studioLightPanel/90 dark:bg-zinc-950/95 novel-editor-textarea overflow-y-auto whitespace-pre-wrap select-text shadow-inner"></div>
 
-            <!-- Khung soạn thảo tiểu thuyết chính -->
-            <textarea id="textarea-chapter-content" class="w-full flex-1 min-h-[42vh] lg:min-h-[260px] p-4 sm:p-8 rounded-2xl border border-studioLightBorder dark:border-zinc-800/90 bg-studioLightPanel/70 dark:bg-zinc-950/90 novel-editor-textarea select-text focus:outline-none focus:border-emerald-500/70 resize-y lg:resize-none shadow-inner mx-auto" placeholder="Bắt đầu viết chương tiểu thuyết của bạn tại đây...&#10;- Quy ước hội thoại chuẩn: - Câu thoại (Tên nhân vật)&#10;- Hệ thống tự động lưu an toàn sau mỗi 2 giây và tạo bản sao lưu phiên bản tự động."></textarea>
+              <!-- Khung soạn thảo tiểu thuyết chính -->
+              <textarea id="textarea-chapter-content" class="w-full flex-1 min-h-[42vh] lg:min-h-[260px] p-4 sm:p-8 rounded-2xl border border-studioLightBorder dark:border-zinc-800/90 bg-studioLightPanel/70 dark:bg-zinc-950/90 novel-editor-textarea select-text focus:outline-none focus:border-emerald-500/70 resize-y lg:resize-none shadow-inner mx-auto" placeholder="Bắt đầu viết chương tiểu thuyết của bạn tại đây...&#10;- Quy ước hội thoại chuẩn: - Câu thoại (Tên nhân vật)&#10;- Hệ thống tự động lưu an toàn sau mỗi 2 giây và tạo bản sao lưu phiên bản tự động."></textarea>
 
-            <!-- Thanh phím tắt dấu câu tiểu thuyết dành riêng cho Điện thoại & Máy tính bảng (Mặc định rút gọn sẵn) -->
-            <div id="mobile-writer-quickbar" class="lg:hidden mt-2 px-2 py-1.5 rounded-xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightPanel/95 dark:bg-zinc-900/95 flex items-center gap-1.5 overflow-x-auto text-xs shrink-0">
-              <button type="button" id="btn-toggle-mobile-quickbar" data-noir-collapse-target="mobile-quickbar-collapsible-buttons" data-noir-collapse-key="mobile_quickbar" class="noir-collapse-toggle px-2 py-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-[10px] font-bold text-emerald-400 shrink-0 flex items-center gap-1">
-                <span>⌨️ Dấu câu</span> <span class="noir-collapse-arrow">▾</span>
-              </button>
-              <div id="mobile-quickbar-collapsible-buttons" class="hidden flex items-center gap-1.5 shrink-0">
-                <button type="button" data-quick-insert="\n- " class="px-2.5 py-1 rounded-lg bg-zinc-800 text-emerald-300 font-monoCode font-bold shrink-0">- Thoại</button>
-                <button type="button" data-quick-insert=" ()" class="px-2.5 py-1 rounded-lg bg-zinc-800 text-amber-300 font-monoCode font-bold shrink-0">(Tên NV)</button>
-                <button type="button" data-quick-insert="“”" class="px-2.5 py-1 rounded-lg bg-zinc-800 text-zinc-200 font-monoCode font-bold shrink-0">“ ”</button>
-                <button type="button" data-quick-insert=" — " class="px-2.5 py-1 rounded-lg bg-zinc-800 text-zinc-200 font-monoCode font-bold shrink-0">—</button>
-                <button type="button" data-quick-insert="…" class="px-2.5 py-1 rounded-lg bg-zinc-800 text-zinc-200 font-monoCode font-bold shrink-0">…</button>
-                <button type="button" data-quick-insert="\n\n* * *\n\n" class="px-2.5 py-1 rounded-lg bg-zinc-800 text-indigo-300 font-monoCode font-bold shrink-0">* * * (Chuyển cảnh)</button>
+              <!-- Thanh phím tắt dấu câu tiểu thuyết dành riêng cho Điện thoại & Máy tính bảng (Mặc định rút gọn sẵn) -->
+              <div id="mobile-writer-quickbar" class="lg:hidden mt-2 px-2 py-1.5 rounded-xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightPanel/95 dark:bg-zinc-900/95 flex items-center gap-1.5 overflow-x-auto text-xs shrink-0">
+                <button type="button" id="btn-toggle-mobile-quickbar" data-noir-collapse-target="mobile-quickbar-collapsible-buttons" data-noir-collapse-key="mobile_quickbar" class="noir-collapse-toggle px-2 py-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-[10px] font-bold text-emerald-400 shrink-0 flex items-center gap-1">
+                  <span>⌨️ Dấu câu</span> <span class="noir-collapse-arrow">▾</span>
+                </button>
+                <div id="mobile-quickbar-collapsible-buttons" class="hidden flex items-center gap-1.5 shrink-0">
+                  <button type="button" data-quick-insert="\n- " class="px-2.5 py-1 rounded-lg bg-zinc-800 text-emerald-300 font-monoCode font-bold shrink-0">- Thoại</button>
+                  <button type="button" data-quick-insert=" ()" class="px-2.5 py-1 rounded-lg bg-zinc-800 text-amber-300 font-monoCode font-bold shrink-0">(Tên NV)</button>
+                  <button type="button" data-quick-insert="“”" class="px-2.5 py-1 rounded-lg bg-zinc-800 text-zinc-200 font-monoCode font-bold shrink-0">“ ”</button>
+                  <button type="button" data-quick-insert=" — " class="px-2.5 py-1 rounded-lg bg-zinc-800 text-zinc-200 font-monoCode font-bold shrink-0">—</button>
+                  <button type="button" data-quick-insert="…" class="px-2.5 py-1 rounded-lg bg-zinc-800 text-zinc-200 font-monoCode font-bold shrink-0">…</button>
+                  <button type="button" data-quick-insert="\n\n* * *\n\n" class="px-2.5 py-1 rounded-lg bg-zinc-800 text-indigo-300 font-monoCode font-bold shrink-0">* * * (Chuyển cảnh)</button>
+                </div>
               </div>
             </div>
+
+            <!-- Bảng Split Table tại Tab 1: Xem & sửa song song Story Bible hiện tại + Câu lệnh AI hiện tại -->
+            <aside id="tab1-split-workbench-drawer" class="hidden w-full lg:w-[440px] xl:w-[500px] max-h-[55vh] lg:max-h-none flex flex-col rounded-2xl border-2 border-cyan-500/40 bg-studioLightPanel/95 dark:bg-zinc-950/95 shadow-xl overflow-hidden shrink-0 text-xs">
+              <div class="px-3 py-2 border-b border-cyan-500/30 bg-cyan-950/35 flex items-center justify-between gap-2 shrink-0">
+                <span class="font-extrabold text-cyan-300 text-[11px]">⚡ Split Bảng: Story Bible &amp; Câu Lệnh Hiện Tại</span>
+                <button type="button" id="btn-close-tab1-split-workbench" class="px-2 py-0.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-[11px]">✕</button>
+              </div>
+              <div class="flex-1 grid grid-cols-1 divide-y divide-zinc-800 overflow-y-auto min-h-0">
+                <div class="p-2.5 flex flex-col gap-1.5 min-h-[160px]">
+                  <div class="flex items-center justify-between gap-1.5">
+                    <span class="font-extrabold text-amber-300 text-[11px]">🏛️ Story Bible hiện tại</span>
+                    <button type="button" id="btn-split-open-full-bible" class="px-2 py-0.5 rounded-lg border border-amber-500/40 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-bold text-[10px]">Mở Nhân vật / Phục bút</button>
+                  </div>
+                  <textarea id="tab1-split-bible-textarea" rows="7" class="w-full flex-1 p-2 rounded-xl border border-zinc-800 bg-zinc-900/90 text-zinc-100 text-[11.5px] leading-relaxed select-text focus:outline-none focus:border-amber-400" placeholder="Nội dung Story Bible hiện tại sẽ tự đồng bộ 2 chiều tại đây..."></textarea>
+                </div>
+                <div class="p-2.5 flex flex-col gap-1.5 min-h-[150px]">
+                  <div class="flex items-center justify-between gap-1.5">
+                    <span class="font-extrabold text-indigo-300 text-[11px]">🤖 Câu lệnh AI hiện tại</span>
+                    <button type="button" id="btn-split-open-ai-modal" class="px-2 py-0.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[10px]">🚀 Chọn Mô hình &amp; Chạy</button>
+                  </div>
+                  <textarea id="tab1-split-command-textarea" rows="5" class="w-full flex-1 p-2 rounded-xl border border-zinc-800 bg-zinc-900/90 text-zinc-100 text-[11.5px] leading-relaxed select-text focus:outline-none focus:border-indigo-400" placeholder="Nhập hoặc chỉnh sửa câu lệnh AI hiện tại (tự đồng bộ với Trung tâm lệnh AI)..."></textarea>
+                </div>
+              </div>
+            </aside>
           </div>
         </div>
       </div>
@@ -1757,6 +1861,10 @@
     <!-- MÀN HÌNH 4 (TAB 4): STORY BIBLE, HỒ SƠ NHÂN VẬT, AI BIẾT GÌ & PHỤC BÚT-->
     <!-- =================================================================== -->
     <section id="right-bible-pane" class="hidden flex-1 min-h-0 overflow-y-auto overflow-x-hidden min-w-0 p-3 sm:p-4 lg:p-6 pb-28 lg:pb-8 bg-studioLightBg/95 dark:bg-noirBg/95 z-10">
+      <div id="tab4-focus-bible-close-bar" class="hidden fixed top-0 left-0 right-0 z-[80] px-4 py-2.5 bg-zinc-950/95 border-b border-amber-500/40 items-center justify-between gap-2 text-xs shadow-lg">
+        <span class="font-extrabold text-amber-300">🏛️ Story Bible (Chế Độ Viết Tập Trung — Nhân vật, Manh mối, Phục bút &amp; Mô hình)</span>
+        <button type="button" id="btn-close-focus-bible-overlay" class="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs">← Quay lại Bàn Viết Tab 1</button>
+      </div>
       <div id="s10-story-bible-main-view" class="max-w-6xl mx-auto space-y-5 text-xs min-w-0 overflow-x-hidden">
         <!-- Đầu trang Story Bible -->
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-studioLightBorder dark:border-zinc-800 pb-4">

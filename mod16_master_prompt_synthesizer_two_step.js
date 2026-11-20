@@ -282,6 +282,14 @@
       recommendationNote:
         'Lựa chọn ưu tiên số 1 cho cả 5 chế độ: viết chương dài (Chế độ 1), tham mưu cốt truyện (Chế độ 2), kiểm toán mâu thuẫn (Chế độ 3), đánh giá độc giả (Chế độ 4) & vẽ biểu đồ (Chế độ 5).'
     },
+    'gemini-4-neon': {
+      badge: '⚡ GEMINI 4 NEON (MỚI) · SUY LUẬN XHIGH & PHẢN HỒI SIÊU MƯỢT',
+      toneQuality: '9.8/10 — Văn phong sắc sảo, giàu nhịp điệu, hội thoại tự nhiên',
+      logicDepth: '9.8/10 — Hỗ trợ đầy đủ 4 mức tư duy LOW / MEDIUM / HIGH / XHIGH',
+      speedRating: '⚡ Siêu nhanh & Sâu sắc',
+      recommendationNote:
+        'Mô hình Gemini 4 Neon thế hệ mới: kết hợp tốc độ xuất chữ cực nhanh với khả năng bám sát Story Bible & suy luận đa tầng (yêu cầu API Key hỗ trợ gói Paid/Billing).'
+    },
     'gemini-3.8-flash': {
       badge: '🌟 DÒNG FLASH MƯỢT MÀ & GIÀU CẢM XÚC',
       toneQuality: '9.5/10 — Giàu cảm xúc, từ vựng tiếng Việt tự nhiên, miêu tả tâm lý mượt mà',

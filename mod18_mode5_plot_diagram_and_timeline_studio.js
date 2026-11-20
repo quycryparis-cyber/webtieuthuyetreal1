@@ -1120,32 +1120,46 @@
 
     buildStoryBibleFirstDigest(chaps, includeRawExcerpts = false) {
       const compiledBible =
-        this.storyBible?.buildCompiledBibleBlockForPrompt?.() ||
-        document.getElementById('textarea-rendered-bible-content')?.value?.trim() ||
-        '';
+        this.storyBible?.buildCompiledBibleBlockForPrompt?.() || '';
+      const rawRenderedBible =
+        document.getElementById('textarea-rendered-bible-content')?.value?.trim() || '';
+      const mergedBibleContent =
+        rawRenderedBible && (!compiledBible || rawRenderedBible.length > compiledBible.length * 0.6)
+          ? (compiledBible && compiledBible.indexOf(rawRenderedBible.slice(0, 120)) === -1
+              ? `${compiledBible}\n\n--- BẢN STORY BIBLE CHI TIẾT ĐẦY ĐỦ (TAB 4) ---\n${rawRenderedBible}`
+              : rawRenderedBible)
+          : compiledBible;
 
       const charLines = (this.storyBible?.characters || []).map(
         (c, i) =>
           `- [NV ${i + 1}] ${c.name} (${c.role || 'Chưa rõ vai trò'}): ${c.traits || ''} ${
+            c.speechStyle ? `| Xưng hô: ${c.speechStyle}` : ''
+          } ${c.innerWound ? `| Động cơ: ${c.innerWound}` : ''} ${
             c.secret ? `| Bí mật: ${c.secret}` : ''
-          }`
+          }`.trim()
       );
       const clueLines = (this.storyBible?.cluesLedger || []).map(
         (cl, i) =>
-          `- [Phục bút ${i + 1}] ${cl.title} (${cl.status === 'RESOLVED' ? 'Đã giải đáp' : 'Đang mở'}) — Gieo tại: ${
+          `- [Phục bút ${i + 1}] ${cl.title} (${cl.status === 'RESOLVED' ? 'Đã giải đáp' : 'Đang treo chờ thu hồi'}) — Gieo tại: ${
             cl.plantedIn || '?'
-          }`
+          }${cl.note ? ` | Ghi chú: ${cl.note}` : ''}`
       );
       const knowledgeLines = (this.storyBible?.knowledgeMatrix || []).map(
-        (k, i) => `- [Ai Biết Gì ${i + 1}] ${k.character || '?'} biết: ${k.knows || k.secret || JSON.stringify(k)}`
+        (k, i) =>
+          `- [Ai Biết Gì ${i + 1}] Bí mật: ${k.secret || k.knows || JSON.stringify(k)} | Đã biết: ${
+            k.whoKnows || k.character || '?'
+          } | Chưa biết: ${k.whoDoesNotKnow || '?'}`
       );
 
       const bibleHeader = [
-        `=== NGUỒN CHÍNH: HỒ SƠ STORY BIBLE (TAB 4) ===`,
-        compiledBible || '(Chưa biên soạn khung Story Bible tổng hợp)',
+        `=== NGUỒN CHÍNH: HỒ SƠ STORY BIBLE TOÀN DIỆN (TAB 4 · LIÊN KẾT CHẾ ĐỘ 5) ===`,
+        mergedBibleContent || '(Chưa biên soạn khung Story Bible tổng hợp)',
         charLines.length ? `--- DANH SÁCH NHÂN VẬT CỐT LÕI ---\n${charLines.join('\n')}` : '',
-        clueLines.length ? `--- SỔ PHỤC BÚT & MANH MỐI ---\n${clueLines.join('\n')}` : '',
-        knowledgeLines.length ? `--- MA TRẬN AI BIẾT GÌ ---\n${knowledgeLines.join('\n')}` : ''
+        clueLines.length ? `--- SỔ CÁI PHỤC BÚT, MANH MỐI & NGÒI NỔ THỜI GIAN ---\n${clueLines.join('\n')}` : '',
+        knowledgeLines.length ? `--- MA TRẬN AI BIẾT GÌ — AI CHƯA BIẾT ---\n${knowledgeLines.join('\n')}` : '',
+        `=== CHỈ THỊ GỘP TRỤC THỜI GIAN CHẾ ĐỘ 5 + STORY BIBLE ===`,
+        `1. Bắt buộc đối chiếu chéo toàn bộ mốc ngày/giờ/phút, vị trí địa bàn, thương tích, tài sản/vật chứng và hạn chót nhiệm vụ trong Story Bible với diễn biến các chương đã chọn.`,
+        `2. Dựng TRỤC THỜI GIAN HOÀN HẢO NHẤT theo đúng trình tự nhân quả liên hoàn (từ Arc/Hồi/Phân cảnh đến mốc giờ cụ thể), chỉ rõ nhân vật nào ở đâu, biết gì, chưa biết gì, và phát hiện mọi xung đột thời gian hoặc phục bút bị bỏ quên.`
       ]
         .filter(Boolean)
         .join('\n\n');

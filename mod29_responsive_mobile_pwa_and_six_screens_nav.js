@@ -237,9 +237,12 @@
       };
 
       const rootEl = document.documentElement;
+      const vvOffsetTop = window.visualViewport ? Math.max(0, Math.round(window.visualViewport.offsetTop || 0)) : 0;
+      // Tránh khoảng trắng phía trên bàn phím ảo khi trình duyệt dịch chuyển visualViewport.offsetTop > 0
+      const effectiveVhHeight = vvOffsetTop > 2 && h > vvHeight ? h : vvHeight;
       rootEl.dataset.studioViewport = tier;
       rootEl.dataset.keyboardOpen = keyboardOpenLikely ? 'true' : 'false';
-      rootEl.style.setProperty('--studio-vh', `${(vvHeight * 0.01).toFixed(2)}px`);
+      rootEl.style.setProperty('--studio-vh', `${(effectiveVhHeight * 0.01).toFixed(2)}px`);
       this.enforceZeroRootScroll();
       NS.navigator?.mobileCompactAdvisor?.applyResponsiveModalMaxHeights?.();
 
@@ -3784,6 +3787,145 @@
     }
   }
 
+  class FocusWritingAndTab1SplitController {
+    constructor() {
+      this.bound = false;
+      this.focusActive = false;
+      this.splitOpen = false;
+    }
+
+    syncSplitInputsFromSources() {
+      const splitBible = document.getElementById('tab1-split-bible-textarea');
+      const srcBible = document.getElementById('textarea-rendered-bible-content');
+      if (splitBible && srcBible && splitBible.value !== srcBible.value) {
+        splitBible.value = srcBible.value;
+      }
+      const splitCmd = document.getElementById('tab1-split-command-textarea');
+      const srcCmd =
+        document.getElementById('s18-fullscreen-prompt-textarea') ||
+        document.getElementById('textarea-chapter-beats');
+      if (splitCmd && srcCmd && splitCmd.value !== srcCmd.value) {
+        splitCmd.value = srcCmd.value;
+      }
+    }
+
+    setFocusWritingMode(enable) {
+      this.focusActive = Boolean(enable);
+      document.body.classList.toggle('noir-focus-writing-mode', this.focusActive);
+      if (!this.focusActive) {
+        document.body.classList.remove('noir-focus-bible-open');
+      } else {
+        NS.navigator?.navigateToScreen?.('SCREEN_1_WRITE');
+      }
+      const btn = document.getElementById('btn-tab1-focus-writing-mode');
+      if (btn) btn.setAttribute('aria-pressed', this.focusActive ? 'true' : 'false');
+      return this.focusActive;
+    }
+
+    setFocusBibleOverlay(open) {
+      if (!this.focusActive && open) {
+        NS.navigator?.navigateToScreen?.('SCREEN_4_BIBLE');
+        return;
+      }
+      document.body.classList.toggle('noir-focus-bible-open', Boolean(open));
+      if (open) {
+        NS.storyBible?.renderAllLists?.();
+      }
+    }
+
+    toggleTab1SplitWorkbench(forceState = null) {
+      const drawer = document.getElementById('tab1-split-workbench-drawer');
+      if (!drawer) return false;
+      this.splitOpen = typeof forceState === 'boolean' ? forceState : drawer.classList.contains('hidden');
+      drawer.classList.toggle('hidden', !this.splitOpen);
+      if (this.splitOpen) {
+        this.syncSplitInputsFromSources();
+      }
+      return this.splitOpen;
+    }
+
+    bindEvents() {
+      if (this.bound || typeof document === 'undefined') return;
+      this.bound = true;
+
+      document.getElementById('btn-tab1-focus-writing-mode')?.addEventListener('click', () => {
+        this.setFocusWritingMode(!this.focusActive);
+      });
+      document.getElementById('btn-exit-focus-writing-mode')?.addEventListener('click', () => {
+        this.setFocusWritingMode(false);
+      });
+      document.getElementById('btn-focus-open-ai-cmd')?.addEventListener('click', () => {
+        this.setFocusBibleOverlay(false);
+        document.getElementById('btn-open-fullscreen-ai-command')?.click();
+      });
+      document.getElementById('btn-focus-open-bible')?.addEventListener('click', () => {
+        this.setFocusBibleOverlay(!document.body.classList.contains('noir-focus-bible-open'));
+      });
+      document.getElementById('btn-close-focus-bible-overlay')?.addEventListener('click', () => {
+        this.setFocusBibleOverlay(false);
+      });
+      document.getElementById('btn-tab1-split-bible-cmd')?.addEventListener('click', () => {
+        this.toggleTab1SplitWorkbench();
+      });
+      document.getElementById('btn-focus-toggle-split')?.addEventListener('click', () => {
+        this.setFocusBibleOverlay(false);
+        this.toggleTab1SplitWorkbench();
+      });
+      document.getElementById('btn-close-tab1-split-workbench')?.addEventListener('click', () => {
+        this.toggleTab1SplitWorkbench(false);
+      });
+      document.getElementById('btn-split-open-full-bible')?.addEventListener('click', () => {
+        if (this.focusActive) {
+          this.setFocusBibleOverlay(true);
+        } else {
+          NS.navigator?.navigateToScreen?.('SCREEN_4_BIBLE');
+        }
+      });
+      document.getElementById('btn-split-open-ai-modal')?.addEventListener('click', () => {
+        document.getElementById('btn-open-fullscreen-ai-command')?.click();
+      });
+
+      const splitBible = document.getElementById('tab1-split-bible-textarea');
+      if (splitBible) {
+        splitBible.addEventListener('input', () => {
+          const srcBible = document.getElementById('textarea-rendered-bible-content');
+          if (srcBible && srcBible.value !== splitBible.value) {
+            srcBible.value = splitBible.value;
+            srcBible.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        });
+      }
+      const splitCmd = document.getElementById('tab1-split-command-textarea');
+      if (splitCmd) {
+        splitCmd.addEventListener('input', () => {
+          ['s18-fullscreen-prompt-textarea', 'textarea-chapter-beats'].forEach((id) => {
+            const target = document.getElementById(id);
+            if (target && target.value !== splitCmd.value) {
+              target.value = splitCmd.value;
+              target.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+          });
+        });
+      }
+
+      document.getElementById('textarea-rendered-bible-content')?.addEventListener('input', (e) => {
+        if (splitBible && splitBible.value !== e.target.value) {
+          splitBible.value = e.target.value;
+        }
+      });
+      ['s18-fullscreen-prompt-textarea', 'textarea-chapter-beats'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('input', (e) => {
+          if (splitCmd && splitCmd.value !== e.target.value) {
+            splitCmd.value = e.target.value;
+          }
+        });
+      });
+    }
+  }
+
+  const focusWritingCtrl = new FocusWritingAndTab1SplitController();
+  NS.focusWritingCtrl = focusWritingCtrl;
+
   const delayedTooltipController = new HumanizedDelayedTooltipController();
   delayedTooltipController.bindGlobalEvents();
   NS.delayedTooltipController = delayedTooltipController;
@@ -3794,6 +3936,7 @@
     floatingBarsManager.init();
     collapsibleToolbars.refreshBindings();
     delayedTooltipController.bindGlobalEvents();
+    focusWritingCtrl.bindEvents();
     return res;
   };
 

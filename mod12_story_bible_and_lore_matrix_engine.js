@@ -1140,19 +1140,46 @@
         });
       }
 
-      // Nạp câu lệnh chuẩn mẫu NotebookLM & gắn sự kiện xuất PDF gộp tất cả chương (Tab 4)
+      // Nạp câu lệnh chuẩn mẫu NotebookLM siêu chi tiết (8 phần chuẩn trục thời gian & Story Bible toàn diện)
       const nblmPromptEl = document.getElementById('textarea-tab4-notebooklm-prompt');
       if (nblmPromptEl && !nblmPromptEl.value.trim()) {
         nblmPromptEl.value = [
-          'Bạn là Biên Tập Viên Cốt Truyện Cấp Cao. Hãy đọc toàn bộ tệp PDF các chương tiểu thuyết tôi vừa tải lên (theo đúng thứ tự từ Chương 1 đến chương cuối cùng hiện có) và tổng hợp thành một BẢN STORY BIBLE TỔNG HỢP CHI TIẾT NHẤT CÓ THỂ.',
+          'Bạn là Biên Tập Viên Cốt Truyện & Chuyên Gia Kiểm Toán Trục Thời Gian Cấp Cao. Hãy đọc toàn bộ tệp PDF / các chương tiểu thuyết tôi tải lên (đúng trình tự từ Arc 1 / Hồi 1 đến chương cuối cùng hiện có) và biên soạn một BẢN STORY BIBLE TOÀN DIỆN & SIÊU CHI TIẾT.',
           '',
-          'YÊU CẦU BẮT BUỘC (KHÔNG ĐƯỢC LƯỢC BỎ CHI TIẾT QUAN TRỌNG):',
-          '1. THỜI GIAN & BỐI CẢNH HIỆN TẠI: Tính đến trang cuối cùng của tệp PDF, mốc thời gian chính xác là ngày/giờ/mùa nào? Nhân vật chính đang ở đâu, mang trên người những đồ vật/vết thương/trạng thái tâm lý gì?',
-          '2. MẠCH TRUYỆN LIÊN HOÀN TỪ CHƯƠNG 1 ĐẾN HIỆN TẠI: Lập bảng tóm tắt chi tiết diễn biến từng chương (Chương 1, Chương 2, Chương 3... đến chương cuối), nêu rõ nhân quả nối tiếp nhau giữa các chương.',
-          '3. HỒ SƠ TỪNG NHÂN VẬT & QUAN HỆ XƯNG HÔ: Tên tuổi, ngoại hình, tính cách, động cơ ngầm, bí mật riêng, sự thay đổi tâm lý và cặp đại từ xưng hô chuẩn với từng nhân vật khác.',
-          '4. MA TRẬN "AI BIẾT GÌ — AI CHƯA BIẾT": Liệt kê từng bí mật/sự thật trong truyện, chỉ rõ tính đến chương cuối thì ai ĐÃ BIẾT và ai CHƯA BIẾT để tránh tuyệt đối việc nhân vật tự dưng biết trước kịch bản.',
-          '5. SỔ CÁI PHỤC BÚT & MANH MỐI (CHEKHOV\'S GUN): Liệt kê toàn bộ chi tiết nhỏ, lời hứa, đồ vật đã gieo từ các chương đầu — đánh dấu rõ cái nào [ĐANG TREO CHỜ THU HỒI] và cái nào [ĐÃ GIẢI ĐÁP].',
-          '6. LUẬT BẤT KHẢ XÂM PHẠM CỦA THẾ GIỚI TRUYỆN: Hệ thống sức mạnh, giới hạn năng lực, quy tắc logic tuyệt đối không được vi phạm khi viết các chương kế tiếp.'
+          'NGUYÊN TẮC TỐI THƯỢNG (BẮT BUỘC TUÂN THỦ):',
+          '- PHẢI PHÂN TÍCH CỰC KỲ CHI TIẾT, DÀI, ĐẦY ĐỦ TỪNG CON SỐ, MỐC GIỜ/PHÚT, TÊN ĐƯỜNG/ĐỊA BÀN, VẬT CHỨNG, LỜI THOẠI THEN CHỐT VÀ DIỄN BIẾN TÂM LÝ.',
+          '- TUYỆT ĐỐI KHÔNG TÓM TẮT SƠ SÀI, KHÔNG GỘP CHUNG CHUNG, KHÔNG LƯỢC BỎ BẤT KỲ MANH MỐI HAY MỐC THỜI GIAN NÀO.',
+          '- Trình bày chuẩn xác theo đúng cấu trúc 8 PHẦN dưới đây:',
+          '',
+          '1. TÓM TẮT TIMELINE HÀNH TRÌNH CHI TIẾT (TRỤC THỜI GIAN TỪNG PHẦN / HỒI / PHÂN CẢNH):',
+          '   - Chia rõ từng Phần (Arc) -> Hồi (Chapter) -> Phân cảnh (X.1, X.2, X.3...).',
+          '   - Ghi rõ MỐC THỜI GIAN CHÍNH XÁC từng ngày/buổi/giờ/phút (ví dụ: 09h42 sáng Thứ Sáu, 16h30 Thứ Sáu, 21h28 Thứ Sáu, 06h12 Thứ Bảy, 22h50...) và thời lượng đếm ngược giữa các sự kiện.',
+          '   - Liệt kê chi tiết từng hành động, nguyên nhân — kết quả, kỹ thuật/nghiệp vụ, con số tiền bạc/vật chứng và bước ngoặt tâm lý.',
+          '',
+          '2. CƠ CHẾ HỆ THỐNG / QUY TẮC THẾ GIỚI & NHIỆM VỤ ĐANG KÍCH HOẠT:',
+          '   - Tên Hệ thống / Luật bất khả xâm phạm của thế giới, giới hạn năng lực, cơ chế cảnh báo.',
+          '   - Trạng thái các Nhiệm vụ đã hoàn thành và Nhiệm vụ đang kích hoạt (thời hạn chót chính xác, yêu cầu kép bắt buộc, phần thưởng, hình phạt thất bại).',
+          '',
+          '3. BẢNG NHÂN VẬT & MẠNG LƯỚI QUAN HỆ (DẠNG BẢNG 4 CỘT):',
+          '   - Cột 1: Nhân vật | Cột 2: Vai trò / Thân phận (tuổi, nghề nghiệp, xuất thân) | Cột 3: Tính cách, Hành vi nổi bật & Quy ước xưng hô | Cột 4: Trạng thái hiện tại (đang ở đâu, làm gì, thương tích/tâm lý ra sao đến cuối hồi mới nhất).',
+          '',
+          '4. TÀI SẢN, VŨ KHÍ DỮ LIỆU, BẰNG CHỨNG PHÁP LÝ & TÌNH TRẠNG THỂ CHẤT HIỆN TẠI:',
+          '   - Tài chính khả dụng và tài chính ngầm cất giấu (ghi rõ từng con số chính xác và từng vị trí cất giấu).',
+          '   - Danh sách từng vật chứng, thiết bị, USB, file/video, giấy tờ y tế/pháp lý đang nắm giữ và nơi sao lưu.',
+          '   - Tình trạng thể chất & thương tích hiện tại của nhân vật chính và đồng minh.',
+          '',
+          '5. SỔ CÁI PHỤC BÚT, MANH MỐI & NHỮNG NGÒI NỔ CẤP BÁCH CHỜ KÍCH NỔ (CHEKHOV\'S GUN):',
+          '   - Liệt kê toàn bộ chi tiết nhỏ, lời hứa, đồ vật, âm mưu đã gieo từ các hồi đầu — đánh dấu rõ [ĐANG TREO CHỜ THU HỒI] hoặc [ĐÃ GIẢI ĐÁP].',
+          '   - Liệt kê các ngòi nổ cấp bách và hạn chót thời gian chờ kích nổ ngay ở hồi tiếp theo.',
+          '',
+          '6. MA TRẬN "AI BIẾT GÌ — AI CHƯA BIẾT" (NHỮNG BÍ MẬT CHƯA TIẾT LỘ / SECRETS KEPT HIDDEN):',
+          '   - Liệt kê từng bí mật cốt lõi trong truyện, chỉ rõ tính đến chương cuối thì AI ĐÃ BIẾT và AI TUYỆT ĐỐI CHƯA BIẾT để chống nhân vật tự dưng biết trước kịch bản.',
+          '',
+          '7. ĐỊA BÀN & ĐỊA ĐIỂM QUAN TRỌNG:',
+          '   - Liệt kê cụ thể từng chiến trường, phòng trọ/căn cứ, cơ sở y tế, cứ điểm đối thủ, hang ổ kẻ thù, địa bàn lưu trữ dữ liệu và mục tiêu tấn công tiếp theo.',
+          '',
+          '8. CHIẾN THUẬT & ĐÒN ĐẤU TRÍ THỰC CHIẾN NỔI BẬT:',
+          '   - Tổng hợp từng chiến thuật/đòn phản kích đặc sắc đã và đang áp dụng (tên chiến thuật + cơ chế thực thi + điểm mù khai thác).'
         ].join('\n');
       }
 
@@ -1288,23 +1315,23 @@
       if (effectiveKey && effectiveKey.length >= 8 && router?.isCurrentKeyFlashLiteVerified?.()) {
         try {
           const extractionPrompt = [
-            'Bạn là Chuyên gia Cấu trúc Cốt truyện & Story Bible Tiểu thuyết.',
-            'Hãy phân tích kỹ Bản Story Bible chính thức dưới đây và bóc tách thành một đối tượng JSON hợp lệ DUY NHẤT theo schema sau:',
+            'Bạn là Chuyên gia Cấu trúc Cốt truyện, Trục Thời Gian & Story Bible Tiểu thuyết Siêu Chi Tiết.',
+            'Hãy phân tích CỰC KỲ KỸ LƯỠNG Bản Story Bible chính thức dưới đây (không bỏ sót nhân vật, bí mật, phục bút, vật chứng, mốc thời gian) và bóc tách thành một đối tượng JSON hợp lệ DUY NHẤT theo schema sau:',
             '{',
             '  "characters": [',
-            '    { "name": "Tên nhân vật", "role": "Vai trò (Chính / Phản diện / Phụ)", "traits": "Tính cách & đặc điểm", "speechStyle": "Giọng thoại & xưng hô", "innerWound": "Vết thương nội tâm / Động cơ" }',
+            '    { "name": "Tên nhân vật", "role": "Vai trò / Thân phận (Chính / Phản diện / Phụ)", "traits": "Tính cách, hành vi nổi bật & trạng thái hiện tại", "speechStyle": "Giọng thoại & xưng hô", "innerWound": "Động cơ / Vết thương nội tâm / Mục tiêu" }',
             '  ],',
             '  "knowledgeMatrix": [',
-            '    { "secret": "Tên bí mật hoặc sự thật", "whoKnows": "Ai đã biết", "whoDoesNotKnow": "Ai chưa biết (cấm AI để lộ sớm)" }',
+            '    { "secret": "Tên bí mật, manh mối hoặc âm mưu chưa tiết lộ", "whoKnows": "Ai đã biết rõ", "whoDoesNotKnow": "Ai tuyệt đối chưa biết (cấm AI để lộ sớm)" }',
             '  ],',
             '  "cluesLedger": [',
-            '    { "title": "Chi tiết phục bút hoặc manh mối", "plantedIn": "Chương gieo", "status": "PLANTED", "note": "Ghi chú ý nghĩa thu hồi" }',
+            '    { "title": "Chi tiết phục bút, manh mối, vật chứng hoặc ngòi nổ hạn chót thời gian", "plantedIn": "Hồi / Chương / Mốc giờ gieo", "status": "PLANTED", "note": "Ghi chú chi tiết ý nghĩa thu hồi & mốc thời gian liên quan" }',
             '  ]',
             '}',
             'QUY TẮC BẮT BUỘC:',
             '1. Chỉ trả về chuỗi JSON thuần, bắt đầu bằng { và kết thúc bằng }.',
             '2. Không kèm bất kỳ lời giải thích, mở đầu hay khối ```json markdown.',
-            '3. Bóc tách đầy đủ tất cả nhân vật, bí mật và phục bút có trong Story Bible.',
+            '3. Bóc tách ĐẦY ĐỦ TẤT CẢ nhân vật, bí mật, manh mối, ngòi nổ phục bút và mốc thời gian quan trọng có trong Story Bible (ưu tiên chi tiết tối đa).',
             '',
             '=== BẢN STORY BIBLE CHÍNH THỨC ===',
             bibleText
@@ -1322,7 +1349,7 @@
             prompt: extractionPrompt,
             modelId: chosenBibleModel,
             temperature: 0.2,
-            maxOutputTokens: 3000,
+            maxOutputTokens: 6000,
             thinkingLevel: chosenBibleThinking
           });
 

@@ -1198,7 +1198,7 @@
     gpsCoords: null, // { lat, lon, label }
     lastRealtimeSnapshot: null,
     selectedCategory: 'ALL',
-    showCustomMatrix: true,
+    showCustomMatrix: false,
     showTuningPanel: false,
     allowHttpServerFolderProbe: false,
     tuning: {
@@ -3092,7 +3092,7 @@
             : ''
         }
 
-        <!-- BẢNG CHỌN NHANH 6 KHUNG GIỜ × 28 LOẠI THỜI TIẾT WMO = 168 BIẾN THỂ -->
+        <!-- BẢNG CHỌN NHANH 6 KHUNG GIỜ × 28 LOẠI THỜI TIẾT WMO = 168 BIẾN THỂ (MẶC ĐỊNH THU GỌN) -->
         <div id="mod43-custom-matrix-card" class="p-3 rounded-2xl border border-zinc-300/80 dark:border-zinc-800 bg-zinc-50/75 dark:bg-zinc-950/60 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -3102,35 +3102,29 @@
             <button type="button" id="mod43-btn-toggle-matrix" class="px-2.5 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 text-[10.5px] font-bold text-zinc-700 dark:text-zinc-200">${st.showCustomMatrix ? '▲ Thu gọn bảng chọn' : '▼ Mở bảng 6×28'}</button>
           </div>
 
-          <!-- Thử nhanh khoảnh khắc -->
-          <div class="flex flex-wrap items-center gap-1.5">
-            ${quickPresetButtons}
-          </div>
+          <div id="mod43-custom-matrix-body" class="${st.showCustomMatrix ? '' : 'hidden '}space-y-2.5">
+            <!-- Thử nhanh khoảnh khắc -->
+            <div class="flex flex-wrap items-center gap-1.5">
+              ${quickPresetButtons}
+            </div>
 
-          ${
-            st.showCustomMatrix
-              ? `
-            <div class="space-y-2.5">
-              <div>
-                <div class="text-[10.5px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-300 mb-1.5">1. Chọn 1 Trong 6 Khung Giờ Ánh Sáng (Theo Sunrise/Sunset)</div>
-                <div id="mod43-phase-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
-                  ${phaseButtonsHtml}
-                </div>
-              </div>
-
-              <div>
-                <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-                  <div class="text-[10.5px] font-extrabold uppercase tracking-wider text-sky-700 dark:text-sky-300">2. Chọn 1 Trong 28 Trạng Thái Thời Tiết WMO</div>
-                  <div class="flex flex-wrap gap-1">${categoryTabsHtml}</div>
-                </div>
-                <div id="mod43-wmo-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 max-h-56 overflow-y-auto pr-1">
-                  ${weatherGridHtml}
-                </div>
+            <div>
+              <div class="text-[10.5px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-300 mb-1.5">1. Chọn 1 Trong 6 Khung Giờ Ánh Sáng (Theo Sunrise/Sunset)</div>
+              <div id="mod43-phase-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
+                ${phaseButtonsHtml}
               </div>
             </div>
-          `
-              : ''
-          }
+
+            <div>
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                <div class="text-[10.5px] font-extrabold uppercase tracking-wider text-sky-700 dark:text-sky-300">2. Chọn 1 Trong 28 Trạng Thái Thời Tiết WMO</div>
+                <div class="flex flex-wrap gap-1">${categoryTabsHtml}</div>
+              </div>
+              <div id="mod43-wmo-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 max-h-56 overflow-y-auto pr-1">
+                ${weatherGridHtml}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     `;

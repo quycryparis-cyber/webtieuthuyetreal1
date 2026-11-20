@@ -2511,6 +2511,16 @@
             </button>
           </div>
 
+          <!-- Thanh Thu gọn / Mở rộng Căn chỉnh Crop, Preset & 6 Thanh Trượt Nền -->
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-zinc-800/80">
+            <span class="text-[11px] font-extrabold text-zinc-300">🎛️ Căn Chỉnh Crop, Preset &amp; 6 Thanh Trượt Nền</span>
+            <button type="button" id="btn-mod40-toggle-bg-advanced"
+              class="px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-800/90 hover:bg-zinc-700 text-[10.5px] font-bold text-zinc-200 transition shrink-0">
+              ▼ Mở rộng
+            </button>
+          </div>
+
+          <div id="mod40-bg-advanced-body" class="hidden space-y-3.5">
           <!-- Hàng căn chỉnh / Crop khung hình nền YouTube tùy chỉnh -->
           <div class="rounded-xl border border-amber-500/25 bg-zinc-900/65 px-3 py-2.5 space-y-2">
             <div class="flex flex-wrap items-center justify-between gap-2">
@@ -2646,6 +2656,7 @@
             </summary>
             <div id="mod40-diag-log-list" class="mt-2 space-y-1 max-h-40 overflow-y-auto"></div>
           </details>
+          </div>
         </div>
       `;
     }
@@ -2666,6 +2677,17 @@
     }
 
     _bindControlsEvents(rootEl) {
+      const advBtn = rootEl.querySelector('#btn-mod40-toggle-bg-advanced');
+      const advBody = rootEl.querySelector('#mod40-bg-advanced-body');
+      if (advBtn && advBody) {
+        advBtn.addEventListener('click', () => {
+          const willOpen = advBody.classList.contains('hidden');
+          advBody.classList.toggle('hidden', !willOpen);
+          const lbl = willOpen ? '▲ Thu gọn' : '▼ Mở rộng';
+          advBtn.textContent = NS.i18n?.translateText?.(lbl) || lbl;
+        });
+      }
+
       const bindSlider = (sliderId, fieldName, suffix, labelId) => {
         const el = rootEl.querySelector(`#${sliderId}`);
         if (!el) return;
