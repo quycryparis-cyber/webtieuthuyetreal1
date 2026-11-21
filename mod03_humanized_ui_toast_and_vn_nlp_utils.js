@@ -661,7 +661,7 @@
         el.setAttribute('role', 'status');
         el.setAttribute('aria-live', 'polite');
         el.className =
-          'fixed bottom-5 right-4 z-[9998] max-w-md px-4 py-3 rounded-2xl border shadow-2xl backdrop-blur-md transition-all duration-300 hidden pointer-events-auto';
+          'fixed top-16 sm:top-auto sm:bottom-20 right-3 sm:right-4 z-[9998] max-w-[calc(100vw-24px)] sm:max-w-md px-4 py-3 rounded-2xl border shadow-2xl backdrop-blur-md transition-all duration-300 hidden pointer-events-auto';
         document.body.appendChild(el);
       }
       return el;
@@ -707,7 +707,7 @@
       const closeLabel = tr('Đóng thông báo');
 
       const palette = HUMANIZED_TOAST_STYLE_MAP[level];
-      host.className = `fixed bottom-5 right-4 z-[9998] max-w-md px-4 py-3 rounded-2xl border shadow-2xl backdrop-blur-md transition-all duration-300 pointer-events-auto flex items-start gap-2.5 text-sm font-medium ${palette.borderClass}`;
+      host.className = `fixed top-16 sm:top-auto sm:bottom-20 right-3 sm:right-4 z-[9998] max-w-[calc(100vw-24px)] sm:max-w-md px-4 py-3 rounded-2xl border shadow-2xl backdrop-blur-md transition-all duration-300 pointer-events-auto flex items-start gap-2.5 text-sm font-medium ${palette.borderClass}`;
       host.innerHTML = `
         <span class="shrink-0 text-base leading-none mt-0.5">${palette.icon}</span>
         <div class="flex-1 min-w-0 leading-snug break-words">${this.utils.escapeHtml(renderedMsg)}</div>

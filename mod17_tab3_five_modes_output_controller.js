@@ -730,14 +730,29 @@
         outTextarea.placeholder = descriptor.placeholder;
       }
 
+      const insertBtns = [
+        document.getElementById('btn-s20-insert-append'),
+        document.getElementById('btn-s20-insert-replace'),
+        document.getElementById('btn-insert-ai-append'),
+        document.getElementById('btn-insert-ai-replace')
+      ].filter(Boolean);
+
       if (modeKey === 'MODE_5_DIAGRAM') {
         stdWrapper?.classList.add('hidden');
         mode5Studio?.classList.remove('hidden');
+        insertBtns.forEach((b) => {
+          b.disabled = true;
+          b.classList.add('opacity-40', 'cursor-not-allowed');
+        });
         window.NoirStudio?.mode5Studio?.refreshChapterChecklist?.();
         this.updateOutputWordBadge(this.modeOutputs.MODE_5_DIAGRAM || '');
       } else {
         mode5Studio?.classList.add('hidden');
         stdWrapper?.classList.remove('hidden');
+        insertBtns.forEach((b) => {
+          b.disabled = false;
+          b.classList.remove('opacity-40', 'cursor-not-allowed');
+        });
         if (outTextarea) {
           outTextarea.value = this.modeOutputs[modeKey] || '';
           this.updateOutputWordBadge(outTextarea.value);

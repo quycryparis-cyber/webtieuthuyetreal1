@@ -3614,6 +3614,67 @@
         if (map[code]) return lead + map[code] + trail;
       }
 
+      // 13. Bộ đếm chương/từ Tab 6, tiêu đề trang động (— Noir Studio), và nhãn Cục bộ (Ngoại tuyến)
+      const mChapWordCnt = norm.match(/^(\d+)\s*chương\s*\(([\d.,]+)\s*từ\)$/i);
+      if (mChapWordCnt) {
+        const [, chN, wdN] = mChapWordCnt;
+        const map = {
+          en: `${chN} chapters (${wdN} words)`,
+          'zh-CN': `${chN} 章（${wdN} 字）`,
+          'zh-TW': `${chN} 章（${wdN} 字）`,
+          ko: `${chN}장 (${wdN}단어)`,
+          ja: `${chN}章（${wdN}語）`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mChapAppWord = norm.match(/^(\d+)\s*chương\s*\((\d+)\s*đã duyệt\)\s*·\s*([\d.,]+)\s*từ đã viết$/i);
+      if (mChapAppWord) {
+        const [, chN, appN, wdN] = mChapAppWord;
+        const map = {
+          en: `${chN} chapters (${appN} approved) · ${wdN} words written`,
+          'zh-CN': `${chN} 章（已审 ${appN} 章）· 已写 ${wdN} 字`,
+          'zh-TW': `${chN} 章（已審 ${appN} 章）· 已寫 ${wdN} 字`,
+          ko: `${chN}장 (${appN} 승인) · ${wdN}단어 작성`,
+          ja: `${chN}章（承認済 ${appN}）· ${wdN}語執筆済`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mNoirDocTitle = norm.match(/^(.+?)\s*—\s*Noir Studio$/i);
+      if (mNoirDocTitle) {
+        const prefixTr = this.translateText(mNoirDocTitle[1].trim(), code);
+        if (prefixTr && prefixTr !== mNoirDocTitle[1].trim()) {
+          return lead + `${prefixTr} — Noir Studio` + trail;
+        }
+      }
+
+      const mLocalOfflineBadge = norm.match(/^🟡\s*Cục bộ \(Ngoại tuyến\)(?:\s*·\s*(\d+)\s*tab)?$/i);
+      if (mLocalOfflineBadge) {
+        const tabPart = mLocalOfflineBadge[1] ? ` · ${mLocalOfflineBadge[1]} tab` : '';
+        const map = {
+          en: `🟡 Local (Offline)${tabPart}`,
+          'zh-CN': `🟡 本地（离线）${tabPart}`,
+          'zh-TW': `🟡 本機（離線）${tabPart}`,
+          ko: `🟡 로컬 (오프라인)${tabPart}`,
+          ja: `🟡 ローカル（オフライン）${tabPart}`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mModReady = norm.match(/^🛡️\s*(\d+)\/(\d+)\s*Module Sẵn Sàng$/i);
+      if (mModReady) {
+        const [, okN, totN] = mModReady;
+        const map = {
+          en: `🛡️ ${okN}/${totN} Modules Ready`,
+          'zh-CN': `🛡️ ${okN}/${totN} 模块就绪`,
+          'zh-TW': `🛡️ ${okN}/${totN} 模組就緒`,
+          ko: `🛡️ ${okN}/${totN} 모듈 준비됨`,
+          ja: `🛡️ ${okN}/${totN} モジュール稼働中`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
       if (Array.isArray(pack.patterns)) {
         for (let i = 0; i < pack.patterns.length; i++) {
           const rule = pack.patterns[i];

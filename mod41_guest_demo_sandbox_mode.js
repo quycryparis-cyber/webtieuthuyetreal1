@@ -250,7 +250,7 @@
           status: 'APPROVED',
           content: ch1Content,
           beats: 'Mở màn tại Tháp Đồng Hồ đêm mưa; Minh Khôi gặp Lệ Băng và xác nhận mảnh chìa khóa bán nguyệt.',
-          wordCount: 280,
+          wordCount: String(ch1Content || '').trim().split(/\s+/).filter(Boolean).length,
           createdAt: now - 3600000 * 5,
           updatedAt: now - 3600000 * 4
         },
@@ -262,7 +262,7 @@
           status: 'APPROVED',
           content: ch2Content,
           beats: 'Khám phá 6 sổ cái bìa đen trong hầm; Bé Miu xuất hiện kỳ lạ với manh mối Giáo sư Hoàng.',
-          wordCount: 255,
+          wordCount: String(ch2Content || '').trim().split(/\s+/).filter(Boolean).length,
           createdAt: now - 3600000 * 3,
           updatedAt: now - 3600000 * 2
         },
@@ -274,7 +274,7 @@
           status: 'DRAFT',
           content: ch3Content,
           beats: 'Giải mã con số 13:00; vết thương cổ tay trái Minh Khôi; bước lên gác chuông đối chất Lệ Băng.',
-          wordCount: 265,
+          wordCount: String(ch3Content || '').trim().split(/\s+/).filter(Boolean).length,
           createdAt: now - 3600000,
           updatedAt: now - 600000
         }
@@ -1210,7 +1210,7 @@
             <div id="${ids.RESTRICTION_REASON}" class="p-3.5 rounded-xl border border-amber-400/45 bg-amber-500/10 text-amber-100 text-xs sm:text-[13px] font-semibold leading-relaxed"></div>
 
             <div id="${ids.RESTRICTION_STEPS}" class="p-3 rounded-xl border border-zinc-800 bg-zinc-950/90 space-y-1.5 text-[11px] text-zinc-300">
-              <div class="font-extrabold text-emerald-300 uppercase text-[10px] tracking-wider">⏱️ 2 BƯỚC MỞ KHÓA TRỌN VẸN (CHƯA ĐẦY 2 PHÚT):</div>
+              <div class="font-extrabold text-emerald-300 uppercase text-[10px] tracking-wider">⏱️ 3 BƯỚC MỞ KHÓA TRỌN VẸN (CHƯA ĐẦY 2 PHÚT):</div>
               <div>1. Bấm nút "🔄 Reload Lại Web Để Kết Nối" bên dưới để quay về màn hình chính.</div>
               <div>2. Lấy miễn phí rồi sao chép &amp; dán Gemini API Key tại Bước 1 (Google AI Studio).</div>
               <div>3. Chọn Thư mục làm việc trên máy tính / điện thoại tại Bước 2 — mọi dữ liệu của bạn sẽ được lưu an toàn 100%!</div>
@@ -1426,7 +1426,7 @@
         el.readOnly = true;
         el.setAttribute('aria-readonly', 'true');
         el.dataset.mod41GuestLocked = 'true';
-        el.classList.add('opacity-95', 'cursor-not-allowed', 'border-zinc-500/70');
+        el.classList.add('opacity-60', 'cursor-not-allowed', 'border-zinc-500/70', 'select-none');
 
         const trGuestPh = (s) =>
           NS.i18n?.translateText ? NS.i18n.translateText(String(s || '')) : String(s || '');
@@ -1544,6 +1544,9 @@
           </span>
         </div>
         <div class="w-full lg:w-auto flex flex-wrap items-center gap-1.5 min-w-0 max-w-full">
+          <button type="button" id="btn-mod41-banner-jump-tab1" class="max-w-full whitespace-nowrap text-center px-2.5 py-1 rounded-lg bg-teal-600/85 hover:bg-teal-500 text-white font-extrabold text-[10.5px] transition">
+            ✍️ Vào Bàn Viết (Tab 1)
+          </button>
           <button type="button" id="${ids.BANNER_QUICK_5MODES_BTN}" class="max-w-full whitespace-normal text-center px-2.5 py-1 rounded-lg bg-sky-600/80 hover:bg-sky-500 text-white font-extrabold text-[10.5px] transition">
             ⚡ Thử Prompt 5 Chế Độ
           </button>
@@ -1559,6 +1562,9 @@
       banner.classList.toggle('hidden', !this.owner.isActive());
       NS.i18n?.translateElement?.(banner);
 
+      document.getElementById('btn-mod41-banner-jump-tab1')?.addEventListener('click', () => {
+        NS.navigator?.navigateToScreen?.('SCREEN_1_WRITE');
+      });
       document.getElementById(ids.BANNER_QUICK_5MODES_BTN)?.addEventListener('click', () => {
         NS.navigator?.navigateToScreen?.('SCREEN_3_AI');
       });
@@ -2521,6 +2527,11 @@
         NS.rag.rebuildIndexFromChapters(demoChaps);
         NS.rag.renderSearchResultsUI?.('');
       }
+      if (NS.localComputeAndAttendance) {
+        NS.localComputeAndAttendance.refreshLocalSummaryUI?.();
+        NS.localComputeAndAttendance.renderLocalComputeCard?.();
+      }
+      NS.bus?.emit?.('chapters:updated', { chapters: demoChaps, source: 'guest_demo' });
 
       // Khởi tạo trước Sơ đồ Mode 5 từ dữ liệu mẫu để vào Tab 3 Mode 5 thấy ngay biểu đồ đẹp
       const m5Def = this.presetStudio.getDefaultPresetForMode('MODE_5_DIAGRAM');

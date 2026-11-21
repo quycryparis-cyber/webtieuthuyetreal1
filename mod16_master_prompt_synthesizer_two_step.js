@@ -1375,8 +1375,14 @@
       this.onExecutionModeChanged('MODE_2_BRAINSTORM');
 
       const promptBox = document.getElementById('s18-fullscreen-prompt-textarea');
+      const modalBody = document.querySelector('#modal-fullscreen-ai-command-dialog .overflow-y-auto');
+      if (modalBody) modalBody.scrollTop = 0;
       if (promptBox) {
-        promptBox.focus();
+        try {
+          promptBox.focus({ preventScroll: true });
+        } catch (_eFocus) {
+          promptBox.focus();
+        }
       }
       this.utils?.showToast?.(
         '🧭 Đã chuyển sang Chế độ 2! Hãy liệt kê vài gạch đầu dòng dàn ý thô rồi bảo AI chi tiết hóa nhé.',

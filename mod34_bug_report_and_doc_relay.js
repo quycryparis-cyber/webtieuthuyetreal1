@@ -2790,19 +2790,15 @@
       }
       this.isChecking = true;
       try {
-        // Chạy song song GViz trực tiếp từ Google Sheet (siêu nhanh ~300ms) và Apps Script Web App
-        const [gvizRes, scriptRes] = await Promise.allSettled([
-          this.fetchFromGoogleSheetGvizFallback(),
-          this.fetchFromAppsScriptWebApp()
-        ]);
-        const scriptData = scriptRes.status === 'fulfilled' ? scriptRes.value : null;
-        const gvizData = gvizRes.status === 'fulfilled' ? gvizRes.value : null;
-        const data =
-          scriptData && typeof scriptData.active === 'boolean'
-            ? scriptData
-            : gvizData && typeof gvizData.active === 'boolean'
-              ? gvizData
-              : null;
+        // Ưu tiên GViz trực tiếp từ Google Sheet (nhanh ~300ms, hỗ trợ CORS sạch không bắn lỗi Console)
+        const gvizData = await this.fetchFromGoogleSheetGvizFallback().catch(() => null);
+        let data = gvizData && typeof gvizData.active === 'boolean' ? gvizData : null;
+        if (!data) {
+          const scriptData = await this.fetchFromAppsScriptWebApp().catch(() => null);
+          if (scriptData && typeof scriptData.active === 'boolean') {
+            data = scriptData;
+          }
+        }
         if (data && typeof data.active === 'boolean') {
           this.applyNoticePayload(data);
           return data;

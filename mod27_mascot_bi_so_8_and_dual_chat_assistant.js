@@ -2544,6 +2544,9 @@
                 }
 
                 <div class="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-zinc-800/80 text-[10px]">
+                  ${
+                    !isWelcome
+                      ? `
                   <button type="button" data-chat-act="INSERT_MANUSCRIPT" data-msg-id="${utils.escapeHtml(
                     m.id
                   )}" class="px-2 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/40 text-emerald-300 font-bold transition" title="Chèn nội dung này vào cuối Bản thảo Tab 1">
@@ -2558,7 +2561,9 @@
                     m.id
                   )}" class="px-2 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/35 border border-purple-500/40 text-purple-300 font-bold transition" title="Đưa vào Bảng Trắng Nháp Nhanh">
                     💡 Lưu vào Nháp nhanh
-                  </button>
+                  </button>`
+                      : ''
+                  }
                   <button type="button" data-chat-act="SPEAK_TTS" data-msg-id="${utils.escapeHtml(
                     m.id
                   )}" class="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold transition" title="Nghe đọc nội dung này bằng giọng Tiếng Việt">

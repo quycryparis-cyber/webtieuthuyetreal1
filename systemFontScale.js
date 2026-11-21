@@ -277,8 +277,8 @@
       return PRESETS.map(function (item) {
         var active = item.key === activeKey;
         var baseCls = compact
-          ? 'noir-font-scale-btn w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-xs font-bold transition-all cursor-pointer '
-          : 'noir-font-scale-btn flex-1 min-w-[78px] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-extrabold transition-all cursor-pointer ';
+          ? 'noir-font-scale-btn w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-xs font-bold transition-all cursor-pointer whitespace-nowrap '
+          : 'noir-font-scale-btn flex-1 min-w-[96px] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ';
         var stateCls = active
           ? 'border-indigo-400 bg-indigo-600 text-white shadow-md shadow-indigo-900/30 ring-1 ring-indigo-300/60'
           : 'border-zinc-700/80 bg-zinc-900/80 text-zinc-200 hover:border-indigo-400/70 hover:text-white';

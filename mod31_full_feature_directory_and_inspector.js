@@ -2176,7 +2176,7 @@
         },
         {
           id: 'SYSTEM_MAP',
-          label: '🏗️ Kiến Trúc 31 Module & Trạng Thái',
+          label: '🏗️ Kiến Trúc 44 Module & Trạng Thái',
         },
       ];
 

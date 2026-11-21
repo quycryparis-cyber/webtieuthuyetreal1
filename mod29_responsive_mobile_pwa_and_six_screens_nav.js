@@ -1340,9 +1340,18 @@
     syncDocumentTitle(screenConfig) {
       if (typeof document === 'undefined' || !screenConfig) return;
       const baseBrand = 'Noir Studio';
-      document.title = `${screenConfig.documentTitleSuffix} — ${baseBrand}`;
+      const tr = (s) => (NS.i18n && typeof NS.i18n.translateText === 'function' ? NS.i18n.translateText(s) : s);
+      const rawTitle = `${screenConfig.documentTitleSuffix} — ${baseBrand}`;
+      document.title = tr(rawTitle);
       if (NS.i18n && typeof NS.i18n.syncDocumentTitle === 'function') {
         NS.i18n.syncDocumentTitle();
+      }
+      // Đồng bộ nhãn nút "Mở Tab 5 ↗" trên thanh nhạc nổi (ẩn mũi tên chuyển khi đang ở đúng Tab 5)
+      const jumpTab5Btn = document.getElementById('btn-floating-audio-jump-tab5');
+      if (jumpTab5Btn) {
+        const onTab5 = screenConfig.id === 'SCREEN_5_AMBIENCE';
+        jumpTab5Btn.textContent = tr(onTab5 ? 'Đang ở Tab 5' : 'Mở Tab 5 ↗');
+        jumpTab5Btn.classList.toggle('opacity-60', onTab5);
       }
     }
 
@@ -3920,6 +3929,121 @@
           }
         });
       });
+
+      // Phím tắt Esc thoát nhanh Chế độ Viết Tập Trung (hoặc đóng Story Bible overlay trước)
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key !== 'Escape' || !this.focusActive) return;
+        const aiModal = document.getElementById('modal-fullscreen-ai-command');
+        if (aiModal && !aiModal.classList.contains('hidden')) return;
+        if (document.body.classList.contains('noir-focus-bible-open')) {
+          this.setFocusBibleOverlay(false);
+          return;
+        }
+        this.setFocusWritingMode(false);
+      });
+
+      // Cây Chương Nhanh ngay tại Tab 1 (📚 Cây Chương)
+      const renderQuickTree = () => {
+        const listEl = document.getElementById('tab1-quick-chapter-tree-list');
+        if (!listEl) return;
+        const chaps = Array.isArray(NS.chapterManager?.chapters) ? NS.chapterManager.chapters : [];
+        const activeId = NS.chapterManager?.activeChapterId || NS.state?.activeChapterId || '';
+        const esc = (s) =>
+          String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const tr = (s) => (NS.i18n?.translateText ? NS.i18n.translateText(s) : s);
+        if (!chaps.length) {
+          listEl.innerHTML = `<div class="p-2 text-[11px] text-zinc-500 text-center">${esc(tr('Chưa có chương nào.'))}</div>`;
+          return;
+        }
+        listEl.innerHTML = chaps
+          .map((ch, idx) => {
+            const isAct = ch.id === activeId;
+            const grp = ch.hierarchyGroup?.name ? `<div class="text-[9.5px] font-bold text-teal-400 uppercase tracking-wide mb-0.5 truncate">${esc(ch.hierarchyGroup.level || 'Quyển')}: ${esc(ch.hierarchyGroup.name)}</div>` : '';
+            const wc = typeof ch.wordCount === 'number' ? ch.wordCount : String(ch.content || '').trim().split(/\s+/).filter(Boolean).length;
+            return `<button type="button" data-tab1-quick-chap-id="${esc(ch.id)}" class="w-full text-left px-2.5 py-2 rounded-xl border transition ${
+              isAct
+                ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-200 font-bold'
+                : 'border-zinc-800/80 bg-zinc-900/50 hover:bg-zinc-800/80 text-zinc-300'
+            }">${grp}<div class="truncate text-[11.5px]">${idx + 1}. ${esc(ch.displayTitle || ch.title || 'Chương')}</div><div class="text-[10px] text-zinc-400 mt-0.5">${wc} ${esc(tr('từ'))}</div></button>`;
+          })
+          .join('');
+        listEl.querySelectorAll('[data-tab1-quick-chap-id]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-tab1-quick-chap-id');
+            if (id && NS.chapterManager?.selectChapter) {
+              NS.chapterManager.selectChapter(id);
+              renderQuickTree();
+            }
+          });
+        });
+      };
+
+      const treeSidebar = document.getElementById('tab1-quick-chapter-sidebar');
+      document.getElementById('btn-tab1-toggle-chapter-tree')?.addEventListener('click', () => {
+        if (!treeSidebar) return;
+        const willOpen = treeSidebar.classList.contains('hidden');
+        treeSidebar.classList.toggle('hidden', !willOpen);
+        if (willOpen) renderQuickTree();
+      });
+      document.getElementById('btn-close-tab1-chapter-tree')?.addEventListener('click', () => {
+        treeSidebar?.classList.add('hidden');
+      });
+      NS.bus?.on?.('chapters:updated', () => {
+        if (treeSidebar && !treeSidebar.classList.contains('hidden')) renderQuickTree();
+      });
+      NS.bus?.on?.('chapter:selected', () => {
+        if (treeSidebar && !treeSidebar.classList.contains('hidden')) renderQuickTree();
+      });
+
+      // Thanh AI Nổi Khi Bôi Đen Đoạn Văn trong Tab 1 (Inline AI Context Bar)
+      const editorEl = document.getElementById('textarea-chapter-content');
+      const inlineBar = document.getElementById('tab1-inline-ai-selection-bar');
+      let lastSelectedPassage = '';
+      const syncInlineSelectionBar = () => {
+        if (!editorEl || !inlineBar) return;
+        const start = editorEl.selectionStart || 0;
+        const end = editorEl.selectionEnd || 0;
+        const sel = end > start ? editorEl.value.slice(start, end).trim() : '';
+        if (sel.length >= 10) {
+          lastSelectedPassage = sel.slice(0, 1200);
+          inlineBar.classList.remove('hidden');
+        } else {
+          inlineBar.classList.add('hidden');
+        }
+      };
+      if (editorEl && inlineBar) {
+        editorEl.addEventListener('mouseup', () => setTimeout(syncInlineSelectionBar, 25));
+        editorEl.addEventListener('keyup', () => setTimeout(syncInlineSelectionBar, 25));
+        editorEl.addEventListener('select', () => syncInlineSelectionBar());
+        document.addEventListener('selectionchange', () => {
+          if (document.activeElement === editorEl) syncInlineSelectionBar();
+        });
+        document.getElementById('btn-close-inline-ai-bar')?.addEventListener('click', () => {
+          inlineBar.classList.add('hidden');
+        });
+        const actionPromptMap = {
+          sensory: 'Hãy viết sâu thêm chi tiết ngũ quan (thị giác, thính giác, xúc giác, tâm lý) kiểu Show-Don\'t-Tell cho đoạn trích sau, giữ nguyên giọng văn và tính cách nhân vật:',
+          pacing: 'Hãy đẩy nhanh nhịp độ kịch tính, cắt bỏ câu thừa và tăng độ căng thẳng cho đoạn trích sau:',
+          dialogue: 'Hãy chuẩn hóa lời thoại theo định dạng "- Câu thoại (Tên nhân vật)" và chỉnh lại cách xưng hô tự nhiên nhất cho đoạn trích sau:',
+          continue: 'Hãy viết tiếp liền mạch, giàu cảm xúc ngay sau đoạn trích sau (giữ đúng mạch sự kiện và Story Bible):'
+        };
+        inlineBar.querySelectorAll('[data-inline-ai-action]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const act = btn.getAttribute('data-inline-ai-action');
+            const instruction = actionPromptMap[act] || actionPromptMap.continue;
+            const fullCmd = `${instruction}\n\n"""\n${lastSelectedPassage}\n"""`;
+            ['s18-fullscreen-prompt-textarea', 'textarea-chapter-beats', 'tab1-split-command-textarea'].forEach((id) => {
+              const target = document.getElementById(id);
+              if (target && !target.readOnly) {
+                target.value = fullCmd;
+                target.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            });
+            inlineBar.classList.add('hidden');
+            document.getElementById('btn-open-fullscreen-ai-command')?.click();
+          });
+        });
+      }
     }
   }
 

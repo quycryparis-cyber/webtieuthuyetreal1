@@ -420,25 +420,36 @@
         posMap[p.id] = p;
       });
 
+      const trimWordSafe = (raw, maxChars) => {
+        const s = String(raw || '').trim();
+        if (s.length <= maxChars) return s;
+        const cut = s.slice(0, maxChars - 1);
+        const lastSpace = cut.lastIndexOf(' ');
+        return (lastSpace > Math.floor(maxChars * 0.55) ? cut.slice(0, lastSpace) : cut).trim() + '…';
+      };
+
       const edgesSvg = links
-        .map((lk) => {
+        .map((lk, lkIdx) => {
           const s = posMap[lk.source];
           const t = posMap[lk.target];
           if (!s || !t) return '';
           const mx = (s.x + t.x) / 2;
-          const my = (s.y + t.y) / 2 - 14;
+          const staggerY = ((lkIdx % 3) - 1) * 20;
+          const my = (s.y + t.y) / 2 - 14 + staggerY;
           const isClueEdge =
             s.group === 'CLUE' || t.group === 'CLUE' || String(lk.label || '').includes('manh mối');
           const edgeColor = isClueEdge ? '#818cf8' : '#10b981';
+          const cleanLbl = lk.label ? trimWordSafe(lk.label, 28) : '';
+          const pillW = Math.max(110, Math.min(210, cleanLbl.length * 6.5 + 22));
 
           return `
             <g>
               <path d="M ${s.x} ${s.y} Q ${mx} ${my - 12} ${t.x} ${t.y}" fill="none" stroke="${edgeColor}" stroke-width="2.2" stroke-dasharray="5,3" marker-end="url(#arrowHead)" opacity="0.85" />
               ${
-                lk.label
-                  ? `<rect x="${mx - 68}" y="${my - 12}" width="136" height="19" rx="6" fill="#09090b" stroke="#27272a" />
-                     <text x="${mx}" y="${my + 1}" fill="#a7f3d0" font-size="10" font-family="Inter, sans-serif" font-weight="600" text-anchor="middle">${this.esc(
-                      String(lk.label).slice(0, 26)
+                cleanLbl
+                  ? `<rect x="${mx - pillW / 2}" y="${my - 11}" width="${pillW}" height="20" rx="6" fill="#09090b" stroke="#27272a" />
+                     <text x="${mx}" y="${my + 2}" fill="#a7f3d0" font-size="10" font-family="Inter, sans-serif" font-weight="600" text-anchor="middle">${this.esc(
+                      cleanLbl
                     )}</text>`
                   : ''
               }
@@ -455,17 +466,19 @@
           const fillBg = isChar ? '#271a05' : isClue ? '#17153b' : '#052e22';
           const badge = isChar ? '👤 NHÂN VẬT' : isClue ? '🔫 PHỤC BÚT' : `⏳ MỐC #${i + 1}`;
           const timeText = n.time ? ` (${n.time})` : '';
+          const chapMatch = `${n.label || ''} ${n.detail || ''}`.match(/Chương\s*(\d+)/i);
+          const chapAttr = chapMatch ? ` data-mode5-jump-chapter="${chapMatch[1]}"` : '';
           return `
-            <g transform="translate(${n.x - 118}, ${n.y - 38})" class="cursor-pointer">
-              <rect width="236" height="76" rx="14" fill="${fillBg}" stroke="${strokeColor}" stroke-width="2" filter="url(#dropGlow)" />
+            <g transform="translate(${n.x - 130}, ${n.y - 40})" class="cursor-pointer"${chapAttr}>
+              <rect width="260" height="80" rx="14" fill="${fillBg}" stroke="${strokeColor}" stroke-width="2" filter="url(#dropGlow)" />
               <text x="14" y="22" fill="${strokeColor}" font-size="10" font-family="JetBrains Mono, monospace" font-weight="700">${this.esc(
-                badge + timeText
+                trimWordSafe(badge + timeText, 34)
               )}</text>
-              <text x="14" y="43" fill="#f4f4f5" font-size="12" font-family="Inter, sans-serif" font-weight="700">${this.esc(
-                String(n.label || '').slice(0, 28)
+              <text x="14" y="44" fill="#f4f4f5" font-size="11.5" font-family="Inter, sans-serif" font-weight="700">${this.esc(
+                trimWordSafe(n.label || '', 32)
               )}</text>
-              <text x="14" y="61" fill="#a1a1aa" font-size="10" font-family="Inter, sans-serif">${this.esc(
-                String(n.detail || n.label || '').slice(0, 35)
+              <text x="14" y="64" fill="#a1a1aa" font-size="10" font-family="Inter, sans-serif">${this.esc(
+                trimWordSafe(n.detail || n.label || '', 40)
               )}</text>
             </g>
           `;
@@ -1012,6 +1025,20 @@
       const stage = document.getElementById('mode5-svg-canvas-Stage');
       if (stage) {
         stage.innerHTML = svg;
+        if (!stage.dataset.noirJumpBound) {
+          stage.dataset.noirJumpBound = '1';
+          stage.addEventListener('click', (ev) => {
+            const nodeG = ev.target?.closest?.('[data-mode5-jump-chapter]');
+            if (!nodeG) return;
+            const chapNum = parseInt(nodeG.getAttribute('data-mode5-jump-chapter'), 10);
+            const chaps = Array.isArray(NS.chapterManager?.chapters) ? NS.chapterManager.chapters : [];
+            const target = chaps[chapNum - 1] || chaps.find((c) => new RegExp(`Chương\\s*${chapNum}\\b`, 'i').test(c.displayTitle || c.title || ''));
+            if (target && NS.chapterManager?.selectChapter) {
+              NS.chapterManager.selectChapter(target.id);
+              NS.navigator?.navigateToScreen?.('SCREEN_1_WRITE');
+            }
+          });
+        }
       }
       return svg;
     }

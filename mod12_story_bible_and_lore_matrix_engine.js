@@ -2073,7 +2073,7 @@
                 )}" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-teal-600 text-[10px] text-teal-200 font-bold" title="Thiết lập quan hệ & đại từ xưng hô với nhân vật khác">🤝 Quan hệ</button>
                 <button type="button" data-edit-char="${this.utils.escapeHtml(
                   ch.id
-                )}" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-indigo-600 text-[10px] text-white font-bold">✏️ Sửa</button>
+                )}" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-indigo-600 text-[10px] text-white font-bold whitespace-nowrap inline-flex items-center gap-1 shrink-0">✏️ Sửa</button>
                 <button type="button" data-del-char="${this.utils.escapeHtml(
                   ch.id
                 )}" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-rose-600 text-[10px] text-white font-bold">✕</button>
@@ -2348,7 +2348,7 @@
               <div class="flex items-center gap-1">
                 <button type="button" data-edit-know="${this.utils.escapeHtml(
                   item.id
-                )}" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-indigo-600 text-[10px] text-white font-bold">✏️ Sửa</button>
+                )}" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-indigo-600 text-[10px] text-white font-bold whitespace-nowrap inline-flex items-center gap-1 shrink-0">✏️ Sửa</button>
                 <button type="button" data-del-know="${this.utils.escapeHtml(
                   item.id
                 )}" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-rose-600 text-[10px] text-white font-bold">✕</button>

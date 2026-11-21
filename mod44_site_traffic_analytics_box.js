@@ -2212,8 +2212,8 @@
             snapshot.presence && snapshot.presence.activeCount > 1
               ? ` · ${snapshot.presence.activeCount} tab`
               : '';
-          scopeBadge.textContent = tr(`🟢 Trực tiếp${tabsLabel}`);
-          scopeBadge.title = tr('Đếm trực tiếp theo phiên trình duyệt, đa tab (PWA/Web) và lưu trữ 2 tầng');
+          scopeBadge.textContent = tr(`🟡 Cục bộ (Ngoại tuyến)${tabsLabel}`);
+          scopeBadge.title = tr('Đang đếm cục bộ trên trình duyệt (máy chủ thống kê toàn cầu tạm không phản hồi)');
         }
       }
 
