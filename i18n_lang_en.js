@@ -4384,6 +4384,12 @@
     "Nhạc, Pomodoro & Chữ": "Music, Pomodoro & Typography",
     "Âm Nhạc, Pomodoro & Không Gian": "Audio, Pomodoro & Ambience",
     "Kho Phiên Bản & Xuất Sách": "Version Vault & Book Export",
+    // [V100_HOURLY_24H_AND_WARD_GPS]
+    "⏱️ Dự Báo Ngắn Hạn 24 Giờ Tới (Mỗi 1 Tiếng)": "⏱️ Next 24-Hour Short-Term Forecast (Hourly)",
+    "🧭 Vị trí thực của bạn đang ở:": "🧭 Your current location:",
+    "🧭 Khu vực đang xem:": "🧭 Viewing area:",
+    "🧭 Bạn đang ở:": "🧭 You are at:",
+    "Bạn đang ở:": "You are at:",
   });
 
   const promptExact = Object.freeze({

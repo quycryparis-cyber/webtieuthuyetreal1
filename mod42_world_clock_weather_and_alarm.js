@@ -1297,15 +1297,76 @@
     return WMO_WEATHER_CATALOG[1];
   }
 
+  function resolveZonedCalendarClockParts(dateObj, ianaZone) {
+    const dt = dateObj instanceof Date ? dateObj : new Date();
+    const tz = String(ianaZone || 'Asia/Ho_Chi_Minh').trim() || 'Asia/Ho_Chi_Minh';
+    try {
+      const dtf = new Intl.DateTimeFormat('en-CA', {
+        timeZone: tz,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+      const map = {};
+      dtf.formatToParts(dt).forEach((p) => {
+        if (p.type !== 'literal') map[p.type] = p.value;
+      });
+      let hour = parseInt(map.hour, 10);
+      if (!Number.isFinite(hour) || hour === 24) hour = 0;
+      const minute = parseInt(map.minute, 10) || 0;
+      const year = String(map.year || dt.getFullYear());
+      const month = pad2(parseInt(map.month, 10) || dt.getMonth() + 1);
+      const day = pad2(parseInt(map.day, 10) || dt.getDate());
+      return {
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        ddMm: `${day}/${month}`,
+        isoHourPrefix: `${year}-${month}-${day}T${pad2(hour)}:00`,
+      };
+    } catch (_eTz) {
+      const year = String(dt.getFullYear());
+      const month = pad2(dt.getMonth() + 1);
+      const day = pad2(dt.getDate());
+      const hour = dt.getHours();
+      const minute = dt.getMinutes();
+      return {
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        ddMm: `${day}/${month}`,
+        isoHourPrefix: `${year}-${month}-${day}T${pad2(hour)}:00`,
+      };
+    }
+  }
+
+  function computeUpcomingHourlyStartMs(nowDate, ianaZone) {
+    const baseMs = (nowDate instanceof Date ? nowDate : new Date()).getTime();
+    const curParts = resolveZonedCalendarClockParts(new Date(baseMs), ianaZone);
+    if (curParts.minute > 0) {
+      return baseMs + (60 - curParts.minute) * 60000 + 1000;
+    }
+    return baseMs;
+  }
+
   /**
    * Tạo bản ước lượng thời tiết cục bộ theo vĩ độ & khung giờ khi thiết bị mất mạng
    * hoặc chạy kiểm thử không có kết nối Open-Meteo. Luôn đánh dấu nguồn rõ ràng.
    */
   function buildOfflineWeatherSnapshot(lat, lon, displayName, zoneIana) {
     const now = new Date();
+    const resolvedIana = zoneIana || 'Asia/Ho_Chi_Minh';
+    const nowParts = resolveZonedCalendarClockParts(now, resolvedIana);
     const absLat = Math.abs(Number(lat) || 21);
-    const month = now.getMonth() + 1;
-    const hour = now.getHours();
+    const month = parseInt(nowParts.month, 10) || now.getMonth() + 1;
+    const hour = nowParts.hour;
 
     // Xác định mùa bán cầu Bắc / Nam một cách tự nhiên
     const isSouthern = (Number(lat) || 0) < 0;
@@ -1327,14 +1388,20 @@
     else if (absLat < 25 && isSummerBand && hour >= 15 && hour <= 19) sampleCode = 61;
     else if (hour >= 10 && hour <= 15) sampleCode = 1;
 
+    // 24 giờ gần nhất mỗi 1 tiếng tính từ giờ kế tiếp (VD: 23:50 ngày 21/11 -> 00:00 (22/11) .. 23:00 (22/11))
+    const startHourMs = computeUpcomingHourlyStartMs(now, resolvedIana);
     const hourly = [];
-    for (let i = 0; i < 8; i++) {
-      const h = (hour + i * 2) % 24;
+    for (let i = 0; i < 24; i++) {
+      const slotParts = resolveZonedCalendarClockParts(new Date(startHourMs + i * 3600000), resolvedIana);
+      const h = slotParts.hour;
       const shift = Math.sin(((h - 9) / 24) * Math.PI * 2) * 3.5;
+      const hhStr = `${pad2(h)}:00`;
       hourly.push({
-        timeLabel: `${pad2(h)}:00`,
+        timeLabel: hhStr,
+        dateLabel: slotParts.ddMm,
+        displayLabel: `${hhStr} (${slotParts.ddMm})`,
         tempC: Math.round((baseTempC + shift) * 10) / 10,
-        code: i % 3 === 2 ? sampleCode : 2,
+        code: i % 4 === 2 ? sampleCode : (h >= 18 || h <= 5 ? 2 : 1),
         precipProb: sampleCode >= 60 ? 55 : 20,
       });
     }
@@ -1770,7 +1837,9 @@
         if (!data || !data.current) throw new Error('INVALID_OPEN_METEO_PAYLOAD');
 
         const cur = data.current;
-        const nowHour = new Date().getHours();
+        const resolvedIana = data.timezone || zoneIana || 'Asia/Ho_Chi_Minh';
+        const startAnchorMs = computeUpcomingHourlyStartMs(new Date(), resolvedIana);
+        const startAnchor = resolveZonedCalendarClockParts(new Date(startAnchorMs), resolvedIana);
         const hourlyTimes = Array.isArray(data.hourly?.time) ? data.hourly.time : [];
         const hourlyTemps = Array.isArray(data.hourly?.temperature_2m) ? data.hourly.temperature_2m : [];
         const hourlyCodes = Array.isArray(data.hourly?.weather_code) ? data.hourly.weather_code : [];
@@ -1778,15 +1847,23 @@
           ? data.hourly.precipitation_probability
           : [];
 
+        // Tìm mốc giờ đầu tiên >= mốc giờ kế tiếp tại múi giờ mục tiêu, lấy 24 khung mỗi 1 tiếng
+        let startIdx = hourlyTimes.findIndex((t) => String(t || '') >= startAnchor.isoHourPrefix);
+        if (startIdx < 0) startIdx = 0;
+
         const hourly = [];
-        for (let i = 0; i < hourlyTimes.length && hourly.length < 8; i += 2) {
-          const ts = String(hourlyTimes[i] || '');
-          const hhPart = ts.slice(11, 16) || `${pad2((nowHour + i) % 24)}:00`;
+        for (let k = 0; k < 24 && startIdx + k < hourlyTimes.length; k += 1) {
+          const idx = startIdx + k;
+          const ts = String(hourlyTimes[idx] || '');
+          const hhPart = ts.slice(11, 16) || `${pad2((startAnchor.hour + k) % 24)}:00`;
+          const ddMm = ts.length >= 10 ? `${ts.slice(8, 10)}/${ts.slice(5, 7)}` : startAnchor.ddMm;
           hourly.push({
             timeLabel: hhPart,
-            tempC: Number(hourlyTemps[i] ?? cur.temperature_2m),
-            code: Number(hourlyCodes[i] ?? cur.weather_code),
-            precipProb: Number(hourlyProbs[i] ?? 0),
+            dateLabel: ddMm,
+            displayLabel: ddMm ? `${hhPart} (${ddMm})` : hhPart,
+            tempC: Number(hourlyTemps[idx] ?? cur.temperature_2m),
+            code: Number(hourlyCodes[idx] ?? cur.weather_code),
+            precipProb: Number(hourlyProbs[idx] ?? 0),
           });
         }
 
@@ -2036,7 +2113,6 @@
             </div>
             <div class="flex flex-col gap-1.5 sm:items-end shrink-0">
               <button type="button" id="mod42-btn-reset-vn-default" class="px-3 py-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition">🇻🇳 Về mặc định Giờ Hà Nội (GMT +7)</button>
-              <button type="button" data-mod42-jump-tab="weather" class="px-3 py-1.5 rounded-xl border border-sky-500/40 bg-sky-500/15 hover:bg-sky-500/25 text-sky-700 dark:text-sky-300 text-xs font-bold transition" data-i18n-ignore="true">${escapeHtml(NS.i18n?.translateText?.(`🌤️ Xem thời tiết tại ${NS.i18n?.translateText?.(activeZone.cityVi) || activeZone.cityVi} →`) || `🌤️ Xem thời tiết tại ${activeZone.cityVi} →`)}</button>
             </div>
           </div>
         </div>
@@ -2089,9 +2165,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Module 43: Thời tiết Real-Time tại vị trí & Màn hình mô phỏng 6 khung giờ × 28 WMO -->
-        <div id="mod43-inline-weather-mount" class="mt-4"></div>
       </div>
     `;
   }
@@ -2127,8 +2200,9 @@
       .map((slot) => {
         const m = lookupWmoWeatherMeta(slot.code);
         return `
-          <div class="p-2 rounded-xl border border-zinc-300/80 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/60 text-center flex flex-col items-center gap-0.5 min-w-[68px]">
-            <span class="text-[10px] font-monoCode text-zinc-500 dark:text-zinc-400">${escapeHtml(slot.timeLabel)}</span>
+          <div class="p-2 rounded-xl border border-zinc-300/80 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/60 text-center flex flex-col items-center gap-0.5 min-w-[82px] shrink-0">
+            <span class="text-[10.5px] font-monoCode font-extrabold text-zinc-700 dark:text-zinc-200">${escapeHtml(slot.timeLabel)}</span>
+            ${slot.dateLabel ? `<span class="text-[9.5px] font-monoCode text-zinc-500 dark:text-zinc-400">(${escapeHtml(slot.dateLabel)})</span>` : ''}
             <span class="text-base">${m.icon}</span>
             <span class="text-xs font-extrabold text-zinc-800 dark:text-zinc-100">${convertCelsius(slot.tempC, tempUnit)}</span>
             <span class="text-[9.5px] text-sky-600 dark:text-sky-300">💧 ${Math.round(slot.precipProb)}%</span>
@@ -2201,6 +2275,11 @@
               <div>
                 <div class="flex flex-wrap items-center gap-2">
                   <h3 class="text-sm font-extrabold text-zinc-900 dark:text-white" data-i18n-ignore="true">${escapeHtml(NS.i18n?.translateText?.(snap.locationName) || snap.locationName)}</h3>
+                  ${
+                    targetLoc.isGps
+                      ? `<span id="mod42-gps-user-where-pill" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40" data-i18n-ignore="true">${escapeHtml(NS.i18n?.translateText?.('🧭 Bạn đang ở:') || '🧭 Bạn đang ở:')} ${escapeHtml(String(snap.locationName || '').replace(/^📍\s*/, ''))}</span>`
+                      : ''
+                  }
                 </div>
                 <div class="text-xs font-bold text-sky-700 dark:text-sky-300 mt-0.5" data-i18n-ignore="true">${escapeHtml(NS.i18n?.translateText?.(meta.labelVi) || meta.labelVi)} · ${escapeHtml(NS.i18n?.translateText?.(meta.moodTag) || meta.moodTag)}</div>
                 <div class="text-[11px] text-zinc-600 dark:text-zinc-300 mt-1" data-i18n-ignore="true">${escapeHtml(NS.i18n?.translateText?.('✍️ Gợi ý sáng tác:') || '✍️ Gợi ý sáng tác:')} ${escapeHtml(NS.i18n?.translateText?.(meta.writingTip) || meta.writingTip)}</div>
@@ -2232,10 +2311,10 @@
           </div>
         </div>
 
-        <!-- Theo giờ (Có nút Thu gọn / Mở rộng) -->
+        <!-- Theo giờ: 24 tiếng gần nhất mỗi 1 tiếng (Có nút Thu gọn / Mở rộng) -->
         <div class="p-3 rounded-2xl border border-zinc-300/80 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/50 space-y-2">
           <div class="flex items-center justify-between gap-2">
-            <h4 class="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">⏱️ Dự Báo Ngắn Hạn Theo Giờ</h4>
+            <h4 class="text-xs font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">⏱️ Dự Báo Ngắn Hạn 24 Giờ Tới (Mỗi 1 Tiếng)</h4>
             <button type="button" id="btn-mod42-toggle-weather-hourly" class="px-2.5 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900 text-[10.5px] font-bold text-zinc-700 dark:text-zinc-200 hover:border-sky-500 transition">${controller.showWeatherHourly ? '▲ Thu gọn' : '▼ Mở rộng'}</button>
           </div>
           <div id="mod42-weather-hourly-body" class="${controller.showWeatherHourly ? '' : 'hidden '}flex gap-2 overflow-x-auto pb-1">${hourlyHtml}</div>
@@ -2467,6 +2546,7 @@
       this.tzSearchQuery = '';
       this.weatherSearchQuery = '';
       this.weatherSearchResults = [];
+      this.showWeatherHourly = true;
       this.isWeatherLoading = false;
       this.latestWeatherSnapshot = null;
 

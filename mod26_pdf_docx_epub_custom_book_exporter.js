@@ -1418,9 +1418,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${utils.escapeHtml(this.prefs.bookTitle)}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,700;1,7..72,400&family=Lora:ital,wght@0,400;0,700;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <!-- 100% Local-First Typography: xử lý tức thì trên máy người dùng, không chờ tải Google Fonts CDN -->
   <style>
     @page {
       size: ${trimPreset.pageSizeCss};
@@ -2741,7 +2739,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>📖 ${utils.escapeHtml(this.prefs.bookTitle)} — Ấn Bản Đọc Sách Độc Lập</title>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,700;1,7..72,400&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <!-- 100% Local-First E-Reader: mở đọc tức thì ngoại tuyến, không phụ thuộc CDN ngoài -->
   <style>
     :root {
       --er-bg: #FCF9F2;

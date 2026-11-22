@@ -1603,21 +1603,30 @@
       const nLon = Number(lon);
       if (!Number.isFinite(nLat) || !Number.isFinite(nLon)) return '';
       const boxes = [
-        // Đà Nẵng (Sơn Trà & các quận trung tâm)
+        // Đà Nẵng — chi tiết cấp Phường/Xã (Sơn Trà & các quận/phường trung tâm)
+        { minLat: 16.06, maxLat: 16.085, minLon: 108.225, maxLon: 108.255, name: 'Phường An Hải, Sơn Trà, Đà Nẵng' },
+        { minLat: 16.048, maxLat: 16.068, minLon: 108.235, maxLon: 108.255, name: 'Phường Phước Mỹ, Sơn Trà, Đà Nẵng' },
+        { minLat: 16.075, maxLat: 16.095, minLon: 108.24, maxLon: 108.26, name: 'Phường Mân Thái, Sơn Trà, Đà Nẵng' },
+        { minLat: 16.08, maxLat: 16.105, minLon: 108.22, maxLon: 108.245, name: 'Phường Nại Hiên Đông, Sơn Trà, Đà Nẵng' },
+        { minLat: 16.09, maxLat: 16.14, minLon: 108.23, maxLon: 108.32, name: 'Phường Thọ Quang, Sơn Trà, Đà Nẵng' },
         { minLat: 16.04, maxLat: 16.14, minLon: 108.21, maxLon: 108.32, name: 'Sơn Trà, Đà Nẵng' },
+        { minLat: 16.055, maxLat: 16.08, minLon: 108.205, maxLon: 108.225, name: 'Phường Hải Châu, Hải Châu, Đà Nẵng' },
         { minLat: 16.02, maxLat: 16.09, minLon: 108.18, maxLon: 108.23, name: 'Hải Châu, Đà Nẵng' },
         { minLat: 15.97, maxLat: 16.045, minLon: 108.23, maxLon: 108.29, name: 'Ngũ Hành Sơn, Đà Nẵng' },
         { minLat: 16.04, maxLat: 16.08, minLon: 108.16, maxLon: 108.21, name: 'Thanh Khê, Đà Nẵng' },
         { minLat: 16.05, maxLat: 16.16, minLon: 108.08, maxLon: 108.18, name: 'Liên Chiểu, Đà Nẵng' },
         { minLat: 15.99, maxLat: 16.05, minLon: 108.16, maxLon: 108.23, name: 'Cẩm Lệ, Đà Nẵng' },
         { minLat: 15.92, maxLat: 16.22, minLon: 107.90, maxLon: 108.35, name: 'Đà Nẵng, Việt Nam' },
-        // Hà Nội
+        // Hà Nội — cấp Phường trung tâm
+        { minLat: 21.022, maxLat: 21.036, minLon: 105.845, maxLon: 105.86, name: 'Phường Hàng Trống, Hoàn Kiếm, Hà Nội' },
         { minLat: 21.01, maxLat: 21.05, minLon: 105.84, maxLon: 105.87, name: 'Hoàn Kiếm, Hà Nội' },
         { minLat: 21.02, maxLat: 21.06, minLon: 105.81, maxLon: 105.85, name: 'Ba Đình, Hà Nội' },
+        { minLat: 21.025, maxLat: 21.045, minLon: 105.78, maxLon: 105.805, name: 'Phường Dịch Vọng, Cầu Giấy, Hà Nội' },
         { minLat: 21.01, maxLat: 21.06, minLon: 105.77, maxLon: 105.81, name: 'Cầu Giấy, Hà Nội' },
         { minLat: 20.99, maxLat: 21.03, minLon: 105.81, maxLon: 105.85, name: 'Đống Đa, Hà Nội' },
         { minLat: 20.94, maxLat: 21.14, minLon: 105.72, maxLon: 105.94, name: 'Hà Nội, Việt Nam' },
-        // TP. Hồ Chí Minh
+        // TP. Hồ Chí Minh — cấp Phường trung tâm
+        { minLat: 10.77, maxLat: 10.79, minLon: 106.695, maxLon: 106.71, name: 'Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh' },
         { minLat: 10.76, maxLat: 10.80, minLon: 106.68, maxLon: 106.72, name: 'Quận 1, TP. Hồ Chí Minh' },
         { minLat: 10.79, maxLat: 10.89, minLon: 106.73, maxLon: 106.84, name: 'Thủ Đức, TP. Hồ Chí Minh' },
         { minLat: 10.68, maxLat: 10.90, minLon: 106.58, maxLon: 106.86, name: 'TP. Hồ Chí Minh, Việt Nam' },
@@ -1643,20 +1652,25 @@
 
     _formatReverseGeocodePlace(parts) {
       const clean = [];
+      const stripAdminPrefix = (s) =>
+        String(s || '')
+          .replace(/^(Thành phố|Tỉnh|Phường|Xã|Thị trấn|Quận|Huyện|Thị xã)\s+/iu, '')
+          .trim()
+          .toLowerCase();
       for (let i = 0; i < parts.length; i++) {
         const raw = String(parts[i] || '')
           .replace(/^(Thành phố|Tỉnh)\s+/iu, '')
           .replace(/^(Quận|Huyện|Thị xã)\s+(?!\d)/iu, '')
           .trim();
         if (!raw) continue;
-        const normRaw = raw.toLowerCase();
+        const normRaw = stripAdminPrefix(raw) || raw.toLowerCase();
         const exists = clean.some((c) => {
-          const lc = c.toLowerCase();
+          const lc = stripAdminPrefix(c) || c.toLowerCase();
           return lc === normRaw || lc.indexOf(normRaw) !== -1 || normRaw.indexOf(lc) !== -1;
         });
         if (!exists) clean.push(raw);
       }
-      return clean.slice(0, 2).join(', ');
+      return clean.slice(0, 3).join(', ');
     }
 
     formatGpsPlaceLabel(lat, lon, placeName = '') {
@@ -1672,7 +1686,7 @@
       const nLon = Number(lon);
       if (!Number.isFinite(nLat) || !Number.isFinite(nLon)) return '';
       if (!this._geoNameCache) this._geoNameCache = new Map();
-      const cacheKey = `${nLat.toFixed(3)},${nLon.toFixed(3)}`;
+      const cacheKey = `${nLat.toFixed(4)},${nLon.toFixed(4)}`;
       if (this._geoNameCache.has(cacheKey)) {
         return this._geoNameCache.get(cacheKey);
       }
@@ -1696,34 +1710,60 @@
         }
       };
 
+      const hasWardPrecision = (txt) =>
+        /^(Phường|Xã|Thị trấn|Ward|Commune)\b/iu.test(String(txt || '').trim()) ||
+        (String(txt || '').split(',').length >= 3);
+
       let resolvedPlace = '';
       if (typeof navigator === 'undefined' || navigator.onLine !== false) {
-        const bdc = await fetchJsonWithTimeout(
-          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(nLat.toFixed(5))}&longitude=${encodeURIComponent(nLon.toFixed(5))}&localityLanguage=vi`,
-          2200
+        // 1. Ưu tiên Nominatim zoom=18 để lấy chính xác tới đơn vị hành chính cơ sở (Phường / Xã / Thị trấn)
+        const nom = await fetchJsonWithTimeout(
+          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(nLat.toFixed(5))}&lon=${encodeURIComponent(nLon.toFixed(5))}&accept-language=vi&zoom=18&addressdetails=1`,
+          3600
         );
-        if (bdc) {
-          resolvedPlace = this._formatReverseGeocodePlace([
-            bdc.locality,
-            bdc.city || bdc.principalSubdivision,
-          ]);
+        if (nom && nom.address) {
+          const addr = nom.address;
+          const ward =
+            addr.quarter ||
+            addr.suburb ||
+            addr.village ||
+            addr.town ||
+            addr.hamlet ||
+            addr.neighbourhood ||
+            addr.residential ||
+            '';
+          const district = addr.city_district || addr.district || addr.county || '';
+          const city = addr.city || addr.state || addr.province || '';
+          resolvedPlace = this._formatReverseGeocodePlace([ward, district, city]);
         }
-        if (!resolvedPlace) {
-          const nom = await fetchJsonWithTimeout(
-            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(nLat.toFixed(5))}&lon=${encodeURIComponent(nLon.toFixed(5))}&accept-language=vi&zoom=14`,
-            2200
+
+        // 2. Bổ sung BigDataCloud (kể cả localityInfo.administrative cấp 8/6/4) nếu Nominatim thiếu hoặc lỗi
+        if (!resolvedPlace || !hasWardPrecision(resolvedPlace)) {
+          const bdc = await fetchJsonWithTimeout(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(nLat.toFixed(5))}&longitude=${encodeURIComponent(nLon.toFixed(5))}&localityLanguage=vi`,
+            2800
           );
-          if (nom && nom.address) {
-            const addr = nom.address;
-            resolvedPlace = this._formatReverseGeocodePlace([
-              addr.suburb || addr.city_district || addr.district || addr.town || addr.village || addr.county,
-              addr.city || addr.state || addr.province,
+          if (bdc) {
+            const adminList = Array.isArray(bdc.localityInfo?.administrative)
+              ? [...bdc.localityInfo.administrative].sort((a, b) => Number(b.adminLevel || 0) - Number(a.adminLevel || 0))
+              : [];
+            const wardAdmin = adminList.find((x) => Number(x.adminLevel) >= 7 && x.name)?.name || '';
+            const distAdmin = adminList.find((x) => Number(x.adminLevel) === 6 && x.name)?.name || '';
+            const cityAdmin = bdc.city || adminList.find((x) => Number(x.adminLevel) === 4 && x.name)?.name || bdc.principalSubdivision || '';
+            const bdcPlace = this._formatReverseGeocodePlace([
+              wardAdmin || bdc.locality,
+              distAdmin,
+              cityAdmin,
             ]);
+            if (bdcPlace && (!resolvedPlace || (!hasWardPrecision(resolvedPlace) && hasWardPrecision(bdcPlace)) || bdcPlace.length > resolvedPlace.length)) {
+              resolvedPlace = bdcPlace;
+            }
           }
         }
       }
-      if (!resolvedPlace) {
-        resolvedPlace = this.lookupKnownDistrictCity(nLat, nLon);
+      const offlineBox = this.lookupKnownDistrictCity(nLat, nLon);
+      if (!resolvedPlace || (!hasWardPrecision(resolvedPlace) && hasWardPrecision(offlineBox))) {
+        if (offlineBox) resolvedPlace = offlineBox;
       }
       if (resolvedPlace) {
         this._geoNameCache.set(cacheKey, resolvedPlace);
@@ -2294,7 +2334,10 @@
       this.running = true;
       const tick = () => {
         if (!this.running) return;
-        this.renderFrame();
+        // Dừng vẽ hạt thời tiết khi tab đang ẩn để nhường 100% GPU/CPU cho giải mã video & âm thanh
+        if (typeof document === 'undefined' || !document.hidden) {
+          this.renderFrame();
+        }
         this.animFrameId = requestAnimationFrame(tick);
       };
       this.animFrameId = requestAnimationFrame(tick);
@@ -2930,8 +2973,16 @@
               <button type="button" id="mod43-btn-sync-gps" class="px-2.5 py-1.5 rounded-xl border border-emerald-500/45 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-[11px] font-extrabold transition cursor-pointer">📍 Vị Trí Thực (GPS)</button>
               <button type="button" id="mod43-btn-sync-zone" class="px-2.5 py-1.5 rounded-xl border border-sky-500/45 bg-sky-500/15 hover:bg-sky-500/25 text-sky-700 dark:text-sky-300 text-[11px] font-bold transition cursor-pointer">🔄 Đồng Bộ Ngay</button>
             </div>
-            <div id="mod43-gps-hint-box" class="px-2.5 py-1 rounded-xl border border-amber-500/35 bg-amber-500/10 text-[10.5px] font-semibold text-amber-800 dark:text-amber-200 leading-snug break-words">
-              📱 Bạn bật tính năng Vị trí và bấm vào nút &quot;Vị trí thực (GPS)&quot; trên điện thoại để xem nhé
+            <div id="mod43-gps-hint-box" class="px-2.5 py-1 rounded-xl border ${
+              isGpsPinned
+                ? 'border-emerald-500/45 bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
+                : 'border-amber-500/35 bg-amber-500/10 text-amber-800 dark:text-amber-200'
+            } text-[10.5px] font-semibold leading-snug break-words" data-i18n-ignore="true">
+              ${
+                isGpsPinned
+                  ? `✅ ${escapeHtml(trText('Bạn đang ở:'))} <strong>${escapeHtml(String(st.gpsCoords?.label || rt.locationName || '').replace(/^📍\s*/, ''))}</strong>`
+                  : escapeHtml(trText('📱 Bạn bật tính năng Vị trí và bấm vào nút "Vị trí thực (GPS)" trên điện thoại để xem nhé'))
+              }
             </div>
           </div>
         </div>
@@ -2942,6 +2993,11 @@
             <div class="flex flex-wrap items-center gap-1.5">
               <span class="text-base">${rtWmoCfg.icon}</span>
               <span class="text-xs font-extrabold text-zinc-900 dark:text-white">${escapeHtml(trText(rt.locationName))}</span>
+              <span id="mod43-gps-resolved-where" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                isGpsPinned
+                  ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
+                  : 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30'
+              }" data-i18n-ignore="true">${escapeHtml(trText(isGpsPinned ? '🧭 Vị trí thực của bạn đang ở:' : '🧭 Khu vực đang xem:'))} ${escapeHtml(String(rt.locationName || '').replace(/^[^\p{L}\p{N}]+/u, ''))}</span>
               <span class="px-1.5 py-0.5 rounded-md text-[9.5px] font-monoCode bg-black/10 dark:bg-black/35 text-zinc-700 dark:text-zinc-300">${escapeHtml(rt.sourceMode === 'open_meteo_live' ? 'Open-Meteo Live' : 'Offline Sync')}</span>
             </div>
             <div id="mod43-realtime-wmo-summary" data-i18n-ignore="true" class="text-xs font-bold text-sky-700 dark:text-sky-300">
@@ -3571,7 +3627,9 @@
         this.state.gpsCoords &&
         Number.isFinite(Number(this.state.gpsCoords.lat)) &&
         Number.isFinite(Number(this.state.gpsCoords.lon)) &&
-        (!this.state.gpsCoords.label || String(this.state.gpsCoords.label).indexOf('Vị trí thực của bạn') !== -1)
+        (!this.state.gpsCoords.label ||
+          String(this.state.gpsCoords.label).indexOf('Vị trí thực của bạn') !== -1 ||
+          !/(Phường|Xã|Thị trấn)/i.test(String(this.state.gpsCoords.label)))
       ) {
         const upgradedPlace = await this.apiClient
           .reverseGeocodeCoords(this.state.gpsCoords.lat, this.state.gpsCoords.lon)

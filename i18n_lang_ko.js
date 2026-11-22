@@ -4382,6 +4382,12 @@
     "Nhạc, Pomodoro & Chữ": "음악, 뽀모도로 & 타이포그래피",
     "Âm Nhạc, Pomodoro & Không Gian": "오디오, 뽀모도로 & 배경 공간",
     "Kho Phiên Bản & Xuất Sách": "버전 보관소 & 책 내보내기",
+    // [V100_HOURLY_24H_AND_WARD_GPS]
+    "⏱️ Dự Báo Ngắn Hạn 24 Giờ Tới (Mỗi 1 Tiếng)": "⏱️ 향후 24시간 단기 예보 (1시간 간격)",
+    "🧭 Vị trí thực của bạn đang ở:": "🧭 현재 사용자 위치:",
+    "🧭 Khu vực đang xem:": "🧭 조회 중인 지역:",
+    "🧭 Bạn đang ở:": "🧭 현재 위치:",
+    "Bạn đang ở:": "현재 위치:",
   });
 
   const promptExact = Object.freeze({

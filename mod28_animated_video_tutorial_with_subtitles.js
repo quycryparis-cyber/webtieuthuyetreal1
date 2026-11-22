@@ -1827,7 +1827,7 @@
           return;
         }
 
-        this.resizeCanvasToContainer();
+        // Resize được xử lý bởi ResizeObserver — không gọi layout reflow mỗi khung hình 60FPS
         this.renderCurrentFrame();
         this.notifyTickListeners();
         this.scheduleNextAnimationFrame();

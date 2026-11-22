@@ -3139,19 +3139,26 @@
           if (!ifrSrc || ifrSrc === 'about:blank') return;
 
           if (action === 'pause') {
-            bridge.dispatchPlayerCommand('mute', []);
+            if (!this._lastSentIframeMuted) {
+              this._lastSentIframeMuted = true;
+              bridge.dispatchPlayerCommand('mute', []);
+            }
             bridge.dispatchPlayerCommand('pauseVideo', []);
             return;
           }
           if (action === 'rate') {
             const cleanRate = Number(info.playbackRate) || Number(this.playerCtrl?.prefs?.speed) || 1;
+            this._lastSentIframeRate = cleanRate;
             bridge.dispatchPlayerCommand('setPlaybackRate', [cleanRate]);
             return;
           }
           if (action === 'seek') {
             const targetSec = Math.max(0, Number(info.currentTime) || 0);
             this._iframeLastSeekSyncMs = Date.now();
-            bridge.dispatchPlayerCommand('mute', []);
+            if (!this._lastSentIframeMuted) {
+              this._lastSentIframeMuted = true;
+              bridge.dispatchPlayerCommand('mute', []);
+            }
             bridge.dispatchPlayerCommand('seekTo', [targetSec, true]);
             return;
           }
@@ -3161,14 +3168,20 @@
             }
             return;
           }
-          bridge.dispatchPlayerCommand('mute', []);
+          if (!this._lastSentIframeMuted) {
+            this._lastSentIframeMuted = true;
+            bridge.dispatchPlayerCommand('mute', []);
+          }
           const cleanRate = Number(info.playbackRate) || Number(this.playerCtrl?.prefs?.speed) || 1;
-          bridge.dispatchPlayerCommand('setPlaybackRate', [cleanRate]);
+          if (this._lastSentIframeRate !== cleanRate) {
+            this._lastSentIframeRate = cleanRate;
+            bridge.dispatchPlayerCommand('setPlaybackRate', [cleanRate]);
+          }
           if (action === 'play') {
             const targetSec = Number(info.currentTime);
             if (Number.isFinite(targetSec) && targetSec >= 0) {
               const lastVTime = Number(bridge._lastVisualIframeTimeSec);
-              if (!Number.isFinite(lastVTime) || Math.abs(lastVTime - targetSec) > 1.2) {
+              if (!Number.isFinite(lastVTime) || Math.abs(lastVTime - targetSec) > 1.5) {
                 this._iframeLastSeekSyncMs = Date.now();
                 bridge.dispatchPlayerCommand('seekTo', [targetSec, true]);
               }
@@ -3192,8 +3205,8 @@
             Number.isFinite(targetCur) &&
             targetCur >= 0 &&
             Number.isFinite(vTime) &&
-            Math.abs(vTime - targetCur) > 1.8 &&
-            (!this._iframeLastSeekSyncMs || Date.now() - this._iframeLastSeekSyncMs >= 2500)
+            Math.abs(vTime - targetCur) > 2.8 &&
+            (!this._iframeLastSeekSyncMs || Date.now() - this._iframeLastSeekSyncMs >= 4000)
           ) {
             this._iframeLastSeekSyncMs = Date.now();
             bridge.dispatchPlayerCommand('seekTo', [targetCur, true]);
@@ -3226,6 +3239,11 @@
         if (action === 'seek') {
           const targetSec = Math.max(0, Number(info.currentTime) || 0);
           player.lastKnownTime = targetSec;
+          this._lastVisualHardSeekMs = Date.now();
+          const baseRate = Number(info.playbackRate) || Number(this.playerCtrl?.prefs?.speed) || 1;
+          if (Math.abs((el.playbackRate || 1) - baseRate) > 0.01) {
+            el.playbackRate = baseRate;
+          }
           if (el.readyState >= 1) {
             try { el.currentTime = targetSec; } catch (_eS) {}
           } else {
@@ -3235,13 +3253,14 @@
         }
 
         const audioRate = Number(info.playbackRate) || Number(this.playerCtrl?.prefs?.speed) || 1;
-        if (Math.abs((el.playbackRate || 1) - audioRate) > 0.01) {
-          el.playbackRate = audioRate;
-        }
 
         if (action === 'play') {
           const targetPlayTime = Number.isFinite(info.currentTime) ? Math.max(0, Number(info.currentTime)) : 0;
-          if (el.readyState >= 1 && (el.ended || Math.abs((el.currentTime || 0) - targetPlayTime) > 0.4)) {
+          if (Math.abs((el.playbackRate || 1) - audioRate) > 0.01) {
+            el.playbackRate = audioRate;
+          }
+          if (el.readyState >= 1 && (el.ended || Math.abs((el.currentTime || 0) - targetPlayTime) > 0.45)) {
+            this._lastVisualHardSeekMs = Date.now();
             try { el.currentTime = targetPlayTime; } catch (_eS2) {}
           }
           if ((!isHiddenNow || inPip) && (el.paused || el.ended)) {
@@ -3251,7 +3270,7 @@
           return;
         }
 
-        // Periodic tick drift-lock between Tab 3 <audio> and Tab 5 muted <video>
+        // Smooth A/V drift-lock between Tab 3 <audio> and Tab 5 muted <video> (zero keyframe-seek stutter on long videos)
         if (isHiddenNow && !inPip) {
           if (!el.paused) {
             try { el.pause(); } catch (_eH) {}
@@ -3265,14 +3284,28 @@
           try { el.pause(); } catch (_eP2) {}
         }
         const targetCur = Number(info.currentTime);
-        if (
-          Number.isFinite(targetCur) &&
-          targetCur >= 0 &&
-          el.readyState >= 1 &&
-          !el.seeking &&
-          Math.abs((el.currentTime || 0) - targetCur) > 0.55
-        ) {
-          try { el.currentTime = targetCur; } catch (_eD) {}
+        if (Number.isFinite(targetCur) && targetCur >= 0 && el.readyState >= 2 && !el.seeking) {
+          const nowMs = Date.now();
+          const drift = targetCur - (el.currentTime || 0);
+          const absDrift = Math.abs(drift);
+          const sinceHardSeek = nowMs - (this._lastVisualHardSeekMs || 0);
+          if (absDrift > 2.4 && sinceHardSeek >= 1800) {
+            // Chỉ tua cứng lại khi lệch rất xa (>2.4s) và đã qua thời gian giải mã keyframe
+            this._lastVisualHardSeekMs = nowMs;
+            if (Math.abs((el.playbackRate || 1) - audioRate) > 0.01) {
+              el.playbackRate = audioRate;
+            }
+            try { el.currentTime = targetCur; } catch (_eD) {}
+          } else if (shouldPlay && absDrift > 0.16 && absDrift <= 2.4 && sinceHardSeek >= 600) {
+            // Bắt kịp mượt mà bằng vi chỉnh tốc độ khung hình (không ngắt pipeline giải mã video dài)
+            const nudgeFactor = drift > 0 ? Math.min(1.18, 1 + absDrift * 0.12) : Math.max(0.86, 1 - absDrift * 0.10);
+            const desiredRate = Math.max(0.5, Math.min(2.25, Number((audioRate * nudgeFactor).toFixed(3))));
+            if (Math.abs((el.playbackRate || 1) - desiredRate) > 0.015) {
+              el.playbackRate = desiredRate;
+            }
+          } else if (Math.abs((el.playbackRate || 1) - audioRate) > 0.01) {
+            el.playbackRate = audioRate;
+          }
         }
       } finally {
         this._syncingVisualFromMod21 = false;

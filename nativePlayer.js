@@ -570,6 +570,11 @@
         this.playbackStateCode = YT_STATES.PLAYING;
         if (this.companionAudioActive && this.companionAudioEl) {
           this._syncCompanionPrefs();
+          if (this._companionPausedForVideoWait || Math.abs((this.companionAudioEl.currentTime || 0) - (el.currentTime || 0)) > 0.25) {
+            this._companionPausedForVideoWait = false;
+            this._lastCompanionHardSeekMs = Date.now();
+            try { this.companionAudioEl.currentTime = el.currentTime || 0; } catch (_ce) {}
+          }
           if (this.companionAudioEl.paused) {
             this.companionAudioEl.play().catch(() => {});
           }
@@ -580,6 +585,11 @@
       el.addEventListener('waiting', () => {
         if (!this.active) return;
         this.playbackStateCode = YT_STATES.BUFFERING;
+        // Tạm giữ âm thanh đồng hành khi khung hình đang nạp keyframe (tránh tiếng chạy trước hình trên video dài)
+        if (this.companionAudioActive && this.companionAudioEl && !this.companionAudioEl.paused && !this._bgAudioHandoffActive) {
+          this._companionPausedForVideoWait = true;
+          try { this.companionAudioEl.pause(); } catch (_ceWait) {}
+        }
         this.emit('stateChange', YT_STATES.BUFFERING);
       });
 
@@ -622,7 +632,21 @@
 
       el.addEventListener('seeked', () => {
         if (!this.active) return;
-        this.emit('seeked', { currentTime: Number(el.currentTime) || 0, paused: Boolean(el.paused) });
+        const curT = Number(el.currentTime) || 0;
+        if (this.companionAudioActive && this.companionAudioEl && !this._bgAudioHandoffActive) {
+          this._lastCompanionHardSeekMs = Date.now();
+          this._companionPausedForVideoWait = false;
+          try {
+            if (Math.abs((this.companionAudioEl.currentTime || 0) - curT) > 0.12) {
+              this.companionAudioEl.currentTime = curT;
+            }
+            this._syncCompanionPrefs();
+            if (!el.paused && this.companionAudioEl.paused) {
+              this.companionAudioEl.play().catch(() => {});
+            }
+          } catch (_ceSeeked) {}
+        }
+        this.emit('seeked', { currentTime: curT, paused: Boolean(el.paused) });
       });
 
       el.addEventListener('pause', () => {
@@ -665,11 +689,29 @@
         if (Number.isFinite(cur) && cur >= 0) this.lastKnownTime = cur;
         if (Number.isFinite(dur) && dur > 0) this.lastKnownDuration = dur;
 
-        if (this.companionAudioActive && this.companionAudioEl && !el.paused) {
-          if (Math.abs((this.companionAudioEl.currentTime || 0) - (cur || 0)) > 0.35) {
-            try { this.companionAudioEl.currentTime = cur || 0; } catch (_ce) {}
+        if (this.companionAudioActive && this.companionAudioEl && !el.paused && !el.seeking) {
+          const baseSpd = Number(this._prefs?.speed) || 1;
+          const aCur = Number(this.companionAudioEl.currentTime) || 0;
+          const drift = (cur || 0) - aCur;
+          const absDrift = Math.abs(drift);
+          const nowSync = Date.now();
+          const sinceSeek = nowSync - (this._lastCompanionHardSeekMs || 0);
+          if (absDrift > 1.4 && sinceSeek >= 1200) {
+            this._lastCompanionHardSeekMs = nowSync;
+            try {
+              this.companionAudioEl.playbackRate = baseSpd;
+              this.companionAudioEl.currentTime = cur || 0;
+            } catch (_ce) {}
+          } else if (absDrift > 0.14 && absDrift <= 1.4 && sinceSeek >= 500) {
+            const nudge = drift > 0 ? Math.min(1.08, 1 + absDrift * 0.08) : Math.max(0.92, 1 - absDrift * 0.08);
+            const nextRate = Number((baseSpd * nudge).toFixed(3));
+            if (Math.abs((this.companionAudioEl.playbackRate || 1) - nextRate) > 0.01) {
+              try { this.companionAudioEl.playbackRate = nextRate; } catch (_ceR) {}
+            }
+          } else if (Math.abs((this.companionAudioEl.playbackRate || 1) - baseSpd) > 0.01) {
+            try { this.companionAudioEl.playbackRate = baseSpd; } catch (_ceR2) {}
           }
-          if (this.companionAudioEl.paused) {
+          if (this.companionAudioEl.paused && el.readyState >= 3 && !this._companionPausedForVideoWait) {
             this.companionAudioEl.play().catch(() => {});
           }
         }
@@ -1426,6 +1468,7 @@
       if (!this.active || !this.videoEl) return;
       const target = Math.max(0, Number(seconds) || 0);
       this.lastKnownTime = target;
+      this._lastCompanionHardSeekMs = Date.now();
       try {
         if (this.videoEl.readyState >= 1) {
           this.videoEl.currentTime = target;
@@ -1437,6 +1480,10 @@
             this.companionAudioEl.currentTime = target;
           } else if (this._bgAudioHandoffActive) {
             this.pendingBgSeekTime = target;
+          }
+          if (!this._bgAudioHandoffActive && !this.videoEl.paused && this.videoEl.readyState < 3 && !this.companionAudioEl.paused) {
+            this._companionPausedForVideoWait = true;
+            this.companionAudioEl.pause();
           }
         }
       } catch (_e) {}

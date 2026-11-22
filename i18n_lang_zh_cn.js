@@ -4382,6 +4382,12 @@
     "Nhạc, Pomodoro & Chữ": "音乐、番茄钟与排版",
     "Âm Nhạc, Pomodoro & Không Gian": "音乐、番茄钟与氛围空间",
     "Kho Phiên Bản & Xuất Sách": "版本库与书籍导出",
+    // [V100_HOURLY_24H_AND_WARD_GPS]
+    "⏱️ Dự Báo Ngắn Hạn 24 Giờ Tới (Mỗi 1 Tiếng)": "⏱️ 未来 24 小时逐小时预报",
+    "🧭 Vị trí thực của bạn đang ở:": "🧭 您当前所在位置：",
+    "🧭 Khu vực đang xem:": "🧭 当前查看区域：",
+    "🧭 Bạn đang ở:": "🧭 您当前位于：",
+    "Bạn đang ở:": "您当前位于：",
   });
 
   const promptExact = Object.freeze({
