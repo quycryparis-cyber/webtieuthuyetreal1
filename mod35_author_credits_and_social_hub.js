@@ -2176,6 +2176,9 @@
             <button type="button" id="btn-mod35-toggle-milestones" class="px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-[11px] font-bold cursor-pointer transition">
               🏆 Bảng Cột Mốc Sáng Tác
             </button>
+            <button type="button" id="btn-mod35-open-fx570-calc" class="px-2.5 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/50 text-sky-200 text-[11px] font-bold cursor-pointer transition">
+              🧮 Máy Tính Đồ Thị (fx-570VN PLUS &amp; Desmos)
+            </button>
           </div>
           <div class="flex flex-wrap items-center gap-1.5">
             <button type="button" id="btn-mod35-a11y-fontscale" class="px-2 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 text-[10px] font-semibold cursor-pointer">
@@ -2212,6 +2215,14 @@
 
       const msToggle = document.getElementById('btn-mod35-toggle-milestones');
       const msSlot = document.getElementById('mod35-milestone-matrix-slot');
+      const fx570Btn = document.getElementById('btn-mod35-open-fx570-calc');
+      if (fx570Btn) {
+        fx570Btn.addEventListener('click', () => {
+          if (NS.fx570GraphCalc && typeof NS.fx570GraphCalc.openCalculatorModal === 'function') {
+            NS.fx570GraphCalc.openCalculatorModal(false);
+          }
+        });
+      }
       if (msToggle && msSlot) {
         msToggle.addEventListener('click', () => {
           const isHidden = msSlot.classList.contains('hidden');

@@ -1029,7 +1029,7 @@
         }, true);
       } catch (_eSub) {}
       try {
-        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v101';
+        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v102';
         if (typeof window !== 'undefined' && 'caches' in window && window.caches && typeof window.caches.keys === 'function') {
           window.caches.keys().then(function (keys) {
             for (var i = 0; i < keys.length; i++) {
@@ -1488,7 +1488,7 @@
             <span>➕ Tạo Chương Mới</span>
           </button>
           <select id="quick-chapter-switcher" class="max-w-[165px] sm:max-w-[205px] px-2.5 py-1.5 rounded-xl border border-emerald-500/40 bg-studioLightBg dark:bg-zinc-950 font-bold text-xs text-emerald-500 focus:outline-none focus:border-emerald-400 shrink-0 min-w-0" title="Chuyển nhanh giữa các chương"></select>
-          <input id="input-chapter-title" type="text" value="Chương 1: Khởi Đầu Trong Mưa Đêm" placeholder="Nhập tên chương..." class="w-full sm:w-auto min-w-0 flex-1 sm:basis-[160px] px-3 py-1.5 rounded-xl border border-transparent hover:border-studioLightBorder dark:hover:border-zinc-700 focus:border-emerald-500 bg-transparent focus:bg-studioLightBg dark:focus:bg-zinc-950 font-extrabold text-sm sm:text-base focus:outline-none transition select-text" />
+          <input id="input-chapter-title" type="text" value="Chương 1: Khởi Đầu Trong Mưa Đêm" placeholder="Nhập tên chương..." class="w-full sm:w-auto min-w-[150px] flex-1 sm:basis-[160px] px-3 py-1.5 rounded-xl border border-transparent hover:border-studioLightBorder dark:hover:border-zinc-700 focus:border-emerald-500 bg-transparent focus:bg-studioLightBg dark:focus:bg-zinc-950 font-extrabold text-sm sm:text-base focus:outline-none transition select-text" />
           <span id="active-chapter-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0 whitespace-nowrap cursor-pointer">
             📝 Bản Nháp
           </span>
@@ -1856,7 +1856,7 @@
           </div>
 
           <!-- Vùng soạn thảo chính: Gồm Cây Chương Nhanh (Ẩn mặc định), Khung Soạn Thảo, Thanh AI Bôi Đen & Bảng Split -->
-          <div class="flex-1 flex flex-col lg:flex-row gap-3 min-h-[44vh] lg:min-h-[280px] overflow-hidden relative px-2 sm:px-6 lg:px-10 py-3">
+          <div class="flex-1 flex flex-col lg:flex-row gap-3 min-h-0 lg:min-h-[280px] overflow-y-auto lg:overflow-hidden relative px-2 sm:px-6 lg:px-10 py-3 pb-24 lg:pb-3">
             <!-- Cây Chương Nhanh tại Tab 1 (Mở bằng nút 📚 Cây Chương, chuyển chương không cần rời Bàn viết) -->
             <aside id="tab1-quick-chapter-sidebar" class="hidden w-full lg:w-64 xl:w-72 max-h-[38vh] lg:max-h-none flex flex-col rounded-2xl border border-teal-500/40 bg-studioLightPanel/95 dark:bg-zinc-950/95 shadow-lg overflow-hidden shrink-0 text-xs">
               <div class="px-3 py-2 border-b border-teal-500/30 bg-teal-950/35 flex items-center justify-between gap-2 shrink-0">
@@ -1866,7 +1866,7 @@
               <div id="tab1-quick-chapter-tree-list" class="flex-1 overflow-y-auto p-2 space-y-1 min-h-0"></div>
             </aside>
 
-            <div class="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
+            <div class="flex-1 flex flex-col min-w-0 min-h-0 overflow-visible lg:overflow-hidden relative">
               <!-- Thanh AI Nổi Khi Bôi Đen Đoạn Văn (Inline AI Context Bar) -->
               <div id="tab1-inline-ai-selection-bar" class="hidden mb-2 px-2.5 py-1.5 rounded-xl border border-indigo-400/50 bg-indigo-950/95 shadow-xl flex flex-wrap items-center justify-between gap-1.5 text-[11px] shrink-0">
                 <span class="font-extrabold text-indigo-200 whitespace-nowrap">✨ AI nhanh cho đoạn đã chọn:</span>
@@ -1882,10 +1882,10 @@
               <div id="ai-diff-review-surface" class="hidden w-full flex-1 p-5 sm:p-8 rounded-2xl border-2 border-emerald-500/40 bg-studioLightPanel/90 dark:bg-zinc-950/95 novel-editor-textarea overflow-y-auto whitespace-pre-wrap select-text shadow-inner"></div>
 
               <!-- Khung soạn thảo tiểu thuyết chính -->
-              <textarea id="textarea-chapter-content" class="w-full flex-1 min-h-[42vh] lg:min-h-[260px] p-4 sm:p-8 rounded-2xl border border-studioLightBorder dark:border-zinc-800/90 bg-studioLightPanel/70 dark:bg-zinc-950/90 novel-editor-textarea select-text focus:outline-none focus:border-emerald-500/70 resize-y lg:resize-none shadow-inner mx-auto" placeholder="Bắt đầu viết chương tiểu thuyết của bạn tại đây...&#10;- Quy ước hội thoại chuẩn: - Câu thoại (Tên nhân vật)&#10;- Hệ thống tự động lưu an toàn sau mỗi 2 giây và tạo bản sao lưu phiên bản tự động."></textarea>
+              <textarea id="textarea-chapter-content" class="w-full flex-1 min-h-[210px] sm:min-h-[34vh] lg:min-h-[260px] p-4 sm:p-8 rounded-2xl border border-studioLightBorder dark:border-zinc-800/90 bg-studioLightPanel/70 dark:bg-zinc-950/90 novel-editor-textarea select-text focus:outline-none focus:border-emerald-500/70 resize-y lg:resize-none shadow-inner mx-auto" placeholder="Bắt đầu viết chương tiểu thuyết của bạn tại đây...&#10;- Quy ước hội thoại chuẩn: - Câu thoại (Tên nhân vật)&#10;- Hệ thống tự động lưu an toàn sau mỗi 2 giây và tạo bản sao lưu phiên bản tự động."></textarea>
 
               <!-- Thanh phím tắt dấu câu tiểu thuyết dành riêng cho Điện thoại & Máy tính bảng (Mặc định rút gọn sẵn) -->
-              <div id="mobile-writer-quickbar" class="lg:hidden mt-2 px-2 py-1.5 rounded-xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightPanel/95 dark:bg-zinc-900/95 flex items-center gap-1.5 overflow-x-auto text-xs shrink-0">
+              <div id="mobile-writer-quickbar" class="lg:hidden mt-2 mb-2 px-2 py-2 min-h-[42px] rounded-xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightPanel/95 dark:bg-zinc-900/95 flex items-center gap-1.5 overflow-x-auto overflow-y-visible text-xs shrink-0">
                 <button type="button" id="btn-toggle-mobile-quickbar" data-noir-collapse-target="mobile-quickbar-collapsible-buttons" data-noir-collapse-key="mobile_quickbar" class="noir-collapse-toggle px-2 py-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-[10px] font-bold text-emerald-400 shrink-0 flex items-center gap-1">
                   <span>⌨️ Dấu câu</span> <span class="noir-collapse-arrow">▾</span>
                 </button>
@@ -3771,6 +3771,7 @@
   <script src="mod42_world_clock_weather_and_alarm.js"></script>
   <script src="mod43_realtime_weather_sky_engine.js"></script>
   <script src="mod44_site_traffic_analytics_box.js"></script>
+  <script src="mod45_scientific_fx570_and_desmos_graphing_calc.js"></script>
   <script src="systemFontScale.js"></script>
   <script src="miscFunHub.js"></script>
   <script src="i18n_lang_en.js"></script>

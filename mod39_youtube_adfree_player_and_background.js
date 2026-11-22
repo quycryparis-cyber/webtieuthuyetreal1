@@ -9587,6 +9587,10 @@
       safeNotify('✅ Đã copy link thành công, chờ bạn dán link vào ytsave', 'success', 3600);
 
       try {
+        this.openYtSaveGuideModal(watchUrl, ytsaveUrl);
+      } catch (_eGuide) {}
+
+      try {
         if (typeof global.open === 'function') {
           global.open(ytsaveUrl, '_blank', 'noopener,noreferrer');
         }
@@ -9598,6 +9602,120 @@
         watchUrl,
         ytsaveUrl
       };
+    }
+
+    openYtSaveGuideModal(watchUrl, ytsaveUrl = 'https://ytsave.to/') {
+      if (typeof document === 'undefined' || !document.body) return null;
+      const existing = document.getElementById('mod39-ytsave-guide-modal');
+      if (existing) existing.remove();
+
+      if (!document.getElementById('mod39-ytsave-blink-style')) {
+        const st = document.createElement('style');
+        st.id = 'mod39-ytsave-blink-style';
+        st.textContent = [
+          '@keyframes mod39YtSavePulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.75), 0 0 14px rgba(251,191,36,.55); transform: scale(1); } 50% { box-shadow: 0 0 0 6px rgba(239,68,68,0), 0 0 22px rgba(251,191,36,.95); transform: scale(1.03); } }',
+          '@keyframes mod39YtTabBlink { 0%,100% { border-color: rgba(52,211,153,.95); background: rgba(16,185,129,.22); } 50% { border-color: rgba(251,191,36,.95); background: rgba(245,158,11,.28); } }',
+          '.mod39-ytsave-dl-blink { animation: mod39YtSavePulse 1.35s ease-in-out infinite; }',
+          '.mod39-ytsave-tab-blink { animation: mod39YtTabBlink 1.5s ease-in-out infinite; }'
+        ].join('\n');
+        document.head.appendChild(st);
+      }
+
+      const escHtml = (s) =>
+        String(s || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+
+      const modal = document.createElement('div');
+      modal.id = 'mod39-ytsave-guide-modal';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.className =
+        'fixed inset-0 z-[190] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto';
+
+      modal.innerHTML = `
+        <div class="my-auto w-full max-w-lg rounded-2xl border-2 border-amber-400/75 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden text-xs">
+          <div class="px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-amber-950/70 via-rose-950/50 to-zinc-950 flex items-center justify-between gap-2">
+            <div class="font-extrabold text-sm text-amber-300 flex items-center gap-2">
+              <span>📥 Hướng Dẫn Tải Video / MP3 Tại YTSave</span>
+            </div>
+            <button type="button" id="btn-mod39-close-ytsave-guide" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-rose-600 text-zinc-100 font-extrabold transition">✕</button>
+          </div>
+          <div class="p-4 space-y-3">
+            <div class="p-3 rounded-xl border border-emerald-500/45 bg-emerald-950/30 text-emerald-100 leading-relaxed font-semibold">
+              ✅ Link YouTube đã được tự động sao chép sẵn vào bộ nhớ tạm! Bạn chỉ cần <strong>Dán (Ctrl+V / giữ ô nhập → Dán)</strong> vào ô tải của YTSave rồi lướt xuống chọn chất lượng mong muốn.
+            </div>
+            <div class="p-3 rounded-xl border border-amber-500/45 bg-amber-950/25 text-amber-100 leading-relaxed space-y-1">
+              <div>🎬 <strong>Chọn chất lượng video mong muốn tải về</strong> (Ví dụ: <strong>144p, 240p, 480p, 720p, 1080p, 1440p, 2160p</strong>).</div>
+              <div>🎵 <strong>Muốn tải file MP3</strong> thì bấm sang mục <strong>Audio</strong> ngay tại trang YTSave.</div>
+              <div class="text-[11px] text-zinc-400 pt-1">🔒 Lưu ý kỹ thuật: Chính sách bảo mật trình duyệt (Same-Origin Policy) không cho phép trang web tự bấm nút hay dán chữ hộ sang tên miền khác (app.ytsave.to), nên hệ thống đã tối ưu sao chép 1 chạm + mở thẳng trang cho bạn.</div>
+            </div>
+
+            <!-- Mô phỏng trực quan có nhấp nháy các nút Video / Audio & Download trên YTSave -->
+            <div class="p-3 rounded-xl border border-zinc-800 bg-zinc-900/90 space-y-2.5">
+              <div class="text-[11px] font-bold text-zinc-400 uppercase tracking-wide">👀 Mô phỏng nút cần bấm trên trang YTSave:</div>
+              <div class="grid grid-cols-3 gap-1.5 text-center font-extrabold text-[11px]">
+                <div class="mod39-ytsave-tab-blink py-1.5 px-2 rounded-lg border-2 text-emerald-200">🎬 Video (MP4)</div>
+                <div class="mod39-ytsave-tab-blink py-1.5 px-2 rounded-lg border-2 text-amber-200">🎵 Audio (MP3)</div>
+                <div class="py-1.5 px-2 rounded-lg border border-zinc-700 bg-zinc-950/80 text-zinc-400">Subtitles</div>
+              </div>
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-zinc-950/80 border border-zinc-800">
+                  <div><strong class="text-white">2160p / 1080p</strong> <span class="text-zinc-400 text-[10px]">MP4 · 4K / FHD</span></div>
+                  <span class="mod39-ytsave-dl-blink px-3 py-1 rounded-lg bg-rose-600 text-white font-extrabold text-[11px]">⬇ Download</span>
+                </div>
+                <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-zinc-950/80 border border-zinc-800">
+                  <div><strong class="text-white">720p / 480p / 240p / 144p</strong> <span class="text-zinc-400 text-[10px]">MP4 · HD / SD</span></div>
+                  <span class="mod39-ytsave-dl-blink px-3 py-1 rounded-lg bg-rose-600/85 text-white font-extrabold text-[11px]">⬇ Download</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 p-2 rounded-xl border border-zinc-800 bg-zinc-900/80">
+              <input type="text" id="mod39-ytsave-guide-url-input" readonly value="${escHtml(watchUrl)}" class="flex-1 min-w-0 bg-transparent text-[11px] font-mono text-sky-300 focus:outline-none select-all" />
+              <button type="button" id="btn-mod39-ytsave-recopy" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-bold shrink-0 transition">📋 Sao chép lại</button>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
+              <a href="${escHtml(ytsaveUrl)}" target="_blank" rel="noopener noreferrer" id="btn-mod39-ytsave-reopen" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white font-extrabold shadow transition inline-flex items-center gap-1.5">
+                <span>🚀 Mở YTSave Ngay ↗</span>
+              </a>
+              <button type="button" id="btn-mod39-ytsave-guide-done" class="px-3.5 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-200 font-bold transition">
+                Đã hiểu, đóng lại
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+      if (NS.i18n?.translateElement) {
+        NS.i18n.translateElement(modal);
+      }
+
+      const closeModal = () => {
+        try { modal.remove(); } catch (_e) {}
+      };
+      modal.addEventListener('click', (ev) => {
+        if (ev.target === modal) closeModal();
+      });
+      modal.querySelector('#btn-mod39-close-ytsave-guide')?.addEventListener('click', closeModal);
+      modal.querySelector('#btn-mod39-ytsave-guide-done')?.addEventListener('click', closeModal);
+      modal.querySelector('#btn-mod39-ytsave-recopy')?.addEventListener('click', async () => {
+        try {
+          if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(watchUrl);
+          } else {
+            const inp = modal.querySelector('#mod39-ytsave-guide-url-input');
+            inp?.select?.();
+            document.execCommand?.('copy');
+          }
+          safeNotify('✅ Đã copy link thành công, chờ bạn dán link vào ytsave', 'success', 2600);
+        } catch (_e) {}
+      });
+      return modal;
     }
 
     commitSingleAbInput(field, triggerReason = 'manual', options = {}) {

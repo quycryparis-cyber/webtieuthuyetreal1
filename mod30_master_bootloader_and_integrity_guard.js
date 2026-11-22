@@ -66,6 +66,7 @@
     { index: 42, key: 'mod42', file: 'mod42_world_clock_weather_and_alarm.js', nsProp: 'worldClockStudio', label: 'Khung Giờ Quốc Tế, Định Dạng Ngày Giờ, Thời Tiết & Báo Thức (MP3 / Hệ Thống)' },
     { index: 43, key: 'mod43', file: 'mod43_realtime_weather_sky_engine.js', nsProp: 'weatherSkyEngine', label: 'Động Cơ Thời Tiết Thời Gian Thực & Nền Bầu Trời 60FPS (6 Khung Giờ × 28 WMO)' },
     { index: 44, key: 'mod44', file: 'mod44_site_traffic_analytics_box.js', nsProp: 'siteTrafficAnalytics', label: 'Ô Thống Kê Người Đang Truy Cập & Lượt Truy Cập (Ngày / Tuần / Tháng / Năm / Lịch Sử)' },
+    { index: 45, key: 'mod45', file: 'mod45_scientific_fx570_and_desmos_graphing_calc.js', nsProp: 'fx570GraphCalc', label: 'Máy Tính Khoa Học Casio fx-570VN PLUS & Đồ Thị Hàm Số Kiểu Desmos (100% Cục Bộ)' },
   ]);
 
   /**
@@ -879,6 +880,7 @@
       await this.invokeModuleInitSafe('mod42_worldClockStudio', NS.worldClockStudio, 'init');
       await this.invokeModuleInitSafe('mod43_weatherSkyEngine', NS.weatherSkyEngine, 'init');
       await this.invokeModuleInitSafe('mod44_siteTrafficAnalytics', NS.siteTrafficAnalytics, 'init');
+      await this.invokeModuleInitSafe('mod45_fx570GraphCalc', NS.fx570GraphCalc, 'init');
       await this.invokeModuleInitSafe('systemFontScale', NS.systemFontScale, 'init');
       await this.invokeModuleInitSafe('miscFunHub', NS.miscFunHub, 'init');
 
@@ -1267,6 +1269,7 @@
         { module: 'mod42', nsProp: 'worldClockStudio', requiredMethods: ['init', 'openModal', 'closeModal', 'toggleModal', 'setTimezone', 'setDateFormat', 'addAlarm', 'deleteAlarm', 'refreshWeather', 'getFormattedNowSnapshot'] },
         { module: 'mod43', nsProp: 'weatherSkyEngine', requiredMethods: ['init', 'mountIntoContainer', 'onModalClosed', 'computeTimePhaseFromMinutes', 'syncRealtimeWeather', 'applyRealtimeBackground', 'applyCustomBackground', 'disableBackground', 'selfInspect'] },
         { module: 'mod44', nsProp: 'siteTrafficAnalytics', requiredMethods: ['init', 'recordVisit', 'refreshPresence', 'getSnapshot', 'renderBox', 'selfInspect'] },
+        { module: 'mod45', nsProp: 'fx570GraphCalc', requiredMethods: ['init', 'mountIntoContainer', 'openCalculatorModal', 'evaluateExpression', 'solveEquation', 'solveInequality', 'toggleDesmosPanel', 'plotFunctionFromCalc', 'selfInspect'] },
       ];
     }
 

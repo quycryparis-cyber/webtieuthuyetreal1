@@ -40,6 +40,10 @@
       key: 'fan_ham_mo',
       buttonText: 'Những fan hâm mộ đời đầu (Đăng cũng rất cảm ơn mọi người đã ủng hộ về mặt tinh thần)',
     },
+    {
+      key: 'fx570_graph',
+      buttonText: 'Máy tính đồ thị (Vì mình ngu toán nên thêm 1 chức năng này bên cạnh credit luôn, thứ giúp mình qua môn vô số lần)',
+    },
   ];
 
   var FAN_CARDS = [
@@ -1126,6 +1130,10 @@
         );
       }
 
+      if (this.activeTab === 'fx570_graph') {
+        return '<div id="misc-fx570-graph-mount" class="w-full min-w-0"></div>';
+      }
+
       // fan_ham_mo: hiển thị toàn bộ 6 ảnh fan hâm mộ cùng lúc
       var cardsHtml = FAN_CARDS.map(function (fan) {
         return (
@@ -1194,6 +1202,13 @@
 
       translateElement(root);
       attachResilientImageHandlers(root);
+
+      if (this.activeTab === 'fx570_graph') {
+        var calcMount = document.getElementById('misc-fx570-graph-mount');
+        if (calcMount && NS.fx570GraphCalc && typeof NS.fx570GraphCalc.mountIntoContainer === 'function') {
+          NS.fx570GraphCalc.mountIntoContainer(calcMount);
+        }
+      }
 
       if (this.activeTab === 'sa_luoi') {
         this.preloadImage(JUMPSCARE_IMG_SRC);

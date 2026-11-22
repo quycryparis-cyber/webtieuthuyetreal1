@@ -727,7 +727,10 @@
       const descriptor =
         TAB3_MODE_DESCRIPTORS[modeKey] || TAB3_MODE_DESCRIPTORS.MODE_1_DRAFT;
       if (outTextarea && descriptor.placeholder) {
-        outTextarea.placeholder = descriptor.placeholder;
+        outTextarea.setAttribute('placeholder', descriptor.placeholder);
+        if (window.NoirStudio?.i18n?.processElementAttributes) {
+          window.NoirStudio.i18n.processElementAttributes(outTextarea);
+        }
       }
 
       const insertBtns = [
