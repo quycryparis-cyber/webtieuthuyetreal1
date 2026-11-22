@@ -807,7 +807,19 @@
       try {
         const maybePromise = targetObj[methodName]();
         if (maybePromise && typeof maybePromise.then === 'function') {
-          await maybePromise;
+          const timeoutMs = 2500;
+          let timerId = null;
+          const raceResult = await Promise.race([
+            maybePromise.then((v) => ({ done: true, val: v })),
+            new Promise((resolve) => {
+              timerId = setTimeout(() => resolve({ done: false, timedOut: true }), timeoutMs);
+            }),
+          ]);
+          if (timerId) clearTimeout(timerId);
+          if (raceResult && raceResult.timedOut) {
+            this.telemetry.recordStep(label, 'TIMEOUT_CONTINUED', Date.now() - started, `Vượt quá ${timeoutMs}ms — bỏ qua chờ để không treo nút`);
+            return true;
+          }
         }
         this.telemetry.recordStep(label, 'OK', Date.now() - started);
         return true;
@@ -897,7 +909,16 @@
       this.postBootSynchronizationPass();
 
       const startedSw = Date.now();
-      await this.swCoordinator.registerSafely();
+      try {
+        let swTimer = null;
+        await Promise.race([
+          this.swCoordinator.registerSafely(),
+          new Promise((resolve) => {
+            swTimer = setTimeout(resolve, 1500);
+          }),
+        ]);
+        if (swTimer) clearTimeout(swTimer);
+      } catch (_eSw) {}
       this.telemetry.recordStep('mod30_serviceWorker', 'OK', Date.now() - startedSw, this.swCoordinator.status);
 
       this.hasBooted = true;
@@ -2099,7 +2120,55 @@
       if (els.supportBiQrBtn && els.supportBiQrBtn.dataset.gateQrBound !== '1') {
         els.supportBiQrBtn.dataset.gateQrBound = '1';
         els.supportBiQrBtn.addEventListener('click', () => {
-          NS.authorCredits?.openVietQrDonateModal?.();
+          try {
+            if (NS.authorCredits?.openVietQrDonateModal) {
+              NS.authorCredits.openVietQrDonateModal();
+            } else {
+              const m = document.getElementById('modal-mod35-credits-hub');
+              if (m) {
+                m.style.zIndex = '10055';
+                m.classList.remove('hidden');
+              }
+            }
+          } catch (_eQr) {}
+        });
+      }
+
+      const authorPill = document.getElementById('gate-author-attribution-pill');
+      if (authorPill && authorPill.dataset.gateAuthorBound !== '1') {
+        authorPill.dataset.gateAuthorBound = '1';
+        const openAuthorInfo = () => {
+          try {
+            const m = document.getElementById('modal-mod35-credits-hub');
+            if (m) {
+              m.style.zIndex = '10055';
+              m.classList.remove('hidden');
+              NS.authorCredits?.init?.();
+              NS.i18n?.translateElement?.(m);
+              const closeBtn = document.getElementById('btn-close-modal-mod35');
+              if (closeBtn && closeBtn.dataset.gateCloseFallback !== '1') {
+                closeBtn.dataset.gateCloseFallback = '1';
+                closeBtn.addEventListener('click', () => {
+                  m.classList.add('hidden');
+                });
+              }
+              if (m.dataset.gateBackdropFallback !== '1') {
+                m.dataset.gateBackdropFallback = '1';
+                m.addEventListener('click', (ev) => {
+                  if (ev.target === m) m.classList.add('hidden');
+                });
+              }
+              return;
+            }
+            NS.authorCredits?.openVietQrDonateModal?.();
+          } catch (_eAuth) {}
+        };
+        authorPill.addEventListener('click', openAuthorInfo);
+        authorPill.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            ev.preventDefault();
+            openAuthorInfo();
+          }
         });
       }
 
@@ -2297,7 +2366,17 @@
 
       const stInitial = this.getGateStatus();
       if (stInitial.hasKey && !stInitial.flashLiteVerified) {
-        await this.runAutoFlashLiteVerify(stInitial.activeKey);
+        // Chạy xác thực ngầm KHÔNG chặn UI (tránh làm liệt nút Ngôn ngữ / Chế độ Khách / Chọn thư mục khi mạng chậm)
+        this.runAutoFlashLiteVerify(stInitial.activeKey)
+          .then(() => {
+            if (!this.shouldSuppressAutoGate()) {
+              this.showGate(false);
+            }
+            this.refreshUI();
+          })
+          .catch(() => {
+            this.refreshUI();
+          });
       }
 
       // Tuyệt đối không tự bật lại Cổng Kết Nối nếu người dùng đã vào Chế độ Khách / Studio trong lúc xác thực ngầm
@@ -2348,11 +2427,18 @@
       }
       this.hasInitialized = true;
 
-      this.eventTracer.attachToEventBus();
-      this.crossSync.attachCrossModuleListeners();
-      this.unloadSyncGuard.attachBeforeUnloadHook();
-      this.tab6CardInjector.attachEmergencyHotkey();
-      this.cacheHygiene.cleanDeprecatedTempKeysOnly();
+      try { this.eventTracer.attachToEventBus(); } catch (_e1) {}
+      try { this.crossSync.attachCrossModuleListeners(); } catch (_e2) {}
+      try { this.unloadSyncGuard.attachBeforeUnloadHook(); } catch (_e3) {}
+      try { this.tab6CardInjector.attachEmergencyHotkey(); } catch (_e4) {}
+      try { this.cacheHygiene.cleanDeprecatedTempKeysOnly(); } catch (_e5) {}
+
+      // ƯU TIÊN SỐ 1 (t = 0ms): Gắn ngay sự kiện các nút trên Cổng Kết Nối (Ủng hộ, Ngôn ngữ,
+      // Chế Độ Khách, Chọn Thư Mục, Hiện API Key, Thông tin Tác giả) TRƯỚC KHI chờ 45 module / IndexedDB / SW,
+      // bảo đảm không một nút nào bị liệt dù IndexedDB hoặc Service Worker cũ đang bận/chậm!
+      try { this.connectionGate.bindGateEvents(); } catch (_eGateEarly) {}
+      try { NS.i18n?.init?.(); } catch (_eI18nEarly) {}
+      try { NS.guestMode?.init?.(); } catch (_eGuestEarly) {}
 
       // Bug 12: Ngăn phím Backspace/Delete khi nhấn liên tục ngoài ô nhập gây điều hướng quay lại / tải lại trang web
       if (typeof document !== 'undefined' && !document.body?.dataset?.noirSafeKeyGuard) {
@@ -2386,15 +2472,11 @@
       }
 
       const bootSummary = await this.orchestrator.executeBootSequence();
-      try {
-        NS.featureDirectory?.init?.();
-      } catch (_mod31Err) {}
-      this.schemaHealer.inspectAndHealWorkspaceIntegrity();
-      this.tab6CardInjector.mountTab6HealthFooter();
-      await this.connectionGate.init();
-      try {
-        NS.i18n?.init?.();
-      } catch (_i18nBootErr) {}
+      try { NS.featureDirectory?.init?.(); } catch (_mod31Err) {}
+      try { this.schemaHealer.inspectAndHealWorkspaceIntegrity(); } catch (_schemaErr) {}
+      try { this.tab6CardInjector.mountTab6HealthFooter(); } catch (_tab6FootErr) {}
+      try { await this.connectionGate.init(); } catch (_gateErr) {}
+      try { NS.i18n?.init?.(); } catch (_i18nBootErr) {}
 
       if (NS.logger?.info) {
         NS.logger.info(

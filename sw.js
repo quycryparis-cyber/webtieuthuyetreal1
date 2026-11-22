@@ -6,7 +6,7 @@
  * (Windows / macOS / Linux) ngay cả khi mất kết nối mạng.
  * ============================================================================
  */
-const CACHE_NAME = 'bi-novel-studio-pwa-v102';
+const CACHE_NAME = 'bi-novel-studio-pwa-v103';
 const OFFLINE_CDN_HOSTS = [
   'cdn.tailwindcss.com',
   'cdnjs.cloudflare.com',
@@ -112,11 +112,19 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return Promise.allSettled(
-        CORE_ASSETS.map((assetUrl) =>
-          fetch(new Request(assetUrl, { cache: 'no-cache' }))
-            .then((res) => (res && res.ok ? cache.put(assetUrl, res) : null))
-            .catch(() => cache.add(assetUrl).catch(() => null))
-        )
+        CORE_ASSETS.map((assetUrl) => {
+          const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+          const timer = ctrl ? setTimeout(() => ctrl.abort(), 4500) : null;
+          return fetch(assetUrl, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+            .then((res) => {
+              if (timer) clearTimeout(timer);
+              return res && res.ok ? cache.put(assetUrl, res) : null;
+            })
+            .catch(() => {
+              if (timer) clearTimeout(timer);
+              return null;
+            });
+        })
       );
     })
   );
@@ -124,46 +132,67 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-          return null;
-        })
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys.map((key) => {
+            if (key !== CACHE_NAME) {
+              return caches.delete(key);
+            }
+            return null;
+          })
+        )
       )
-    )
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
-  const url = new URL(req.url);
+  let url;
+  try {
+    url = new URL(req.url);
+  } catch (_eUrl) {
+    return;
+  }
   if (url.hostname.includes('generativelanguage.googleapis.com')) {
     return;
   }
   const isSameOrigin = url.origin === self.location.origin;
-  const networkFetchReq = isSameOrigin ? new Request(req, { cache: 'no-cache' }) : req;
+  const isNavigate = req.mode === 'navigate' || req.destination === 'document';
+  const isCodeOrDoc =
+    isNavigate || /\.(?:html|js|mjs|json|css)$/i.test(url.pathname) || url.pathname.endsWith('/');
+
+  // Network-First tuyệt đối cho HTML & toàn bộ file .js/.json/.css để KHÔNG BAO GIỜ lệch phiên bản cache
+  const doNetworkFetch = () => {
+    if (isSameOrigin && isCodeOrDoc) {
+      return fetch(req.url, { cache: 'no-store', credentials: 'same-origin' });
+    }
+    if (isSameOrigin) {
+      return fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' });
+    }
+    return fetch(req);
+  };
+
   event.respondWith(
-    fetch(networkFetchReq)
+    doNetworkFetch()
       .then((networkRes) => {
         const contentType = (networkRes && networkRes.headers && networkRes.headers.get('content-type')) || '';
         const isImageReq = /\.(?:jpg|jpeg|png|webp|ico|svg)$/i.test(url.pathname) || req.destination === 'image';
-        const isHtmlPoison = isImageReq && contentType.toLowerCase().includes('text/html');
-        const isSameOriginOk = networkRes && networkRes.status === 200 && url.origin === self.location.origin && !isHtmlPoison;
+        const isJsReq = /\.m?js$/i.test(url.pathname) || req.destination === 'script';
+        const isHtmlPoison = (isImageReq || isJsReq) && contentType.toLowerCase().includes('text/html');
+        const isSameOriginOk = networkRes && networkRes.status === 200 && isSameOrigin && !isHtmlPoison;
         const isStaticCdn =
           OFFLINE_CDN_HOSTS.includes(url.hostname) &&
           networkRes &&
           (networkRes.status === 200 || networkRes.type === 'opaque');
         if (isSameOriginOk || isStaticCdn) {
           const clone = networkRes.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone)).catch(() => {});
           return networkRes;
         }
-        // Nếu phản hồi lỗi (vd 404 HTML hoặc thiếu tệp trên hosting tĩnh), thử dùng bản đã cache trước đó
         if (!networkRes || !networkRes.ok || isHtmlPoison) {
           return caches.match(req, { ignoreSearch: true }).then((cached) => cached || networkRes);
         }
@@ -172,7 +201,7 @@ self.addEventListener('fetch', (event) => {
       .catch(() =>
         caches.match(req, { ignoreSearch: true }).then((cached) => {
           if (cached) return cached;
-          if (req.mode === 'navigate' || req.destination === 'document') {
+          if (isNavigate) {
             return caches.match('./index.html');
           }
           return Response.error();

@@ -1494,6 +1494,14 @@
           resolve(null);
           return;
         }
+        let settled = false;
+        const done = (v) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(t);
+          resolve(v);
+        };
+        const t = setTimeout(() => done(null), 2000);
         try {
           const req = indexedDB.open(IDB_NAME, IDB_VERSION);
           req.onupgradeneeded = (ev) => {
@@ -1502,10 +1510,11 @@
               db.createObjectStore(IDB_STORE, { keyPath: 'id' });
             }
           };
-          req.onsuccess = (ev) => resolve(ev.target.result);
-          req.onerror = () => resolve(null);
+          req.onsuccess = (ev) => done(ev.target.result);
+          req.onerror = () => done(null);
+          req.onblocked = () => done(null);
         } catch (_err) {
-          resolve(null);
+          done(null);
         }
       });
       return this.dbPromise;

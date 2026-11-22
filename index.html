@@ -1029,7 +1029,7 @@
         }, true);
       } catch (_eSub) {}
       try {
-        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v102';
+        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v103';
         if (typeof window !== 'undefined' && 'caches' in window && window.caches && typeof window.caches.keys === 'function') {
           window.caches.keys().then(function (keys) {
             for (var i = 0; i < keys.length; i++) {
@@ -1039,12 +1039,24 @@
             }
           }).catch(function () {});
         }
-        if (typeof navigator !== 'undefined' && navigator.serviceWorker && typeof navigator.serviceWorker.getRegistrations === 'function') {
-          navigator.serviceWorker.getRegistrations().then(function (regs) {
-            for (var j = 0; j < regs.length; j++) {
-              try { regs[j].update().catch(function () {}); } catch (_eU) {}
-            }
-          }).catch(function () {});
+        if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+          var hadPrevController = Boolean(navigator.serviceWorker.controller);
+          navigator.serviceWorker.addEventListener('controllerchange', function () {
+            try {
+              if (!hadPrevController) return;
+              var reloadFlagKey = '__noir_sw_synced_' + TARGET_SW_CACHE;
+              if (window.sessionStorage && window.sessionStorage.getItem(reloadFlagKey) === '1') return;
+              if (window.sessionStorage) window.sessionStorage.setItem(reloadFlagKey, '1');
+              window.location.reload();
+            } catch (_eRel) {}
+          });
+          if (typeof navigator.serviceWorker.getRegistrations === 'function') {
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              for (var j = 0; j < regs.length; j++) {
+                try { regs[j].update().catch(function () {}); } catch (_eU) {}
+              }
+            }).catch(function () {});
+          }
         }
       } catch (_eSwClean) {}
     })();
@@ -1063,7 +1075,7 @@
       <div class="px-4 py-3.5 sm:px-7 sm:py-4 border-b border-zinc-800 bg-gradient-to-r from-emerald-950/85 via-zinc-900 to-indigo-950/75 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div class="space-y-2 min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
-            <div id="gate-author-attribution-pill" class="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600/40 via-violet-600/35 to-indigo-500/35 border-2 border-indigo-400/80 text-indigo-100 font-extrabold text-xs sm:text-sm shadow-lg shadow-indigo-950/50 ring-1 ring-indigo-300/35 max-w-full whitespace-normal text-left leading-snug">
+            <div id="gate-author-attribution-pill" role="button" tabindex="0" class="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600/40 via-violet-600/35 to-indigo-500/35 hover:from-indigo-500/55 hover:to-violet-500/50 border-2 border-indigo-400/80 text-indigo-100 font-extrabold text-xs sm:text-sm shadow-lg shadow-indigo-950/50 ring-1 ring-indigo-300/35 max-w-full whitespace-normal text-left leading-snug cursor-pointer transition">
               <span aria-hidden="true" class="text-base sm:text-lg shrink-0">✍️</span>
               <span>Web do <strong class="text-white font-black">Mai Hải Đăng (Bi)</strong> phát triển</span>
             </div>

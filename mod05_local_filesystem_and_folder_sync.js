@@ -1936,7 +1936,16 @@
       this.initialized = true;
       this.bindHeaderButton();
       this.tab2Widget.injectFolderExplorerPanelIfNeeded();
-      await this.tryRestoreSavedFolderHandle();
+      try {
+        let restoreTimer = null;
+        await Promise.race([
+          this.tryRestoreSavedFolderHandle(),
+          new Promise((resolve) => {
+            restoreTimer = setTimeout(resolve, 1800);
+          })
+        ]);
+        if (restoreTimer) clearTimeout(restoreTimer);
+      } catch (_eRestore) {}
       return this;
     }
   }

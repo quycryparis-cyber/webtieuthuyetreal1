@@ -305,6 +305,19 @@
       }
 
       this.openPromise = new Promise((resolve) => {
+        let settled = false;
+        const finish = (dbVal) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(openTimeout);
+          this.openPromise = null;
+          resolve(dbVal);
+        };
+        const openTimeout = setTimeout(() => {
+          this.lastError = 'Mở IndexedDB quá thời gian chờ (tự chuyển bộ nhớ đệm cục bộ để không treo ứng dụng).';
+          finish(null);
+        }, 2200);
+
         try {
           const req = indexedDB.open(this.getDbName(), this.getDbVersion());
 
@@ -342,13 +355,15 @@
                 this.db = upEvt.target.result;
                 this.attachDbLifecycleListeners(this.db);
                 this.stats.lastOpenedAt = Date.now();
-                this.openPromise = null;
-                resolve(this.db);
+                finish(this.db);
               };
               upgradeReq.onerror = () => {
                 this.lastError = upgradeReq.error?.message || 'Lỗi nâng cấp schema IndexedDB';
-                this.openPromise = null;
-                resolve(null);
+                finish(null);
+              };
+              upgradeReq.onblocked = () => {
+                this.lastError = 'Nâng cấp IndexedDB đang bị khóa bởi một tab cũ khác.';
+                finish(null);
               };
               return;
             }
@@ -356,25 +371,21 @@
             this.db = db;
             this.attachDbLifecycleListeners(db);
             this.stats.lastOpenedAt = Date.now();
-            this.openPromise = null;
-            resolve(db);
+            finish(db);
           };
 
           req.onerror = () => {
             this.lastError = req.error?.message || 'Không thể mở IndexedDB';
-            this.openPromise = null;
-            resolve(null);
+            finish(null);
           };
 
           req.onblocked = () => {
             this.lastError = 'Kết nối IndexedDB đang bị khóa bởi một tab cũ khác.';
-            this.openPromise = null;
-            resolve(null);
+            finish(null);
           };
         } catch (err) {
           this.lastError = err?.message || 'Lỗi khởi tạo IndexedDB';
-          this.openPromise = null;
-          resolve(null);
+          finish(null);
         }
       });
 
