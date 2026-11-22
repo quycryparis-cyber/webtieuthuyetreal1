@@ -2700,7 +2700,11 @@
 
       const neuralVoice = window.NoirStudio?.neuralVoice;
       if (neuralVoice && typeof neuralVoice.speakText === 'function') {
-        const spoken = neuralVoice.speakText(rawText, 'vi-VN', {
+        const autoLang =
+          typeof neuralVoice.detectTextVoiceLang === 'function'
+            ? neuralVoice.detectTextVoiceLang(rawText)
+            : 'vi-VN';
+        const spoken = neuralVoice.speakText(rawText, autoLang, {
           source: 'CHATBOT',
           rate: Number(this.prefs.speechRate) || 1.0,
           pitch: 1.0,
@@ -2710,7 +2714,7 @@
           },
         });
         if (spoken) {
-          utils.showToast('🔊 Đang đọc bằng giọng Việt tự nhiên...', 'info', 2200);
+          utils.showToast('🔊 Đang đọc bằng giọng AI đa ngôn ngữ...', 'info', 2200);
           return;
         }
         if (neuralVoice.lastFailureReason === 'NO_VI_VOICE') {

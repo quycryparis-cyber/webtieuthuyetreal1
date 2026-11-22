@@ -939,7 +939,7 @@
 
     applyPrefs(prefs = {}) {
       this._prefs = {
-        speed: clampNum(prefs.speed, 0.25, 2.5, this._prefs.speed || 1),
+        speed: clampNum(prefs.speed, 0.25, 4.0, this._prefs.speed || 1),
         volume: clampNum(prefs.volume, 0, 100, this._prefs.volume ?? 85),
         muted: Boolean(prefs.muted)
       };
@@ -1319,7 +1319,7 @@
         this.lastKnownDuration = Math.max(0, Number(streamInfo.durationSec) || 0);
         this.pendingBgSeekTime = startSec > 0 ? startSec : null;
 
-        aEl.playbackRate = clampNum(prefs.speed, 0.25, 2.5, 1);
+        aEl.playbackRate = clampNum(prefs.speed, 0.25, 4.0, 1);
         aEl.muted = Boolean(prefs.muted);
         aEl.volume = clampNum((prefs.volume ?? 85) / 100, 0, 1, 0.85);
 
@@ -1648,7 +1648,7 @@
           : this.lastKnownTime;
       const safePos = dur > 0 ? Math.min(dur, Math.max(0, rawPos)) : Math.max(0, rawPos);
       const state = forcedState || (el && !el.paused ? 'playing' : 'paused');
-      const rate = clampNum(el?.playbackRate || this._prefs.speed || 1, 0.25, 2.5, 1);
+      const rate = clampNum(el?.playbackRate || this._prefs.speed || 1, 0.25, 4.0, 1);
 
       if (NS.audioBackgroundBridge && typeof NS.audioBackgroundBridge.syncMediaSession === 'function') {
         if (!opts.positionOnly) {

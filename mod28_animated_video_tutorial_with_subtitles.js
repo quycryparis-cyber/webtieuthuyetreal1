@@ -19,7 +19,7 @@
   const NS = (globalScope.NoirStudio = globalScope.NoirStudio || {});
 
   /**
-   * Danh sách 20 phân đoạn video chi tiết (~09:52) bao quát toàn bộ 44 Module & tính năng mới (Mod 01 -> Mod 44).
+   * Danh sách 28 phân đoạn video chi tiết (~14:00) bao quát toàn bộ 45 Module & tính năng mới nhất (Mod 01 -> Mod 45).
    */
   const VIDEO_TUTORIAL_CHAPTERS_DATA = Object.freeze([
     {
@@ -241,19 +241,19 @@
     {
       id: 'CHAP_13_TAB6_ENCYCLOPEDIA_VIDEO_AI_BAR',
       index: 13,
-      title: '13. Tab 6: Bách Khoa 44 Module (Mod 31), Video Toàn Màn Hình & Giọng Việt Tự Nhiên (Mod 28, 33)',
+      title: '13. Tab 6: Bách Khoa 45 Module (Mod 31), Video Toàn Màn Hình & Giọng AI 6 Ngôn Ngữ (Mod 28, 33)',
       durationSec: 28,
       startSec: 370,
       endSec: 398,
       accentColor: '#10b981',
-      badgeLabel: 'MOD 28 · MOD 31 · MOD 33 · 44 MODULE',
+      badgeLabel: 'MOD 28 · MOD 31 · MOD 33 · 45 MODULE',
       sceneType: 'SIX_SCREENS_MAP',
       summary:
-        'Tra cứu mọi tính năng của cả 44 Module kèm nút "Đi tới & Làm nổi bật", xem Video phóng to Toàn màn hình với phụ đề nằm riêng dưới khung video & giọng Neural Việt/Anh.',
+        'Tra cứu mọi tính năng của cả 45 Module kèm nút "Đi tới & Làm nổi bật", xem Video phóng to Toàn màn hình với phụ đề nằm riêng dưới khung video & giọng AI 6 ngôn ngữ (Neural + Google Dịch TTS).',
       keyActionSteps: [
-        'Bách khoa toàn thư (Mod 31): Gõ từ khóa bất kỳ để tìm trong toàn bộ 44 Module và bấm 1 chạm nhảy thẳng tới đúng nút trên giao diện.',
-        'Video Hướng Dẫn (Mod 28): Bấm Xem Toàn Màn Hình, phụ đề song ngữ Việt/Anh luôn nằm tách rời dưới khung video, không bao giờ che hình ảnh.',
-        'Động cơ Giọng Việt Neural (Mod 33): Đọc tự nhiên trọn câu kèm link hướng dẫn cài giọng đọc nếu máy chưa có, tắt tiếng dứt điểm khi Mute.',
+        'Bách khoa toàn thư (Mod 31): Gõ từ khóa bất kỳ để tìm trong toàn bộ 45 Module và bấm 1 chạm nhảy thẳng tới đúng nút trên giao diện.',
+        'Video Hướng Dẫn (Mod 28): Bấm Xem Toàn Màn Hình, phụ đề luôn nằm tách rời dưới khung video, không bao giờ che hình ảnh.',
+        'Động cơ Giọng AI 6 Ngôn Ngữ (Mod 33): Hỗ trợ trọn vẹn Việt, Anh, Trung Giản/Phồn, Hàn, Nhật qua Neural & Google Dịch TTS miễn phí, tắt tiếng dứt điểm khi Mute.',
       ],
     },
     {
@@ -372,14 +372,14 @@
       startSec: 574,
       endSec: 592,
       accentColor: '#22d3ee',
-      badgeLabel: 'MOD 44 GLOBAL V3 · 6 NGÔN NGỮ (EN/简体/繁體/KO/JA) · 44 MODULE',
+      badgeLabel: 'MOD 44 GLOBAL V3 · 6 NGÔN NGỮ (EN/简体/繁體/KO/JA) · 45 MODULE',
       sceneType: 'MINI_PLAYER_AND_TRAFFIC_STAGE',
       summary:
         'Thống kê truy cập đồng bộ toàn cầu chuẩn xác mọi thiết bị từ gốc v3, cùng nút Đổi 6 Ngôn Ngữ (Tiếng Việt + Anh/Trung Giản/Đài Loan/Hàn/Nhật) đặt ngay dưới nút Ủng hộ Đăng & đầu trang Mobile/Desktop!',
       keyActionSteps: [
         'Ô Thống Kê Truy Cập Tab 6 dùng máy chủ đếm chung (bi-novel-quycry-v3) nên Toàn lịch sử, Năm, Tháng, Tuần, Hôm nay & Đang truy cập thống nhất chuẩn xác giữa mọi máy.',
         'Bấm nút "🌐 Tiếng Việt ▾" ngay dưới nút "Ủng hộ Đăng cà phê ☕", ở góc phải thanh Header (Desktop & Mobile) hoặc đầu Cổng để đổi sang EN, 简体中文, 繁體中文, 한국어 hoặc 日本語 mà không ảnh hưởng nội dung truyện.',
-        'Toàn hệ sinh thái 44 Module + 5 module ngôn ngữ vận hành mượt mà responsive trên mọi thiết bị Desktop, Mobile & App PWA!',
+        'Toàn hệ sinh thái 45 Module + 5 module ngôn ngữ vận hành mượt mà responsive trên mọi thiết bị Desktop, Mobile & App PWA!',
       ],
     },
     {
@@ -470,6 +470,60 @@
         'Trên điện thoại Android/iOS (Brave, Chrome, Safari), thanh Header đỉnh & phần trên các Tab 1–6 luôn hiển thị trọn vẹn, tuyệt đối không bị tụt hay cắt mất phần trên khi đổi Tab hoặc mở bàn phím.',
         'Tất cả cửa sổ popup, hộp Mở to / Thu nhỏ AI, Crop video & Lịch sử đều cuộn mượt từ đỉnh xuống đáy, không bao giờ che khuất nút "✕ Đóng".',
         'Ngay trong Rạp Video Hướng Dẫn Tab 6 này, nút "⛶ Xem toàn màn hình" tự căn tỷ lệ 16:9 khít khung trên cả Điện thoại dọc, Điện thoại ngang lẫn Desktop kèm đầy đủ phụ đề & thanh tua phía dưới!',
+      ],
+    },
+    {
+      id: 'CHAP_26_FOCUS_MODE_TREE_SPLIT_HIERARCHY',
+      index: 26,
+      title: '26. Viết Tập Trung, Cây Chương Nhanh, Thanh AI Bôi Đen, Chia Cột Split & Kéo Thả Quyển/Chương/Cảnh (Mod 08, 11, 23, 25)',
+      durationSec: 32,
+      startSec: 742,
+      endSec: 774,
+      accentColor: '#10b981',
+      badgeLabel: 'VIẾT TẬP TRUNG · CÂY CHƯƠNG · THANH AI BÔI ĐEN · PHÂN CẤP QUYỂN/CẢNH',
+      sceneType: 'TAB1_DIFF_REVIEW',
+      summary:
+        'Bàn viết Tab 1 bổ sung chế độ 🎯 Viết Tập Trung, thanh trượt 📚 Cây Chương chuyển nhanh, ⚡ Split đối chiếu 2 màn hình, Thanh AI Bôi Đen sửa văn tại chỗ và Tab 2 kéo thả Quyển → Chương → Cảnh!',
+      keyActionSteps: [
+        'Trên Tab 1, bấm 🎯 Viết Tập Trung để ẩn toàn bộ thanh phụ, hoặc mở 📚 Cây Chương / ⚡ Split để vừa xem dàn ý & Story Bible song song khi gõ.',
+        'Bôi đen bất kỳ đoạn văn nào trên Tab 1 để hiện ngay Thanh AI Bôi Đen: viết tiếp, tả sâu ngũ quan, rút gọn câu hay kiểm tra sáo ngữ trong 1 chạm.',
+        'Tại Tab 2 (Mod 08), gom chương vào từng Quyển / Phần và chia nhỏ Cảnh (Scene), hỗ trợ kéo thả sắp xếp trực quan kèm lọc trạng thái chính xác.',
+      ],
+    },
+    {
+      id: 'CHAP_27_DESKTOP_YT_SPEED4X_WEATHER24H_LOCAL',
+      index: 27,
+      title: '27. Desktop YouTube Trực Tiếp (0.25x–4x, Cửa Sổ Nổi, YTSave), Thời Tiết 24h Cấp Phường & Xuất Sách 100% Nội Bộ (Mod 26, 39, 42, 43)',
+      durationSec: 32,
+      startSec: 774,
+      endSec: 806,
+      accentColor: '#06b6d4',
+      badgeLabel: 'DESKTOP YOUTUBE 0.25x-4x · CỬA SỔ NỔI · YTSAVE · 24H CẤP PHƯỜNG · LOCAL-FIRST',
+      sceneType: 'WEATHER_CLOCK_ALARM_STAGE',
+      summary:
+        'Desktop & App Desktop phát thẳng youtube-nocookie.com siêu mượt với tốc độ 0.25x–4x, Cửa sổ nổi, Mobile tự nhảy dấu : khi nhập A–B, popup YTSave mới, dự báo 24h từng giờ cấp phường & xuất PDF/DOCX/EPUB 100% nội bộ!',
+      keyActionSteps: [
+        'Trên Desktop/App Desktop, YouTube phát thẳng mượt mà không cần dò luồng công cộng; chọn tốc độ 0.25x–4x, bấm 🖼️ Cửa sổ nổi, nhập A–B trên điện thoại tự nhảy qua dấu : sau 2 chữ số và tải video nhanh qua hộp hướng dẫn YTSave.',
+        'Thời tiết (Mod 43) dự báo ngắn hạn đủ 24 giờ gần nhất theo từng giờ (00:00 → 23:00) kèm định vị rõ tới cấp Phường/Xã; tab Múi giờ (Mod 42) tách gọn chỉ quản lý giờ & định dạng.',
+        'Xuất sách PDF / DOCX / EPUB (Mod 26), tìm kiếm BM25 & mọi công cụ xử lý văn bản đều chạy 100% trực tiếp trên máy người dùng (kiểu Local-First tốc độ tức thì không gửi file lên server).',
+      ],
+    },
+    {
+      id: 'CHAP_28_MOD45_CASIO_DESMOS_VOICE6LANG',
+      index: 28,
+      title: '28. Module 45: Casio fx-570VN PLUS & Đồ Thị Desmos Local + AI Nói 6 Ngôn Ngữ (Google Dịch TTS) (Mod 09, 28, 33, 45)',
+      durationSec: 34,
+      startSec: 806,
+      endSec: 840,
+      accentColor: '#f59e0b',
+      badgeLabel: 'MODULE 45 CASIO FX-570VN+ & DESMOS · AI NÓI 6 THỨ TIẾNG · 45 MODULE',
+      sceneType: 'MINI_PLAYER_AND_TRAFFIC_STAGE',
+      summary:
+        'Ra mắt Module 45 (Tab 6 Mục #5 Linh Tinh & Credit): Máy tính Casio fx-570VN PLUS đầy đủ SHIFT/ALPHA/SOLVE/Tích phân/Ma trận + Đồ thị Desmos 100% Local, cùng giọng đọc AI 6 thứ tiếng (Google Dịch TTS) & Tự lưu 2 giây toàn diện!',
+      keyActionSteps: [
+        'Vào Tab 6 → Ô #5 "Chức năng linh tinh" → Mục 6 "Máy tính đồ thị" (hoặc nút trong Credit) để dùng Casio fx-570VN PLUS đầy đủ phép toán khoa học + bấm "Tạo hàm đồ thị" vẽ đồ thị tương tác kiểu Desmos 100% nội bộ không cần mạng!',
+        'Chọn bất kỳ trong 6 ngôn ngữ giọng đọc AI (Tiếng Việt, English, 中文 简体, 中文 繁體, 한국어, 日本語) ngay trên Rạp Video Hướng Dẫn hoặc Trợ lý AI — tự động phát mượt qua Neural Voice hoặc Google Dịch TTS!',
+        'Trọn bộ 45 Module + Tự lưu mỗi 2 giây ghi nhớ mọi trạng thái người dùng (bản thảo, con trỏ, tab, nhạc, cài đặt) sẵn sàng đồng hành cùng tác giả trên Desktop, Mobile & App PWA!',
       ],
     },
   ]);
@@ -813,10 +867,10 @@
       chapterId: 'CHAP_13_TAB6_ENCYCLOPEDIA_VIDEO_AI_BAR',
       startSec: 370.0,
       endSec: 384.0,
-      speaker: 'Bách Khoa 44 Module & Video Toàn Màn Hình',
-      speakerEn: '44-Mod Guide & Fullscreen Video',
-      text: 'Bách khoa toàn thư (Mod 31) tra cứu trọn bộ 44 Module và bấm nhảy thẳng tới nút tương ứng; Video Hướng Dẫn hỗ trợ phóng to Toàn màn hình sắc nét.',
-      textEn: 'Search every capability across all 44 Modules in the Encyclopedia and jump directly to its control, or watch this Video Tutorial in crisp Fullscreen.',
+      speaker: 'Bách Khoa 45 Module & Video Toàn Màn Hình',
+      speakerEn: '45-Mod Guide & Fullscreen Video',
+      text: 'Bách khoa toàn thư (Mod 31) tra cứu trọn bộ 45 Module và bấm nhảy thẳng tới nút tương ứng; Video Hướng Dẫn hỗ trợ phóng to Toàn màn hình sắc nét.',
+      textEn: 'Search every capability across all 45 Modules in the Encyclopedia and jump directly to its control, or watch this Video Tutorial in crisp Fullscreen.',
     },
     {
       id: 'SUB_35',
@@ -1013,10 +1067,10 @@
       chapterId: 'CHAP_20_MOD44_TRAFFIC_BOX_SUMMARY',
       startSec: 586.0,
       endSec: 592.0,
-      speaker: '44 Module + 5 Ngôn Ngữ — Sáng Tác Mượt Trên Mọi Màn Hình!',
-      speakerEn: '44 Modules + 5 i18n Packs Complete',
-      text: 'Cả 44 Module và 5 file ngôn ngữ đã được kiểm định responsive toàn diện trên Desktop, Mobile lẫn App PWA. Chúc bạn sáng tác thăng hoa cùng Web Viết Tiểu Thuyết Của Bi!',
-      textEn: 'All 44 Modules and 5 language packs are verified responsive across Desktop, Mobile, and PWA Apps. Enjoy writing and relaxing in Bi’s Novel Writing Studio!',
+      speaker: '45 Module + 5 Ngôn Ngữ — Sáng Tác Mượt Trên Mọi Màn Hình!',
+      speakerEn: '45 Modules + 5 i18n Packs Complete',
+      text: 'Cả 45 Module và 5 file ngôn ngữ đã được kiểm định responsive toàn diện trên Desktop, Mobile lẫn App PWA. Chúc bạn sáng tác thăng hoa cùng Web Viết Tiểu Thuyết Của Bi!',
+      textEn: 'All 45 Modules and 5 language packs are verified responsive across Desktop, Mobile, and PWA Apps. Enjoy writing and relaxing in Bi’s Novel Writing Studio!',
     },
     {
       id: 'SUB_55',
@@ -1168,12 +1222,114 @@
       text: 'Rạp video Tab 6 nay phóng to Toàn màn hình sắc nét trên cả Điện thoại dọc, Điện thoại ngang lẫn Laptop với tỷ lệ 16:9 chuẩn, phụ đề song ngữ và thanh tua đầy đủ phía dưới!',
       textEn: 'The Tab 6 Tutorial Theater now enters clean 16:9 Fullscreen across Portrait Phone, Landscape Phone, and Desktop with readable bilingual subtitles and controls below!',
     },
+    {
+      id: 'SUB_70',
+      chapterId: 'CHAP_26_FOCUS_MODE_TREE_SPLIT_HIERARCHY',
+      startSec: 742.0,
+      endSec: 752.0,
+      speaker: 'Tab 1: Viết Tập Trung, Cây Chương Nhanh & Chia Cột Split',
+      speakerEn: 'Tab 1 Focus Mode, Chapter Tree & Split View',
+      text: 'Trên bàn viết Tab 1, bấm Viết Tập Trung để gõ không sao nhãng, mở nhanh Cây Chương hoặc Chia Cột Split để vừa viết vừa đối chiếu dàn ý và Story Bible song song!',
+      textEn: 'In Tab 1, toggle Focus Writing Mode for distraction-free drafting, open the quick Chapter Tree, or use Split View to reference your outline and Story Bible side by side!',
+    },
+    {
+      id: 'SUB_71',
+      chapterId: 'CHAP_26_FOCUS_MODE_TREE_SPLIT_HIERARCHY',
+      startSec: 752.0,
+      endSec: 763.0,
+      speaker: 'Thanh AI Bôi Đen Sửa Văn Tại Chỗ & Soát Sáo Ngữ',
+      speakerEn: 'Inline AI Selection Bar & Cliché Polish',
+      text: 'Chỉ cần bôi đen bất kỳ đoạn văn nào trên Tab 1, Thanh AI Bôi Đen sẽ hiện lên để viết tiếp, tả sâu ngũ quan, cô đọng câu văn hoặc quét từ sáo ngữ ngay tại chỗ.',
+      textEn: 'Highlight any passage in Tab 1 to summon the Inline AI Selection Bar for instant continuation, sensory deepening, tightening, or cliché cleanup right in place.',
+    },
+    {
+      id: 'SUB_72',
+      chapterId: 'CHAP_26_FOCUS_MODE_TREE_SPLIT_HIERARCHY',
+      startSec: 763.0,
+      endSec: 774.0,
+      speaker: 'Tab 2: Kéo Thả Phân Cấp Quyển → Chương → Cảnh (Mod 08)',
+      speakerEn: 'Tab 2 Volume → Chapter → Scene Drag & Drop',
+      text: 'Tại Tab 2, bạn có thể tổ chức truyện thành từng Quyển, Chương và Cảnh con, kéo thả sắp xếp trực quan và kết hợp Gemini 4 Neon lọc đúng mô hình theo hạng API Key!',
+      textEn: 'In Tab 2, organize your novel into Volumes, Chapters, and Scenes with drag-and-drop reordering, paired with Gemini 4 Neon and smart API key tier auto-fallback!',
+    },
+    {
+      id: 'SUB_73',
+      chapterId: 'CHAP_27_DESKTOP_YT_SPEED4X_WEATHER24H_LOCAL',
+      startSec: 774.0,
+      endSec: 785.0,
+      speaker: 'Desktop YouTube Trực Tiếp (0.25x–4x), Cửa Sổ Nổi & Mobile A–B',
+      speakerEn: 'Desktop Direct YouTube (0.25x–4x), Floating Window & Mobile A–B',
+      text: 'Trên Desktop và App Desktop, YouTube phát thẳng mượt mà không cần dò luồng công cộng, hỗ trợ tốc độ 0.25x tới 4x, Cửa sổ nổi, và trên điện thoại nhập 2 số A–B tự nhảy qua dấu hai chấm!',
+      textEn: 'On Desktop and Desktop PWA, YouTube streams directly without public probing, supporting 0.25x to 4x speed, Floating Window, and auto-jump past the colon after 2 digits on Mobile A–B!',
+    },
+    {
+      id: 'SUB_74',
+      chapterId: 'CHAP_27_DESKTOP_YT_SPEED4X_WEATHER24H_LOCAL',
+      startSec: 785.0,
+      endSec: 795.0,
+      speaker: 'Hộp Hướng Dẫn Tải YTSave & Thời Tiết 24 Giờ Cấp Phường (Mod 43)',
+      speakerEn: 'YTSave Helper & 24-Hour Ward-Level Weather',
+      text: 'Nút tải video YouTube mở cửa sổ mô phỏng YTSave kèm tùy chọn điều hướng thẳng lần sau; bảng Thời Tiết dự báo đủ 24 giờ gần nhất từng tiếng và định vị rõ tới cấp Phường/Xã.',
+      textEn: 'The YouTube Download button opens the YTSave guide popup with an optional direct-redirect toggle; Weather displays a rolling 24-hour hourly forecast with ward-level GPS location.',
+    },
+    {
+      id: 'SUB_75',
+      chapterId: 'CHAP_27_DESKTOP_YT_SPEED4X_WEATHER24H_LOCAL',
+      startSec: 795.0,
+      endSec: 806.0,
+      speaker: 'Kiến Trúc Xử Lý 100% Nội Bộ Siêu Nhanh (Local-First)',
+      speakerEn: '100% Local-First Instant Processing',
+      text: 'Xuất sách PDF, DOCX, EPUB, tìm kiếm BM25, so sánh Diff và xử lý ảnh/nhạc đều chạy trực tiếp trên máy người dùng như iHatePDF, gần như tức thì và không gửi bản thảo lên máy chủ!',
+      textEn: 'PDF, DOCX, EPUB exports, BM25 search, Diff comparison, and media tools run 100% locally on your device for near-instant speed without uploading manuscripts to external servers!',
+    },
+    {
+      id: 'SUB_76',
+      chapterId: 'CHAP_28_MOD45_CASIO_DESMOS_VOICE6LANG',
+      startSec: 806.0,
+      endSec: 817.0,
+      speaker: 'Module 45 Mới: Máy Tính Casio fx-570VN PLUS & Đồ Thị Desmos Local',
+      speakerEn: 'New Module 45: Casio fx-570VN PLUS & Local Desmos Graphing',
+      text: 'Ra mắt Module 45 ở Tab 6 Mục #5 Linh Tinh và Credit: giả lập đầy đủ Casio fx-570VN PLUS kèm nút Tạo hàm đồ thị tương tác kiểu Desmos chạy 100% nội bộ trên máy!',
+      textEn: 'Introducing Module 45 in Tab 6 Misc Fun Hub & Credits: a full Casio fx-570VN PLUS scientific calculator paired with an interactive 100% local Desmos-style Graphing Plotter!',
+    },
+    {
+      id: 'SUB_77',
+      chapterId: 'CHAP_28_MOD45_CASIO_DESMOS_VOICE6LANG',
+      startSec: 817.0,
+      endSec: 828.0,
+      speaker: 'Giọng Đọc AI 6 Ngôn Ngữ (Neural + Google Dịch TTS Miễn Phí)',
+      speakerEn: '6-Language AI Voice Narration (Neural + Google Translate TTS)',
+      text: 'Động cơ giọng nói AI nay đọc mượt cả 6 thứ tiếng Việt, Anh, Trung Giản, Trung Phồn, Hàn và Nhật qua Neural Voice hoặc Google Dịch TTS tích hợp sẵn cho cả Video lẫn Trợ lý AI!',
+      textEn: 'The AI voice engine now narrates fluently across all 6 languages—Vietnamese, English, Simplified/Traditional Chinese, Korean, and Japanese—using Neural Voices or built-in Google Translate TTS!',
+    },
+    {
+      id: 'SUB_78',
+      chapterId: 'CHAP_28_MOD45_CASIO_DESMOS_VOICE6LANG',
+      startSec: 828.0,
+      endSec: 840.0,
+      speaker: 'Hoàn Thiện 45 Module & Tự Lưu 2 Giây Mọi Trạng Thái!',
+      speakerEn: 'All 45 Modules Complete with Full 2-Second Autosave!',
+      text: 'Cả 45 Module kết hợp cơ chế Tự Lưu mỗi 2 giây ghi nhớ trọn vẹn văn bản, vị trí con trỏ, tab và cài đặt đang dùng. Chúc tác giả sáng tác bùng nổ cùng Web Viết Tiểu Thuyết Của Bi!',
+      textEn: 'All 45 Modules work together with full 2-second autosave preserving your manuscript, cursor, active tab, and settings. Happy writing with Bi’s Novel Writing Studio!',
+    },
   ]);
 
   /**
    * Nhật ký nâng cấp hệ thống & danh sách chi tiết các cải tiến lớn qua từng phiên bản.
    */
   const SYSTEM_CHANGELOG_V38 = Object.freeze([
+    {
+      version: 'v104.0 — Hoàn Thiện 45 Module: Casio fx-570VN+ & Desmos (Mod 45), Desktop YouTube Trực Tiếp (0.25x–4x, Cửa Sổ Nổi, YTSave), Mobile A–B Auto-Jump & AI Nói 6 Ngôn Ngữ (Google Dịch TTS)',
+      date: '22/11/2026',
+      dateLabel: 'Mới nhất',
+      badgeTone: 'emerald',
+      highlights: [
+        'Desktop & App Desktop YouTube Trực Tiếp (Mod 39 & Mod 21): Bỏ dò luồng công cộng trên Desktop, phát thẳng youtube-nocookie.com mượt trong nền với tốc độ mở rộng 0.25x / 0.5x / 0.75x / 1x / 1.25x / 1.5x / 1.75x / 2x / 3x / 4x, đổi tên & nâng cấp "🖼️ Cửa sổ nổi" (Document PiP + Cửa sổ kéo thả mọi Tab).',
+        'Mobile A–B Tự Nhảy Qua Dấu ":" & Popup YTSave Mới: Nhập 2 chữ số phút trên điện thoại tự nhảy sang giây (03 → 03: → 03:38); hộp tải YTSave chỉ mô phỏng ô dán link + nút Download nhấp nháy kèm nút "Điều hướng thẳng tới YTSave (không hiện lại)" và nút "🚀 Mở YTSave Ngay ↗" nhấp nháy nổi bật nhất.',
+        'Module 45 (Tab 6 Mục #5 & Credit): Máy tính khoa học Casio fx-570VN PLUS đầy đủ chức năng + Nút "Tạo hàm đồ thị" tương tác kiểu Desmos 100% nội bộ, kèm Dự báo Thời Tiết 24 giờ từng tiếng cấp Phường (Mod 43), Khắc phục triệt để liệt nút PWA/Tab thường (SW v104) & Tự Lưu 2 giây mọi trạng thái (Mod 09).',
+        'Giọng Đọc AI 6 Ngôn Ngữ (Mod 28, Mod 33, Mod 27): Hỗ trợ đầy đủ Tiếng Việt, English, 中文 (简体), 中文 (繁體), 한국어, 日本語 qua Neural Voice và tự động dùng Google Dịch TTS dự phòng cho cả Video Hướng Dẫn 28 mốc (đủ 45 Module) lẫn Trợ lý AI!',
+      ],
+    },
     {
       version: 'v52.0 — Nối Âm Thanh YouTube ➔ MP3 Nền Mục 3, Tự Lưu 2s Toàn Diện, Cổng Gọn & Sửa Triệt Để Responsive Mobile + Fullscreen Video Tab 6',
       date: '17/11/2026',
@@ -1458,7 +1614,13 @@
     }
 
     setLanguage(lang) {
-      this.language = lang === 'en-US' ? 'en-US' : 'vi-VN';
+      const nv = globalScope.NoirStudio?.neuralVoice;
+      this.language =
+        typeof nv?.normalizeLangCode === 'function'
+          ? nv.normalizeLangCode(lang)
+          : ['vi-VN', 'en-US', 'zh-CN', 'zh-TW', 'ko-KR', 'ja-JP'].includes(lang)
+            ? lang
+            : 'vi-VN';
       this.lastSpokenCueKey = '';
       this.stop();
       return this.language;
@@ -1470,34 +1632,44 @@
 
     pickBestCuteVoice(langCode) {
       if (!this.isSupported()) return null;
+      const nv = globalScope.NoirStudio?.neuralVoice;
+      if (nv && typeof nv.pickBestNaturalVoice === 'function') {
+        const picked = nv.pickBestNaturalVoice(langCode);
+        if (picked && !picked.isGoogleTranslateTts) return picked;
+      }
       const voices = globalScope.speechSynthesis.getVoices?.() || [];
       if (!voices.length) return null;
-      const isVi = langCode === 'vi-VN';
-      const preferredPatterns = isVi
-        ? [/hoaimy/i, /namminh/i, /google.*tiếng việt/i, /linh/i, /\ban\b/i, /^vi[-_]?vn$/i]
-        : [/aria.*natural/i, /jenny.*natural/i, /samantha/i, /google us english/i, /zira/i, /en[-_]us/i, /en[-_]gb/i];
+      const prefix = String(langCode || 'vi-VN').split('-')[0].toLowerCase();
+      return voices.find((v) => String(v.lang || '').toLowerCase().startsWith(prefix)) || null;
+    }
 
-      for (const rx of preferredPatterns) {
-        const hit = voices.find((v) =>
-          (isVi ? /^vi/i.test(v.lang) : /^en/i.test(v.lang)) && rx.test(`${v.name} ${v.lang}`)
-        );
-        if (hit) return hit;
+    resolveLocalizedCueText(cue, langCode) {
+      if (!cue) return '';
+      if (langCode === 'vi-VN') return cue.text || cue.textEn || '';
+      if (langCode === 'en-US') return cue.textEn || cue.text || '';
+      if (cue.textByLang && cue.textByLang[langCode]) return cue.textByLang[langCode];
+      const i18nMap = {
+        'zh-CN': 'zh-CN',
+        'zh-TW': 'zh-TW',
+        'ko-KR': 'ko',
+        'ja-JP': 'ja',
+      };
+      const targetI18n = i18nMap[langCode];
+      const i18nInst = globalScope.NoirStudio?.i18n || globalScope.NoirNovel?.i18n;
+      if (targetI18n && i18nInst && typeof i18nInst.translateText === 'function') {
+        const translated = i18nInst.translateText(cue.text || '', targetI18n);
+        if (translated && translated !== cue.text) return translated;
       }
-      return (
-        voices.find((v) =>
-          isVi ? /^vi/i.test(v.lang) : /^en/i.test(v.lang)
-        ) || null
-      );
+      return cue.textEn || cue.text || '';
     }
 
     speakCueIfNeeded(cue, isPlaying) {
-      if (!this.enabled || !isPlaying || !cue || !this.isSupported()) return;
+      if (!this.enabled || !isPlaying || !cue) return;
       const cueKey = `${cue.id}_${this.language}`;
       if (this.lastSpokenCueKey === cueKey) return;
       this.lastSpokenCueKey = cueKey;
 
-      const textToRead =
-        this.language === 'en-US' ? cue.textEn || cue.text : cue.text || cue.textEn;
+      const textToRead = this.resolveLocalizedCueText(cue, this.language);
       if (!textToRead) return;
 
       const neuralVoice = globalScope.NoirStudio?.neuralVoice;
@@ -1514,6 +1686,7 @@
         }
       }
 
+      if (!this.isSupported()) return;
       try {
         const bestVoice = this.pickBestCuteVoice(this.language);
         if (this.language === 'vi-VN' && !bestVoice) {
@@ -3324,9 +3497,13 @@
                   } font-bold text-[11px]">
                     ${this.player.voiceNarrator.enabled ? '🎙️ Giọng đọc AI Cute: BẬT' : '🔇 Giọng đọc AI Cute: TẮT'}
                   </button>
-                  <select id="mod28-voice-lang-select" title="Chọn ngôn ngữ giọng thuyết minh Neural VI/EN" class="px-2 py-1.5 rounded-xl border border-zinc-700 bg-zinc-900 text-[11px] font-bold text-pink-200">
-                    <option value="vi-VN"${this.player.voiceNarrator.language === 'vi-VN' ? ' selected' : ''}>🇻🇳 Giọng Việt Neural</option>
-                    <option value="en-US"${this.player.voiceNarrator.language === 'en-US' ? ' selected' : ''}>🇬🇧 English Neural</option>
+                  <select id="mod28-voice-lang-select" title="Chọn ngôn ngữ giọng thuyết minh AI 6 thứ tiếng (Neural / Google Dịch TTS)" class="px-2 py-1.5 rounded-xl border border-zinc-700 bg-zinc-900 text-[11px] font-bold text-pink-200">
+                    <option value="vi-VN"${this.player.voiceNarrator.language === 'vi-VN' ? ' selected' : ''}>🇻🇳 Tiếng Việt (AI / Google Dịch)</option>
+                    <option value="en-US"${this.player.voiceNarrator.language === 'en-US' ? ' selected' : ''}>🇬🇧 English (AI / Google TTS)</option>
+                    <option value="zh-CN"${this.player.voiceNarrator.language === 'zh-CN' ? ' selected' : ''}>🇨🇳 中文 简体 (AI / Google 翻译)</option>
+                    <option value="zh-TW"${this.player.voiceNarrator.language === 'zh-TW' ? ' selected' : ''}>🇹🇼 中文 繁體 (AI / Google 翻譯)</option>
+                    <option value="ko-KR"${this.player.voiceNarrator.language === 'ko-KR' ? ' selected' : ''}>🇰🇷 한국어 (AI / Google 번역)</option>
+                    <option value="ja-JP"${this.player.voiceNarrator.language === 'ja-JP' ? ' selected' : ''}>🇯🇵 日本語 (AI / Google 翻訳)</option>
                   </select>
                   <button type="button" id="mod33-btn-toggle-mirror-mode" class="px-2.5 py-1.5 rounded-xl border border-cyan-500/45 bg-cyan-500/15 text-cyan-200 font-bold text-[11px]" title="Chuyển giữa chế độ chiếu Giao diện Web Thật và Sơ đồ">
                     ${globalScope.NoirStudio?.liveDomVideoMirror?.enabled !== false ? '🖥️ Web Thật: BẬT' : '🎨 Sơ đồ: BẬT'}
@@ -3652,10 +3829,15 @@
       if (mod33TestVoiceBtn) {
         mod33TestVoiceBtn.addEventListener('click', () => {
           const lang = document.getElementById('mod28-voice-lang-select')?.value || 'vi-VN';
-          const sample =
-            lang === 'en-US'
-              ? 'Hello author Bi! Welcome to Noir Studio, where your live Light Novel interface guides every step smoothly.'
-              : 'Xin chào tác giả Bi! Video hướng dẫn nay chiếu trực tiếp giao diện thật của Studio với giọng đọc tự nhiên.';
+          const samplesByLang = {
+            'vi-VN': 'Xin chào tác giả Bi! Video hướng dẫn nay chiếu trực tiếp giao diện thật của 45 Module với giọng đọc AI tự nhiên.',
+            'en-US': 'Hello author Bi! Welcome to Noir Studio, where all 45 modules and your live Light Novel workspace guide every step smoothly.',
+            'zh-CN': '你好作者 Bi！欢迎来到小说创作工作室，45个完整模块和语音向导将助你流畅创作每一章故事。',
+            'zh-TW': '你好作者 Bi！歡迎來到小說創作工作室，45個完整模組與語音導覽將助你流暢創作每一章故事。',
+            'ko-KR': '안녕하세요 Bi 작가님! 45개 모듈이 모두 갖춰진 소설 스튜디오에 오신 것을 환영합니다.',
+            'ja-JP': 'こんにちは、Bi作家さん！45個のモジュールを備えた小説執筆スタジオへようこそ。',
+          };
+          const sample = samplesByLang[lang] || samplesByLang['vi-VN'];
           globalScope.NoirStudio?.neuralVoice?.speakText?.(sample, lang, {
             source: 'VIDEO_TEST',
             rate: this.player.playbackRate || 0.98,
@@ -3784,6 +3966,22 @@
 
   if (typeof NS.registerModule === 'function') {
     NS.registerModule('mod28', tutorialController);
+  }
+
+  if (typeof globalScope !== 'undefined' && typeof globalScope.addEventListener === 'function') {
+    globalScope.addEventListener('i18n:languageChanged', (ev) => {
+      const nv = globalScope.NoirStudio?.neuralVoice;
+      const nextLangCode =
+        typeof nv?.normalizeLangCode === 'function'
+          ? nv.normalizeLangCode(ev?.detail?.lang || globalScope.NoirStudio?.i18n?.getLanguage?.() || 'vi')
+          : 'vi-VN';
+      tutorialController.player?.voiceNarrator?.setLanguage?.(nextLangCode);
+      const sel = document.getElementById('mod28-voice-lang-select');
+      if (sel && sel.value !== nextLangCode) {
+        sel.value = nextLangCode;
+      }
+      nv?.syncVoicePickerUI?.(nextLangCode);
+    });
   }
 
   if (typeof document !== 'undefined') {

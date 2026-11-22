@@ -1570,6 +1570,30 @@
       targetDomId: 'btn-tab6-lang-switcher',
       actionLabel: 'Mở Nút Đổi Ngôn Ngữ Ngay Dưới Nút Ủng Hộ Tab 6',
     },
+    {
+      id: 'FEAT_MOD45_CASIO_FX570_AND_DESMOS',
+      category: 'TAB6',
+      categoryLabel: 'Tab 6: Phiên Bản & Xuất Sách',
+      title: 'Máy Tính Đồ Thị Casio fx-570VN PLUS & Desmos Local (Mod 45)',
+      badge: '100% Nội Bộ Offline / Không Cần Mạng',
+      moduleRef: 'Mod 45 (Tab 6 — Mục #5 Chức Năng Linh Tinh & Author Credits)',
+      summary:
+        'Giả lập trọn vẹn máy tính khoa học Casio fx-570VN PLUS (SHIFT/ALPHA, Phân số, Căn, Lũy thừa, Lượng giác, Log, Tích phân, Đạo hàm, SOLVE, Phương trình bậc 2/3, Ma trận, Vector, Số phức, BASE-N) kèm nút "Tạo hàm đồ thị" mở sân khấu vẽ đồ thị tương tác kiểu Desmos 100% chạy ngay trên máy người dùng!',
+      whenToUse:
+        'Khi cần tính nhanh toán học, giải phương trình, bấm đạo hàm/tích phân, vẽ đồ thị hàm số hoặc tính chỉ số hệ thống thế giới truyện ngay trong Studio mà không cần mở web ngoài.',
+      stepByStep: [
+        'Vào Tab 6 → Ô #5 "Chức năng linh tinh" → chọn mục số 6 "Máy tính đồ thị" (hoặc bấm phím tắt trong cửa sổ Author Credits).',
+        'Bấm phím trực tiếp trên thân máy Casio fx-570VN PLUS hoặc gõ bàn phím vật lý để tính toán khoa học tức thì.',
+        'Bấm nút "📈 Tạo hàm đồ thị" ngay bên cạnh để mở bộ vẽ đồ thị kiểu Desmos (hỗ trợ nhiều hàm f(x), phóng to/thu nhỏ, kéo tọa độ, tìm giao điểm & xuất ảnh PNG).',
+      ],
+      proTip:
+        'Toàn bộ động cơ tính toán & vẽ đồ thị chạy 100% nội bộ trên CPU thiết bị (Local-First) nên hoạt động tức thì kể cả khi mất mạng.',
+      relatedIds: ['FEAT_MOD44_SITE_TRAFFIC_ANALYTICS', 'FEAT_TAB6_VIDEO_TUTORIAL_BILINGUAL'],
+      screenKey: 'SCREEN_6_SYSTEM',
+      expandCollapseIds: ['tab6-misc-fun-body'],
+      targetDomId: 'btn-misc-open-graphing-calc',
+      actionLabel: 'Mở Máy Tính Casio fx-570VN PLUS & Đồ Thị Desmos',
+    },
   ]);
 
   const WORKFLOW_PLAYBOOKS_CATALOG = Object.freeze([
@@ -1751,7 +1775,7 @@
     { group: 'Nhóm Chương & Lịch Sử (Mod 06–10)', modules: 'mod06 (Nạp DOCX/PDF/TXT), mod07 (Tìm kiếm BM25 0-Token), mod08 (Cây chương 2 chiều), mod09 (Lưu 3 tầng & Undo), mod10 (Time-Machine Preview)' },
     { group: 'Nhóm AI & Story Bible (Mod 11–19)', modules: 'mod11 (Google Docs AI Diff), mod12 (Story Bible & NotebookLM), mod13 (Radar Anti-Cliché), mod14 (Soát logic), mod15 (API Vault & Quotas 5h/Tuần), mod16 (Prompt Tổng Hợp 2 Bước), mod17 (Đầu ra 5 Chế độ Tab 3), mod18 (Biểu đồ Mode 5), mod19 (Duyệt lũy tiến Ch.1..cuối)' },
     { group: 'Nhóm Tập Trung, Soạn Thảo & Xuất Sách (Mod 20–26)', modules: 'mod20 (Pomodoro 2 chiều), mod21 (MP3 Lặp A-B & 7 Âm tự nhiên), mod22 (60FPS Mưa & 6 Tranh nền), mod23 (Bàn viết Tab 1 & Tìm/Thay), mod24 (Lore Whisper & Mục tiêu chữ), mod25 (Từ điển Ngũ quan & Lời tác giả), mod26 (Xuất OOXML .DOCX & .PDF 1-Trang Bìa)' },
-    { group: 'Nhóm Trợ Lý, Điều Hướng, Bảo Chứng & Tiện Ích Studio (Mod 27–44 + 5 Gói Ngôn Ngữ JS)', modules: 'mod09 (Lưu 3 tầng & Sức Khỏe mở rộng kèm Chân dung Tác giả "đang theo dõi bạn"), mod27 (Bi Số 8 3D + Chat Kép), mod28 (Video Hướng Dẫn ~10 Phút Chi Tiết + Nhật Ký), mod29 (6 Tab + Cài App PWA 4 thẻ 1-chạm), mod30 (Cổng Kết Nối + Bộ Điều Phối Đa Ngôn Ngữ NS.i18n), mod31 (Bách Khoa Toàn Thư 44 Module), mod32 (Sân khấu Hình nền & Cầu nối Argon 4), mod33 (Đồng bộ Key/Pro-Ultra/Giọng Neural VI-EN), mod34 (Báo lỗi Google Sheets), mod35 (Author Credits & VietQR Offline Fallback), mod36 (Khiên Chống Reload 7 tầng), mod37 (Đồng bộ .ZIP & Google Drive), mod38 (Điểm danh & Local Compute), mod39 (Hero Search YouTube Không Quảng Cáo + Khóa Loop Livestream + Phát Nền), mod40 (Nền Video Không Nút Che + Crop Vùng Khung Hình Có/Không Ép Fullscreen), mod41 (Guest Mode Nhảy Thẳng Tab 5 + Nhấp Nháy 4s YouTube/MP3), mod42 (Giờ Quốc Tế & Báo Thức MP3), mod43 (Thời Tiết Thực 60FPS 6×28), mod44 (Thống Kê Truy Cập Toàn Cầu v3), i18n_lang_en / zh_cn / zh_tw / ko / ja (5 Module Ngôn Ngữ Quốc Tế)' },
+    { group: 'Nhóm Trợ Lý, Điều Hướng, Bảo Chứng & Tiện Ích Studio (Mod 27–45 + 5 Gói Ngôn Ngữ JS)', modules: 'mod09 (Lưu 3 tầng mỗi 2s & Sức Khỏe mở rộng kèm Chân dung Tác giả), mod27 (Bi Số 8 3D + Chat Kép 6 ngôn ngữ), mod28 (Video Hướng Dẫn 28 Mốc Đủ 45 Module + Nhật Ký), mod29 (6 Tab + Cài App PWA 4 thẻ 1-chạm), mod30 (Cổng Kết Nối + Bộ Điều Phối Đa Ngôn Ngữ NS.i18n), mod31 (Bách Khoa Toàn Thư 45 Module), mod32 (Sân khấu Hình nền & Cầu nối Argon 4), mod33 (Đồng bộ Key/Pro-Ultra & Giọng AI 6 Ngôn Ngữ Neural + Google Dịch TTS), mod34 (Báo lỗi Google Sheets), mod35 (Author Credits & VietQR Offline Fallback), mod36 (Khiên Chống Reload 7 tầng), mod37 (Đồng bộ .ZIP & Google Drive), mod38 (Điểm danh & Local Compute), mod39 (Desktop YouTube Trực Tiếp 0.25x–4x, Cửa Sổ Nổi, Mobile A–B Auto-Jump & YTSave), mod40 (Nền Video Không Nút Che + Crop Vùng Khung Hình), mod41 (Guest Mode Nhảy Thẳng Tab 5 + Nhấp Nháy 4s), mod42 (Giờ Quốc Tế & Báo Thức MP3), mod43 (Thời Tiết Thực 24h Từng Giờ Cấp Phường + Bầu Trời 60FPS), mod44 (Thống Kê Truy Cập Toàn Cầu v3), mod45 (Máy Tính Casio fx-570VN PLUS & Đồ Thị Desmos 100% Local), i18n_lang_en / zh_cn / zh_tw / ko / ja (5 Module Ngôn Ngữ Quốc Tế)' },
   ]);
 
   const TONE_BADGE_CLASSES = Object.freeze({
@@ -2176,7 +2200,7 @@
         },
         {
           id: 'SYSTEM_MAP',
-          label: '🏗️ Kiến Trúc 44 Module & Trạng Thái',
+          label: '🏗️ Kiến Trúc 45 Module & Trạng Thái',
         },
       ];
 

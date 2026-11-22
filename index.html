@@ -1029,7 +1029,7 @@
         }, true);
       } catch (_eSub) {}
       try {
-        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v103';
+        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v104';
         if (typeof window !== 'undefined' && 'caches' in window && window.caches && typeof window.caches.keys === 'function') {
           window.caches.keys().then(function (keys) {
             for (var i = 0; i < keys.length; i++) {
@@ -2349,22 +2349,28 @@
                   <button type="button" id="btn-audio-seek-back" class="px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-[11px]">⏪ -5s</button>
                   <button type="button" id="btn-audio-seek-fwd" class="px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-[11px]">+5s ⏩</button>
                   <select id="s9-audio-speed-select" class="noir-dark-select min-w-[96px] px-2.5 py-1.5 rounded border border-zinc-700 bg-zinc-950 text-white font-monoCode text-xs">
+                    <option value="0.25">0.25x</option>
+                    <option value="0.5">0.5x</option>
                     <option value="0.75">0.75x</option>
                     <option value="1" selected>1.0x</option>
                     <option value="1.25">1.25x</option>
                     <option value="1.5">1.5x</option>
+                    <option value="1.75">1.75x</option>
+                    <option value="2">2.0x</option>
+                    <option value="3">3.0x</option>
+                    <option value="4">4.0x</option>
                   </select>
                 </div>
               </div>
               <div class="flex flex-wrap sm:flex-nowrap items-center gap-2">
                 <span class="w-14 shrink-0 text-[11px] font-bold text-emerald-400">Điểm A:</span>
                 <input id="s11-slider-point-a" type="range" min="0" max="300" step="1" value="0" class="flex-1 min-w-[96px] accent-emerald-500" />
-                <input id="s11-input-point-a" type="text" value="00:00" class="w-24 min-w-[92px] px-2 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 font-monoCode text-center text-xs" />
+                <input id="s11-input-point-a" type="text" inputmode="numeric" autocomplete="off" value="00:00" class="w-24 min-w-[92px] px-2 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 font-monoCode text-center text-xs" />
               </div>
               <div class="flex flex-wrap sm:flex-nowrap items-center gap-2">
                 <span class="w-14 shrink-0 text-[11px] font-bold text-amber-400">Điểm B:</span>
                 <input id="s11-slider-point-b" type="range" min="1" max="300" step="1" value="60" class="flex-1 min-w-[96px] accent-amber-500" />
-                <input id="s11-input-point-b" type="text" value="01:00" class="w-24 min-w-[92px] px-2 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 font-monoCode text-center text-xs" />
+                <input id="s11-input-point-b" type="text" inputmode="numeric" autocomplete="off" value="01:00" class="w-24 min-w-[92px] px-2 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 font-monoCode text-center text-xs" />
               </div>
               <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
                 <select id="s9-audio-loop-mode" class="noir-dark-select min-w-0 max-w-full px-2.5 py-1.5 rounded border border-zinc-700 bg-zinc-950 text-white text-xs">

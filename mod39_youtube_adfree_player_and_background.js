@@ -57,6 +57,7 @@
       AB_LOOP_MAP: 'noir_v39_mod39_ab_loop_map_v1',
       WEB_BG_STATE: 'noir_v39_mod39_web_bg_state_v1',
       YT_LOOP_STATE: 'yt_loop_state',
+      YTSAVE_DIRECT_REDIRECT: 'noir_mod39_ytsave_direct_redirect_v1',
       SEARCH_CACHE_PREFIX: 'mod39_yt_search_cache_'
     }),
     SEARCH_TIMEOUT_MS: 5200,
@@ -84,7 +85,7 @@
       DEFAULT_BG_BRIGHTNESS_PCT: 62,
       DEFAULT_BG_VOLUME_PCT: 0
     }),
-    SPEED_OPTIONS: Object.freeze([0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]),
+    SPEED_OPTIONS: Object.freeze([0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 3, 4]),
     YT_PLAYER_STATES: Object.freeze({
       UNSTARTED: -1,
       ENDED: 0,
@@ -94,6 +95,22 @@
       CUED: 5
     })
   });
+
+  /**
+   * Nhận diện Desktop (Trình duyệt PC/Laptop hoặc App PWA cài trên Desktop).
+   * Trên Desktop, trình duyệt đã cho phép YouTube phát trong nền tự nhiên nên
+   * ưu tiên phát trực tiếp qua youtube-nocookie.com, không cần dò luồng công cộng.
+   */
+  function isDesktopDirectYoutubeEnv() {
+    if (global.__MOD39_FORCE_PUBLIC_STREAM__) return false;
+    if (typeof navigator === 'undefined') return false;
+    const ua = String(navigator.userAgent || '');
+    const isMobileOrTabletUa =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(ua);
+    const isIpadOs =
+      /Macintosh/i.test(ua) && Number(navigator.maxTouchPoints || 0) > 1;
+    return !isMobileOrTabletUa && !isIpadOs;
+  }
 
   /**
    * Các từ khóa tìm kiếm bầu không khí sáng tác lành mạnh trên YouTube.
@@ -4380,7 +4397,7 @@
           this.syncAudioBridgeStageCard();
           this.syncStatusUi();
         });
-      } else if (isHttpOrigin && !navigator?.webdriver) {
+      } else if (isHttpOrigin && !navigator?.webdriver && !isDesktopDirectYoutubeEnv()) {
         this.prewarmStreamForBackground(activeRec, sessionId).catch(() => {});
       }
     }
@@ -4590,6 +4607,183 @@
       return true;
     }
 
+    isFloatingWindowOpen() {
+      return Boolean(
+        NS.nativePlayer?.isInSystemPiP ||
+        (this._docPipWindow && !this._docPipWindow.closed) ||
+        document.getElementById('mod39-desktop-floating-win')
+      );
+    }
+
+    closeDesktopFloatingWindow() {
+      let closedAny = false;
+      try {
+        if (this._docPipWindow && !this._docPipWindow.closed) {
+          this._docPipWindow.close();
+          closedAny = true;
+        }
+      } catch (_ePip) {}
+      this._docPipWindow = null;
+
+      const floatEl = document.getElementById('mod39-desktop-floating-win');
+      if (floatEl) {
+        try {
+          floatEl.remove();
+          closedAny = true;
+        } catch (_eRm) {}
+      }
+      if (closedAny) {
+        this.syncStatusUi();
+        this.playerCtrl.emitUiSync?.();
+      }
+      return closedAny;
+    }
+
+    async openDesktopFloatingWindow() {
+      const video = this.playerCtrl?.activeVideo;
+      if (!video || (!video.videoId && !video.playlistId)) {
+        safeNotify('🎬 Hãy chọn hoặc mở một video YouTube trước!', 'warning', 2600);
+        return { ok: false, reason: 'no-video' };
+      }
+
+      if (this.isFloatingWindowOpen() && !NS.nativePlayer?.isInSystemPiP) {
+        this.closeDesktopFloatingWindow();
+        safeNotify('🖼️ Đã đóng Cửa sổ nổi YouTube.', 'info', 2000);
+        return { ok: true, closed: true };
+      }
+
+      const snap = this.playerCtrl?.bridge?.getCurrentPlaybackSnapshot?.() || {};
+      const startSec = Math.max(0, Math.floor(Number(snap.currentTime) || Number(video.startSeconds) || 0));
+      const parser = NS.youtubeStudio?.parser;
+      const embedUrl = parser
+        ? parser.buildPrivacyEmbedUrl({
+            videoId: video.videoId,
+            playlistId: video.playlistId,
+            startSeconds: startSec,
+            autoplay: true,
+            loop: !video.isLive && Boolean(this.playerCtrl?.prefs?.repeatMode),
+            muted: Boolean(this.playerCtrl?.prefs?.muted),
+            controls: true,
+            forBackground: false
+          })
+        : `https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.videoId || '')}?autoplay=1&start=${startSec}&rel=0`;
+
+      // Tạm dừng iframe chính để tránh phát trùng tiếng khi mở Cửa sổ nổi
+      try {
+        this.playerCtrl?.pause?.();
+      } catch (_ePause) {}
+
+      // Ưu tiên 1: Document Picture-in-Picture thật của hệ điều hành (Chrome / Edge / Desktop PWA)
+      if (
+        typeof window !== 'undefined' &&
+        window.documentPictureInPicture &&
+        typeof window.documentPictureInPicture.requestWindow === 'function'
+      ) {
+        try {
+          const pipWin = await window.documentPictureInPicture.requestWindow({
+            width: 440,
+            height: 292
+          });
+          this._docPipWindow = pipWin;
+          const doc = pipWin.document;
+          doc.title = `${video.title || 'YouTube'} — Cửa sổ nổi`;
+          doc.body.style.cssText =
+            'margin:0;padding:0;background:#09090b;color:#f4f4f5;font-family:system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;height:100vh;overflow:hidden;';
+
+          const safeTitle = String(video.title || 'Video YouTube')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+          doc.body.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:#18181b;border-bottom:1px solid #27272a;font-size:11px;font-weight:700;">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">🖼️ ${safeTitle}</span>
+              <button id="pip-close-btn" type="button" style="background:#e11d48;color:#fff;border:0;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;">✕ Đóng</button>
+            </div>
+            <div style="flex:1;position:relative;background:#000;">
+              <iframe src="${embedUrl}" style="width:100%;height:100%;border:0;" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+            </div>
+          `;
+          doc.getElementById('pip-close-btn')?.addEventListener('click', () => {
+            try { pipWin.close(); } catch (_eC) {}
+          });
+          pipWin.addEventListener('pagehide', () => {
+            this._docPipWindow = null;
+            this.syncStatusUi();
+            this.playerCtrl?.emitUiSync?.();
+          });
+          this.syncStatusUi();
+          this.playerCtrl?.emitUiSync?.();
+          safeNotify('🖼️ Đã mở Cửa sổ nổi YouTube trên màn hình!', 'success', 2400);
+          return { ok: true, mode: 'document-pip' };
+        } catch (_eDocPip) {
+          this._docPipWindow = null;
+        }
+      }
+
+      // Ưu tiên 2: Cửa sổ nổi kéo-thả trực tiếp trong toàn bộ 6 Tab của Studio
+      if (typeof document !== 'undefined' && document.body) {
+        const win = document.createElement('div');
+        win.id = 'mod39-desktop-floating-win';
+        win.className =
+          'fixed bottom-4 right-4 z-[175] w-[340px] sm:w-[400px] rounded-2xl overflow-hidden border-2 border-violet-500/70 bg-zinc-950 shadow-2xl';
+        const safeTitle = String(video.title || 'Video YouTube')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        win.innerHTML = `
+          <div id="mod39-floating-drag-bar" class="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-900 border-b border-zinc-800 cursor-move select-none text-xs">
+            <span class="font-extrabold text-violet-200 truncate flex-1">🖼️ ${safeTitle}</span>
+            <button type="button" id="btn-mod39-close-floating-win" class="px-2 py-0.5 rounded-lg bg-zinc-800 hover:bg-rose-600 text-zinc-100 font-extrabold transition">✕</button>
+          </div>
+          <div class="relative w-full aspect-video bg-black">
+            <iframe src="${embedUrl}" class="w-full h-full border-0" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+          </div>
+        `;
+        document.body.appendChild(win);
+
+        // Kéo thả mượt mà quanh màn hình
+        const dragBar = win.querySelector('#mod39-floating-drag-bar');
+        let dragging = false;
+        let offsetX = 0;
+        let offsetY = 0;
+        if (dragBar) {
+          dragBar.addEventListener('pointerdown', (ev) => {
+            if (ev.target?.closest?.('button')) return;
+            dragging = true;
+            const rect = win.getBoundingClientRect();
+            offsetX = ev.clientX - rect.left;
+            offsetY = ev.clientY - rect.top;
+            win.style.right = 'auto';
+            win.style.bottom = 'auto';
+            win.style.left = `${rect.left}px`;
+            win.style.top = `${rect.top}px`;
+            try { dragBar.setPointerCapture(ev.pointerId); } catch (_eCap) {}
+          });
+          dragBar.addEventListener('pointermove', (ev) => {
+            if (!dragging) return;
+            const maxX = Math.max(8, window.innerWidth - win.offsetWidth - 8);
+            const maxY = Math.max(8, window.innerHeight - win.offsetHeight - 8);
+            const nx = Math.max(8, Math.min(maxX, ev.clientX - offsetX));
+            const ny = Math.max(8, Math.min(maxY, ev.clientY - offsetY));
+            win.style.left = `${nx}px`;
+            win.style.top = `${ny}px`;
+          });
+          dragBar.addEventListener('pointerup', () => {
+            dragging = false;
+          });
+        }
+        win.querySelector('#btn-mod39-close-floating-win')?.addEventListener('click', () => {
+          this.closeDesktopFloatingWindow();
+        });
+        this.syncStatusUi();
+        this.playerCtrl?.emitUiSync?.();
+        safeNotify('🖼️ Đã mở Cửa sổ nổi — có thể kéo tự do qua mọi Tab!', 'success', 2600);
+        return { ok: true, mode: 'in-app-floating' };
+      }
+
+      return { ok: false, reason: 'floating-unavailable' };
+    }
+
     async requestSystemPictureInPicture() {
       const video = this.playerCtrl.activeVideo;
       if (!video) {
@@ -4597,12 +4791,17 @@
         return { ok: false, reason: 'no-video' };
       }
 
-      // Tuyệt đối không bật khung mini popup đè màn hình; chỉ gọi PiP hệ điều hành nếu đang bật Xem Video Hình và trình duyệt hỗ trợ
+      // 1) Nếu đang phát qua HTML5 Video Native (Mobile/Stream) -> dùng PiP video hệ điều hành
       if (NS.nativePlayer?.isActive?.() && NS.nativePlayer.mode === 'video') {
         const res = await NS.nativePlayer.enterSystemPictureInPicture();
         this.syncStatusUi();
         this.playerCtrl.emitUiSync?.();
         return res;
+      }
+
+      // 2) Trên Desktop (YouTube Trực Tiếp) hoặc Iframe -> mở Cửa sổ nổi (Document PiP / Floating Window)
+      if (isDesktopDirectYoutubeEnv() || this.playerCtrl.activeEngine === 'IFRAME') {
+        return await this.openDesktopFloatingWindow();
       }
 
       const okVideo = await this.switchBetweenAudioBridgeAndVideo(true);
@@ -4612,7 +4811,7 @@
           return await NS.nativePlayer.enterSystemPictureInPicture();
         }
       }
-      return { ok: false, reason: 'requires-video-playback-mode' };
+      return await this.openDesktopFloatingWindow();
     }
 
     handleVisibilityChange(isHidden) {
@@ -4835,12 +5034,17 @@
       const alwaysBgPipBtn = document.getElementById('btn-mod39-toggle-always-bg-pip');
       const modeBadge = document.getElementById('mod39-stream-mode-badge');
 
+      const isDesktopDirect = isDesktopDirectYoutubeEnv();
       const isMod21Audio = this.playerCtrl?.activeEngine === 'MOD21_AUDIO';
       const isResolving = this.playerCtrl?.activeEngine === 'RESOLVING_STREAM';
       const nativeActive = Boolean(NS.nativePlayer?.isActive?.());
       const visualPairedActive = Boolean(isMod21Audio && nativeActive && NS.nativePlayer?.visualMutedCompanion && NS.nativePlayer?.mode === 'video');
       const pipSupported = Boolean(NS.nativePlayer?.getPiPCapabilities?.()?.anySupported);
-      const canShowOsPip = Boolean(nativeActive && NS.nativePlayer?.mode === 'video' && pipSupported);
+      const isFloatingOpen = this.isFloatingWindowOpen();
+      const canShowFloatingBtn = Boolean(
+        (nativeActive && NS.nativePlayer?.mode === 'video' && pipSupported) ||
+        (isDesktopDirect && this.playerCtrl?.activeVideo)
+      );
       const trBg = (s) =>
         NS.i18n?.translateText ? NS.i18n.translateText(String(s || '')) : String(s || '');
 
@@ -4851,8 +5055,9 @@
         if (el && el.className !== cls) el.className = cls;
       };
 
-      const isReconnectingNow = Boolean(this._bgReconnectState?.active && !isMod21Audio && !nativeActive);
+      const isReconnectingNow = Boolean(!isDesktopDirect && this._bgReconnectState?.active && !isMod21Audio && !nativeActive);
       const isYoutubeIframeFallback = Boolean(
+        !isDesktopDirect &&
         this.playerCtrl?.activeVideo &&
         !isMod21Audio &&
         !nativeActive &&
@@ -4861,8 +5066,9 @@
       );
       const shouldBlinkStatusAlert = Boolean(isReconnectingNow || isYoutubeIframeFallback);
       if (statusEl) {
-        const bgStatusMsg =
-          this.statusText && this.statusText.indexOf('🎬') === -1
+        const bgStatusMsg = isDesktopDirect
+          ? '🖥️ Chế độ Desktop (YouTube Trực Tiếp): Phát mượt trong nền qua youtube-nocookie, hỗ trợ Tua, Dừng, Lặp A–B, Tốc độ (0.25x–4x) & Cửa sổ nổi.'
+          : this.statusText && this.statusText.indexOf('🎬') === -1
             ? this.statusText
             : isYoutubeIframeFallback
               ? '📺 Đang phát qua Luồng phát YouTube — Đã tự động ngắt MP3 cũ ở Tab 3 để chờ đồng bộ (Tự động chạy nền khi sang Luồng phát công cộng).'
@@ -4880,7 +5086,14 @@
         statusEl.classList.remove('hidden');
       }
       if (modeBadge) {
-        if (isMod21Audio) {
+        if (isDesktopDirect) {
+          delete modeBadge.dataset.i18nIgnore;
+          setTxtIf(modeBadge, trBg('🖥️ YouTube Trực Tiếp (Desktop)'));
+          setClsIf(
+            modeBadge,
+            'px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 border border-emerald-400/60 text-emerald-200 shrink-0'
+          );
+        } else if (isMod21Audio) {
           delete modeBadge.dataset.i18nIgnore;
           setTxtIf(modeBadge, trBg(visualPairedActive ? '🎬 Luồng phát công cộng (Hình + MP3 Nền)' : '🎧 Luồng phát công cộng (MP3 Nền)'));
           setClsIf(
@@ -4903,7 +5116,7 @@
           );
         } else if (nativeActive) {
           delete modeBadge.dataset.i18nIgnore;
-          setTxtIf(modeBadge, trBg('🚀 Luồng phát công cộng (Video & PiP)'));
+          setTxtIf(modeBadge, trBg('🚀 Luồng phát công cộng (Video & Cửa sổ nổi)'));
           setClsIf(
             modeBadge,
             'px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-sky-500/20 border border-sky-400/60 text-sky-200 shrink-0'
@@ -4943,14 +5156,14 @@
         );
       }
       if (sysPipBtn) {
-        sysPipBtn.classList.toggle('hidden', !canShowOsPip);
+        sysPipBtn.classList.toggle('hidden', !canShowFloatingBtn);
         sysPipBtn.textContent = trBg(
-          NS.nativePlayer?.isInSystemPiP ? '🖼️ Đang mở PiP hệ thống' : '🖼️ PiP Cửa sổ nổi'
+          isFloatingOpen ? '🖼️ Đang mở Cửa sổ nổi' : '🖼️ Cửa sổ nổi'
         );
-        sysPipBtn.className = canShowOsPip
-          ? NS.nativePlayer?.isInSystemPiP
-            ? 'px-2.5 py-2 rounded-xl border border-emerald-400 bg-emerald-600/80 text-white text-xs font-extrabold transition shadow'
-            : 'px-2.5 py-2 rounded-xl border border-violet-500/45 bg-violet-500/15 hover:bg-violet-500/25 text-violet-200 text-xs font-extrabold transition'
+        sysPipBtn.className = canShowFloatingBtn
+          ? isFloatingOpen
+            ? 'px-2.5 py-2 rounded-xl border border-emerald-400 bg-emerald-600/80 text-white text-xs font-extrabold transition shadow shrink-0 whitespace-nowrap inline-flex items-center justify-center'
+            : 'px-2.5 py-2 rounded-xl border border-violet-500/45 bg-violet-500/15 hover:bg-violet-500/25 text-violet-200 text-xs font-extrabold transition shrink-0 whitespace-nowrap inline-flex items-center justify-center'
           : 'hidden';
       }
     }
@@ -5949,20 +6162,28 @@
       const sessionId = this._engineSessionId;
       this._lockedIframeSessionId = 0;
 
+      const isDesktopDirect = isDesktopDirectYoutubeEnv();
       const isHttpOrigin =
         typeof global.location !== 'undefined' && /^https?:$/i.test(String(global.location.protocol || ''));
       const cachedDirect =
-        !isLiveStream && record.videoId ? NS.streamFetcher?.readCache?.(record.videoId) : null;
+        !isDesktopDirect && !isLiveStream && record.videoId ? NS.streamFetcher?.readCache?.(record.videoId) : null;
       const hasValidCachedDirect = Boolean(
-        cachedDirect &&
+        !isDesktopDirect &&
+          cachedDirect &&
           cachedDirect.ok &&
           !cachedDirect.fallback &&
           (cachedDirect.videoStreamUrl || cachedDirect.audioStreamUrl)
       );
 
-      // Mặc định phát thẳng Video HTML5 <video> (Ảnh 2) + đồng bộ Audio Nền Tab 3 (mod21).
-      // Trong lúc dò luồng HTTP/HTTPS không nhúng sớm YouTube Iframe (Ảnh 1) để tránh giật reset hoặc kẹt iframe.
-      if (hasValidCachedDirect) {
+      // Trên Desktop / App Desktop: phát thẳng qua youtube-nocookie.com (đã chạy nền mượt, không cần dò luồng công cộng).
+      // Trên Mobile: ưu tiên luồng công cộng HTML5 / Audio Nền Tab 3 để tắt màn hình vẫn nghe được.
+      if (isDesktopDirect) {
+        this.activeEngine = 'IFRAME';
+        this.mobileBgAudio?.closeDesktopFloatingWindow?.();
+        this.bridge.mountEmbedUrlIntoIframe(record, this.prefs);
+        this.startPollingLoop();
+        this.mobileBgAudio?.onVideoLoaded(record, { sessionId });
+      } else if (hasValidCachedDirect) {
         if (this.mobileBgAudio) {
           this.mobileBgAudio._iframeMutedVisualCompanion = false;
           this.mobileBgAudio._silenceForegroundIframeForNativeTakeover?.();
@@ -6104,6 +6325,7 @@
         const isHttpOriginPlay =
           typeof global.location !== 'undefined' && /^https?:$/i.test(String(global.location.protocol || ''));
         if (
+          !isDesktopDirectYoutubeEnv() &&
           this.activeVideo?.videoId &&
           !this.isVideoLiveStream() &&
           isHttpOriginPlay &&
@@ -6234,6 +6456,7 @@
         this.mobileBgAudio.resolvedStreamInfo = null;
         this.mobileBgAudio.streamFallbackReason = '';
         this.mobileBgAudio.stopAutoReconnectLoop?.({ silent: true });
+        this.mobileBgAudio.closeDesktopFloatingWindow?.();
       }
       this.bridge.assumedAutoplaying = false;
       this.bridge._lastPlayCommandAtMs = 0;
@@ -6373,13 +6596,17 @@
       const cleanRate = MOD39_CONSTANTS.SPEED_OPTIONS.includes(Number(rate)) ? Number(rate) : 1;
       this.prefs.speed = cleanRate;
       this.vault.savePlayerPrefs(this.prefs);
+      let iframeSpeedCapped = false;
       if (this.activeEngine === 'MOD21_AUDIO' && NS.audioStudio?.setExternalAudioPrefs) {
         NS.audioStudio.setExternalAudioPrefs(this.prefs);
         this.mobileBgAudio?._syncVisualCompanionWithMod21?.('rate', { playbackRate: cleanRate });
       } else if (this.isNativePlayerActive()) {
         NS.nativePlayer.setPlaybackRate(cleanRate);
       } else {
-        this.bridge.dispatchPlayerCommand('setPlaybackRate', [cleanRate]);
+        // YouTube Iframe API chính thức hỗ trợ 0.25x -> 2x; truyền mức tối đa 2x khi > 2x để tránh bị từ chối lệnh
+        const ytSafeRate = cleanRate > 2 ? 2 : cleanRate;
+        iframeSpeedCapped = cleanRate > 2;
+        this.bridge.dispatchPlayerCommand('setPlaybackRate', [ytSafeRate]);
       }
       this.mobileBgAudio?.applyPrefsToNativeAudio();
       this.mobileBgAudio?.syncMediaSessionState();
@@ -6387,7 +6614,13 @@
         NS.youtubeMotionBg.syncWithForegroundRate(cleanRate);
       }
       this.emitUiSync();
-      safeNotify(`⚡ Tốc độ phát YouTube: ${cleanRate}x`, 'info', 1800);
+      safeNotify(
+        iframeSpeedCapped
+          ? `⚡ Tốc độ ${cleanRate}x đã chọn (Khung YouTube chuẩn giới hạn tối đa 2x; trình phát MP3/HTML5 hỗ trợ trọn vẹn 3x–4x).`
+          : `⚡ Tốc độ phát YouTube: ${cleanRate}x`,
+        'info',
+        iframeSpeedCapped ? 3200 : 1800
+      );
     }
 
     setVolume(volumePct) {
@@ -8444,8 +8677,8 @@
                       type="button"
                       id="btn-mod39-system-pip"
                       class="hidden px-2.5 py-2 rounded-xl border border-violet-500/45 bg-violet-500/15 hover:bg-violet-500/25 text-violet-200 text-xs font-extrabold shrink-0 whitespace-nowrap inline-flex items-center justify-center"
-                      title="Mở cửa sổ nổi Picture-in-Picture hệ điều hành (chỉ khả dụng khi đang bật Xem Video Hình và trình duyệt hỗ trợ)"
-                    >🖼️ PiP Cửa sổ nổi</button>
+                      title="Mở cửa sổ nổi xem video (hỗ trợ cả Desktop &amp; Mobile)"
+                    >🖼️ Cửa sổ nổi</button>
                     <button
                       type="button"
                       id="btn-mod39-yt-fullscreen"
@@ -8549,6 +8782,8 @@
                     <div class="flex gap-1">
                       <input
                         type="text"
+                        inputmode="numeric"
+                        autocomplete="off"
                         id="input-mod39-ab-start"
                         placeholder="00:00"
                         class="w-full min-w-0 px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700 text-xs font-mono text-white"
@@ -8567,6 +8802,8 @@
                     <div class="flex gap-1">
                       <input
                         type="text"
+                        inputmode="numeric"
+                        autocomplete="off"
                         id="input-mod39-ab-end"
                         placeholder="00:30"
                         class="w-full min-w-0 px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700 text-xs font-mono text-white"
@@ -9226,6 +9463,40 @@
             inputEl.setSelectionRange(segStart, segStart + 2);
           } catch (_eClickSel) {}
         });
+        const setCaretSafe = (pos) => {
+          const apply = () => {
+            try {
+              inputEl.setSelectionRange(pos, pos);
+            } catch (_eSet) {}
+          };
+          apply();
+          setTimeout(apply, 0);
+        };
+        const applyMaskedDigits = (digitStr) => {
+          const digitsOnly = String(digitStr || '').replace(/\D+/g, '');
+          if (!digitsOnly) return false;
+          const tpl = getAbTemplateForCurrentVideo();
+          const slots = getAbDigitSlots(tpl);
+          let masked = normalizeMaskedClockValue(inputEl.value, tpl);
+          let rawPos = typeof inputEl.selectionStart === 'number' ? inputEl.selectionStart : 0;
+          const selEnd = typeof inputEl.selectionEnd === 'number' ? inputEl.selectionEnd : rawPos;
+          if (selEnd > rawPos && rawPos === 0 && selEnd >= tpl.length - 1) {
+            rawPos = 0;
+          }
+          for (let d = 0; d < digitsOnly.length; d++) {
+            let slotIdx = slots.findIndex((s) => s >= rawPos);
+            if (slotIdx === -1) slotIdx = slots.length - 1;
+            const charPos = slots[slotIdx];
+            const chars = masked.split('');
+            chars[charPos] = digitsOnly[d];
+            masked = chars.join('');
+            rawPos = slotIdx < slots.length - 1 ? slots[slotIdx + 1] : tpl.length;
+          }
+          inputEl.value = masked;
+          setCaretSafe(rawPos);
+          return true;
+        };
+
         inputEl.addEventListener('keydown', (ev) => {
           if (ev.key === 'Enter' || ev.keyCode === 13) {
             ev.preventDefault();
@@ -9240,19 +9511,7 @@
           const slots = getAbDigitSlots(tpl);
           if (/^[0-9]$/.test(ev.key)) {
             ev.preventDefault();
-            const masked = normalizeMaskedClockValue(inputEl.value, tpl);
-            const rawPos = typeof inputEl.selectionStart === 'number' ? inputEl.selectionStart : 0;
-            let slotIdx = slots.findIndex((s) => s >= rawPos);
-            if (slotIdx === -1) slotIdx = slots.length - 1;
-            const charPos = slots[slotIdx];
-            const chars = masked.split('');
-            chars[charPos] = ev.key;
-            inputEl.value = chars.join('');
-            const nextSlotIdx = Math.min(slots.length - 1, slotIdx + 1);
-            const nextCaret = slotIdx < slots.length - 1 ? slots[nextSlotIdx] : tpl.length;
-            try {
-              inputEl.setSelectionRange(nextCaret, nextCaret);
-            } catch (_eSet) {}
+            applyMaskedDigits(ev.key);
             return;
           }
           if (ev.key === 'Backspace') {
@@ -9272,31 +9531,86 @@
               const chars = cur.split('');
               chars[charPos] = '0';
               inputEl.value = chars.join('');
-              try {
-                inputEl.setSelectionRange(charPos, charPos);
-              } catch (_eBk) {}
+              setCaretSafe(charPos);
             }
+          }
+        });
+        inputEl.addEventListener('beforeinput', (ev) => {
+          if (ev.inputType === 'insertText' && typeof ev.data === 'string' && /^[0-9]+$/.test(ev.data)) {
+            ev.preventDefault();
+            applyMaskedDigits(ev.data);
           }
         });
         inputEl.addEventListener('input', () => {
           const tpl = getAbTemplateForCurrentVideo();
           const cur = String(inputEl.value || '');
-          if (!cur || /^\d{2}:\d{2}(:\d{2})?$/.test(cur)) return;
+          const pos = typeof inputEl.selectionStart === 'number' ? inputEl.selectionStart : cur.length;
+          if (!cur) return;
+
+          // Nếu đã đúng định dạng 03:00 và con trỏ vừa gõ xong 2 chữ số đầu (đang đứng ngay trước dấu :)
+          // -> lập tức nhảy con trỏ qua dấu : (tới vị trí 3 hoặc 6) để gõ thẳng 2 chữ số tiếp theo trên Mobile!
+          if (/^\d{2}:\d{2}(:\d{2})?$/.test(cur)) {
+            if (pos === 2) {
+              setCaretSafe(3);
+            } else if (tpl.length === 8 && pos === 5) {
+              setCaretSafe(6);
+            }
+            return;
+          }
+
+          if (cur.indexOf(':') !== -1) {
+            const parts = cur.split(':').map((p) => p.replace(/\D+/g, ''));
+            if (tpl.length === 5) {
+              let p0 = parts[0] || '';
+              let p1 = parts[1] || '';
+              if (p0.length > 2) {
+                const overflow = p0.slice(2);
+                p0 = p0.slice(0, 2);
+                p1 = (overflow + p1).slice(0, 2);
+                inputEl.value = `${p0}:${p1.padEnd(2, '0')}`;
+                setCaretSafe(Math.min(5, 3 + overflow.length));
+              } else if (p1.length > 2) {
+                inputEl.value = `${p0.padStart(2, '0')}:${p1.slice(0, 2)}`;
+                setCaretSafe(Math.min(5, pos));
+              }
+            } else {
+              let p0 = parts[0] || '';
+              let p1 = parts[1] || '';
+              let p2 = parts[2] || '';
+              if (p0.length > 2) {
+                const ov = p0.slice(2);
+                p0 = p0.slice(0, 2);
+                p1 = (ov + p1).slice(0, 2);
+                inputEl.value = `${p0}:${p1.padEnd(2, '0')}:${p2.padEnd(2, '0').slice(0, 2)}`;
+                setCaretSafe(Math.min(8, 3 + ov.length));
+              } else if (p1.length > 2) {
+                const ov = p1.slice(2);
+                p1 = p1.slice(0, 2);
+                p2 = (ov + p2).slice(0, 2);
+                inputEl.value = `${p0.padStart(2, '0')}:${p1}:${p2.padEnd(2, '0')}`;
+                setCaretSafe(Math.min(8, 6 + ov.length));
+              } else if (p2.length > 2) {
+                inputEl.value = `${p0.padStart(2, '0')}:${p1.padStart(2, '0')}:${p2.slice(0, 2)}`;
+                setCaretSafe(Math.min(8, pos));
+              }
+            }
+            return;
+          }
+
           const digits = cur.replace(/\D+/g, '');
           if (!digits) return;
-          if (cur.indexOf(':') === -1) {
-            const maxDigits = tpl.length === 8 ? 6 : 4;
-            const clipped = digits.slice(0, maxDigits);
-            const parts = [];
-            for (let i = 0; i < clipped.length; i += 2) {
-              parts.push(clipped.slice(i, i + 2));
-            }
-            if (clipped.length === 2 || (tpl.length === 8 && clipped.length === 4)) {
-              inputEl.value = parts.join(':') + ':';
-            } else {
-              inputEl.value = parts.join(':');
-            }
+          const maxDigits = tpl.length === 8 ? 6 : 4;
+          const clipped = digits.slice(0, maxDigits);
+          const parts = [];
+          for (let i = 0; i < clipped.length; i += 2) {
+            parts.push(clipped.slice(i, i + 2));
           }
+          if (clipped.length === 2 || (tpl.length === 8 && clipped.length === 4)) {
+            inputEl.value = parts.join(':') + ':';
+          } else {
+            inputEl.value = parts.join(':');
+          }
+          setCaretSafe(inputEl.value.length);
         });
         inputEl.addEventListener('change', () => {
           this.commitSingleAbInput(field, 'change', { silentConfirmToast: true });
@@ -9584,21 +9898,36 @@
       this._lastCopiedYtSaveUrl = watchUrl;
       const ytsaveUrl = 'https://ytsave.to/';
       this._lastOpenedYtSaveTarget = ytsaveUrl;
+
+      // Nếu người dùng đã bật "Điều hướng thẳng tới YTSave" từ trước -> mở thẳng không hiện cửa sổ nữa
+      const directRedirectPref = safeStorageGet(MOD39_CONSTANTS.STORAGE_KEYS.YTSAVE_DIRECT_REDIRECT);
+      if (directRedirectPref === '1') {
+        safeNotify('✅ Đã copy link thành công — Đang điều hướng thẳng tới YTSave!', 'success', 3000);
+        try {
+          if (typeof global.open === 'function') {
+            global.open(ytsaveUrl, '_blank', 'noopener,noreferrer');
+          }
+        } catch (_eOpenDirect) {}
+        return {
+          ok: true,
+          copied: Boolean(copiedOk),
+          directRedirect: true,
+          watchUrl,
+          ytsaveUrl
+        };
+      }
+
       safeNotify('✅ Đã copy link thành công, chờ bạn dán link vào ytsave', 'success', 3600);
 
+      // Mặc định CHỈ hiện cửa sổ hướng dẫn trực quan, KHÔNG tự nhảy thẳng sang trang YTSave
       try {
         this.openYtSaveGuideModal(watchUrl, ytsaveUrl);
       } catch (_eGuide) {}
 
-      try {
-        if (typeof global.open === 'function') {
-          global.open(ytsaveUrl, '_blank', 'noopener,noreferrer');
-        }
-      } catch (_eOpen) {}
-
       return {
         ok: true,
         copied: Boolean(copiedOk),
+        directRedirect: false,
         watchUrl,
         ytsaveUrl
       };
@@ -9613,10 +9942,10 @@
         const st = document.createElement('style');
         st.id = 'mod39-ytsave-blink-style';
         st.textContent = [
-          '@keyframes mod39YtSavePulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.75), 0 0 14px rgba(251,191,36,.55); transform: scale(1); } 50% { box-shadow: 0 0 0 6px rgba(239,68,68,0), 0 0 22px rgba(251,191,36,.95); transform: scale(1.03); } }',
-          '@keyframes mod39YtTabBlink { 0%,100% { border-color: rgba(52,211,153,.95); background: rgba(16,185,129,.22); } 50% { border-color: rgba(251,191,36,.95); background: rgba(245,158,11,.28); } }',
-          '.mod39-ytsave-dl-blink { animation: mod39YtSavePulse 1.35s ease-in-out infinite; }',
-          '.mod39-ytsave-tab-blink { animation: mod39YtTabBlink 1.5s ease-in-out infinite; }'
+          '@keyframes mod39YtSavePulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.85), 0 0 14px rgba(239,68,68,.55); transform: scale(1); } 50% { box-shadow: 0 0 0 7px rgba(239,68,68,0), 0 0 24px rgba(251,191,36,.95); transform: scale(1.04); } }',
+          '@keyframes mod39YtOpenSuperBlink { 0%,100% { box-shadow: 0 0 0 0 rgba(251,191,36,.95), 0 0 18px rgba(244,63,94,.85); filter: brightness(1); transform: scale(1); } 50% { box-shadow: 0 0 0 10px rgba(251,191,36,0), 0 0 32px rgba(251,191,36,1); filter: brightness(1.18); transform: scale(1.06); } }',
+          '.mod39-ytsave-dl-blink { animation: mod39YtSavePulse 1.25s ease-in-out infinite; }',
+          '.mod39-ytsave-open-super-blink { animation: mod39YtOpenSuperBlink 1.05s ease-in-out infinite; }'
         ].join('\n');
         document.head.appendChild(st);
       }
@@ -9636,40 +9965,35 @@
         'fixed inset-0 z-[190] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto';
 
       modal.innerHTML = `
-        <div class="my-auto w-full max-w-lg rounded-2xl border-2 border-amber-400/75 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden text-xs">
+        <div class="my-auto w-full max-w-xl rounded-2xl border-2 border-amber-400/75 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden text-xs">
           <div class="px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-amber-950/70 via-rose-950/50 to-zinc-950 flex items-center justify-between gap-2">
             <div class="font-extrabold text-sm text-amber-300 flex items-center gap-2">
               <span>📥 Hướng Dẫn Tải Video / MP3 Tại YTSave</span>
             </div>
             <button type="button" id="btn-mod39-close-ytsave-guide" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-rose-600 text-zinc-100 font-extrabold transition">✕</button>
           </div>
-          <div class="p-4 space-y-3">
+          <div class="p-4 space-y-3.5">
             <div class="p-3 rounded-xl border border-emerald-500/45 bg-emerald-950/30 text-emerald-100 leading-relaxed font-semibold">
-              ✅ Link YouTube đã được tự động sao chép sẵn vào bộ nhớ tạm! Bạn chỉ cần <strong>Dán (Ctrl+V / giữ ô nhập → Dán)</strong> vào ô tải của YTSave rồi lướt xuống chọn chất lượng mong muốn.
-            </div>
-            <div class="p-3 rounded-xl border border-amber-500/45 bg-amber-950/25 text-amber-100 leading-relaxed space-y-1">
-              <div>🎬 <strong>Chọn chất lượng video mong muốn tải về</strong> (Ví dụ: <strong>144p, 240p, 480p, 720p, 1080p, 1440p, 2160p</strong>).</div>
-              <div>🎵 <strong>Muốn tải file MP3</strong> thì bấm sang mục <strong>Audio</strong> ngay tại trang YTSave.</div>
-              <div class="text-[11px] text-zinc-400 pt-1">🔒 Lưu ý kỹ thuật: Chính sách bảo mật trình duyệt (Same-Origin Policy) không cho phép trang web tự bấm nút hay dán chữ hộ sang tên miền khác (app.ytsave.to), nên hệ thống đã tối ưu sao chép 1 chạm + mở thẳng trang cho bạn.</div>
+              ✅ Link YouTube đã được tự động sao chép sẵn vào bộ nhớ tạm! Bạn chỉ cần <strong>Dán (Ctrl+V / bấm Paste)</strong> vào ô tải của YTSave rồi bấm <strong>Download</strong>.
             </div>
 
-            <!-- Mô phỏng trực quan có nhấp nháy các nút Video / Audio & Download trên YTSave -->
-            <div class="p-3 rounded-xl border border-zinc-800 bg-zinc-900/90 space-y-2.5">
-              <div class="text-[11px] font-bold text-zinc-400 uppercase tracking-wide">👀 Mô phỏng nút cần bấm trên trang YTSave:</div>
-              <div class="grid grid-cols-3 gap-1.5 text-center font-extrabold text-[11px]">
-                <div class="mod39-ytsave-tab-blink py-1.5 px-2 rounded-lg border-2 text-emerald-200">🎬 Video (MP4)</div>
-                <div class="mod39-ytsave-tab-blink py-1.5 px-2 rounded-lg border-2 text-amber-200">🎵 Audio (MP3)</div>
-                <div class="py-1.5 px-2 rounded-lg border border-zinc-700 bg-zinc-950/80 text-zinc-400">Subtitles</div>
+            <!-- Mô phỏng trực quan ô Paste link & nút Download nhấp nháy của YTSave -->
+            <div class="p-3.5 rounded-xl border border-zinc-800 bg-[#1a1a1d] space-y-2.5 shadow-inner">
+              <div class="text-center space-y-0.5">
+                <div class="text-sm font-black tracking-tight text-white">YouTube Video Downloader</div>
+                <div class="text-[10.5px] text-zinc-400">👀 Mô phỏng ô dán link &amp; nút Download trên trang YTSave</div>
               </div>
-              <div class="space-y-1.5">
-                <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-zinc-950/80 border border-zinc-800">
-                  <div><strong class="text-white">2160p / 1080p</strong> <span class="text-zinc-400 text-[10px]">MP4 · 4K / FHD</span></div>
-                  <span class="mod39-ytsave-dl-blink px-3 py-1 rounded-lg bg-rose-600 text-white font-extrabold text-[11px]">⬇ Download</span>
+              <div class="p-2.5 rounded-xl bg-[#242428] border border-zinc-700/70 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div class="flex-1 min-w-0 flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[#323237] border border-zinc-600/80 text-zinc-300 font-mono text-[11px]">
+                  <span class="truncate">🔗 youtube.com/watch?v=...</span>
+                  <span class="px-2 py-0.5 rounded bg-zinc-800/90 text-zinc-200 font-sans font-bold text-[10.5px] shrink-0">📋 Paste</span>
                 </div>
-                <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-zinc-950/80 border border-zinc-800">
-                  <div><strong class="text-white">720p / 480p / 240p / 144p</strong> <span class="text-zinc-400 text-[10px]">MP4 · HD / SD</span></div>
-                  <span class="mod39-ytsave-dl-blink px-3 py-1 rounded-lg bg-rose-600/85 text-white font-extrabold text-[11px]">⬇ Download</span>
+                <div class="flex flex-col items-center sm:items-end shrink-0 gap-1">
+                  <span class="mod39-ytsave-dl-blink w-full sm:w-auto text-center px-4 py-2 rounded-lg bg-red-600 text-white font-extrabold text-xs tracking-wide select-none">⬇ Download</span>
                 </div>
+              </div>
+              <div class="text-[10.5px] text-amber-200/90 text-center sm:text-right font-semibold pr-1">
+                Enter ở máy tính hoặc bấm vào nút Download ở điện thoại nha
               </div>
             </div>
 
@@ -9678,13 +10002,20 @@
               <button type="button" id="btn-mod39-ytsave-recopy" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-bold shrink-0 transition">📋 Sao chép lại</button>
             </div>
 
-            <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
-              <a href="${escHtml(ytsaveUrl)}" target="_blank" rel="noopener noreferrer" id="btn-mod39-ytsave-reopen" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white font-extrabold shadow transition inline-flex items-center gap-1.5">
-                <span>🚀 Mở YTSave Ngay ↗</span>
-              </a>
-              <button type="button" id="btn-mod39-ytsave-guide-done" class="px-3.5 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-200 font-bold transition">
-                Đã hiểu, đóng lại
-              </button>
+            <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-between gap-2.5 pt-1">
+              <button
+                type="button"
+                id="btn-mod39-ytsave-direct-always"
+                class="px-3 py-2 rounded-xl border border-sky-500/50 bg-sky-950/45 hover:bg-sky-900/60 text-sky-200 font-bold text-[11px] text-left sm:text-center leading-snug transition flex-1 min-w-[200px]"
+              >⚡ Điều hướng thẳng tới YTSave (Bạn sẽ không thấy cửa sổ này hiện lên ở lần sau)</button>
+              <div class="flex flex-wrap items-center justify-end gap-2 shrink-0">
+                <a href="${escHtml(ytsaveUrl)}" target="_blank" rel="noopener noreferrer" id="btn-mod39-ytsave-reopen" class="mod39-ytsave-open-super-blink px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-black text-xs shadow-lg border-2 border-amber-200/80 transition inline-flex items-center justify-center gap-1.5">
+                  <span>🚀 Mở YTSave Ngay ↗</span>
+                </a>
+                <button type="button" id="btn-mod39-ytsave-guide-done" class="px-3 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-200 font-bold transition">
+                  Đã hiểu, đóng lại
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -9703,6 +10034,16 @@
       });
       modal.querySelector('#btn-mod39-close-ytsave-guide')?.addEventListener('click', closeModal);
       modal.querySelector('#btn-mod39-ytsave-guide-done')?.addEventListener('click', closeModal);
+      modal.querySelector('#btn-mod39-ytsave-direct-always')?.addEventListener('click', () => {
+        safeStorageSet(MOD39_CONSTANTS.STORAGE_KEYS.YTSAVE_DIRECT_REDIRECT, '1');
+        closeModal();
+        safeNotify('⚡ Đã bật điều hướng thẳng tới YTSave cho các lần tải sau!', 'success', 3000);
+        try {
+          if (typeof global.open === 'function') {
+            global.open(ytsaveUrl, '_blank', 'noopener,noreferrer');
+          }
+        } catch (_eOpenAlways) {}
+      });
       modal.querySelector('#btn-mod39-ytsave-recopy')?.addEventListener('click', async () => {
         try {
           if (navigator.clipboard?.writeText) {
@@ -9866,6 +10207,7 @@
         const isHttpOriginBoot =
           typeof global.location !== 'undefined' && /^https?:$/i.test(String(global.location.protocol || ''));
         if (
+          !isDesktopDirectYoutubeEnv() &&
           !isLiveSaved &&
           saved.videoId &&
           isHttpOriginBoot &&
@@ -10554,7 +10896,7 @@
         'btn-mod39-yt-ab-toggle':
           'Lặp đi lặp lại đúng đoạn từ Mốc A tới Mốc B (ví dụ đoạn nhạc cao trào viết truyện).',
         'btn-mod39-system-pip':
-          'Mở cửa sổ nổi Picture-in-Picture hệ điều hành (chỉ khả dụng khi đang bật Xem Video Hình và trình duyệt hỗ trợ)',
+          'Mở cửa sổ nổi xem video (hỗ trợ cả Desktop & Mobile)',
         'btn-mod39-yt-fullscreen':
           'Mở rộng khung YouTube ra toàn màn hình (tự động dùng Pseudo-Fullscreen nếu trình duyệt hạn chế).'
       };

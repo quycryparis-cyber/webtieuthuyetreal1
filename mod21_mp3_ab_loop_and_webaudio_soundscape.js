@@ -2365,7 +2365,7 @@
 
         const savedSpeed = localStorage.getItem(AUDIO_STUDIO_STORAGE_KEYS.PLAYBACK_SPEED);
         if (savedSpeed !== null) {
-          this.playbackRate = Math.max(0.5, Math.min(2.0, Number(savedSpeed) || 1.0));
+          this.playbackRate = Math.max(0.25, Math.min(4.0, Number(savedSpeed) || 1.0));
         }
 
         const savedLoopMode = localStorage.getItem(AUDIO_STUDIO_STORAGE_KEYS.LOOP_MODE);
@@ -2974,13 +2974,109 @@
         });
       }
 
+      const attachSmartMobileTimeAutoJump = (inpEl) => {
+        if (!inpEl || inpEl.dataset.mod21SmartTimeBound) return;
+        inpEl.dataset.mod21SmartTimeBound = '1';
+        inpEl.setAttribute('inputmode', 'numeric');
+        inpEl.setAttribute('autocomplete', 'off');
+        const setCaretSafe = (pos) => {
+          const apply = () => {
+            try { inpEl.setSelectionRange(pos, pos); } catch (_e) {}
+          };
+          apply();
+          setTimeout(apply, 0);
+        };
+        const insertMaskedDigits = (digitStr) => {
+          const digitsOnly = String(digitStr || '').replace(/\D+/g, '');
+          if (!digitsOnly) return false;
+          const slots = [0, 1, 3, 4];
+          let masked = /^\d{2}:\d{2}$/.test(String(inpEl.value || '').trim())
+            ? String(inpEl.value).trim()
+            : '00:00';
+          let pos = typeof inpEl.selectionStart === 'number' ? inpEl.selectionStart : 0;
+          const selEnd = typeof inpEl.selectionEnd === 'number' ? inpEl.selectionEnd : pos;
+          if (selEnd > pos && pos === 0 && selEnd >= 4) pos = 0;
+          for (let d = 0; d < digitsOnly.length; d++) {
+            let slotIdx = slots.findIndex((s) => s >= pos);
+            if (slotIdx === -1) slotIdx = slots.length - 1;
+            const chars = masked.split('');
+            chars[slots[slotIdx]] = digitsOnly[d];
+            masked = chars.join('');
+            pos = slotIdx < slots.length - 1 ? slots[slotIdx + 1] : 5;
+          }
+          inpEl.value = masked;
+          setCaretSafe(pos);
+          return true;
+        };
+        inpEl.addEventListener('focus', () => {
+          if (!/^\d{2}:\d{2}$/.test(String(inpEl.value || '').trim())) {
+            inpEl.value = '00:00';
+          }
+          setTimeout(() => {
+            try { inpEl.setSelectionRange(0, 2); } catch (_e) {}
+          }, 0);
+        });
+        inpEl.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter' || ev.keyCode === 13) {
+            this.updateABLoopPoints();
+            inpEl.blur();
+            return;
+          }
+          if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+          if (/^[0-9]$/.test(ev.key)) {
+            ev.preventDefault();
+            insertMaskedDigits(ev.key);
+          }
+        });
+        inpEl.addEventListener('beforeinput', (ev) => {
+          if (ev.inputType === 'insertText' && typeof ev.data === 'string' && /^[0-9]+$/.test(ev.data)) {
+            ev.preventDefault();
+            insertMaskedDigits(ev.data);
+          }
+        });
+        inpEl.addEventListener('input', () => {
+          const cur = String(inpEl.value || '');
+          const pos = typeof inpEl.selectionStart === 'number' ? inpEl.selectionStart : cur.length;
+          if (/^\d{2}:\d{2}$/.test(cur)) {
+            if (pos === 2) setCaretSafe(3);
+            return;
+          }
+          if (cur.indexOf(':') !== -1) {
+            const parts = cur.split(':').map((p) => p.replace(/\D+/g, ''));
+            let p0 = parts[0] || '';
+            let p1 = parts[1] || '';
+            if (p0.length > 2) {
+              const overflow = p0.slice(2);
+              p0 = p0.slice(0, 2);
+              p1 = (overflow + p1).slice(0, 2);
+              inpEl.value = `${p0}:${p1.padEnd(2, '0')}`;
+              setCaretSafe(Math.min(5, 3 + overflow.length));
+            } else if (p1.length > 2) {
+              inpEl.value = `${p0.padStart(2, '0')}:${p1.slice(0, 2)}`;
+              setCaretSafe(Math.min(5, pos));
+            }
+          } else {
+            const digits = cur.replace(/\D+/g, '').slice(0, 4);
+            if (digits.length === 2) {
+              inpEl.value = `${digits}:`;
+              setCaretSafe(3);
+            } else if (digits.length > 2) {
+              inpEl.value = `${digits.slice(0, 2)}:${digits.slice(2)}`;
+              setCaretSafe(inpEl.value.length);
+            }
+          }
+        });
+      };
+
       if (inputA) {
+        attachSmartMobileTimeAutoJump(inputA);
         inputA.addEventListener('change', () => {
           this.updateABLoopPoints();
         });
       }
 
       if (inputB) {
+        attachSmartMobileTimeAutoJump(inputB);
         inputB.addEventListener('change', () => {
           this.updateABLoopPoints();
         });
@@ -3889,7 +3985,7 @@
       const audioEl = document.getElementById('s8-native-audio-bar');
       if (!audioEl || !this.currentTrackMeta?.isExternalStream) return;
       if (typeof prefs.speed === 'number' && Number.isFinite(prefs.speed)) {
-        const cleanRate = Math.max(0.5, Math.min(2.0, prefs.speed));
+        const cleanRate = Math.max(0.25, Math.min(4.0, prefs.speed));
         this.playbackRate = cleanRate;
         audioEl.playbackRate = cleanRate;
       }
@@ -4489,10 +4585,10 @@
     }
 
     /**
-     * Đặt tốc độ phát nhạc (0.75x, 1.0x, 1.25x, 1.5x)
+     * Đặt tốc độ phát nhạc (0.25x -> 4.0x)
      */
     setSpeed(rate) {
-      const clampedRate = Math.max(0.5, Math.min(2.0, Number(rate) || 1.0));
+      const clampedRate = Math.max(0.25, Math.min(4.0, Number(rate) || 1.0));
       this.playbackRate = clampedRate;
 
       const audioEl = document.getElementById('s8-native-audio-bar');

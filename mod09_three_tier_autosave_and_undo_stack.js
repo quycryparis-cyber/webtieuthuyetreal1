@@ -565,8 +565,10 @@
       if (!chap) return false;
       const ta = document.getElementById('textarea-chapter-content');
       const beatsEl = document.getElementById('textarea-chapter-beats');
+      const titleEl = document.getElementById('input-chapter-title');
       if (ta && ta.value !== (chap.content || '')) return true;
       if (beatsEl && beatsEl.value !== (chap.beats || '')) return true;
+      if (titleEl && titleEl.value !== (chap.title || '')) return true;
       return false;
     }
 
@@ -574,13 +576,14 @@
       if (this.heartbeatTimer) {
         clearInterval(this.heartbeatTimer);
       }
+      const periodMs = Math.max(1500, Math.min(2000, Number(intervalMs) || 2000));
       this.heartbeatTimer = setInterval(() => {
         if (this.NS.state?.isDirty || this.hasLiveManuscriptDelta()) {
           this.engine.triggerSave(false);
         } else {
           this.engine.perfAuditor?.flushAuxiliaryScratchpadAndSettings?.();
         }
-      }, Math.max(2000, intervalMs));
+      }, periodMs);
     }
 
     bindKeyboardShortcutsAndButtons() {
@@ -906,12 +909,14 @@
     flushAuxiliaryScratchpadAndSettings() {
       try {
         if (typeof document === 'undefined' || typeof localStorage === 'undefined') return;
+        let anyAuxChanged = false;
         const syncInput = (domId, lsKey) => {
           const el = document.getElementById(domId);
           if (!el || el.value === undefined) return;
           const nextVal = String(el.value);
           if (localStorage.getItem(lsKey) !== nextVal) {
             localStorage.setItem(lsKey, nextVal);
+            anyAuxChanged = true;
           }
         };
         const keys = this.NS.constants?.STORAGE_KEYS || {};
@@ -921,6 +926,27 @@
         syncInput('input-bible-anti-cliche', keys.ANTI_CLICHE || 'noir_s10_anti_cliche_blacklist_v1');
         syncInput('input-user-command', 'noir_v36_last_command_prompt');
         syncInput('free-chat-input', 'noir_v40_free_chat_draft_v1');
+        syncInput('bi-mascot-chat-input', 'noir_v104_mascot_chat_draft_v1');
+        syncInput('input-mod39-stage-inline-search', 'noir_v104_yt_inline_search_draft_v1');
+
+        // Ghi nhớ trạng thái giao diện đầy đủ mỗi 2 giây (vị trí con trỏ, cuộn trang, chương, tab, chế độ viết)
+        const ta = document.getElementById('textarea-chapter-content');
+        const activeChapId = this.NS.chapterManager?.getActiveChapter?.()?.id || '';
+        const sessionStateObj = {
+          activeChapterId: String(activeChapId || ''),
+          editorScrollTop: ta ? Math.round(ta.scrollTop || 0) : 0,
+          editorSelectionStart: ta && typeof ta.selectionStart === 'number' ? ta.selectionStart : 0,
+          editorSelectionEnd: ta && typeof ta.selectionEnd === 'number' ? ta.selectionEnd : 0,
+          windowScrollY: typeof window !== 'undefined' ? Math.round(window.scrollY || 0) : 0,
+          focusWritingMode: Boolean(document.body?.classList?.contains('focus-writing-mode')),
+          aiMode: document.getElementById('select-ai-mode')?.value || ''
+        };
+        const serializedSession = JSON.stringify(sessionStateObj);
+        if (serializedSession !== this._lastFullSessionJson) {
+          this._lastFullSessionJson = serializedSession;
+          localStorage.setItem('noir_v104_full_session_state_v1', serializedSession);
+          anyAuxChanged = true;
+        }
 
         this.NS.navigator?.screenMemory?.captureAndSaveAllNow?.();
         this.NS.youtubeStudio?.persistCurrentPlaybackSnapshotNow?.();
@@ -928,9 +954,49 @@
         this.NS.fsEngine?.writeScheduler?.flushPendingWrites?.();
 
         const nowMs = Date.now();
-        if (!this._lastIdbMirrorAt || nowMs - this._lastIdbMirrorAt >= 4000) {
+        if (anyAuxChanged || !this._lastIdbMirrorAt || nowMs - this._lastIdbMirrorAt >= 4000) {
           this._lastIdbMirrorAt = nowMs;
           this.NS.idb?.keyGuardian?.mirrorAllLocalConfigKeysToIdb?.();
+        }
+      } catch (_) {
+        // Bỏ qua
+      }
+    }
+
+    restoreFullSessionStateOnBoot() {
+      try {
+        if (typeof document === 'undefined' || typeof localStorage === 'undefined') return;
+        const restoreIfEmpty = (domId, lsKey) => {
+          const el = document.getElementById(domId);
+          const saved = localStorage.getItem(lsKey);
+          if (el && saved && !String(el.value || '').trim()) {
+            el.value = saved;
+          }
+        };
+        restoreIfEmpty('input-user-command', 'noir_v36_last_command_prompt');
+        restoreIfEmpty('free-chat-input', 'noir_v40_free_chat_draft_v1');
+        restoreIfEmpty('bi-mascot-chat-input', 'noir_v104_mascot_chat_draft_v1');
+
+        const raw = localStorage.getItem('noir_v104_full_session_state_v1');
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return;
+
+        const ta = document.getElementById('textarea-chapter-content');
+        const activeChapId = String(this.NS.chapterManager?.getActiveChapter?.()?.id || '');
+        if (ta && (!parsed.activeChapterId || parsed.activeChapterId === activeChapId)) {
+          if (Number(parsed.editorScrollTop) > 0) {
+            ta.scrollTop = Number(parsed.editorScrollTop);
+          }
+          const len = (ta.value || '').length;
+          if (Number(parsed.editorSelectionStart) > 0 && Number(parsed.editorSelectionStart) <= len) {
+            try {
+              ta.setSelectionRange(
+                Number(parsed.editorSelectionStart),
+                Math.min(len, Number(parsed.editorSelectionEnd) || Number(parsed.editorSelectionStart))
+              );
+            } catch (_eSel) {}
+          }
         }
       } catch (_) {
         // Bỏ qua
@@ -1597,10 +1663,11 @@
       this.refreshUndoRedoButtonsForActiveChapter();
       this.statusUI.renderStatus('SAVED');
 
-      // Kiểm tra bản crash đột ngột từ lần đóng trước (chạy sau 700ms để không cản giao diện boot)
+      // Khôi phục vị trí cuộn, con trỏ soạn thảo & bản nháp phiên trước + kiểm tra crash
       setTimeout(() => {
+        this.perfAuditor?.restoreFullSessionStateOnBoot?.();
         this.crashRecovery.checkAndOfferCrashRecoveryIfNeeded();
-      }, 700);
+      }, 500);
 
       return this;
     }
