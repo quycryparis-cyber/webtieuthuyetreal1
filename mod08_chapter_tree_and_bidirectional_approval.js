@@ -2781,29 +2781,31 @@
       bind('btn-tab2-collapse-sidebar', 'click', () => setSidebarCollapsed(true));
       bind('btn-tab2-expand-sidebar', 'click', () => setSidebarCollapsed(false));
 
-      // Tự động ẩn nút mở sidebar nếu chuyển sang tab không dùng sidebar
-      this.NS.bus?.on?.('screen:changed', (payload) => {
+      // Tự động ẩn nút mở sidebar nếu chuyển sang tab không dùng sidebar (lắng nghe đúng sự kiện nav:screen_changed của Mod 29!)
+      const syncExpandBtnForScreen = (payload) => {
         const aside = document.getElementById('left-sidebar-pane');
         const expandBtn = document.getElementById('btn-tab2-expand-sidebar');
         if (!expandBtn) return;
-        const scr = typeof payload === 'string' ? payload : payload?.screenId || '';
+        const scr =
+          (typeof payload === 'string' ? payload : payload?.screenId || '') ||
+          document.body?.dataset?.activeScreen ||
+          this.NS?.state?.activeScreen ||
+          '';
         const isTab2 = scr === 'SCREEN_2_FILES' || scr === 'SCREEN_2_SOURCES';
-        const isCollapsed = aside?.classList.contains('noir-sidebar-collapsed');
+        const isCollapsed = Boolean(aside?.classList.contains('noir-sidebar-collapsed'));
         expandBtn.classList.toggle('hidden', !(isTab2 && isCollapsed));
-      });
+      };
+      const scrEvt = this.NS?.constants?.EVENTS?.SCREEN_CHANGED || 'nav:screen_changed';
+      this.NS.bus?.on?.(scrEvt, syncExpandBtnForScreen);
+      if (scrEvt !== 'screen:changed') {
+        this.NS.bus?.on?.('screen:changed', syncExpandBtnForScreen);
+      }
+      setTimeout(() => syncExpandBtnForScreen(), 250);
 
-      // Đồng bộ 2 chiều thư mục Quyển / Chương / Cảnh với ổ cứng khi bấm nút hoặc quay lại tab
+      // Đồng bộ 2 chiều thư mục Quyển / Chương / Cảnh CHỈ khi người dùng chủ động bấm nút (tránh lag khi chuyển cửa sổ/app!)
       bind('btn-tab2-sync-from-disk', 'click', () => {
         this.syncFromDiskFolderIfConnected(true);
       });
-      if (!this._diskRescanBound) {
-        this._diskRescanBound = true;
-        document.addEventListener('visibilitychange', () => {
-          if (!document.hidden && this.NS?.fsEngine?.rootDirHandle) {
-            this.syncFromDiskFolderIfConnected(false).catch(() => {});
-          }
-        });
-      }
 
       // Đồng bộ đổi tên tiêu đề chương tại Tab 1 xuống tên file khi blur
       bind('input-chapter-title', 'change', (e) => {

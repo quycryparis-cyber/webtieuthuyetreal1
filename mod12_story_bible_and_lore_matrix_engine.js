@@ -1193,14 +1193,45 @@
       if (btnExportAllPdfNblm && !btnExportAllPdfNblm.dataset.mod12Bound) {
         btnExportAllPdfNblm.dataset.mod12Bound = '1';
         btnExportAllPdfNblm.addEventListener('click', () => {
-          const exp = window.NoirStudio?.exporter;
-          if (exp && typeof exp.exportMergedManuscriptPdfForNotebookLM === 'function') {
-            exp.exportMergedManuscriptPdfForNotebookLM();
-          } else {
-            const scopeSel = document.getElementById('export-scope-select');
-            if (scopeSel) scopeSel.value = 'ALL_CHAPTERS';
-            exp?.openExporterModal?.();
+          const chapMgr = window.NoirStudio?.chapterManager;
+          chapMgr?.syncEditorToActiveChapter?.();
+          const chaps = Array.isArray(chapMgr?.chapters) ? chapMgr.chapters : [];
+          if (chaps.length === 0) {
+            this.utils?.showToast?.('⚠️ Chưa có chương truyện nào để xuất file .TXT!', 'warning', 2600);
+            return;
           }
+          const parts = chaps.map((c, idx) => {
+            const title = String(c.displayTitle || c.title || `Chương ${idx + 1}`).trim();
+            const body = String(c.content || '').trim();
+            return `${title}\n\n${body}`;
+          });
+          const pureTxt = parts.join('\n\n\n');
+          const bookTitle = (
+            document.getElementById('export-book-title-input')?.value ||
+            localStorage.getItem('noir_s6_book_title') ||
+            'Toan_Bo_Chuong_Truyen'
+          )
+            .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '')
+            .replace(/\s+/g, '_')
+            .slice(0, 60);
+          const stamp = new Date().toISOString().slice(0, 10);
+          const blob = new Blob([pureTxt], { type: 'text/plain;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${bookTitle || 'Toan_Bo_Chuong'}_${chaps.length}chuong_${stamp}.txt`;
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            a.remove();
+            URL.revokeObjectURL(url);
+          }, 1500);
+          this.utils?.showToast?.(
+            `✅ Đã xuất nhanh ${chaps.length} chương thành file .TXT thuần chữ! Bạn chỉ cần tải lên Google NotebookLM là xong.`,
+            'success',
+            3600
+          );
         });
       }
 
@@ -2738,28 +2769,8 @@
               .join('\n')
           : '   (Đọc toàn bộ các chương hiện có trong tài liệu tải lên)';
 
-      const clueSummary =
-        this.cluesLedger.length > 0
-          ? this.cluesLedger
-              .map(
-                (cl, i) =>
-                  `   - [${cl.status === 'RESOLVED' ? 'ĐÃ THU HỒI' : 'ĐANG TREO'}] ${cl.title} (${cl.plantedIn || 'Chưa rõ'}) — ${cl.note || ''}`
-              )
-              .join('\n')
-          : '   (Trích xuất đầy đủ mọi phục bút & manh mối mới từ các chương)';
-
-      const knowSummary =
-        this.knowledgeMatrix.length > 0
-          ? this.knowledgeMatrix
-              .map(
-                (k, i) =>
-                  `   - Bí mật "${k.secret}": ĐÃ BIẾT (${k.whoKnows}) | CHƯA BIẾT (${k.whoDoesNotKnow})`
-              )
-              .join('\n')
-          : '   (Trích xuất toàn bộ bí mật chưa tiết lộ và ranh giới nhận thức giữa các nhân vật)';
-
       return [
-        'Bạn là Biên Tập Viên Cốt Truyện & Chuyên Gia Kiểm Toán Trục Thời Gian Cấp Cao. Hãy đọc thật kỹ toàn bộ tệp PDF / các chương tiểu thuyết tôi tải lên (đúng trình tự từ Arc 1 / Hồi 1 đến chương cuối cùng) và biên soạn một BẢN STORY BIBLE TOÀN DIỆN & SIÊU CHI TIẾT.',
+        'Bạn là Biên Tập Viên Cốt Truyện & Chuyên Gia Kiểm Toán Trục Thời Gian Cấp Cao. Hãy đọc thật kỹ toàn bộ tệp TXT / các chương tiểu thuyết tôi tải lên (đúng trình tự từ Chương 1 đến chương cuối cùng) và biên soạn một BẢN STORY BIBLE TOÀN DIỆN & SIÊU CHI TIẾT.',
         '',
         '📚 DANH SÁCH CÁC CHƯƠNG HIỆN TÁC GIẢ ĐÃ VIẾT (BẮT BUỘC PHỦ ĐỦ 100%, KHÔNG BỎ SÓT CHƯƠNG NÀO):',
         chapListText,
@@ -2771,37 +2782,33 @@
         '',
         '1. TÓM TẮT TIMELINE HÀNH TRÌNH CHI TIẾT (THEO TỪNG PHẦN / ARC → HỒI / CHƯƠNG → PHÂN CẢNH):',
         '   - Chia rõ từng Phần (Arc) -> từng Hồi/Chương -> từng Phân cảnh nhỏ (X.1, X.2, X.3...).',
-        '   - Ghi rõ MỐC THỜI GIAN CHÍNH XÁC từng ngày/buổi/giờ/phút (vd: 09h42 sáng Thứ Sáu, 21h28 Thứ Sáu, 06h12 Thứ Bảy, 22h50...) và đếm ngược giữa các sự kiện.',
+        '   - Ghi siêu chi tiết MỐC THỜI GIAN CHÍNH XÁC từng ngày/buổi/giờ/phút và đếm ngược giữa các sự kiện.',
         '   - Ghi rõ diễn biến hành động, kỹ thuật/nghiệp vụ, con số tiền bạc/vật chứng và bước ngoặt tâm lý từng cảnh.',
         '',
         '2. CƠ CHẾ HỆ THỐNG / QUY TẮC THẾ GIỚI & NHIỆM VỤ ĐANG KÍCH HOẠT:',
         '   - Tên Hệ thống / Luật bất khả xâm phạm của thế giới, giới hạn năng lực, cơ chế cảnh báo.',
-        '   - Trạng thái các Nhiệm vụ đã hoàn thành và Nhiệm vụ đang kích hoạt (thời hạn chót chính xác, yêu cầu kép bắt buộc, phần thưởng, hình phạt thất bại).',
+        '   - Liệt kê siêu chi tiết trạng thái các Nhiệm vụ đã hoàn thành và Nhiệm vụ đang kích hoạt (thời hạn chót chính xác, yêu cầu bắt buộc, phần thưởng, hình phạt thất bại).',
         '',
-        '3. BẢNG NHÂN VẬT & MẠNG LƯỚI QUAN HỆ (DẠNG BẢNG 4 CỘT CHI TIẾT):',
-        '   - Cột 1: Nhân vật | Cột 2: Vai trò / Thân phận (tuổi, nghề nghiệp, quê quán) | Cột 3: Tính cách, Hành vi nổi bật đến hết chương mới nhất & Xưng hô | Cột 4: Trạng thái hiện tại (đang ở đâu, làm gì, thương tích/tâm lý ra sao).',
+        '3. BẢNG NHÂN VẬT & MẠNG LƯỚI QUAN HỆ (DẠNG BẢNG 4 CỘT SIÊU CHI TIẾT):',
+        '   - Cột 1: Nhân vật | Cột 2: Vai trò / Thân phận (tuổi, nghề nghiệp, quê quán) | Cột 3: Tính cách, Hành vi nổi bật đến hết chương mới nhất & Cách xưng hô | Cột 4: Trạng thái hiện tại (đang ở đâu, làm gì, thương tích/tâm lý ra sao).',
         '',
-        '4. TÀI SẢN, QUYỀN LỰC, VŨ KHÍ DỮ LIỆU, BẰNG CHỨNG PHÁP LÝ & TÌNH TRẠNG THỂ CHẤT HIỆN TẠI:',
-        '   - Tài chính khả dụng và tài chính ngầm cất giấu (ghi rõ từng đồng và từng vị trí giấu).',
-        '   - Danh sách từng vật chứng, USB, video, giấy tờ y tế/pháp lý và nơi sao lưu.',
-        '   - Tình trạng thể chất & thương tích hiện tại của nhân vật chính và đồng minh.',
+        '4. TÀI SẢN, QUYỀN LỰC, VŨ KHÍ DỮ LIỆU, BẰNG CHỨNG PHÁP LÝ & TÌNH TRẠNG THỂ CHẤT HIỆN TẠI (PHẢI GHI SIÊU CHI TIẾT):',
+        '   - Tài chính khả dụng và tài chính ngầm cất giấu (ghi chính xác từng đồng, nguồn gốc thu/chi và từng vị trí cất giấu).',
+        '   - Danh sách từng vật chứng, thiết bị, USB, video, giấy tờ y tế/pháp lý và mọi nơi đang sao lưu.',
+        '   - Tình trạng thể chất, vết thương cụ thể, thuốc men & giới hạn sức bền hiện tại của nhân vật chính và đồng minh.',
         '',
-        '5. NHỮNG NGÒI NỔ CẤP BÁCH CHỜ KÍCH NỔ (HỒI TIẾP THEO) & SỔ CÁI PHỤC BÚT (MANH MỐI):',
-        '   - Liệt kê toàn bộ các ngòi nổ cấp bách, âm mưu, kế hoạch đang đếm ngược cho chương kế tiếp.',
-        '   - Cập nhật đầy đủ Sổ cái Phục bút & Manh mối (đánh dấu [ĐANG TREO CHỜ THU HỒI] hoặc [ĐÃ GIẢI ĐÁP]).',
-        '   - Sổ cái phục bút hiện ghi nhận trong Studio:',
-        clueSummary,
+        '5. NHỮNG NGÒI NỔ CẤP BÁCH CHỜ KÍCH NỔ (HỒI TIẾP THEO) & SỔ CÁI PHỤC BÚT (PHẢI GHI SIÊU CHI TIẾT):',
+        '   - Liệt kê toàn bộ các ngòi nổ cấp bách, âm mưu, kế hoạch đang đếm ngược cho chương kế tiếp kèm mốc thời gian cụ thể.',
+        '   - Trích xuất đầy đủ Sổ cái Phục bút & Manh mối đã gieo từ Chương 1 đến hiện tại, ghi rõ chương gieo và đánh dấu [ĐANG TREO CHỜ THU HỒI] hoặc [ĐÃ GIẢI ĐÁP].',
         '',
-        '6. NHỮNG BÍ MẬT CHƯA TIẾT LỘ (SECRETS KEPT HIDDEN) & MA TRẬN "AI BIẾT GÌ":',
-        '   - Liệt kê từng bí mật cốt lõi, chỉ rõ tính đến chương cuối AI ĐÃ BIẾT, AI ĐANG NGHI NGỜ và AI TUYỆT ĐỐI CHƯA BIẾT.',
-        '   - Ma trận hiện ghi nhận trong Studio:',
-        knowSummary,
+        '6. NHỮNG BÍ MẬT CHƯA TIẾT LỘ & MA TRẬN "AI BIẾT GÌ" (PHẢI GHI SIÊU CHI TIẾT):',
+        '   - Liệt kê từng bí mật cốt lõi xuyên suốt tác phẩm, chỉ rõ tính đến chương cuối cùng: AI ĐÃ BIẾT, AI ĐANG NGHI NGỜ và AI TUYỆT ĐỐI CHƯA BIẾT (để chống rò rỉ thông tin khi viết chương mới).',
         '',
         '7. ĐỊA BÀN & ĐỊA ĐIỂM QUAN TRỌNG:',
-        '   - Chiến trường, căn cứ, phòng trọ, trạm y tế, trụ sở đối thủ, hang ổ kẻ thù, địa bàn lưu trữ dữ liệu và mục tiêu tiếp theo.',
+        '   - Liệt kê chi tiết các chiến trường, căn cứ, nơi ở, trụ sở đối thủ, địa bàn cất giữ đồ và mục tiêu tiếp theo.',
         '',
         '8. CHIẾN THUẬT & ĐÒN ĐẤU TRÍ THỰC CHIẾN NỔI BẬT:',
-        '   - Tổng hợp từng chiến thuật/đòn phản kích đặc sắc đã và đang sử dụng (tên chiến thuật + cơ chế thực thi + điểm mù khai thác).'
+        '   - Tổng hợp siêu chi tiết từng chiến thuật/đòn phản kích đặc sắc đã và đang sử dụng (tên chiến thuật + cơ chế thực thi + điểm mù khai thác).'
       ].join('\n');
     }
 

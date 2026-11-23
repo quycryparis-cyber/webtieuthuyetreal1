@@ -2315,70 +2315,43 @@
       }
 
       if (modeKey === 'MODE_3_AUDIT') {
-        const excerpt = chapText;
         const chapterInventory = (this.chapterMgr?.chapters || [])
-          .map((c, idx) => `  - Chương ${idx + 1}: ${c.displayTitle || c.title} (${c.wordCount || 0} từ · ${c.status === 'APPROVED' ? 'Đã duyệt' : 'Nháp'})`)
+          .map((c, idx) => `  ${idx + 1}. ${c.displayTitle || c.title} (${c.status === 'APPROVED' ? 'Đã duyệt' : 'Nháp'})`)
           .join('\n');
         return wrapModePrompt([
-          `####################################################################`,
-          `🔍 CHẾ ĐỘ 3: KIỂM TOÁN LOGIC TOÀN DIỆN (TIỂU THUYẾT GIA 30 NĂM KINH NGHIỆM — KHUYÊN DÙNG GOOGLE NOTEBOOKLM)`,
-          `####################################################################`,
-          `Bạn là một Tiểu Thuyết Gia & Tổng Biên Tập Kiểm Toán Logic 30 năm kinh nghiệm, cực kỳ khắt khe và tinh mắt như một thám tử pháp y văn bản.`,
-          `Nhiệm vụ của bạn là SOI LỖI VÀ BẮT LỖI CỰC KỲ CHI TIẾT toàn bộ bản thảo so với Story Bible và các nguồn chương truyện đã tải lên (không bỏ sót dù chỉ 1 chi tiết nhỏ nhất):`,
-          `1. DÒNG THỜI GIAN & ĐỒNG HỒ: Kiểm tra từng giờ, phút, ngày thứ mấy, khoảng cách di chuyển giữa các địa điểm, thời hạn đếm ngược nhiệm vụ — có mốc nào mâu thuẫn hoặc dịch chuyển phi vật lý không?`,
-          `2. TÀI SẢN, VẬT PHẨM & THỂ CHẤT: Soi chính xác từng con số tiền bạc (cộng/trừ), vật chứng/USB/điện thoại đang ở đâu, thương tích nhân vật (rạn xương, vết khâu, sức bền) có bị tự nhiên biến mất vô lý không?`,
-          `3. MA TRẬN "AI BIẾT GÌ" (EPISTEMIC LEAK): Phát hiện mọi tình huống nhân vật vô tình nói, nghĩ hoặc hành động dựa trên thông tin họ CHƯA ĐƯỢC BIẾT tính đến thời điểm đó.`,
-          `4. TÍNH NHẤT QUÁN TÍNH CÁCH (OOC) & XƯNG HÔ: Kiểm tra nhân vật có hành xử trái tính cách gốc, đổi cách xưng hô đột ngột hoặc phản ứng phi tâm lý không.`,
-          `5. SỔ CÁI PHỤC BÚT & LỖ HỔNG CỐT TRUYỆN: Liệt kê mọi phục bút bị treo quên, chi tiết mâu thuẫn giữa các chương trước và chương sau.`,
-          `6. ĐỀ XUẤT SỬA CỤ THỂ: Với MỖI lỗi phát hiện được, BẮT BUỘC ghi rõ [Mức độ: Nghiêm trọng / Trung bình / Nhỏ] + [Vị trí Chương/Đoạn] + [Phân tích lỗi] + [Cách sửa dứt điểm kèm câu văn mẫu].`,
+          `🔍 CHẾ ĐỘ 3: KIỂM TOÁN LOGIC & SOI MÂU THUẪN TOÀN DIỆN (KHUYÊN DÙNG GOOGLE NOTEBOOKLM)`,
+          `(Bám sát tuyệt đối bản Story Bible bạn đã tổng hợp ở phần trên và toàn bộ các chương truyện tôi đã tải lên làm nguồn — KHÔNG bỏ sót dù chỉ 1 chi tiết nhỏ).`,
           ``,
-          `[QUY TẮC KIỂM TOÁN BỔ SUNG CỦA STUDIO]:`,
-          sysInstruction,
+          `Bạn là một Tiểu Thuyết Gia & Tổng Biên Tập Kiểm Toán Logic 30 năm kinh nghiệm, soi lỗi sắc bén như thám tử pháp y văn bản:`,
+          `1. DÒNG THỜI GIAN & ĐỒNG HỒ: Soi từng giờ, phút, ngày thứ mấy, khoảng cách di chuyển và đếm ngược nhiệm vụ — chỉ rõ mọi mốc mâu thuẫn hoặc dịch chuyển phi vật lý.`,
+          `2. TÀI SẢN, VẬT PHẨM & THỂ CHẤT: Kiểm từng con số tiền bạc (thu/chi/số dư), vị trí vật chứng/thiết bị/tài liệu, tình trạng thương tích nhân vật (có bị tự nhiên biến mất vô lý không?).`,
+          `3. MA TRẬN "AI BIẾT GÌ" (RÒ RỈ NHẬN THỨC): Phát hiện mọi chỗ nhân vật vô tình nói, nghĩ hoặc hành động dựa trên thông tin họ CHƯA ĐƯỢC BIẾT tại thời điểm đó.`,
+          `4. TÍNH NHẤT QUÁN TÍNH CÁCH (OOC) & XƯNG HÔ: Chỉ rõ chỗ nhân vật hành xử trái bản chất hoặc lệch vai vế xưng hô.`,
+          `5. SỔ CÁI PHỤC BÚT & LỖ HỔNG CỐT TRUYỆN: Liệt kê các phục bút bị treo quên hoặc xung đột giữa chương trước và chương sau.`,
+          `6. ĐỀ XUẤT SỬA CỤ THỂ: Với MỖI lỗi phát hiện được, ghi rõ [Mức độ: Nghiêm trọng / Trung bình / Nhỏ] + [Vị trí Chương/Đoạn] + [Phân tích lỗi] + [Cách sửa dứt điểm kèm câu văn mẫu].`,
           ``,
-          `[DANH SÁCH CHƯƠNG HIỆN CÓ TRONG STUDIO]:`,
-          chapterInventory || '  (Chương hiện tại)',
+          `[DANH SÁCH CHƯƠNG HIỆN CÓ]:`,
+          chapterInventory || '  (Đối chiếu toàn bộ chương đã tải lên NotebookLM)',
           ``,
-          `[TOÀN BỘ STORY BIBLE, NHÂN VẬT, MA TRẬN AI BIẾT GÌ & PHỤC BÚT (NGUYÊN VĂN 100%)]:`,
-          bibleBlock,
-          ``,
-          `[NỘI DUNG BẢN THẢO ĐANG KIỂM TRA (${activeChap?.displayTitle || 'Chương hiện tại'})]:`,
-          excerpt || '(Bản thảo hiện đang trống — hãy đối chiếu toàn bộ nguồn tài liệu tôi tải lên NotebookLM)',
-          ``,
-          `********************************************************************`,
-          `⭐ YÊU CẦU KIỂM TOÁN CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN THỰC THI CAO NHẤT) ⭐`,
-          `********************************************************************`,
-          cleanCmd || `Hãy soi lỗi cực kỳ chi tiết như tiểu thuyết gia 30 năm kinh nghiệm toàn bộ logic dòng thời gian, tiền bạc, thương tích, vật chứng, OOC nhân vật và rò rỉ thông tin trong Ma trận Ai Biết Gì.`,
-          `********************************************************************`
+          `⭐ YÊU CẦU KIỂM TOÁN CÁ NHÂN CỦA NGƯỜI DÙNG:`,
+          cleanCmd || `Hãy soi lỗi cực kỳ chi tiết toàn bộ logic dòng thời gian, tiền bạc, thương tích, vật chứng, OOC nhân vật và rò rỉ thông tin trong Ma trận Ai Biết Gì trên toàn bộ các chương tôi đã tải lên.`
         ]);
       }
 
       if (modeKey === 'MODE_4_REVIEW') {
-        const excerpt = chapText;
         return wrapModePrompt([
-          `####################################################################`,
-          `📊 CHẾ ĐỘ 4: NHÀ PHÊ BÌNH VĂN HỌC 20 NĂM KINH NGHIỆM & HỘI ĐỒNG ĐỘC GIẢ BETA (KHUYÊN DÙNG GOOGLE NOTEBOOKLM)`,
-          `####################################################################`,
-          `Bạn là 1 nhà phê bình tiểu thuyết, văn học mạng và chính quy 20 năm kinh nghiệm cho các nhà xuất bản lớn. Hãy đọc thật kỹ toàn bộ tài liệu / bản thảo và phân tích thẳng thắn, sắc sảo, không khen xã giao:`,
-          `1. HƯỚNG ĐI CỐT TRUYỆN & ĐỘ LÔI CUỐN: Mạch truyện hiện tại đã tối ưu chưa? Có thực sự giữ chân độc giả từ câu mở đầu đến câu kết chương (cliffhanger / hook) không? Đoạn nào bị chùng nhịp hoặc lê thê?`,
-          `2. TỐC ĐỘ & TỶ LỆ SỨC MẠNH (POWER SCALING / REALISM): Tốc độ phát triển nhân vật, năng lực, tài chính hay âm mưu có bị "ảo quá", buff quá đà hay giải quyết quá dễ dãi không? Chỉ rõ điểm cần tiết chế để tăng tính chân thực.`,
-          `3. CHẤM ĐIỂM 6 TRỤ CỘT VĂN HỌC (Thang 10): Cốt truyện · Tâm lý nhân vật · Nhịp điệu · Hội thoại · Hình ảnh Ngũ quan (Show Don't Tell) · Mức độ chống sáo rỗng AI.`,
-          `4. GÓC NHÌN 3 NHÓM ĐỘC GIẢ KHÓ TÍNH: (a) Độc giả mê đấu trí logic; (b) Độc giả thích chiều sâu tâm lý; (c) Độc giả đọc giải trí nhanh trên điện thoại — họ sẽ khen gì và chê/bỏ truyện ở đúng đoạn nào?`,
-          `5. ĐỀ XUẤT CẢI THIỆN CỤ THỂ: Chỉ ra ít nhất 5 điểm đắt giá nhất cần nâng cấp ngay kèm ví dụ viết lại mẫu theo đúng văn phong tác giả.`,
+          `📊 CHẾ ĐỘ 4: NHÀ PHÊ BÌNH VĂN HỌC CÔNG TÂM & HỘI ĐỒNG ĐỘC GIẢ BETA (KHUYÊN DÙNG GOOGLE NOTEBOOKLM)`,
+          `(Bám sát tuyệt đối bản Story Bible bạn đã tổng hợp ở phần trên và toàn bộ các chương truyện tôi đã tải lên làm nguồn).`,
           ``,
-          `[QUY TẮC BIÊN TẬP & TIÊU CHUẨN VĂN PHONG]:`,
-          sysInstruction,
+          `Bạn là 1 Nhà Phê Bình Tiểu Thuyết, Văn Học Mạng & Chính Quy 20 năm kinh nghiệm cho các nhà xuất bản lớn. Hãy đọc thật kỹ toàn bộ các chương truyện đã tải lên và đánh giá thật công tâm, thẳng thắn, sắc sảo, không khen xã giao:`,
+          `1. HƯỚNG ĐI CỐT TRUYỆN & ĐỘ LÔI CUỐN: Mạch truyện hiện tại đã tối ưu chưa? Có thực sự giữ chân độc giả từ mở đầu đến kết chương (hook / cliffhanger) không? Đoạn nào bị chùng nhịp, dài dòng hoặc vội vàng?`,
+          `2. TỐC ĐỘ & TÍNH CHÂN THỰC / SỨC MẠNH: Tốc độ phát triển nhân vật, năng lực, tài chính hay âm mưu có bị "ảo quá", buff quá đà hay giải quyết quá dễ dãi không? Chỉ rõ chỗ cần tiết chế để thuyết phục hơn.`,
+          `3. CHẤM ĐIỂM 6 TRỤ CỘT VĂN HỌC (Thang 10): Cốt truyện · Tâm lý nhân vật · Nhịp điệu · Hội thoại · Hình ảnh Ngũ quan (Show Don't Tell) · Tự nhiên & chống sáo rỗng AI.`,
+          `4. GÓC NHÌN 3 NHÓM ĐỘC GIẢ KHÓ TÍNH: (a) Độc giả mê đấu trí logic; (b) Độc giả thích chiều sâu tâm lý; (c) Độc giả đọc giải trí nhanh trên điện thoại — họ sẽ khen gì và dễ bỏ truyện ở đúng điểm nào?`,
+          `5. ĐỀ XUẤT CẢI THIỆN ĐẮT GIÁ NHẤT: Chỉ ra 5 điểm cần nâng cấp ngay kèm ví dụ viết lại ngắn theo đúng văn phong tác giả.`,
           ``,
-          `[TOÀN BỘ STORY BIBLE & BỐI CẢNH ĐỐI CHIẾU (NGUYÊN VĂN 100%)]:`,
-          bibleBlock,
-          ``,
-          `[BẢN THẢO / ĐOẠN VĂN CẦN ĐÁNH GIÁ & CHỈNH SỬA (${activeChap?.displayTitle || 'Chương hiện tại'})]:`,
-          excerpt || '(Đánh giá dựa trên toàn bộ nguồn chương truyện tôi tải lên Google NotebookLM)',
-          ``,
-          `********************************************************************`,
-          `⭐ YÊU CẦU ĐÁNH GIÁ CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN THỰC THI CAO NHẤT) ⭐`,
-          `********************************************************************`,
-          cleanCmd || `Bạn là 1 nhà phê bình tiểu thuyết, văn học mạng và chính quy 20 năm kinh nghiệm cho các nhà xuất bản lớn và phân tích cho tôi hướng đi cốt truyện đã tối ưu chưa, có thực sự lôi cuốn độc giả không, có chỗ nào cần cải thiện để giữ chân người đọc và khiến sức mạnh, tốc độ của cốt truyện không bị ảo quá không?`,
-          `********************************************************************`
+          `⭐ YÊU CẦU PHÊ BÌNH CÁ NHÂN CỦA NGƯỜI DÙNG:`,
+          cleanCmd || `Hãy phân tích công tâm xem hướng đi cốt truyện đã tối ưu chưa, có thực sự lôi cuốn độc giả không, chỗ nào cần cải thiện để giữ chân người đọc và khiến nhịp truyện cùng sức mạnh nhân vật không bị ảo quá.`
         ]);
       }
 
@@ -2393,76 +2366,47 @@
           document.getElementById('export-author-name-input')?.value?.trim() ||
           localStorage.getItem('noir_s6_author_name') ||
           'Tác giả';
-        const fullBibleText = String(bibleBlock || '');
 
         if (styleKey === 'CUSTOM_FREE' && cleanCmd) {
           return wrapModePrompt([
-            `🖼️ [CHẾ ĐỘ 6 — TẠO BÌA TRUYỆN TỰ DO BẰNG GEMINI TẠO HÌNH ẢNH]`,
-            `Hãy tạo trực tiếp một bức ảnh bìa tiểu thuyết hoàn chỉnh (tỷ lệ dọc 2:3 chuẩn bìa sách xuất bản, độ sắc nét cao, ánh sáng chuyên nghiệp) theo đúng mô tả sau:`,
+            `🖼️ CHẾ ĐỘ 6 — TẠO BÌA TRUYỆN TỰ DO (DÁN VÀO MỤC "TẠO HÌNH ẢNH" CỦA GEMINI)`,
+            `(Bám sát Story Bible và bối cảnh các chương truyện đã tải lên/tổng hợp ở phần trên).`,
+            `- Tên truyện: "${novelTitle}" · Bút danh: "${authorName}" · Tỷ lệ dọc 2:3 chuẩn bìa sách xuất bản.`,
             ``,
-            `[TOÀN BỘ THÔNG TIN & STORY BIBLE NGUYÊN VĂN 100%]:`,
-            `- Tên truyện: ${novelTitle}`,
-            `- Bút danh tác giả: ${authorName}`,
-            fullBibleText,
-            ``,
-            `********************************************************************`,
-            `⭐ YÊU CẦU THIẾT KẾ BÌA CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN CAO NHẤT) ⭐`,
-            `********************************************************************`,
-            cleanCmd,
-            `********************************************************************`
+            `⭐ YÊU CẦU THIẾT KẾ BÌA CỦA NGƯỜI DÙNG:`,
+            cleanCmd
           ]);
         }
 
         return wrapModePrompt([
-          `####################################################################`,
           `🖼️ CHẾ ĐỘ 6: TẠO BÌA TRUYỆN CHUYÊN NGHIỆP BẰNG AI (DÁN VÀO MỤC "TẠO HÌNH ẢNH" CỦA GEMINI)`,
-          `####################################################################`,
-          `Hãy vẽ trực tiếp một bức ẢNH BÌA TIỂU THUYẾT xuất bản chuyên nghiệp, ấn tượng, chất lượng cực cao dựa trên trọn bộ chủ đề, nhân vật và bối cảnh truyện bên dưới:`,
+          `(Bám sát Story Bible bạn đã tổng hợp ở phần trên và các chương truyện đã tải lên để vẽ đúng tạo hình nhân vật, bối cảnh & không khí truyện).`,
           ``,
           `1. THÔNG TIN BÌA SÁCH:`,
-          `- Tên tác phẩm: "${novelTitle}"`,
-          `- Tên tác giả / Bút danh: "${authorName}"`,
-          `- Tỷ lệ khung hình: Dọc 2:3 (Book Cover Vertical Poster), bố cục chuẩn xuất bản (chừa vùng không gian thoáng/tương phản đẹp ở 1/3 trên cho tiêu đề và lề dưới cho tên tác giả).`,
+          `- Tên tác phẩm: "${novelTitle}" | Bút danh: "${authorName}"`,
+          `- Tỷ lệ dọc 2:3 (Book Cover Vertical Poster), bố cục chuẩn xuất bản (chừa vùng thoáng/tương phản đẹp cho tiêu đề & tên tác giả).`,
           ``,
-          `2. PHONG CÁCH NGHỆ THUẬT ĐÃ CHỌN (${styleObj.label}):`,
+          `2. PHONG CÁCH NGHỆ THUẬT (${styleObj.label}):`,
           styleObj.directive || 'Phong cách minh họa bìa tiểu thuyết xuất bản chuyên nghiệp, ánh sáng điện ảnh, giàu cảm xúc.',
           ``,
-          `3. TOÀN BỘ DỮ LIỆU STORY BIBLE, CỐT TRUYỆN, NHÂN VẬT & BỐI CẢNH (NGUYÊN VĂN 100%, KHÔNG CẮT XÉN):`,
-          fullBibleText,
-          ``,
-          `********************************************************************`,
-          `⭐ YÊU CẦU THIẾT KẾ BÌA CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN CAO NHẤT) ⭐`,
-          `********************************************************************`,
+          `⭐ YÊU CẦU THIẾT KẾ BÌA CÁ NHÂN CỦA NGƯỜI DÙNG:`,
           cleanCmd || `Thiết kế cảnh đắt giá nhất thể hiện linh hồn bộ truyện, nhân vật chính có thần thái cuốn hút, đạo cụ biểu tượng nổi bật và bầu không khí giàu kịch tính.`,
-          `********************************************************************`,
           ``,
-          `🚀 CHỈ THỊ VẼ ẢNH: Vẽ sắc nét, không méo bàn tay/khuôn mặt, ánh sáng có chiều sâu, màu sắc hài hòa đẳng cấp bìa sách bán chạy. Nếu chèn chữ, chỉ chèn chính xác tên tác phẩm hoặc để sạch không chữ rác (no gibberish text).`
+          `🚀 CHỈ THỊ VẼ ẢNH: Vẽ sắc nét, không méo bàn tay/khuôn mặt, ánh sáng có chiều sâu, không sinh chữ lỗi (no gibberish text).`
         ]);
       }
 
       const rawMode5 = [
-        `####################################################################`,
-        `🎨 CHẾ ĐỘ 5: VẼ SƠ ĐỒ CỐT TRUYỆN, TIMELINE & BÁO CÁO MINDMAP TRỰC QUAN (GOOGLE NOTEBOOKLM)`,
-        `####################################################################`,
-        `[QUY TẮC & VAI TRÒ HỆ THỐNG]:`,
-        sysInstruction,
+        `🎨 CHẾ ĐỘ 5: VẼ SƠ ĐỒ CỐT TRUYỆN, TIMELINE & MINDMAP (GOOGLE NOTEBOOKLM)`,
+        `(Bám sát tuyệt đối bản Story Bible bạn đã tổng hợp ở phần trên và toàn bộ các chương truyện tôi đã tải lên làm nguồn).`,
         ``,
-        `[YÊU CẦU ĐẶC BIỆT CHO GOOGLE NOTEBOOKLM (BẮT BUỘC THỰC HIỆN)]:`,
-        `- Ngoài phần văn bản phân tích dòng thời gian & sơ đồ cốt truyện ở khung chat, HÃY ĐỒNG THỜI TẠO CẤU TRÚC PHÂN NHÁNH CHUẨN ĐỂ HIỂN THỊ THÀNH BÁO CÁO HÌNH ẢNH / MINDMAP / SƠ ĐỒ TRỰC QUAN Ở THANH STUDIO BÊN PHẢI CỦA NOTEBOOKLM!`,
-        `- Trình bày rõ 3 lớp trực quan:`,
-        `  1. SƠ ĐỒ TRỤC THỜI GIAN HIỆN TẠI (Timeline theo đúng thứ tự Arc → Hồi/Chương → Mốc giờ/ngày → Địa điểm → Bước ngoặt).`,
-        `  2. SƠ ĐỒ MẠNG LƯỚI QUAN HỆ & PHE PHÁI NHÂN VẬT (Ai là đồng minh, ai là kẻ thù, ai đang giấu bí mật với ai).`,
-        `  3. CÂY PHỤC BÚT & NGÒI NỔ HIỆN TẠI (Nhánh [ĐÃ KÍCH NỔ] vs [ĐANG TREO CHỜ BÙNG NỔ] kèm cảnh báo điểm mâu thuẫn logic nếu có).`,
-        `- Đính kèm thêm khối mã sơ đồ Mermaid (flowchart TD / mindmap) để tác giả có thể xem hoặc xuất ảnh trực quan ngay lập tức.`,
+        `Hãy tổng hợp ngắn gọn, rõ ràng theo đúng 3 sơ đồ phân nhánh để tôi dễ theo dõi (và tạo Bản đồ tư duy / Báo cáo ở thanh Studio bên phải NotebookLM):`,
+        `1. SƠ ĐỒ TRỤC THỜI GIAN (TIMELINE): Theo đúng thứ tự Arc → Hồi/Chương → Mốc giờ/ngày → Địa điểm → Bước ngoặt chính.`,
+        `2. SƠ ĐỒ MẠNG LƯỚI NHÂN VẬT & PHE PHÁI: Đồng minh, đối thủ, và bí mật mỗi người đang nắm giữ.`,
+        `3. CÂY PHỤC BÚT & NGÒI NỔ: Phân tách [ĐÃ KÍCH NỔ] vs [ĐANG TREO CHỜ BÙNG NỔ] (kèm ghi chú nếu phát hiện điểm lệch logic).`,
         ``,
-        `[TOÀN BỘ STORY BIBLE CHÍNH THỨC CẦN LIÊN KẾT & ĐỐI CHIẾU (NGUYÊN VĂN 100%)]:`,
-        bibleBlock,
-        ``,
-        `********************************************************************`,
-        `⭐ YÊU CẦU VẼ SƠ ĐỒ CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN THỰC THI CAO NHẤT) ⭐`,
-        `********************************************************************`,
-        cleanCmd || `Hãy vẽ đúng sơ đồ cốt truyện, sơ đồ timeline đang diễn biến ở hiện tại, mạng lưới nhân vật và tạo thêm báo cáo trực quan / mindmap ở thanh bên NotebookLM dựa trên toàn bộ các chương và Story Bible.`,
-        `********************************************************************`
+        `⭐ YÊU CẦU VẼ SƠ ĐỒ CÁ NHÂN CỦA NGƯỜI DÙNG:`,
+        cleanCmd || `Hãy vẽ sơ đồ cốt truyện, trục timeline hiện tại, mạng lưới nhân vật và tạo thêm Mindmap trực quan dựa trên Story Bible và toàn bộ các chương đã tải lên.`
       ].join('\n');
       const trPrompt = window.NoirNovel?.i18n?.translatePromptFrame;
       return typeof trPrompt === 'function' ? trPrompt(rawMode5) : rawMode5;
@@ -2471,12 +2415,6 @@
     buildSynthesizedPromptForMode(modeKey, resolvedCmd = '') {
       if (modeKey === 'MODE_1_DRAFT') {
         return this.buildMasterSynthesizedPrompt();
-      }
-      if (modeKey === 'MODE_5_DIAGRAM') {
-        const m5Pkg = window.NoirStudio?.mode5Studio?.buildFullMode5PromptForReview?.(resolvedCmd);
-        if (m5Pkg && m5Pkg.combinedCopyablePrompt) {
-          return m5Pkg.combinedCopyablePrompt;
-        }
       }
       return this.buildStandaloneModePrompt(modeKey, resolvedCmd);
     }
@@ -2728,8 +2666,9 @@
     }
 
     async runStep1MasterSynthesis(bypassMode2Check = false, bypassStaleWarn = false) {
-      if (this.isSynthesizing) return;
+      if (this.isSynthesizing && Date.now() - (this._synthStartedAt || 0) < 4000) return;
       this.isSynthesizing = true;
+      this._synthStartedAt = Date.now();
 
       try {
         const promptBox = document.getElementById('s18-fullscreen-prompt-textarea');
@@ -2747,6 +2686,7 @@
           if (currentModeKey === 'MODE_1_DRAFT' && syncTracker.shouldWarnMode1Stale()) {
             this.isSynthesizing = false;
             syncTracker.openMode1StaleWarningModal(() => {
+              syncTracker.acknowledgeStaleForCurrentChapters('M1');
               this.isSynthesizing = false;
               this.runStep1MasterSynthesis(true, true);
             });
@@ -2755,6 +2695,7 @@
           if (currentModeKey === 'MODE_2_BRAINSTORM' && syncTracker.shouldWarnMode2Stale()) {
             this.isSynthesizing = false;
             syncTracker.openMode2StaleWarningModal(() => {
+              syncTracker.acknowledgeStaleForCurrentChapters('M2');
               this.isSynthesizing = false;
               this.runStep1MasterSynthesis(true, true);
             });
@@ -2821,9 +2762,12 @@
           });
         }
 
-        // Đồng bộ Story Bible và các mốc chuyển cảnh mới nhất trước khi tổng hợp
+        // Đồng bộ Story Bible không chặn (non-blocking) để mở ngay cửa sổ xác nhận Prompt
         if (this.storyBible && typeof this.storyBible.saveAllBibleData === 'function') {
-          await this.storyBible.saveAllBibleData(false);
+          try {
+            const pSave = this.storyBible.saveAllBibleData(false);
+            if (pSave && typeof pSave.catch === 'function') pSave.catch(() => {});
+          } catch (_eSbSave) {}
         }
 
         this.utils.showBlockingLoader(
@@ -3651,16 +3595,41 @@
       }
     }
 
+    acknowledgeStaleForCurrentChapters(which = 'BOTH') {
+      const fp = this.computeChaptersFingerprint();
+      if (!fp) return;
+      try {
+        if (which === 'M1' || which === 'BOTH') {
+          this._sessionAckFpM1 = fp;
+          localStorage.setItem('noir_v108_ack_stale_m1_fp', fp);
+        }
+        if (which === 'M2' || which === 'BOTH') {
+          this._sessionAckFpM2 = fp;
+          localStorage.setItem('noir_v108_ack_stale_m2_fp', fp);
+        }
+      } catch (_eAck) {}
+    }
+
     shouldWarnMode1Stale() {
+      const curFp = this.computeChaptersFingerprint();
+      if (!curFp) return false;
       try {
         if (localStorage.getItem(this.KEY_SKIP_M1) === '1') return false;
+        if (this._sessionAckFpM1 === curFp || localStorage.getItem('noir_v108_ack_stale_m1_fp') === curFp) {
+          return false;
+        }
       } catch (_e) {}
       return this.isStoryBibleStale() || this.isMode2Stale();
     }
 
     shouldWarnMode2Stale() {
+      const curFp = this.computeChaptersFingerprint();
+      if (!curFp) return false;
       try {
         if (localStorage.getItem(this.KEY_SKIP_M2) === '1') return false;
+        if (this._sessionAckFpM2 === curFp || localStorage.getItem('noir_v108_ack_stale_m2_fp') === curFp) {
+          return false;
+        }
       } catch (_e) {}
       return this.isStoryBibleStale();
     }
@@ -3743,16 +3712,23 @@
       modal.querySelector('#btn-v105-m1-go-mode2')?.addEventListener('click', goMode2);
       modal.querySelector('#btn-v105-warn-jump-bible')?.addEventListener('click', goBible);
       modal.querySelector('#btn-v105-m1-go-bible')?.addEventListener('click', goBible);
-      modal.querySelector('#btn-v105-m1-proceed')?.addEventListener('click', (ev) => {
+      const runProceedM1 = (ev) => {
         ev?.preventDefault?.();
         ev?.stopPropagation?.();
         saveSkipIfChecked();
+        this.acknowledgeStaleForCurrentChapters('M1');
         close();
         if (this.synth) this.synth.isSynthesizing = false;
         setTimeout(() => {
           try { onProceed?.(); } catch (err) { console.error('[mod16] m1 proceed err:', err); }
         }, 15);
-      });
+      };
+      modal.querySelector('#btn-v105-m1-proceed')?.addEventListener('click', runProceedM1);
+      modal.addEventListener('click', (ev) => {
+        if (ev.target?.closest?.('#btn-v105-m1-proceed')) {
+          runProceedM1(ev);
+        }
+      }, true);
     }
 
     openMode2StaleWarningModal(onProceed) {
@@ -3806,18 +3782,25 @@
         window.NoirStudio?.navigator?.navigateToScreen?.('SCREEN_4_BIBLE');
         this.refreshTab4StaleReminder();
       });
-      modal.querySelector('#btn-v105-m2-proceed')?.addEventListener('click', (ev) => {
+      const runProceedM2 = (ev) => {
         ev?.preventDefault?.();
         ev?.stopPropagation?.();
         if (modal.querySelector('#chk-v105-skip-m2-warn')?.checked) {
           try { localStorage.setItem(this.KEY_SKIP_M2, '1'); } catch (_e) {}
         }
+        this.acknowledgeStaleForCurrentChapters('M2');
         close();
         if (this.synth) this.synth.isSynthesizing = false;
         setTimeout(() => {
           try { onProceed?.(); } catch (err) { console.error('[mod16] m2 proceed err:', err); }
         }, 15);
-      });
+      };
+      modal.querySelector('#btn-v105-m2-proceed')?.addEventListener('click', runProceedM2);
+      modal.addEventListener('click', (ev) => {
+        if (ev.target?.closest?.('#btn-v105-m2-proceed')) {
+          runProceedM2(ev);
+        }
+      }, true);
     }
 
     init() {
@@ -4911,6 +4894,38 @@
       }
     }
 
+    exportRichHtmlToPdfDocument(titleText, bodyHtml, plainFallbackText = '', filePrefix = 'Document') {
+      const safeTitle = this.escapeHtml(titleText || 'Tài liệu Studio');
+      const htmlDoc = `<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8" /><title>${safeTitle}</title><style>
+        @page { size: A4; margin: 16mm 14mm; }
+        body { font-family: "Segoe UI", Roboto, Arial, sans-serif; color: #111827; line-height: 1.58; font-size: 13px; margin: 0; padding: 18px; background: #fff; }
+        h1 { font-size: 18px; color: #065f46; border-bottom: 2px solid #10b981; padding-bottom: 6px; margin: 0 0 14px 0; }
+        h2 { font-size: 15px; color: #1e3a8a; margin: 18px 0 8px 0; border-left: 4px solid #3b82f6; padding-left: 8px; }
+        table { border-collapse: collapse; width: 100%; margin: 10px 0; page-break-inside: auto; font-size: 12px; }
+        tr { page-break-inside: avoid; }
+        th, td { border: 1px solid #94a3b8; padding: 6px 8px; text-align: left; vertical-align: top; }
+        th { background: #ecfdf5; font-weight: 700; }
+        img { max-width: 100%; height: auto; border-radius: 6px; margin: 8px 0; page-break-inside: avoid; }
+        .doc-body { white-space: pre-wrap; word-break: break-word; }
+      </style></head><body><h1>${safeTitle}</h1><div class="doc-body">${bodyHtml}</div><script>window.onload=function(){setTimeout(function(){window.print();},260);};<\/script></body></html>`;
+
+      const win = window.open('', '_blank', 'width=940,height=780');
+      if (win && win.document) {
+        win.document.open();
+        win.document.write(htmlDoc);
+        win.document.close();
+        window.NoirStudio?.utils?.showToast?.(
+          '📄 Đã mở bản in chuẩn Word (giữ nguyên 100% Bảng & Ảnh) — Chọn "Lưu dưới dạng PDF / Save as PDF" để lưu ngay!',
+          'success',
+          4200
+        );
+        return true;
+      }
+      // Dự phòng nếu trình duyệt chặn pop-up: xuất trực tiếp file .pdf binary về Downloads
+      this.exportCompiledPromptToPdf(plainFallbackText || titleText, filePrefix);
+      return true;
+    }
+
     openStoryBibleFullViewerModal() {
       document.getElementById('modal-v106-story-bible-viewer')?.remove();
       const sb = window.NoirStudio?.storyBible;
@@ -4963,61 +4978,91 @@
         <div class="my-auto w-full max-w-5xl max-h-[92dvh] rounded-2xl border-2 border-amber-400/75 bg-zinc-950 text-zinc-100 shadow-2xl flex flex-col overflow-hidden text-xs">
           <div class="px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-amber-950/75 to-zinc-900 flex flex-wrap items-center justify-between gap-2 shrink-0">
             <div>
-              <div class="font-extrabold text-sm text-amber-300">🏛️ CỬA SỔ NỔI TOÀN BỘ STORY BIBLE (CHỈNH SỬA TRỰC TIẾP NHƯ TAB 4)</div>
+              <div class="font-extrabold text-sm text-amber-300">🏛️ CỬA SỔ NỔI TOÀN BỘ STORY BIBLE (CHUẨN WORD · GIỮ TRỌN BẢNG &amp; ẢNH NHƯ TAB 4 MỤC 2)</div>
               <div class="text-[11px] text-amber-100/80">
-                ${linkedFile?.fileName ? `📄 File đang liên kết: <strong>${this.escapeHtml(linkedFile.fileName)}</strong> (${(linkedFile.text || '').length.toLocaleString('vi-VN')} ký tự) · ` : ''}Nội dung khung Story Bible: ${rawBibleText.length.toLocaleString('vi-VN')} ký tự (giữ nguyên 100%, không cắt xén)
+                ${linkedFile?.fileName ? `📄 File đang liên kết: <strong>${this.escapeHtml(linkedFile.fileName)}</strong> (${(linkedFile.text || '').length.toLocaleString('vi-VN')} ký tự) · ` : ''}Nội dung Story Bible: ${rawBibleText.length.toLocaleString('vi-VN')} ký tự (giữ nguyên 100%, không vỡ bảng/ảnh)
               </div>
             </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <button type="button" id="btn-v106-bible-save-inline" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow transition">💾 Lưu Story Bible</button>
-              <button type="button" id="btn-v106-bible-goto-tab4" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold transition">🏛️ Qua Tab 4 Đầy Đủ</button>
+            <div class="flex flex-wrap items-center gap-1.5 shrink-0">
+              <button type="button" id="btn-v108-bible-download-pdf" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold shadow transition">📄 Tải PDF</button>
+              <button type="button" id="btn-v106-bible-save-inline" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow transition">💾 Lưu Story Bible</button>
+              <button type="button" id="btn-v106-bible-goto-tab4" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold transition">🏛️ Qua Tab 4</button>
               <button type="button" id="btn-v106-bible-close" class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-rose-600 text-white font-bold">✕ Đóng</button>
             </div>
           </div>
           <div class="p-4 overflow-y-auto flex-1 space-y-4">
             <div class="space-y-1.5">
-              <div class="font-extrabold text-emerald-300 uppercase text-[11px]">📖 2. Nội Dung Story Bible Chính Thức (Có thể sửa &amp; dán trực tiếp tại đây):</div>
-              <textarea id="textarea-v106-floating-bible-edit" rows="14" class="w-full p-3.5 rounded-xl border border-emerald-500/45 bg-zinc-900/90 text-xs leading-relaxed text-zinc-100 font-monoCode select-text focus:outline-none focus:border-emerald-400 resize-y">${this.escapeHtml(rawBibleText)}</textarea>
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="font-extrabold text-emerald-300 uppercase text-[11px]">📖 2. Nội Dung Story Bible Chính Thức (Chế độ Word — giữ nguyên bảng biểu, định dạng &amp; hình ảnh):</div>
+                <div class="flex items-center gap-1">
+                  <button type="button" data-fb-exec="bold" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white font-black">B</button>
+                  <button type="button" data-fb-exec="italic" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white italic font-serif">I</button>
+                  <button type="button" data-fb-exec="underline" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white underline">U</button>
+                </div>
+              </div>
+              <div id="div-v108-floating-bible-rich" contenteditable="true" spellcheck="false" class="w-full min-h-[280px] max-h-[52vh] overflow-y-auto p-3.5 rounded-xl border border-emerald-500/45 bg-zinc-900/90 text-xs leading-relaxed text-zinc-100 select-text focus:outline-none focus:border-emerald-400 whitespace-pre-wrap break-words [&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-zinc-600 [&_th]:bg-zinc-800/80 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_td]:border [&_td]:border-zinc-700 [&_td]:px-2 [&_td]:py-1 [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2"></div>
             </div>
             ${
               linkedFile?.text
-                ? `<div class="space-y-1.5"><div class="font-extrabold text-sky-300 uppercase text-[11px]">📄 Nội Dung File Story Bible Đang Liên Kết (${this.escapeHtml(linkedFile.fileName)}):</div><pre class="max-h-60 overflow-y-auto whitespace-pre-wrap break-words font-monoCode text-[11.5px] leading-relaxed text-zinc-200 select-text bg-zinc-900/80 p-3 rounded-xl border border-sky-500/35">${this.escapeHtml(linkedFile.text)}</pre></div>`
+                ? `<div class="space-y-1.5"><div class="font-extrabold text-sky-300 uppercase text-[11px]">📄 Nội Dung File Story Bible Đang Liên Kết (${this.escapeHtml(linkedFile.fileName)}):</div><pre class="max-h-56 overflow-y-auto whitespace-pre-wrap break-words font-monoCode text-[11.5px] leading-relaxed text-zinc-200 select-text bg-zinc-900/80 p-3 rounded-xl border border-sky-500/35">${this.escapeHtml(linkedFile.text)}</pre></div>`
                 : ''
             }
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div class="p-3 rounded-xl border border-emerald-500/30 bg-zinc-900/50 space-y-2">
                 <div class="font-extrabold text-emerald-300 text-[11px] uppercase">👤 Hồ Sơ Nhân Vật (${chars.length})</div>
-                <div class="space-y-1.5 max-h-48 overflow-y-auto">${charsHtml}</div>
+                <div class="space-y-1.5 max-h-44 overflow-y-auto">${charsHtml}</div>
               </div>
               <div class="p-3 rounded-xl border border-amber-500/30 bg-zinc-900/50 space-y-2">
                 <div class="font-extrabold text-amber-300 text-[11px] uppercase">🧠 Ma Trận Ai Biết Gì (${knows.length})</div>
-                <div class="space-y-1.5 max-h-48 overflow-y-auto">${knowsHtml}</div>
+                <div class="space-y-1.5 max-h-44 overflow-y-auto">${knowsHtml}</div>
               </div>
               <div class="p-3 rounded-xl border border-indigo-500/30 bg-zinc-900/50 space-y-2">
                 <div class="font-extrabold text-indigo-300 text-[11px] uppercase">🔫 Sổ Cái Phục Bút (${clues.length})</div>
-                <div class="space-y-1.5 max-h-48 overflow-y-auto">${cluesHtml}</div>
+                <div class="space-y-1.5 max-h-44 overflow-y-auto">${cluesHtml}</div>
               </div>
             </div>
           </div>
         </div>
       `;
       document.body.appendChild(modal);
+      const richEditor = modal.querySelector('#div-v108-floating-bible-rich');
+      if (richEditor) {
+        if (richHtml) richEditor.innerHTML = richHtml;
+        else richEditor.innerText = rawBibleText;
+      }
+      modal.querySelectorAll('[data-fb-exec]').forEach((b) => {
+        b.addEventListener('click', () => {
+          richEditor?.focus();
+          try { document.execCommand(b.getAttribute('data-fb-exec'), false, null); } catch (_e) {}
+        });
+      });
+
       const saveInlineBible = () => {
-        const edited = modal.querySelector('#textarea-v106-floating-bible-edit')?.value || '';
+        const htmlNow = String(richEditor?.innerHTML || '');
+        const plainNow = this.serializeRichNodeToPlainText(richEditor);
+        if (tab4Rich) {
+          tab4Rich.innerHTML = htmlNow;
+          tab4Rich.dispatchEvent(new Event('input', { bubbles: true }));
+        }
         if (tab4Plain) {
-          tab4Plain.value = edited;
+          tab4Plain.value = plainNow;
           tab4Plain.dispatchEvent(new Event('input', { bubbles: true }));
         }
-        if (tab4Rich && !richHtml.includes('<table') && !richHtml.includes('<img')) {
-          tab4Rich.innerText = edited;
-        }
+        try { localStorage.setItem('noir_v105_story_bible_rich_html_v1', htmlNow); } catch (_e) {}
         sb?.saveAllBibleData?.(false);
         this.refreshHeroTopLinksUI();
-        window.NoirStudio?.utils?.showToast?.('✅ Đã lưu thay đổi Story Bible ngay tại cửa sổ nổi!', 'success', 2400);
+        window.NoirStudio?.utils?.showToast?.('✅ Đã lưu Story Bible (giữ nguyên bảng biểu & ảnh)!', 'success', 2400);
       };
+
       modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.remove(); });
       modal.querySelector('#btn-v106-bible-close')?.addEventListener('click', () => modal.remove());
       modal.querySelector('#btn-v106-bible-save-inline')?.addEventListener('click', saveInlineBible);
+      modal.querySelector('#btn-v108-bible-download-pdf')?.addEventListener('click', () => {
+        saveInlineBible();
+        const htmlNow = String(richEditor?.innerHTML || '');
+        const plainNow = this.serializeRichNodeToPlainText(richEditor);
+        this.exportRichHtmlToPdfDocument('STORY BIBLE CHÍNH THỨC', htmlNow || this.escapeHtml(plainNow), plainNow, 'Story_Bible');
+      });
       modal.querySelector('#btn-v106-bible-goto-tab4')?.addEventListener('click', () => {
         saveInlineBible();
         modal.remove();
@@ -5032,8 +5077,12 @@
       const useManualInit = localStorage.getItem(this.PLOT_USE_MANUAL_KEY) === '1';
       const aiOutlineVal = String(this.synth?.getMode2DevelopedOutlineText?.() || '').trim();
       let manualOutlineVal = '';
+      let aiRichSaved = '';
+      let manualRichSaved = '';
       try {
         manualOutlineVal = localStorage.getItem(this.PLOT_MANUAL_TEXT_KEY) || '';
+        aiRichSaved = localStorage.getItem('noir_v108_plot_ai_rich_html') || '';
+        manualRichSaved = localStorage.getItem('noir_v108_plot_manual_rich_html') || '';
       } catch (_eM) {}
 
       const modal = document.createElement('div');
@@ -5044,13 +5093,16 @@
       modal.className = 'fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-5 overflow-y-auto';
       modal.innerHTML = `
         <div class="my-auto w-full max-w-5xl max-h-[92dvh] rounded-2xl border-2 border-cyan-400/75 bg-zinc-950 text-zinc-100 shadow-2xl flex flex-col overflow-hidden text-xs">
-          <div class="px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-cyan-950/75 to-indigo-950/70 flex items-center justify-between gap-2 shrink-0">
-            <div class="font-extrabold text-sm text-cyan-300">🧭 CHỌN NGUỒN THAM MƯU CỐT TRUYỆN CHO CHẾ ĐỘ 1 (AI GEMINI / TỰ VIẾT / CẢ 2)</div>
-            <button type="button" id="btn-v106-plot-close" class="px-2.5 py-1 rounded-xl bg-zinc-800 hover:bg-rose-600 text-white font-bold">✕ Đóng</button>
+          <div class="px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-cyan-950/75 to-indigo-950/70 flex flex-wrap items-center justify-between gap-2 shrink-0">
+            <div class="font-extrabold text-sm text-cyan-300">🧭 CHỌN NGUỒN THAM MƯU CỐT TRUYỆN CHO CHẾ ĐỘ 1 (CHUẨN WORD · GIỮ TRỌN BẢNG &amp; ẢNH)</div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" id="btn-v108-plot-download-pdf" class="px-3 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold shadow transition">📄 Tải PDF</button>
+              <button type="button" id="btn-v106-plot-close" class="px-2.5 py-1 rounded-xl bg-zinc-800 hover:bg-rose-600 text-white font-bold">✕ Đóng</button>
+            </div>
           </div>
           <div class="p-4 overflow-y-auto flex-1 space-y-3">
             <div class="p-3 rounded-xl border border-amber-400/55 bg-amber-950/40 text-amber-100 text-[12px] leading-relaxed">
-              💡 Tại đây, bạn tick chọn <strong class="text-cyan-300">tham mưu cốt truyện theo câu trả lời của Gemini</strong> thì AI sẽ tổng hợp prompt theo hướng tham mưu cốt truyện của Gemini, còn nếu bạn chọn ô bên cạnh, là <strong class="text-emerald-300">tham mưu cốt truyện riêng bạn viết, không dùng AI</strong> thì cũng được, hoặc là <strong class="text-amber-300">tick cả 2</strong>.
+              💡 Tại đây, bạn tick chọn <strong class="text-cyan-300">tham mưu cốt truyện theo câu trả lời của Gemini</strong> thì AI sẽ tổng hợp prompt theo hướng tham mưu cốt truyện của Gemini, còn nếu bạn chọn ô bên cạnh, là <strong class="text-emerald-300">tham mưu cốt truyện riêng bạn viết, không dùng AI</strong> thì cũng được, hoặc là <strong class="text-amber-300">tick cả 2</strong> (khi bấm <strong>📄 Tải PDF</strong>, nếu tick cả 2 ô sẽ tự động gộp cả 2 vào 1 file PDF duy nhất!).
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <div class="p-3 rounded-2xl border-2 border-cyan-500/50 bg-cyan-950/20 space-y-2 flex flex-col">
@@ -5058,16 +5110,16 @@
                   <input type="checkbox" id="chk-v106-plot-ai" ${useAiInit ? 'checked' : ''} class="accent-cyan-400 w-4 h-4 shrink-0" />
                   <span>🤖 Tham mưu cốt truyện theo câu trả lời của Gemini (Chế độ 2)</span>
                 </label>
-                <p class="text-[11px] text-zinc-400">Tự động liên kết kết quả Chế độ 2 (hoặc bạn có thể dán thẳng câu trả lời tham mưu của Gemini Web/App vào đây):</p>
-                <textarea id="textarea-v106-plot-ai" class="w-full min-h-[260px] flex-1 p-3 rounded-xl border border-cyan-500/40 bg-zinc-950 text-xs text-zinc-100 leading-relaxed focus:outline-none focus:border-cyan-400 select-text" placeholder="Dán câu trả lời tham mưu cốt truyện từ Gemini (hoặc chạy Chế độ 2 để tự điền vào đây)...">${this.escapeHtml(aiOutlineVal)}</textarea>
+                <p class="text-[11px] text-zinc-400">Hỗ trợ dán trực tiếp từ Gemini / Word / Docs (không vỡ bảng biểu, hình ảnh):</p>
+                <div id="div-v108-plot-ai-rich" contenteditable="true" spellcheck="false" data-placeholder="Dán câu trả lời tham mưu cốt truyện từ Gemini (hoặc chạy Chế độ 2 để tự điền vào đây)..." class="w-full min-h-[260px] max-h-[46vh] overflow-y-auto flex-1 p-3 rounded-xl border border-cyan-500/40 bg-zinc-950 text-xs text-zinc-100 leading-relaxed focus:outline-none focus:border-cyan-400 select-text whitespace-pre-wrap break-words [&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-zinc-600 [&_th]:bg-zinc-800/80 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_td]:border [&_td]:border-zinc-700 [&_td]:px-2 [&_td]:py-1 [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2"></div>
               </div>
               <div class="p-3 rounded-2xl border-2 border-emerald-500/50 bg-emerald-950/20 space-y-2 flex flex-col">
                 <label class="flex items-center gap-2 font-extrabold text-emerald-300 text-xs cursor-pointer select-none">
                   <input type="checkbox" id="chk-v106-plot-manual" ${useManualInit ? 'checked' : ''} class="accent-emerald-400 w-4 h-4 shrink-0" />
                   <span>✍️ Tham mưu cốt truyện riêng bạn tự viết (không dùng AI)</span>
                 </label>
-                <p class="text-[11px] text-zinc-400">Viết dàn ý, nút thắt, diễn biến chương tiếp theo hoàn toàn theo ý riêng của bạn:</p>
-                <textarea id="textarea-v106-plot-manual" class="w-full min-h-[260px] flex-1 p-3 rounded-xl border border-emerald-500/40 bg-zinc-950 text-xs text-zinc-100 leading-relaxed focus:outline-none focus:border-emerald-400 select-text" placeholder="Gõ cốt truyện riêng bạn tự nghĩ ra tại đây (sẽ được giữ nguyên văn 100%, không cắt xén)...">${this.escapeHtml(manualOutlineVal)}</textarea>
+                <p class="text-[11px] text-zinc-400">Soạn thảo chuẩn Word (hỗ trợ dán bảng, ảnh, dàn ý riêng của bạn):</p>
+                <div id="div-v108-plot-manual-rich" contenteditable="true" spellcheck="false" data-placeholder="Gõ hoặc dán cốt truyện riêng bạn tự nghĩ ra tại đây (giữ nguyên 100%, không cắt xén)..." class="w-full min-h-[260px] max-h-[46vh] overflow-y-auto flex-1 p-3 rounded-xl border border-emerald-500/40 bg-zinc-950 text-xs text-zinc-100 leading-relaxed focus:outline-none focus:border-emerald-400 select-text whitespace-pre-wrap break-words [&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-zinc-600 [&_th]:bg-zinc-800/80 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_td]:border [&_td]:border-zinc-700 [&_td]:px-2 [&_td]:py-1 [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2"></div>
               </div>
             </div>
           </div>
@@ -5079,22 +5131,67 @@
       `;
       document.body.appendChild(modal);
 
-      const saveAndClose = () => {
+      const aiRichEl = modal.querySelector('#div-v108-plot-ai-rich');
+      const manualRichEl = modal.querySelector('#div-v108-plot-manual-rich');
+      if (aiRichEl) {
+        if (aiRichSaved && aiRichSaved.trim()) aiRichEl.innerHTML = aiRichSaved;
+        else aiRichEl.innerText = aiOutlineVal;
+      }
+      if (manualRichEl) {
+        if (manualRichSaved && manualRichSaved.trim()) manualRichEl.innerHTML = manualRichSaved;
+        else manualRichEl.innerText = manualOutlineVal;
+      }
+
+      const persistPlotData = () => {
         const useAi = Boolean(modal.querySelector('#chk-v106-plot-ai')?.checked);
         const useManual = Boolean(modal.querySelector('#chk-v106-plot-manual')?.checked);
-        const aiTxt = String(modal.querySelector('#textarea-v106-plot-ai')?.value || '').trim();
-        const manualTxt = String(modal.querySelector('#textarea-v106-plot-manual')?.value || '').trim();
+        const aiHtml = String(aiRichEl?.innerHTML || '');
+        const manualHtml = String(manualRichEl?.innerHTML || '');
+        const aiTxt = this.serializeRichNodeToPlainText(aiRichEl);
+        const manualTxt = this.serializeRichNodeToPlainText(manualRichEl);
         try {
           localStorage.setItem(this.PLOT_USE_AI_KEY, useAi ? '1' : '0');
           localStorage.setItem(this.PLOT_USE_MANUAL_KEY, useManual ? '1' : '0');
           localStorage.setItem(this.PLOT_MANUAL_TEXT_KEY, manualTxt);
           localStorage.setItem('noir_v36_mode2_latest_plot_outline', aiTxt);
+          localStorage.setItem('noir_v108_plot_ai_rich_html', aiHtml);
+          localStorage.setItem('noir_v108_plot_manual_rich_html', manualHtml);
         } catch (_eS) {}
         this.refreshHeroTopLinksUI('MODE_1_DRAFT');
         this.synth?.refreshCommandModeUX?.('MODE_1_DRAFT');
+        return { useAi, useManual, aiHtml, manualHtml, aiTxt, manualTxt };
+      };
+
+      modal.querySelector('#btn-v108-plot-download-pdf')?.addEventListener('click', () => {
+        const data = persistPlotData();
+        const htmlSections = [];
+        const plainSections = [];
+        if (data.useAi && (data.aiTxt || data.aiHtml.trim())) {
+          htmlSections.push(`<h2>🤖 A. Tham Mưu Cốt Truyện Theo Câu Trả Lời Của Gemini (Chế Độ 2)</h2><div>${data.aiHtml || this.escapeHtml(data.aiTxt)}</div>`);
+          plainSections.push(`[A. THAM MƯU CỐT TRUYỆN THEO GEMINI]\n${data.aiTxt}`);
+        }
+        if (data.useManual && (data.manualTxt || data.manualHtml.trim())) {
+          htmlSections.push(`<h2>✍️ B. Tham Mưu Cốt Truyện Riêng Tác Giả Tự Viết</h2><div>${data.manualHtml || this.escapeHtml(data.manualTxt)}</div>`);
+          plainSections.push(`[B. THAM MƯU CỐT TRUYỆN TỰ VIẾT]\n${data.manualTxt}`);
+        }
+        if (htmlSections.length === 0) {
+          window.NoirStudio?.utils?.showToast?.('⚠️ Hãy tick chọn và nhập nội dung ít nhất 1 ô trước khi tải PDF!', 'warning', 2800);
+          return;
+        }
+        const pdfTitle =
+          data.useAi && data.useManual
+            ? 'THAM MƯU CỐT TRUYỆN TỔNG HỢP (GEMINI + TÁC GIẢ TỰ VIẾT)'
+            : data.useAi
+              ? 'THAM MƯU CỐT TRUYỆN THEO GEMINI (CHẾ ĐỘ 2)'
+              : 'THAM MƯU CỐT TRUYỆN TÁC GIẢ TỰ VIẾT';
+        this.exportRichHtmlToPdfDocument(pdfTitle, htmlSections.join('<hr style="margin:18px 0;border:0;border-top:2px dashed #94a3b8;" />'), plainSections.join('\n\n---\n\n'), 'Tham_Muu_Cot_Truyen');
+      });
+
+      const saveAndClose = () => {
+        persistPlotData();
         modal.remove();
         window.NoirStudio?.utils?.showToast?.(
-          '✅ Đã lưu cấu hình Tham mưu cốt truyện cho Chế độ 1!',
+          '✅ Đã lưu cấu hình Tham mưu cốt truyện (chuẩn Word, giữ bảng & ảnh) cho Chế độ 1!',
           'success',
           2600
         );
@@ -5115,7 +5212,7 @@
       // 1) NotebookLM: khung chat ngắn (~4.500 ký tự) -> Hướng dẫn tạo Ghi chú (+ Lưu ý / Studio) kèm giao diện mô phỏng trực quan!
       if (isNotebookLmMode && len > 4500) {
         const shortTriggerCmd =
-          'Hãy đọc thật kỹ toàn bộ hướng dẫn, vai trò và yêu cầu trong Ghi chú (Note) mới tôi vừa tạo trong mục Studio, đối chiếu toàn bộ các chương nguồn và thực thi đầy đủ từng bước!';
+          'Hãy đọc toàn bộ nội dung trong ghi chú [Tên ghi chú vừa tạo] và thực hiện chính xác theo các yêu cầu/hướng dẫn trong đó giúp tôi.';
         box.classList.remove('hidden');
         box.innerHTML = `
           <div class="p-3.5 rounded-2xl border-2 border-sky-400/75 bg-gradient-to-r from-sky-950/75 via-zinc-950 to-indigo-950/70 space-y-3 text-xs shadow-xl">
@@ -5441,6 +5538,24 @@
         plotChk.addEventListener('change', () => {
           try { localStorage.setItem(this.PLOT_MASTER_KEY, plotChk.checked ? '1' : '0'); } catch (_e) {}
           this.refreshHeroTopLinksUI();
+        });
+      }
+
+      // Nút Thu gọn / Mở rộng toàn bộ khung gợi ý trong Hộp Điều Khiển AI (áp dụng cả Tab 3 lẫn Viết Tập Trung)
+      const advToggleBtn = document.getElementById('btn-toggle-cmd-advisories');
+      const advWrap = document.getElementById('cmd-mode-prompt-advisories-wrap');
+      if (advToggleBtn && advWrap) {
+        const setAdvCollapsed = (collapsed) => {
+          advWrap.classList.toggle('hidden', Boolean(collapsed));
+          advToggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+          advToggleBtn.textContent = collapsed ? '▼ Mở rộng gợi ý' : '▲ Thu gọn gợi ý';
+          try { localStorage.setItem('noir_v108_cmd_advisories_collapsed', collapsed ? '1' : '0'); } catch (_e) {}
+        };
+        try {
+          if (localStorage.getItem('noir_v108_cmd_advisories_collapsed') === '1') setAdvCollapsed(true);
+        } catch (_e) {}
+        advToggleBtn.addEventListener('click', () => {
+          setAdvCollapsed(!advWrap.classList.contains('hidden'));
         });
       }
 

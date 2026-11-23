@@ -2533,12 +2533,17 @@
       document.addEventListener('visibilitychange', () => {
         this.handleVisibilityChange(Boolean(document.hidden));
       });
-      NS.bus?.on?.('screen:changed', (payload) => {
+      const onScreenChangeRepaint = (payload) => {
         const scr = typeof payload === 'string' ? payload : payload?.screenId || '';
         if (scr === 'SCREEN_5_AMBIENCE' && isDesktopDirectYoutubeEnv() && this.playerCtrl?.activeEngine === 'IFRAME') {
           setTimeout(() => this.nudgeDesktopIframeCompositorRepaint(), 40);
         }
-      });
+      };
+      const scrEvt39 = NS.constants?.EVENTS?.SCREEN_CHANGED || 'nav:screen_changed';
+      NS.bus?.on?.(scrEvt39, onScreenChangeRepaint);
+      if (scrEvt39 !== 'screen:changed') {
+        NS.bus?.on?.('screen:changed', onScreenChangeRepaint);
+      }
       if (typeof window !== 'undefined') {
         window.addEventListener('pagehide', () => this.handleVisibilityChange(true));
         window.addEventListener('pageshow', () => this.handleVisibilityChange(Boolean(document.hidden)));
@@ -4849,126 +4854,6 @@
         this.playerCtrl?.pause?.();
       } catch (_ePause) {}
 
-      // 2) Trên Desktop: LIÊN TỤC tự động tìm nguồn phát công cộng (Piped / Invidious) cho đến khi lấy được video thật (hoặc người dùng bấm tắt Cửa sổ nổi)!
-      if (isDesktopDirectYoutubeEnv() && video.videoId && !video.isLive) {
-        const myToken = (this._desktopFloatingLoopToken || 0) + 1;
-        this._desktopFloatingLoopToken = myToken;
-        this._desktopFloatingSearching = true;
-        this.syncStatusUi();
-        this.playerCtrl?.emitUiSync?.();
-
-        let attempt = 0;
-        while (this._desktopFloatingLoopToken === myToken && String(this.playerCtrl?.activeVideo?.videoId || '') === String(video.videoId)) {
-          attempt += 1;
-          safeNotify(
-            `🔎 [Lần ${attempt}] Đang tìm nguồn công cộng (Piped / Invidious) để bật Cửa sổ nổi Desktop... (Bấm lại nút 🖼️ Cửa sổ nổi để hủy)`,
-            'info',
-            2600
-          );
-
-          try {
-            const upgraded = await this.upgradeActiveVideoToNativePlayer(video, {
-              autoplay: true,
-              startTime: startSec,
-              preferVideo: true,
-              forceRefresh: attempt > 1
-            });
-
-            // Kiểm tra lại token ngay lập tức: nếu người dùng đã bấm TẮT trong lúc đang dò -> hủy thẳng không cho phát nhạc nền ma!
-            if (this._desktopFloatingLoopToken !== myToken) {
-              this.hardStopAllExtraYoutubeAudioEngines();
-              return { ok: false, cancelled: true };
-            }
-
-            if (upgraded && NS.nativePlayer?.isActive?.() && NS.nativePlayer.videoEl) {
-              this._desktopFloatingSearching = false;
-              this._desktopFloatingPublicStreamActive = true;
-              // Tắt lại iframe chính lần nữa để bảo đảm đồng bộ duy nhất 1 nguồn âm thanh
-              try {
-                this.playerCtrl?.bridge?.dispatchPlayerCommand?.('pauseVideo', []);
-                this.playerCtrl?.bridge?.dispatchPlayerCommand?.('mute', []);
-                this._silenceForegroundIframeForNativeTakeover?.();
-              } catch (_eSil) {}
-
-              const vidEl = NS.nativePlayer.videoEl;
-              const onLeavePip = () => {
-                vidEl.removeEventListener('leavepictureinpicture', onLeavePip);
-                const curSec = Number.isFinite(vidEl.currentTime) ? Math.floor(vidEl.currentTime) : startSec;
-                const wasPlaying = !vidEl.paused;
-                this.restoreDesktopIframeAfterFloatingClose(curSec, wasPlaying);
-                safeNotify('🔄 Đã tắt Cửa sổ nổi & trả âm thanh/hình về đúng khung YouTube chính!', 'info', 2500);
-              };
-              vidEl.addEventListener('leavepictureinpicture', onLeavePip, { once: true });
-
-              const pipRes = await NS.nativePlayer.enterSystemPictureInPicture?.();
-              if (this._desktopFloatingLoopToken !== myToken) {
-                vidEl.removeEventListener('leavepictureinpicture', onLeavePip);
-                this.hardStopAllExtraYoutubeAudioEngines();
-                return { ok: false, cancelled: true };
-              }
-              if (pipRes && pipRes.ok !== false && document.pictureInPictureElement === vidEl) {
-                this.syncStatusUi();
-                this.playerCtrl?.emitUiSync?.();
-                safeNotify('🖼️ Đã bật Cửa sổ nổi Video thật từ nguồn công cộng! Khi đóng sẽ tự đồng bộ về khung gốc.', 'success', 3200);
-                return { ok: true, mode: 'desktop-native-video-pip' };
-              }
-
-              // Nếu user gesture đã hết hạn do tìm nguồn lâu -> hiện khung nổi gọn trong app với nút 1 chạm bật OS Video PiP ngay lập tức!
-              vidEl.removeEventListener('leavepictureinpicture', onLeavePip);
-              if (typeof document !== 'undefined' && document.body) {
-                document.getElementById('mod39-desktop-floating-win')?.remove();
-                const win = document.createElement('div');
-                win.id = 'mod39-desktop-floating-win';
-                win.className =
-                  'fixed bottom-4 right-4 z-[175] w-[360px] sm:w-[420px] rounded-2xl overflow-hidden border-2 border-violet-500/80 bg-zinc-950 shadow-2xl';
-                const safeTitle = String(video.title || 'Video YouTube')
-                  .replace(/&/g, '&amp;')
-                  .replace(/</g, '&lt;')
-                  .replace(/>/g, '&gt;');
-                win.innerHTML = `
-                  <div id="mod39-floating-drag-bar" class="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-900 border-b border-zinc-800 cursor-move select-none text-xs">
-                    <span class="font-extrabold text-violet-200 truncate flex-1">🖼️ ${safeTitle}</span>
-                    <button type="button" id="btn-mod39-promote-os-pip" class="px-2 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[10.5px] transition">↗ Bật PiP OS</button>
-                    <button type="button" id="btn-mod39-close-floating-win" class="px-2 py-0.5 rounded-lg bg-zinc-800 hover:bg-rose-600 text-zinc-100 font-extrabold transition">✕</button>
-                  </div>
-                  <div id="mod39-floating-video-slot" class="relative w-full aspect-video bg-black"></div>
-                `;
-                document.body.appendChild(win);
-                const slot = win.querySelector('#mod39-floating-video-slot');
-                if (slot) {
-                  vidEl.controls = true;
-                  vidEl.style.width = '100%';
-                  vidEl.style.height = '100%';
-                  slot.appendChild(vidEl);
-                  vidEl.play().catch(() => {});
-                }
-                win.querySelector('#btn-mod39-promote-os-pip')?.addEventListener('click', async () => {
-                  vidEl.addEventListener('leavepictureinpicture', onLeavePip, { once: true });
-                  const r2 = await NS.nativePlayer.enterSystemPictureInPicture?.();
-                  if (r2 && r2.ok !== false && document.pictureInPictureElement === vidEl) {
-                    win.classList.add('hidden');
-                  }
-                });
-                win.querySelector('#btn-mod39-close-floating-win')?.addEventListener('click', () => {
-                  this.closeDesktopFloatingWindow();
-                });
-                this.syncStatusUi();
-                this.playerCtrl?.emitUiSync?.();
-                safeNotify('🖼️ Đã mở Cửa sổ nổi từ nguồn công cộng! Bấm "↗ Bật PiP OS" để nổi ra ngoài trình duyệt.', 'success', 3400);
-                return { ok: true, mode: 'desktop-native-floating' };
-              }
-            }
-          } catch (_eDeskLoop) {}
-
-          // Đợi 2.6 giây rồi tự thử lại nguồn Piped / Invidious khác (ngừng ngay nếu người dùng bấm tắt)
-          await new Promise((resolve) => setTimeout(resolve, 2600));
-        }
-
-        this._desktopFloatingSearching = false;
-        this.syncStatusUi();
-        return { ok: false, cancelled: true };
-      }
-
       const parser = NS.youtubeStudio?.parser;
       const embedUrl = parser
         ? parser.buildPrivacyEmbedUrl({
@@ -4983,16 +4868,19 @@
           })
         : `https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.videoId || '')}?autoplay=1&start=${startSec}&rel=0`;
 
-      // Ưu tiên dự phòng 1: Document Picture-in-Picture thật của hệ điều hành (Chrome / Edge / Desktop PWA)
+      // 2) Ưu tiên #1 trên Desktop (Chrome / Edge / Brave / Desktop PWA):
+      //    Document Picture-in-Picture (Cửa sổ nổi Always-On-Top thật của Windows/macOS, nổi trên mọi ứng dụng khác,
+      //    chạy youtube-nocookie.com trực tiếp tức thì 100%, KHÔNG bị YouTube chặn bot như các server Piped/Invidious công cộng!)
       if (
+        isDesktopDirectYoutubeEnv() &&
         typeof window !== 'undefined' &&
         window.documentPictureInPicture &&
         typeof window.documentPictureInPicture.requestWindow === 'function'
       ) {
         try {
           const pipWin = await window.documentPictureInPicture.requestWindow({
-            width: 440,
-            height: 292
+            width: 460,
+            height: 304
           });
           this._docPipWindow = pipWin;
           const doc = pipWin.document;
@@ -5007,25 +4895,78 @@
           doc.body.innerHTML = `
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:#18181b;border-bottom:1px solid #27272a;font-size:11px;font-weight:700;">
               <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">🖼️ ${safeTitle}</span>
-              <button id="pip-close-btn" type="button" style="background:#e11d48;color:#fff;border:0;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;">✕ Đóng</button>
+              <button id="pip-close-btn" type="button" style="background:#e11d48;color:#fff;border:0;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;">✕ Đóng &amp; Trả về gốc</button>
             </div>
             <div style="flex:1;position:relative;background:#000;">
-              <iframe src="${embedUrl}" style="width:100%;height:100%;border:0;" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+              <iframe id="pip-yt-iframe" src="${embedUrl}" style="width:100%;height:100%;border:0;" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
             </div>
           `;
-          doc.getElementById('pip-close-btn')?.addEventListener('click', () => {
+          const closeAndCleanDocPip = () => {
+            try {
+              const f = doc.getElementById('pip-yt-iframe');
+              if (f) f.src = 'about:blank';
+            } catch (_eF) {}
             try { pipWin.close(); } catch (_eC) {}
-          });
+          };
+          doc.getElementById('pip-close-btn')?.addEventListener('click', closeAndCleanDocPip);
           pipWin.addEventListener('pagehide', () => {
+            try {
+              const f = doc.getElementById('pip-yt-iframe');
+              if (f) f.src = 'about:blank';
+            } catch (_eF2) {}
             this._docPipWindow = null;
             this.restoreDesktopIframeAfterFloatingClose(null, true);
           });
           this.syncStatusUi();
           this.playerCtrl?.emitUiSync?.();
-          safeNotify('🖼️ Đã mở Cửa sổ nổi YouTube trên màn hình!', 'success', 2400);
+          safeNotify('🖼️ Đã bật Cửa sổ nổi Desktop (luôn nổi trên mọi ứng dụng)! Khi đóng sẽ tự tắt âm thanh phụ & trả về khung gốc.', 'success', 3200);
           return { ok: true, mode: 'document-pip' };
         } catch (_eDocPip) {
           this._docPipWindow = null;
+        }
+      }
+
+      // 3) Ưu tiên #2 (Trình duyệt chưa hỗ trợ Document PiP như Firefox): thử dò nhanh nguồn Piped/Invidious công cộng (4.5s) -> OS Video PiP
+      if (isDesktopDirectYoutubeEnv() && video.videoId && !video.isLive) {
+        const myToken = (this._desktopFloatingLoopToken || 0) + 1;
+        this._desktopFloatingLoopToken = myToken;
+        this._desktopFloatingSearching = true;
+        this.syncStatusUi();
+        safeNotify('🔎 Đang thử nguồn phát công cộng (Piped / Invidious) cho Cửa sổ nổi Video...', 'info', 2500);
+        try {
+          const upgraded = await this.upgradeActiveVideoToNativePlayer(video, {
+            autoplay: true,
+            startTime: startSec,
+            preferVideo: true,
+            timeoutMs: 4500
+          });
+          this._desktopFloatingSearching = false;
+          if (this._desktopFloatingLoopToken !== myToken) {
+            this.hardStopAllExtraYoutubeAudioEngines();
+            return { ok: false, cancelled: true };
+          }
+          if (upgraded && NS.nativePlayer?.isActive?.() && NS.nativePlayer.videoEl) {
+            this._desktopFloatingPublicStreamActive = true;
+            const vidEl = NS.nativePlayer.videoEl;
+            const onLeavePip = () => {
+              vidEl.removeEventListener('leavepictureinpicture', onLeavePip);
+              const curSec = Number.isFinite(vidEl.currentTime) ? Math.floor(vidEl.currentTime) : startSec;
+              const wasPlaying = !vidEl.paused;
+              this.restoreDesktopIframeAfterFloatingClose(curSec, wasPlaying);
+            };
+            vidEl.addEventListener('leavepictureinpicture', onLeavePip, { once: true });
+            const pipRes = await NS.nativePlayer.enterSystemPictureInPicture?.();
+            if (pipRes && pipRes.ok !== false && document.pictureInPictureElement === vidEl) {
+              this.syncStatusUi();
+              this.playerCtrl?.emitUiSync?.();
+              safeNotify('🖼️ Đã bật Cửa sổ nổi Video thật từ nguồn công cộng!', 'success', 3000);
+              return { ok: true, mode: 'desktop-native-video-pip' };
+            }
+            vidEl.removeEventListener('leavepictureinpicture', onLeavePip);
+            this.hardStopAllExtraYoutubeAudioEngines();
+          }
+        } catch (_eDeskTry) {
+          this._desktopFloatingSearching = false;
         }
       }
 
@@ -10224,27 +10165,12 @@
       const ytsaveUrl = 'https://ytsave.to/';
       this._lastOpenedYtSaveTarget = ytsaveUrl;
 
-      // Nếu người dùng đã bật "Điều hướng thẳng tới YTSave" từ trước -> mở thẳng không hiện cửa sổ nữa
-      const directRedirectPref = safeStorageGet(MOD39_CONSTANTS.STORAGE_KEYS.YTSAVE_DIRECT_REDIRECT);
-      if (directRedirectPref === '1') {
-        safeNotify('✅ Đã copy link thành công — Đang điều hướng thẳng tới YTSave!', 'success', 3000);
-        try {
-          if (typeof global.open === 'function') {
-            global.open(ytsaveUrl, '_blank', 'noopener,noreferrer');
-          }
-        } catch (_eOpenDirect) {}
-        return {
-          ok: true,
-          copied: Boolean(copiedOk),
-          directRedirect: true,
-          watchUrl,
-          ytsaveUrl
-        };
-      }
+      // Luôn xóa cờ điều hướng thẳng cũ để LUÔN hiện cửa sổ hướng dẫn cho người dùng chủ động bấm chuyển
+      try { safeStorageSet(MOD39_CONSTANTS.STORAGE_KEYS.YTSAVE_DIRECT_REDIRECT, '0'); } catch (_eClr) {}
 
-      safeNotify('✅ Đã copy link thành công, chờ bạn dán link vào ytsave', 'success', 3600);
+      safeNotify('✅ Đã tự động copy link YouTube! Bấm nút Mở YTSave bên dưới cửa sổ hướng dẫn để tải về nhé.', 'success', 3600);
 
-      // Mặc định CHỈ hiện cửa sổ hướng dẫn trực quan, KHÔNG tự nhảy thẳng sang trang YTSave
+      // Luôn hiện cửa sổ hướng dẫn trực quan, KHÔNG tự nhảy thẳng sang trang YTSave
       try {
         this.openYtSaveGuideModal(watchUrl, ytsaveUrl);
       } catch (_eGuide) {}
@@ -10327,20 +10253,13 @@
               <button type="button" id="btn-mod39-ytsave-recopy" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-bold shrink-0 transition">📋 Sao chép lại</button>
             </div>
 
-            <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-between gap-2.5 pt-1">
-              <button
-                type="button"
-                id="btn-mod39-ytsave-direct-always"
-                class="px-3 py-2 rounded-xl border border-sky-500/50 bg-sky-950/45 hover:bg-sky-900/60 text-sky-200 font-bold text-[11px] text-left sm:text-center leading-snug transition flex-1 min-w-[200px]"
-              >⚡ Điều hướng thẳng tới YTSave (Bạn sẽ không thấy cửa sổ này hiện lên ở lần sau)</button>
-              <div class="flex flex-wrap items-center justify-end gap-2 shrink-0">
-                <a href="${escHtml(ytsaveUrl)}" target="_blank" rel="noopener noreferrer" id="btn-mod39-ytsave-reopen" class="mod39-ytsave-open-super-blink px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-black text-xs shadow-lg border-2 border-amber-200/80 transition inline-flex items-center justify-center gap-1.5">
-                  <span>🚀 Mở YTSave Ngay ↗</span>
-                </a>
-                <button type="button" id="btn-mod39-ytsave-guide-done" class="px-3 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-200 font-bold transition">
-                  Đã hiểu, đóng lại
-                </button>
-              </div>
+            <div class="flex flex-wrap items-center justify-end gap-2.5 pt-1">
+              <button type="button" id="btn-mod39-ytsave-guide-done" class="px-3.5 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-200 font-bold transition">
+                Đã hiểu, đóng lại
+              </button>
+              <a href="${escHtml(ytsaveUrl)}" target="_blank" rel="noopener noreferrer" id="btn-mod39-ytsave-reopen" class="mod39-ytsave-open-super-blink px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-black text-xs shadow-lg border-2 border-amber-200/80 transition inline-flex items-center justify-center gap-1.5">
+                <span>🚀 Mở YTSave Ngay ↗</span>
+              </a>
             </div>
           </div>
         </div>

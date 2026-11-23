@@ -1988,6 +1988,10 @@
         NS.state.previousScreen = prevScreen;
         NS.state.activeScreen = normalizedId;
       }
+      if (typeof document !== 'undefined' && document.body) {
+        document.body.dataset.s14Screen = normalizedId;
+        document.body.dataset.activeScreen = normalizedId;
+      }
 
       const vp = this.viewportProfiler.measureAndUpdate(false);
       this.layoutApplier.applyScreenVisibility(normalizedId, vp);
@@ -3926,35 +3930,63 @@
       wfCollapseBtn?.addEventListener('click', () => setWfCollapsed(true));
       wfExpandBtn?.addEventListener('click', () => setWfCollapsed(false));
 
-      // Đồng bộ 2 chiều ô Số từ Chế độ 1 (giới hạn CỨNG tối đa 40.000) trong thanh Viết Tập Trung với #input-target-word-count
-      const focusWordInput = document.getElementById('input-focus-target-word-count');
-      const mainWordInput = document.getElementById('input-target-word-count');
-      if (focusWordInput && mainWordInput) {
-        focusWordInput.value = mainWordInput.value || '3500';
-        focusWordInput.addEventListener('input', () => {
-          let raw = Number(focusWordInput.value);
-          if (raw > 40000) {
-            raw = 40000;
-            focusWordInput.value = '40000';
-            NS.utils?.showToast?.('⚠️ Giới hạn tối đa là 40.000 từ mỗi lần chạy Prompt!', 'warning', 2400);
-          }
-          if (raw >= 300) {
-            mainWordInput.value = String(raw);
-            mainWordInput.dispatchEvent(new Event('change', { bubbles: true }));
-          }
+      // Chỉnh nhanh Cỡ chữ văn bản ngay trong thanh Viết Tập Trung (13px -> 32px)
+      const focusFontDec = document.getElementById('btn-focus-font-dec');
+      const focusFontInc = document.getElementById('btn-focus-font-inc');
+      const focusFontLabel = document.getElementById('label-focus-font-size');
+      const applyFocusFontSize = (nextPx) => {
+        const clamped = Math.max(13, Math.min(32, Math.round(Number(nextPx) || 16)));
+        const ed = document.getElementById('textarea-chapter-content');
+        if (ed) ed.style.fontSize = `${clamped}px`;
+        if (focusFontLabel) focusFontLabel.textContent = `${clamped}px`;
+        const mainSlider = document.getElementById('slider-editor-font-size') || document.getElementById('font-size-slider');
+        if (mainSlider) {
+          mainSlider.value = String(clamped);
+        }
+        try { localStorage.setItem('noir_v108_focus_font_size_px', String(clamped)); } catch (_e) {}
+      };
+      const getCurrentEditorFontPx = () => {
+        const ed = document.getElementById('textarea-chapter-content');
+        const inlinePx = ed ? parseFloat(ed.style.fontSize) : NaN;
+        if (Number.isFinite(inlinePx) && inlinePx >= 12) return inlinePx;
+        try {
+          const saved = Number(localStorage.getItem('noir_v108_focus_font_size_px'));
+          if (saved >= 13 && saved <= 32) return saved;
+        } catch (_e) {}
+        return ed ? parseFloat(window.getComputedStyle(ed).fontSize) || 16 : 16;
+      };
+      if (focusFontLabel) {
+        const initPx = Math.round(getCurrentEditorFontPx());
+        focusFontLabel.textContent = `${initPx}px`;
+      }
+      focusFontDec?.addEventListener('click', () => applyFocusFontSize(getCurrentEditorFontPx() - 1));
+      focusFontInc?.addEventListener('click', () => applyFocusFontSize(getCurrentEditorFontPx() + 1));
+
+      // Bộ bảo vệ chống lag / đơ tương tác khi người dùng chuyển qua ứng dụng khác rồi quay lại web/app
+      if (!this._visibilityUnstickBound) {
+        this._visibilityUnstickBound = true;
+        const unstickAfterReturn = () => {
+          if (document.hidden) return;
+          try {
+            document.body.style.pointerEvents = '';
+            document.documentElement.style.pointerEvents = '';
+            const busyAi = Boolean(
+              NS.promptSynthesizer?.isExecutingOfficialPrompt ||
+              NS.promptSynthesizer?.isSynthesizing ||
+              NS.smartApproval?.isRunning
+            );
+            const loader = document.getElementById('global-ai-blocking-loader');
+            if (loader && !loader.classList.contains('hidden') && !busyAi) {
+              loader.classList.add('hidden');
+            }
+            const tip = document.getElementById('noir-smart-delayed-tooltip');
+            if (tip) tip.classList.remove('is-visible');
+          } catch (_eUnstick) {}
+        };
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) setTimeout(unstickAfterReturn, 80);
         });
-        focusWordInput.addEventListener('change', () => {
-          const clamped = Math.max(300, Math.min(40000, Number(focusWordInput.value) || 3500));
-          focusWordInput.value = String(clamped);
-          mainWordInput.value = String(clamped);
-          mainWordInput.dispatchEvent(new Event('change', { bubbles: true }));
-        });
-        mainWordInput.addEventListener('input', () => {
-          focusWordInput.value = mainWordInput.value || '3500';
-        });
-        mainWordInput.addEventListener('change', () => {
-          focusWordInput.value = mainWordInput.value || '3500';
-        });
+        window.addEventListener('focus', () => setTimeout(unstickAfterReturn, 80));
       }
 
       const splitBible = document.getElementById('tab1-split-bible-textarea');
