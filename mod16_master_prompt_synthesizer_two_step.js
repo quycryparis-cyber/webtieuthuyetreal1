@@ -5651,6 +5651,16 @@
           this.openExpandedCommandFocusModal();
         });
       }
+      if (!document.__v113ExpandCmdCaptureBound) {
+        document.__v113ExpandCmdCaptureBound = true;
+        document.addEventListener('click', (ev) => {
+          const hit = ev.target?.closest?.('#btn-toggle-prompt-box-expand');
+          if (!hit) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          this.openExpandedCommandFocusModal();
+        }, true);
+      }
 
       // 2 nút lớn trên cùng: FILE STORY BIBLE & THAM MƯU CỐT TRUYỆN (tick chỉ bật/tắt, bấm thân nút mở cửa sổ nổi!)
       document.getElementById('btn-cmd-hero-story-bible-viewer')?.addEventListener('click', () => {
@@ -5727,7 +5737,9 @@
     openExpandedCommandFocusModal() {
       document.getElementById('modal-v111-expanded-cmd-editor')?.remove();
 
-      const modeKey = this.getActiveModeKey();
+      const modeKey =
+        document.getElementById('select-ai-execution-mode')?.value ||
+        (typeof this.getActiveModeKey === 'function' ? this.getActiveModeKey() : 'MODE_1_DRAFT');
       const modeNameMap = {
         MODE_1_DRAFT: 'Chế độ 1: Viết Truyện',
         MODE_2_BRAINSTORM: 'Chế độ 2: Tham Mưu Cốt Truyện',
@@ -5736,24 +5748,33 @@
         MODE_5_DIAGRAM: 'Chế độ 5: Vẽ Sơ Đồ ASCII',
         MODE_6_BOOK_COVER: 'Chế độ 6: Tạo Bìa Truyện'
       };
+      const esc = (s) =>
+        String(s || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
       const modeTitle = modeNameMap[modeKey] || modeKey;
-      const srcRich = document.getElementById('rich-ai-user-command');
-      const srcPlain = document.getElementById('textarea-ai-user-command');
-      let modalRichMode = Boolean(this.richModeActive);
+      const srcRich =
+        document.getElementById('s18-rich-prompt-editor') ||
+        document.getElementById('rich-ai-user-command');
+      const srcPlain =
+        document.getElementById('s18-fullscreen-prompt-textarea') ||
+        document.getElementById('textarea-ai-user-command');
+      let modalRichMode = srcRich ? !srcRich.classList.contains('hidden') : Boolean(this.richModeActive);
 
       const modal = document.createElement('div');
       modal.id = 'modal-v111-expanded-cmd-editor';
       modal.setAttribute('role', 'dialog');
       modal.setAttribute('aria-modal', 'true');
       modal.className =
-        'fixed inset-0 z-[210] bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4';
+        'fixed inset-0 z-[99999] bg-black/88 backdrop-blur-md flex items-center justify-center p-2 sm:p-4';
 
       modal.innerHTML = `
         <div class="w-full max-w-5xl h-[92vh] rounded-2xl border-2 border-emerald-400/75 bg-zinc-950 text-zinc-100 shadow-2xl flex flex-col overflow-hidden">
           <div class="px-4 py-2.5 border-b border-zinc-800 bg-zinc-900/95 flex flex-wrap items-center justify-between gap-2 shrink-0">
             <div class="flex items-center gap-2 min-w-0">
               <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-200 font-black text-xs truncate">
-                ✍️ Phóng To Ô Nhập Lệnh — ${this.escapeHtml(modeTitle)}
+                ✍️ Phóng To Ô Nhập Lệnh — ${esc(modeTitle)}
               </span>
               <span id="v111-expand-char-count" class="text-[11px] font-mono text-zinc-400">0 ký tự</span>
             </div>
@@ -5804,7 +5825,7 @@
         const curPlain = modalRichMode ? expRich?.innerText || '' : expPlain?.value || '';
         const curHtml = modalRichMode
           ? expRich?.innerHTML || ''
-          : this.escapeHtml(curPlain).replace(/\r\n|\r|\n/g, '<br>');
+          : esc(curPlain).replace(/\r\n|\r|\n/g, '<br>');
         if (srcRich) srcRich.innerHTML = curHtml;
         if (srcPlain) {
           srcPlain.value = curPlain;
@@ -5879,7 +5900,7 @@
         modalRichMode = !modalRichMode;
         if (modalRichMode) {
           if (expRich && expPlain) {
-            expRich.innerHTML = this.escapeHtml(expPlain.value || '').replace(/\r\n|\r|\n/g, '<br>');
+            expRich.innerHTML = esc(expPlain.value || '').replace(/\r\n|\r|\n/g, '<br>');
           }
           expRich?.classList.remove('hidden');
           expPlain?.classList.add('hidden');

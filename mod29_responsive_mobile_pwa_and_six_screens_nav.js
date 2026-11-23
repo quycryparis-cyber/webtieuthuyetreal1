@@ -4171,7 +4171,7 @@
       const nextCollapsed = !Boolean(this.scopeCollapsedState[scopeId]);
       this.scopeCollapsedState[scopeId] = nextCollapsed;
 
-      // 1) Toàn bộ nút chuẩn .noir-collapse-toggle bên trong phạm vi
+      // 1) Toàn bộ nút chuẩn .noir-collapse-toggle bên trong phạm vi -> tự đồng bộ sang "Mở rộng ▾" khi thu gọn tất cả!
       rootEl
         .querySelectorAll('.noir-collapse-toggle[data-noir-collapse-target]')
         .forEach((toggleBtn) => {
@@ -4182,22 +4182,43 @@
           } else {
             const target = document.getElementById(targetId);
             if (target) target.classList.toggle('hidden', nextCollapsed);
+            toggleBtn.setAttribute('aria-expanded', nextCollapsed ? 'false' : 'true');
+            const lbl = toggleBtn.querySelector('.noir-collapse-state-label');
+            if (lbl) lbl.textContent = nextCollapsed ? this._tr('Mở rộng') : this._tr('Thu gọn');
+            const arr = toggleBtn.querySelector('.noir-collapse-arrow');
+            if (arr) arr.textContent = nextCollapsed ? '▾' : '▴';
           }
         });
 
-      // 2) Các khối thu gọn đặc thù theo từng Tab / Trung tâm điều khiển AI
+      // 2) Các khối thu gọn đặc thù theo từng Tab / Trung tâm điều khiển AI + đồng bộ trạng thái nút con sang "Mở rộng"
       if (scopeId === 'TAB_1') {
         const deskGroup = document.getElementById('tab1-desk-actions-collapsible-group');
         const deskBtn = document.getElementById('btn-toggle-tab1-desk-actions');
-        if (deskGroup && deskBtn) {
-          const isCurHidden = deskGroup.classList.contains('hidden');
-          if (isCurHidden !== nextCollapsed) deskBtn.click();
+        if (deskGroup) deskGroup.classList.toggle('hidden', nextCollapsed);
+        if (deskBtn) {
+          deskBtn.setAttribute('aria-expanded', nextCollapsed ? 'false' : 'true');
+          deskBtn.innerHTML = nextCollapsed
+            ? `<span>▼ ${this._tr('Mở rộng chức năng bàn viết truyện')}</span>`
+            : `<span>▲ ${this._tr('Thu gọn chức năng bàn viết truyện')}</span>`;
         }
         const wfBar = document.getElementById('tab1-four-step-workflow-bar');
         const wfBtn = document.getElementById('btn-toggle-tab1-workflow-bar');
-        if (wfBar && wfBtn) {
-          const isCurHidden = wfBar.classList.contains('hidden');
-          if (isCurHidden !== nextCollapsed) wfBtn.click();
+        const wfRestoreBtn = document.getElementById('btn-expand-tab1-workflow-bar');
+        if (wfBar) wfBar.classList.toggle('hidden', nextCollapsed);
+        if (wfRestoreBtn) wfRestoreBtn.classList.toggle('hidden', !nextCollapsed);
+        if (wfBtn) {
+          wfBtn.setAttribute('aria-expanded', nextCollapsed ? 'false' : 'true');
+          wfBtn.innerHTML = nextCollapsed
+            ? `<span>▼ ${this._tr('Mở rộng')}</span>`
+            : `<span>▲ ${this._tr('Thu gọn')}</span>`;
+        }
+      } else if (scopeId === 'TAB_2') {
+        // Thu gọn đồng thời cả danh sách cây chương (#chapter-tree-container) để trở về thành 1 thanh thu gọn duy nhất!
+        const treeEl = document.getElementById('chapter-tree-container');
+        if (treeEl) treeEl.classList.toggle('hidden', nextCollapsed);
+        const sidebarEl = document.getElementById('left-sidebar-pane');
+        if (sidebarEl) {
+          sidebarEl.classList.toggle('tab2-all-collapsed-bar', nextCollapsed);
         }
       } else if (scopeId === 'AI_CENTER') {
         const heroTop = document.getElementById('cmd-hero-links-topbar');
@@ -4211,12 +4232,14 @@
             ? `▼ ${this._tr('Mở rộng gợi ý')}`
             : `▲ ${this._tr('Thu gọn gợi ý')}`;
         }
-      } else if (scopeId === 'TAB_5') {
-        // Hỗ trợ thêm các thẻ <details> & nút thu gọn nội bộ trong Tab 5
-        rootEl.querySelectorAll('details').forEach((d) => {
-          d.open = !nextCollapsed;
-        });
-      } else if (scopeId === 'TAB_6') {
+        const linksPills = document.getElementById('cmd-mode1-links-pills');
+        const linksDrawerBtn = document.getElementById('btn-toggle-cmd-links-drawer');
+        if (linksPills) linksPills.classList.toggle('hidden', nextCollapsed);
+        if (linksDrawerBtn) {
+          linksDrawerBtn.setAttribute('aria-expanded', nextCollapsed ? 'false' : 'true');
+          linksDrawerBtn.textContent = nextCollapsed ? `▾ ${this._tr('Mở rộng')}` : `▴ ${this._tr('Thu gọn')}`;
+        }
+      } else if (scopeId === 'TAB_5' || scopeId === 'TAB_6') {
         rootEl.querySelectorAll('details').forEach((d) => {
           d.open = !nextCollapsed;
         });
@@ -4312,6 +4335,75 @@
           aiCloseBtn
         );
       }
+
+      // v113: Thanh kéo mở rộng / thu hẹp chiều ngang Danh Sách Chương trên Desktop
+      this.mountTab2SidebarResizer();
+    }
+
+    mountTab2SidebarResizer() {
+      const aside = document.getElementById('left-sidebar-pane');
+      const handle = document.getElementById('tab2-sidebar-resizer');
+      if (!aside || !handle || handle.dataset.v113ResizerBound === '1') return;
+      handle.dataset.v113ResizerBound = '1';
+      const WIDTH_KEY = 'noir_v113_tab2_sidebar_width_px';
+
+      const applySavedWidth = () => {
+        try {
+          if (window.innerWidth < 1024) {
+            aside.style.width = '';
+            return;
+          }
+          const saved = Number(localStorage.getItem(WIDTH_KEY) || 0);
+          if (Number.isFinite(saved) && saved >= 260 && saved <= 680) {
+            aside.style.width = `${Math.round(saved)}px`;
+          }
+        } catch (_eW) {}
+      };
+      applySavedWidth();
+      window.addEventListener('resize', applySavedWidth);
+
+      let dragging = false;
+      let startX = 0;
+      let startW = 0;
+
+      handle.addEventListener('pointerdown', (ev) => {
+        if (window.innerWidth < 1024) return;
+        ev.preventDefault();
+        dragging = true;
+        startX = ev.clientX;
+        startW = aside.getBoundingClientRect().width || 384;
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'col-resize';
+        try { handle.setPointerCapture(ev.pointerId); } catch (_eCap) {}
+      });
+
+      handle.addEventListener('pointermove', (ev) => {
+        if (!dragging) return;
+        const maxW = Math.min(680, Math.max(320, window.innerWidth - 360));
+        const nextW = Math.max(260, Math.min(maxW, Math.round(startW + (ev.clientX - startX))));
+        aside.style.width = `${nextW}px`;
+      });
+
+      const endDrag = () => {
+        if (!dragging) return;
+        dragging = false;
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        try {
+          const w = Math.round(aside.getBoundingClientRect().width);
+          if (w >= 260 && w <= 680) {
+            localStorage.setItem(WIDTH_KEY, String(w));
+          }
+        } catch (_eSave) {}
+      };
+      handle.addEventListener('pointerup', endDrag);
+      handle.addEventListener('pointercancel', endDrag);
+
+      handle.addEventListener('dblclick', () => {
+        if (window.innerWidth < 1024) return;
+        aside.style.width = '';
+        try { localStorage.removeItem(WIDTH_KEY); } catch (_eRm) {}
+      });
     }
   }
 

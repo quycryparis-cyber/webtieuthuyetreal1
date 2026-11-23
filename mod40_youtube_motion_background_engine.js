@@ -697,17 +697,27 @@
         html.dark body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} [id^="s14-screen-"] .dark\\:bg-zinc-950,
         html.dark body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} [id^="s14-screen-"] .dark\\:bg-slate-900,
         html.dark body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} [id^="s14-screen-"] .dark\\:bg-slate-950,
-        html.dark body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} [id^="s14-screen-"] .rounded-2xl,
-        html.dark body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} [id^="s14-screen-"] .rounded-xl,
-        html.dark body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} [id^="s14-panel-"],
+        html.dark body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} [id^="s14-screen-"] .rounded-2xl:not(#mod39-player-stage-wrapper),
+        html.dark body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} [id^="s14-screen-"] .rounded-xl:not(#mod39-player-stage-wrapper),
+        html.dark body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} [id^="s14-panel-"]:not(#s14-panel-youtube-box),
         html.dark body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} #tab5-youtube-big-card,
-        html.dark body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} #s14-panel-youtube-box,
         html.dark body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} #s14-panel-typography-box,
         html.dark body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} #mod39-empty-stage-card {
           background-color: rgba(14, 19, 29, var(--noir-ambient-card-dark, 0.28)) !important;
           background-image: none !important;
           backdrop-filter: blur(8px) !important;
           -webkit-backdrop-filter: blur(8px) !important;
+        }
+        /* Tuyệt đối giữ khung phát video YouTube & thẻ bọc trực tiếp sạch không bị backdrop-filter của Mod 40 che mảng tối GPU */
+        body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} #mod39-player-stage-wrapper,
+        body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} #s14-panel-youtube-box,
+        body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} #tab5-youtube-big-card,
+        body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} #s14-screen-5-ambience {
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+        }
+        body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} #mod39-player-stage-wrapper {
+          background-color: #000000 !important;
         }
 
         html.dark body.${MOD40_CONSTANTS.BODY_CLASS_MOD40_ACTIVE} #main-editor,

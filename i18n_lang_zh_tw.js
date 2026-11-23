@@ -4667,6 +4667,14 @@
     "🔄 Xem Sơ Đồ SVG": "🔄 檢視 SVG 圖譜",
     "🖼️ Xem Ảnh Sơ Đồ Đã Lưu": "🖼️ 檢視已存圖譜圖片",
     "🎛️ Chọn Chế Độ (1–6) · Mô Hình Gemini · Số Từ Đầu Ra · Mức Tư Duy": "🎛️ 執行模式 (1–6) · Gemini 模型 · 輸出字數 · 思考深度",
+    "🔍 Tìm Kiếm Nhanh Chi Tiết Truyện": "🔍 快速搜尋小說細節",
+    "Bộ nhớ tìm nhanh: Sẵn sàng": "快速搜尋記憶：已就緒",
+    "⊞ + Bảng": "⊞ + 表格",
+    "Video đang chạy ở Cửa sổ nổi (Đồng bộ 2 chiều)": "影片正在浮動視窗中播放（雙向同步）",
+    "✕ Đóng Cửa sổ nổi & Trả về khung gốc": "✕ 關閉浮動視窗並返回原畫面",
+    "⏳ Đang tải toàn bộ tài nguyên & 45 module Studio...": "⏳ 正在載入全部資源與 45 個工坊模組...",
+    "📦 Đang nạp dữ liệu chương, Story Bible & hoàn tất giao diện...": "📦 正在載入章節資料、故事聖經並完成介面同步...",
+    "✨ Sẵn sàng sáng tác!": "✨ 準備就緒，開始創作！",
   });
 
   const promptExact = Object.freeze({

@@ -922,6 +922,7 @@
       this.telemetry.recordStep('mod30_serviceWorker', 'OK', Date.now() - startedSw, this.swCoordinator.status);
 
       this.hasBooted = true;
+      NS.__MOD30_ALL_BOOT_DONE__ = true;
       this.telemetry.markBootCompleted();
 
       if (NS.bus?.emit && NS.constants?.EVENTS?.BOOT_COMPLETE) {

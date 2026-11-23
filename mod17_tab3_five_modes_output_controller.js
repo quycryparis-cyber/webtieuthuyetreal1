@@ -2426,6 +2426,25 @@
         });
       });
 
+      const addTableBtn = document.getElementById('btn-tab3-rich-add-table');
+      if (addTableBtn && !addTableBtn.dataset.v113Bound) {
+        addTableBtn.dataset.v113Bound = '1';
+        addTableBtn.addEventListener('click', () => {
+          if (!editor) return;
+          if (!this.isRichMode && toggleBtn) toggleBtn.click();
+          editor.focus();
+          const tblHtml =
+            '<table style="width:100%;border-collapse:collapse;margin:8px 0;"><thead><tr><th>Mục / Nhân vật</th><th>Chi tiết</th><th>Ghi chú</th></tr></thead><tbody><tr><td>1</td><td>...</td><td>...</td></tr><tr><td>2</td><td>...</td><td>...</td></tr></tbody></table><p><br></p>';
+          try {
+            document.execCommand('insertHTML', false, tblHtml);
+          } catch (_) {
+            editor.innerHTML += tblHtml;
+          }
+          syncEditorToController();
+          this._toast('⊞ Đã chèn bảng chuẩn Word vào cửa sổ đầu ra!', 'success', 2200);
+        });
+      }
+
       if (addImgBtn && imgInput && !addImgBtn.dataset.v109Bound) {
         addImgBtn.dataset.v109Bound = '1';
         addImgBtn.addEventListener('click', () => imgInput.click());

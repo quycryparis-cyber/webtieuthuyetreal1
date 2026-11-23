@@ -1112,7 +1112,8 @@
         }, true);
       } catch (_eSub) {}
       try {
-        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v112';
+        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v113';
+        window.__noirAppUserEntered = false;
         if (typeof window !== 'undefined' && 'caches' in window && window.caches && typeof window.caches.keys === 'function') {
           window.caches.keys().then(function (keys) {
             for (var i = 0; i < keys.length; i++) {
@@ -1127,6 +1128,8 @@
           navigator.serviceWorker.addEventListener('controllerchange', function () {
             try {
               if (!hadPrevController) return;
+              // Tuyệt đối không tải lại trang giữa chừng sau khi người dùng đã vào giao diện chính (chống lỗi load 2 lần sau 5 giây!)
+              if (window.__noirAppUserEntered) return;
               var reloadFlagKey = '__noir_sw_synced_' + TARGET_SW_CACHE;
               if (window.sessionStorage && window.sessionStorage.getItem(reloadFlagKey) === '1') return;
               if (window.sessionStorage) window.sessionStorage.setItem(reloadFlagKey, '1');
@@ -1158,7 +1161,7 @@
     </div>
     <div style="text-align:center;max-width:340px;">
       <div style="font-size:15px;font-weight:900;color:#ecfdf5;letter-spacing:0.02em;">Sổ Tay Tiểu Thuyết Của Bi</div>
-      <div id="app-boot-splash-status" style="margin-top:6px;font-size:12px;font-weight:600;color:#a7f3d0;">⏳ Đang tải toàn bộ tài nguyên &amp; khởi động Studio...</div>
+      <div id="app-boot-splash-status" style="margin-top:6px;font-size:12px;font-weight:600;color:#a7f3d0;">⏳ Đang tải toàn bộ tài nguyên &amp; 45 module Studio...</div>
     </div>
   </div>
   <script>
@@ -1167,6 +1170,7 @@
       function dismissBootSplash() {
         if (dismissed) return;
         dismissed = true;
+        window.__noirAppUserEntered = true;
         var el = document.getElementById('app-boot-splash-screen');
         if (!el) return;
         el.style.opacity = '0';
@@ -1177,18 +1181,37 @@
       window.__noirDismissBootSplash = dismissBootSplash;
       window.addEventListener('load', function () {
         var st = document.getElementById('app-boot-splash-status');
-        if (st) st.textContent = '✨ Đang hoàn tất đồng bộ giao diện...';
+        if (st) st.textContent = '📦 Đang nạp dữ liệu chương, Story Bible & hoàn tất giao diện...';
         var tries = 0;
         var checkReady = setInterval(function () {
           tries += 1;
-          var coreReady = Boolean(window.NoirStudio && window.NoirStudio.navigator && window.NoirStudio.chapterManager);
-          if (coreReady || tries >= 20) {
+          var ns = window.NoirStudio;
+          var allBootDone = Boolean(ns && ns.__MOD30_ALL_BOOT_DONE__ === true);
+          var fallbackCoreReady = Boolean(tries >= 45 && ns && ns.navigator && ns.chapterManager);
+          if (allBootDone || fallbackCoreReady || tries >= 65) {
             clearInterval(checkReady);
-            setTimeout(dismissBootSplash, 220);
+            var finishAfterFonts = function () {
+              if (st) st.textContent = '✨ Sẵn sàng sáng tác!';
+              setTimeout(dismissBootSplash, 320);
+            };
+            try {
+              if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === 'function') {
+                var settled = false;
+                var doneOnce = function () {
+                  if (settled) return;
+                  settled = true;
+                  finishAfterFonts();
+                };
+                document.fonts.ready.then(doneOnce).catch(doneOnce);
+                setTimeout(doneOnce, 1200);
+                return;
+              }
+            } catch (_eFont) {}
+            finishAfterFonts();
           }
         }, 120);
       });
-      setTimeout(dismissBootSplash, 4800);
+      setTimeout(dismissBootSplash, 8500);
     })();
   </script>
 
@@ -1309,7 +1332,7 @@
             </li>
             <li class="flex items-start gap-2 bg-zinc-950/55 border border-zinc-800/80 rounded-xl p-2 sm:px-2.5">
               <span class="shrink-0 mt-0.5">📚</span>
-              <span><strong class="text-sky-300">Xuất PDF đẹp chuẩn sách, .DOCX &amp; 40+ tính năng khác hoàn toàn FREE:</strong> Tùy chỉnh font/khổ sách, lưu tự động 3 tầng ra ổ cứng thật, Ký ức BM25 (0 token), Time-Machine và đồng bộ đa máy.</span>
+              <span><strong class="text-sky-300">Xuất PDF đẹp chuẩn sách, .DOCX &amp; 40+ tính năng khác hoàn toàn FREE:</strong> Tùy chỉnh font/khổ sách, lưu tự động 3 tầng ra ổ cứng thật, Tìm kiếm nhanh chi tiết truyện trên máy (0 token), Time-Machine và đồng bộ đa máy.</span>
             </li>
           </ul>
         </div>
@@ -1549,7 +1572,7 @@
     <!-- =================================================================== -->
     <!-- CỘT TRÁI (HIỆN Ở TAB 2: QUẢN LÝ CHƯƠNG, CỔNG DUYỆT & FILE NGUỒN)    -->
     <!-- =================================================================== -->
-    <aside id="left-sidebar-pane" class="hidden w-full lg:w-96 xl:w-[420px] min-h-0 border-r border-studioLightBorder dark:border-noirBorder bg-studioLightPanel/95 dark:bg-noirPanel/95 flex flex-col shrink-0 overflow-hidden">
+    <aside id="left-sidebar-pane" class="hidden relative w-full lg:w-96 xl:w-[420px] min-h-0 border-r border-studioLightBorder dark:border-noirBorder bg-studioLightPanel/95 dark:bg-noirPanel/95 flex flex-col shrink-0 overflow-hidden">
       <div class="px-3 py-2.5 border-b border-studioLightBorder dark:border-noirBorder space-y-2 shrink-0">
         <div class="flex flex-wrap items-center justify-between gap-2 min-w-0 max-w-full">
           <h2 class="text-xs font-extrabold uppercase tracking-wider text-emerald-500 flex items-center gap-1.5 whitespace-nowrap shrink-0">
@@ -1558,12 +1581,6 @@
           <div class="w-full sm:w-auto max-w-full min-w-0 flex items-center gap-1.5 flex-wrap justify-start sm:justify-end">
             <button type="button" id="btn-tab2-collapse-sidebar" class="px-2 py-1 rounded-lg border border-amber-500/50 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-bold text-[10px] transition whitespace-nowrap" title="Thu gọn danh sách chương sang bên trái cho rộng màn hình">
               <span>◀ Thu gọn</span>
-            </button>
-            <button type="button" id="btn-tab2-sync-from-disk" class="px-2 py-1 rounded-lg border border-cyan-500/45 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-200 font-bold text-[10px] transition whitespace-nowrap" title="Đồng bộ 2 chiều tên thư mục Quyển / Chương / Cảnh với thư mục công việc trên máy tính">
-              <span>🔄 Đồng bộ thư mục</span>
-            </button>
-            <button type="button" id="btn-tab2-split-gemini" class="px-2 py-1 rounded-lg border border-indigo-500/50 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-200 font-bold text-[10px] transition whitespace-nowrap" title="Copy câu lệnh & chia đôi màn hình làm việc cùng Gemini Web/App">
-              <span>🪟 Chia đôi màn hình với Gemini</span>
             </button>
             <button type="button" id="btn-toggle-tab2-filters" data-noir-collapse-target="tab2-filter-import-collapsible-body" data-noir-collapse-key="tab2_filter_import" class="noir-collapse-toggle px-2.5 py-1 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-300 font-bold text-[10.5px] transition whitespace-nowrap" title="Mở rộng / Rút gọn bộ lọc chương, nạp DOCX/PDF và sao lưu JSON">
               <span>🎛️ Công cụ &amp; Lọc</span> <span class="noir-collapse-arrow">▾</span>
@@ -1599,13 +1616,15 @@
       <!-- Danh sách cây chương (Cho phép bấm chọn, đổi tên trực tiếp, xóa chương) -->
       <div id="chapter-tree-container" class="flex-1 overflow-y-auto p-2.5 space-y-2 select-text"></div>
 
-      <!-- Khu vực tìm kiếm chống quên cục bộ BM25 (0 Token - Mặc định rút gọn sẵn) -->
+      <!-- Khu vực Tìm kiếm nhanh chi tiết truyện trên máy (0 Token - Mặc định rút gọn sẵn, có nút Thu gọn/Mở rộng rõ ràng) -->
       <div class="px-3 py-2 border-t border-studioLightBorder dark:border-noirBorder bg-studioLightBg/70 dark:bg-zinc-950/80 space-y-2 shrink-0">
-        <button type="button" id="btn-toggle-tab2-rag" data-noir-collapse-target="tab2-rag-collapsible-body" data-noir-collapse-key="tab2_rag_search" class="noir-collapse-toggle w-full flex items-center justify-between text-[11px] text-left">
-          <span class="font-bold uppercase text-amber-400 flex items-center gap-1">🔍 Tra Cứu BM25 (0 Token)</span>
-          <span class="flex items-center gap-2">
+        <button type="button" id="btn-toggle-tab2-rag" data-noir-collapse-target="tab2-rag-collapsible-body" data-noir-collapse-key="tab2_rag_search" class="noir-collapse-toggle w-full flex items-center justify-between gap-2 text-[11px] text-left">
+          <span class="font-bold text-amber-400 flex items-center gap-1 min-w-0 truncate" title="Tìm kiếm tức thì tên nhân vật, vật phẩm, địa danh hoặc chi tiết đã viết trong toàn bộ bản thảo ngay trên máy (miễn phí 0 Token)">🔍 Tìm Kiếm Nhanh Chi Tiết Truyện</span>
+          <span class="flex items-center gap-1.5 shrink-0">
             <span id="rag-index-count" class="font-monoCode text-[10px] text-zinc-400">0 đoạn ký ức</span>
-            <span class="noir-collapse-arrow text-amber-400 font-bold">▾</span>
+            <span class="px-1.5 py-0.5 rounded-md border border-amber-500/50 bg-amber-500/15 text-[10px] font-bold text-amber-200 whitespace-nowrap">
+              <span class="noir-collapse-state-label">Mở rộng</span> <span class="noir-collapse-arrow">▾</span>
+            </span>
           </span>
         </button>
         <div id="tab2-rag-collapsible-body" class="hidden space-y-2">
@@ -1615,6 +1634,10 @@
           </div>
           <div id="rag-search-results" class="max-h-36 overflow-y-auto space-y-1.5 text-[11px] select-text"></div>
         </div>
+      </div>
+      <!-- Thanh kéo mở rộng / thu hẹp chiều ngang Danh Sách Chương trên Desktop -->
+      <div id="tab2-sidebar-resizer" class="hidden lg:flex items-center justify-center absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-emerald-500/35 active:bg-emerald-500/55 transition z-30 select-none" title="Kéo sang trái / phải để chỉnh độ rộng Danh Sách Chương (Double-click để đặt lại mặc định)">
+        <div class="w-0.5 h-10 rounded-full bg-zinc-500/60 pointer-events-none"></div>
       </div>
     </aside>
     <button type="button" id="btn-tab2-expand-sidebar" class="hidden fixed left-2 top-1/2 -translate-y-1/2 z-40 px-2.5 py-3 rounded-r-2xl rounded-l-lg border-2 border-emerald-400/75 bg-zinc-950/95 hover:bg-emerald-700 text-emerald-200 hover:text-white font-extrabold text-[11px] shadow-2xl transition flex flex-col items-center gap-1" title="Mở lại Danh Sách Chương">
@@ -1776,6 +1799,7 @@
                   <button type="button" data-tab3-rich-exec="bold" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white font-black" title="In đậm">B</button>
                   <button type="button" data-tab3-rich-exec="italic" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white italic font-serif" title="In nghiêng">I</button>
                   <button type="button" data-tab3-rich-exec="underline" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white underline" title="Gạch chân">U</button>
+                  <button type="button" id="btn-tab3-rich-add-table" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-emerald-300 font-bold" title="Chèn bảng biểu chuẩn Word / Google Docs">⊞ + Bảng</button>
                   <button type="button" id="btn-tab3-rich-add-img" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-sky-300 font-bold" title="Chèn ảnh hoặc dán ảnh trực tiếp Ctrl+V">🖼️ + Ảnh</button>
                   <input type="file" id="input-tab3-rich-img" accept="image/*" class="hidden" />
                 </div>
@@ -3407,7 +3431,7 @@
               <span id="cmd-mode1-links-pills" class="inline-flex items-center gap-1.5 flex-wrap">
                 <span id="cmd-bible-status-pill" class="px-2 py-0.5 rounded-md bg-zinc-900 border border-emerald-500/40 text-emerald-300 font-monoCode">Story Bible: Đã nạp</span>
                 <span id="cmd-scenes-status-pill" class="px-2 py-0.5 rounded-md bg-zinc-900 border border-amber-500/40 text-amber-300 font-monoCode">Mốc chuyển cảnh: 0 mốc</span>
-                <span id="cmd-rag-status-pill" class="px-2 py-0.5 rounded-md bg-zinc-900 border border-indigo-500/40 text-indigo-300 font-monoCode">Chống quên BM25: Sẵn sàng</span>
+                <span id="cmd-rag-status-pill" class="px-2 py-0.5 rounded-md bg-zinc-900 border border-indigo-500/40 text-indigo-300 font-monoCode">Bộ nhớ tìm nhanh: Sẵn sàng</span>
                 <span id="cmd-mode2-plot-pill" class="hidden px-2 py-0.5 rounded-md bg-zinc-900 border border-amber-400/50 text-amber-200 font-monoCode">Cốt truyện Chế độ 2: Đã liên kết</span>
               </span>
             </div>
@@ -3438,7 +3462,7 @@
               ✍️ Nhập Câu Lệnh, Dàn Ý Phân Cảnh Hoặc Yêu Cầu Cụ Thể Cho AI:
             </label>
             <div class="flex items-center gap-2">
-              <button type="button" id="btn-toggle-prompt-box-expand" onclick="(function(btn){var t=document.getElementById('s18-fullscreen-prompt-textarea');if(!t)return;var big=t.classList.toggle('min-h-[68vh]');t.classList.toggle('min-h-[42vh]',!big);btn.textContent=big?'⤡ Thu gọn ô nhập':'⤢ Phóng to ô nhập';})(this)" class="px-2 py-0.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 font-bold text-[10px] transition">
+              <button type="button" id="btn-toggle-prompt-box-expand" class="noir-v111-expand-glow px-2.5 py-1 rounded-lg border-2 border-emerald-400/75 bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-200 font-extrabold text-[10.5px] shadow transition cursor-pointer">
                 ⤢ Phóng to ô nhập
               </button>
               <span id="prompt-char-counter" class="font-monoCode text-[11px] text-zinc-400">0 ký tự</span>

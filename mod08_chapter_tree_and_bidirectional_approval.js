@@ -2091,7 +2091,13 @@
       if (updated > 0 || added > 0) {
         this.saveHierarchyMapToStorage(persistMap);
         this.persistChapters();
-        this.loadActiveChapterIntoEditor();
+        const activeEl = document.activeElement;
+        const isTypingInEditor = Boolean(
+          activeEl && (activeEl.id === 'textarea-chapter-content' || activeEl.id === 'input-chapter-title')
+        );
+        if (!isTypingInEditor) {
+          this.loadActiveChapterIntoEditor();
+        }
         this.renderChapterTreeAndQuickSwitcher();
       }
       await this.syncHierarchyFolderStructureToDisk();
@@ -2100,6 +2106,12 @@
           `🔄 Đồng bộ 2 chiều thư mục xong! (Cập nhật: ${updated} · Thêm mới từ ổ cứng: ${added})`,
           'success',
           3200
+        );
+      } else if (updated > 0 || added > 0) {
+        this.utils.showToast(
+          `🔄 Đã tự động đồng bộ 2 chiều với thư mục máy tính (+${added} mới · ${updated} cập nhật).`,
+          'info',
+          2600
         );
       }
       return { ok: true, updated, added };
@@ -2802,10 +2814,43 @@
       }
       setTimeout(() => syncExpandBtnForScreen(), 250);
 
-      // Đồng bộ 2 chiều thư mục Quyển / Chương / Cảnh CHỈ khi người dùng chủ động bấm nút (tránh lag khi chuyển cửa sổ/app!)
-      bind('btn-tab2-sync-from-disk', 'click', () => {
-        this.syncFromDiskFolderIfConnected(true);
-      });
+      // Đồng bộ 2 chiều TỰ ĐỘNG ngầm giữa thư mục Quyển / Chương / Cảnh trên máy tính và App (không cần nút bấm thủ công!)
+      if (!this._v113AutoDiskSyncBound) {
+        this._v113AutoDiskSyncBound = true;
+        this._v113LastAutoDiskSyncAt = 0;
+        this._v113AutoDiskSyncBusy = false;
+        const runSilentAutoDiskSync = async () => {
+          try {
+            if (this._v113AutoDiskSyncBusy) return;
+            if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+            const fs = this.NS?.localFS;
+            if (!fs || !fs.directoryHandle || !fs.isConnected) return;
+            const activeEl = document.activeElement;
+            if (activeEl && (activeEl.id === 'textarea-chapter-content' || activeEl.id === 'input-chapter-title')) {
+              return;
+            }
+            const now = Date.now();
+            if (now - (this._v113LastAutoDiskSyncAt || 0) < 4000) return;
+            this._v113AutoDiskSyncBusy = true;
+            this._v113LastAutoDiskSyncAt = now;
+            await this.syncFromDiskFolderIfConnected(false);
+          } catch (_eAutoSync) {
+          } finally {
+            this._v113AutoDiskSyncBusy = false;
+          }
+        };
+        window.addEventListener('focus', () => {
+          setTimeout(() => { runSilentAutoDiskSync(); }, 350);
+        });
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            setTimeout(() => { runSilentAutoDiskSync(); }, 350);
+          }
+        });
+        setInterval(() => {
+          runSilentAutoDiskSync();
+        }, 8500);
+      }
 
       // Đồng bộ đổi tên tiêu đề chương tại Tab 1 xuống tên file khi blur
       bind('input-chapter-title', 'change', (e) => {

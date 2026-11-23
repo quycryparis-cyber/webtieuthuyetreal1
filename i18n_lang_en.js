@@ -4669,6 +4669,14 @@
     "🔄 Xem Sơ Đồ SVG": "🔄 View SVG Diagram",
     "🖼️ Xem Ảnh Sơ Đồ Đã Lưu": "🖼️ View Saved Diagram Image",
     "🎛️ Chọn Chế Độ (1–6) · Mô Hình Gemini · Số Từ Đầu Ra · Mức Tư Duy": "🎛️ Mode (1–6) · Gemini Model · Output Words · Thinking Level",
+    "🔍 Tìm Kiếm Nhanh Chi Tiết Truyện": "🔍 Quick Story Detail Search",
+    "Bộ nhớ tìm nhanh: Sẵn sàng": "Quick Search Memory: Ready",
+    "⊞ + Bảng": "⊞ + Table",
+    "Video đang chạy ở Cửa sổ nổi (Đồng bộ 2 chiều)": "Video playing in Floating Window (2-Way Synced)",
+    "✕ Đóng Cửa sổ nổi & Trả về khung gốc": "✕ Close Floating Window & Return to Player",
+    "⏳ Đang tải toàn bộ tài nguyên & 45 module Studio...": "⏳ Loading all assets & 45 Studio modules...",
+    "📦 Đang nạp dữ liệu chương, Story Bible & hoàn tất giao diện...": "📦 Loading chapters, Story Bible & finalizing UI...",
+    "✨ Sẵn sàng sáng tác!": "✨ Ready to write!",
   });
 
   const promptExact = Object.freeze({
