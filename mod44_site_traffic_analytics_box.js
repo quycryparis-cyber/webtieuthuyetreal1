@@ -1401,7 +1401,10 @@
 
       this.beat('init');
       this.heartbeatTimerId = globalScope.setInterval(() => {
-        if (!this.disposed) this.beat('interval');
+        if (this.disposed) return;
+        if (globalScope.document && globalScope.document.hidden) return;
+        if (globalScope.NoirStudio?.perfManager?.isFeatureDisabled?.('traffic_analytics')) return;
+        this.beat('interval');
       }, MOD44_CONSTANTS.TIMINGS.HEARTBEAT_INTERVAL_MS);
     }
 

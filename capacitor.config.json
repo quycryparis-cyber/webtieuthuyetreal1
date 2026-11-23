@@ -1,0 +1,21 @@
+{
+  "appId": "com.maihaidang.binovelstudio",
+  "appName": "Sổ Tay Tiểu Thuyết Bi",
+  "webDir": "dist-app",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "allowsLinkPreview": true,
+    "scrollEnabled": true
+  }
+}

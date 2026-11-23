@@ -848,7 +848,7 @@
           outTextarea.value = this.modeOutputs[cleanMode];
           outTextarea.scrollTop = 0;
         }
-        window.NoirStudio?.tab3RichBridge?.setModeOutputText?.(cleanMode, this.modeOutputs[cleanMode]);
+        window.NoirStudio?.tab3RichBridge?.syncFromPlainOutput?.(cleanMode, this.modeOutputs[cleanMode]);
         this.updateOutputWordBadge(this.modeOutputs[cleanMode]);
         this.refreshRevisionDropdownUI();
         this.refreshAnalyticsFooterBar();
@@ -981,6 +981,7 @@
       if (outTextarea && this.activeMode === modeKey) {
         outTextarea.value = targetRev.text;
       }
+      window.NoirStudio?.tab3RichBridge?.syncFromPlainOutput?.(modeKey, targetRev.text);
       this.updateOutputWordBadge(targetRev.text);
       this.refreshRevisionDropdownUI();
       this.refreshAnalyticsFooterBar();
@@ -2314,6 +2315,10 @@
       this._updateWordBadgeFromActiveEditor();
     }
 
+    setModeOutputText(modeKey, plainText) {
+      return this.syncFromPlainOutput(modeKey, plainText);
+    }
+
     syncFromPlainOutput(modeKey, plainText) {
       const mk = modeKey || this.controller?.activeMode || 'MODE_1_DRAFT';
       const html = this._plainToBasicHtml(plainText);
@@ -2371,6 +2376,9 @@
           }
         }
         this._updateWordBadgeFromActiveEditor();
+        if (this.controller && typeof this.controller.refreshAnalyticsFooterBar === 'function') {
+          this.controller.refreshAnalyticsFooterBar();
+        }
       };
 
       if (editor && !editor.dataset.v109Bound) {
@@ -3807,4 +3815,1018 @@
   const v109Tab3Manager = new V109Tab3RichAsciiAndCoverManager(tab3Controller);
   window.NoirStudio.tab3RichBridge = v109Tab3Manager;
   window.NoirStudio.coverGallery = v109Tab3Manager;
+
+  // ==========================================================================
+  // V115: BỘ NÂNG CẤP TRÌNH SOẠN THẢO CHUẨN WORD CHO MỌI KHUNG CHAT / PROMPT /
+  //       ĐẦU RA AI / STORY BIBLE / THAM MƯU CỐT TRUYỆN (CONTENTEDITABLE)
+  // - Fix xóa Bảng & Ảnh bằng phím Backspace / Delete (như Microsoft Word)
+  // - Menu chuột phải chuyên nghiệp cho Bảng (Thêm/Xóa hàng-cột, Canh đều cột,
+  //   Căn trái/giữa/phải ô, Sao chép bảng, Xóa bảng) & Ảnh (Sao chép ảnh, Cắt/Crop
+  //   ảnh trực quan, Chỉnh kích cỡ, Căn lề, Xoay 90°, Xóa ảnh)
+  // - Bổ sung thanh công cụ chuẩn Word: Chọn tất cả, Căn trái/giữa/phải/đều,
+  //   Gạch ngang, Danh sách, Hoàn tác/Làm lại, Xóa định dạng
+  // ==========================================================================
+  class V115WordRichEditorProSuite {
+    constructor() {
+      this.selectedImg = null;
+      this.selectedTable = null;
+      this.selectedCell = null;
+      this.activeEditor = null;
+      this.contextMenuEl = null;
+      this.floatingBarEl = null;
+      this._cropTargetImg = null;
+      this._cropTargetEditor = null;
+      this._initDone = false;
+    }
+
+    toast(msg, type = 'info', dur = 2400) {
+      window.NoirStudio?.utils?.showToast?.(msg, type, dur);
+    }
+
+    notifyEditorChanged(editorEl) {
+      if (!editorEl) return;
+      try {
+        editorEl.dispatchEvent(new Event('input', { bubbles: true }));
+      } catch (_e) {}
+    }
+
+    injectStylesOnce() {
+      if (document.getElementById('v115-word-rich-styles')) return;
+      const st = document.createElement('style');
+      st.id = 'v115-word-rich-styles';
+      st.textContent = `
+        [contenteditable="true"] img.v115-word-img-selected {
+          outline: 2.5px solid #38bdf8 !important;
+          outline-offset: 2px;
+          box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.25);
+          cursor: pointer;
+        }
+        [contenteditable="true"] table.v115-word-table-selected {
+          outline: 2px solid #10b981 !important;
+          outline-offset: 2px;
+        }
+        #v115-word-context-menu {
+          position: fixed;
+          z-index: 2147483600;
+          min-width: 220px;
+          max-width: 270px;
+          background: rgba(18, 20, 28, 0.98);
+          border: 1px solid rgba(71, 85, 105, 0.8);
+          border-radius: 12px;
+          padding: 5px;
+          box-shadow: 0 18px 42px rgba(0, 0, 0, 0.72);
+          backdrop-filter: blur(12px);
+          color: #f4f4f5;
+          font-size: 12px;
+          user-select: none;
+        }
+        #v115-word-context-menu .v115-ctx-title {
+          padding: 4px 8px 6px;
+          font-size: 10px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: #34d399;
+          border-bottom: 1px solid rgba(63, 63, 70, 0.7);
+          margin-bottom: 4px;
+        }
+        #v115-word-context-menu button {
+          width: 100%;
+          text-align: left;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 9px;
+          border: 0;
+          border-radius: 8px;
+          background: transparent;
+          color: #e4e4e7;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.12s ease;
+        }
+        #v115-word-context-menu button:hover {
+          background: rgba(16, 185, 129, 0.22);
+          color: #ffffff;
+        }
+        #v115-word-context-menu button.v115-ctx-danger {
+          color: #fda4af;
+        }
+        #v115-word-context-menu button.v115-ctx-danger:hover {
+          background: rgba(225, 29, 72, 0.28);
+          color: #ffffff;
+        }
+        #v115-word-context-menu .v115-ctx-sep {
+          height: 1px;
+          background: rgba(63, 63, 70, 0.7);
+          margin: 4px 6px;
+        }
+        #v115-word-floating-bar {
+          position: fixed;
+          z-index: 2147483500;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          flex-wrap: wrap;
+          padding: 4px 6px;
+          border-radius: 10px;
+          background: rgba(15, 23, 42, 0.96);
+          border: 1px solid rgba(52, 211, 153, 0.65);
+          box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
+          font-size: 11px;
+          user-select: none;
+        }
+        #v115-word-floating-bar button {
+          padding: 3px 7px;
+          border-radius: 7px;
+          border: 1px solid rgba(71, 85, 105, 0.7);
+          background: rgba(30, 41, 59, 0.9);
+          color: #e2e8f0;
+          font-weight: 700;
+          font-size: 10.5px;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        #v115-word-floating-bar button:hover {
+          background: rgba(16, 185, 129, 0.3);
+          border-color: rgba(52, 211, 153, 0.8);
+          color: #fff;
+        }
+        #v115-word-floating-bar button.v115-fb-danger {
+          background: rgba(159, 18, 57, 0.45);
+          border-color: rgba(251, 113, 133, 0.6);
+          color: #fecdd3;
+        }
+        #v115-word-floating-bar button.v115-fb-danger:hover {
+          background: #e11d48;
+          color: #fff;
+        }
+      `;
+      document.head.appendChild(st);
+    }
+
+    findToolbarForEditor(editorEl) {
+      if (!editorEl) return null;
+      const idMap = {
+        'tab3-rich-output-editor': 'tab3-rich-output-toolbar',
+        'tab4-rich-bible-editor': 'tab4-rich-bible-toolbar',
+        's18-rich-prompt-editor': 's18-rich-prompt-toolbar',
+        'v111-exp-rich-editor': 'v111-exp-rich-toolbar'
+      };
+      if (idMap[editorEl.id]) {
+        const direct = document.getElementById(idMap[editorEl.id]);
+        if (direct) return direct;
+      }
+      // Tìm thanh công cụ ngay phía trước editor
+      let prev = editorEl.previousElementSibling;
+      for (let i = 0; i < 3 && prev; i++) {
+        if (prev.querySelector && prev.querySelector('button')) {
+          return prev;
+        }
+        prev = prev.previousElementSibling;
+      }
+      return null;
+    }
+
+    selectAllInsideEditor(editorEl) {
+      if (!editorEl) return;
+      editorEl.focus();
+      try {
+        if (editorEl.tagName === 'TEXTAREA' || editorEl.tagName === 'INPUT') {
+          editorEl.select();
+          editorEl.setSelectionRange?.(0, (editorEl.value || '').length);
+        } else {
+          const range = document.createRange();
+          range.selectNodeContents(editorEl);
+          const sel = window.getSelection();
+          if (sel) {
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        }
+        this.toast('☑️ Đã chọn toàn bộ nội dung trong khung!', 'info', 1600);
+      } catch (_e) {}
+    }
+
+    async copyAllFromEditor(editorEl) {
+      if (!editorEl) return;
+      const text =
+        editorEl.tagName === 'TEXTAREA' || editorEl.tagName === 'INPUT'
+          ? String(editorEl.value || '')
+          : String(editorEl.innerText || editorEl.textContent || '');
+      if (!text.trim()) {
+        this.toast('⚠️ Khung hiện đang trống, chưa có nội dung để sao chép!', 'warning', 1800);
+        return;
+      }
+      try {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const tmp = document.createElement('textarea');
+          tmp.value = text;
+          tmp.style.position = 'fixed';
+          tmp.style.opacity = '0';
+          document.body.appendChild(tmp);
+          tmp.select();
+          document.execCommand('copy');
+          tmp.remove();
+        }
+        this.toast('📋 Đã sao chép toàn bộ nội dung vào bộ nhớ tạm!', 'success', 2000);
+      } catch (_e) {
+        this.selectAllInsideEditor(editorEl);
+        try { document.execCommand('copy'); } catch (_e2) {}
+        this.toast('📋 Đã chọn & sao chép toàn bộ nội dung!', 'success', 2000);
+      }
+    }
+
+    enhancePlainPromptAndBibleTextareas() {
+      const targetIds = [
+        'mode5-prompt-input',
+        'textarea-bible-template-frame',
+        'textarea-synthesized-master-prompt',
+        'textarea-sysprompt-editor',
+      ];
+      targetIds.forEach((id) => {
+        const ta = document.getElementById(id);
+        if (!ta || ta.dataset.v117SelectCopyBound === '1' || !ta.parentElement) return;
+        ta.dataset.v117SelectCopyBound = '1';
+        const bar = document.createElement('div');
+        bar.className = 'flex flex-wrap items-center justify-end gap-1.5 mb-1.5';
+        const bSel = document.createElement('button');
+        bSel.type = 'button';
+        bSel.dataset.v117SelectAll = id;
+        bSel.className = 'px-2 py-0.5 rounded-lg border border-emerald-500/45 bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-200 font-bold text-[10.5px] transition cursor-pointer';
+        bSel.textContent = '☑️ Chọn tất cả';
+        bSel.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          this.selectAllInsideEditor(ta);
+        });
+        const bCopy = document.createElement('button');
+        bCopy.type = 'button';
+        bCopy.dataset.v117CopyAll = id;
+        bCopy.className = 'px-2 py-0.5 rounded-lg border border-sky-500/45 bg-sky-500/15 hover:bg-sky-500/30 text-sky-200 font-bold text-[10.5px] transition cursor-pointer';
+        bCopy.textContent = '📋 Sao chép tất cả';
+        bCopy.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          this.copyAllFromEditor(ta);
+        });
+        bar.appendChild(bSel);
+        bar.appendChild(bCopy);
+        ta.parentElement.insertBefore(bar, ta);
+      });
+    }
+
+    runWordExecCmd(editorEl, cmd, val = null) {
+      if (!editorEl) return;
+      editorEl.focus();
+      try {
+        document.execCommand(cmd, false, val);
+      } catch (_e) {}
+      this.notifyEditorChanged(editorEl);
+    }
+
+    enhanceToolbarForEditor(editorEl) {
+      if (!editorEl || editorEl.dataset.v115WordToolbarBound === '1') return;
+      let toolbar = this.findToolbarForEditor(editorEl);
+      // Nếu modal khung rich chưa có thanh công cụ (vd: cửa sổ nổi Story Bible / Tham mưu cốt truyện), tạo thanh gọn ngay phía trên!
+      if (!toolbar && editorEl.parentElement) {
+        toolbar = document.createElement('div');
+        toolbar.className = 'flex flex-wrap items-center gap-1 px-2 py-1.5 rounded-xl border border-zinc-700/80 bg-zinc-900/90 text-[11px] mb-1.5';
+        editorEl.parentElement.insertBefore(toolbar, editorEl);
+      }
+      if (!toolbar || toolbar.dataset.v115WordToolsAdded === '1') {
+        editorEl.dataset.v115WordToolbarBound = '1';
+        return;
+      }
+      toolbar.dataset.v115WordToolsAdded = '1';
+      editorEl.dataset.v115WordToolbarBound = '1';
+
+      const btnGroup = document.createElement('span');
+      btnGroup.className = 'inline-flex flex-wrap items-center gap-1 pl-1.5 ml-1 border-l border-zinc-700/80';
+
+      const makeBtn = (label, title, onClick, extraCls = '') => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        b.title = title;
+        b.className = `px-1.5 py-0.5 rounded-md border border-zinc-700 bg-zinc-900/90 hover:bg-zinc-800 hover:border-emerald-400/60 text-zinc-200 font-bold text-[10.5px] transition cursor-pointer ${extraCls}`;
+        b.addEventListener('mousedown', (ev) => ev.preventDefault());
+        b.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          onClick();
+        });
+        return b;
+      };
+
+      const selAllBtn = makeBtn('☑️ Chọn tất cả', 'Chọn tất cả nội dung trong khung này (Ctrl+A)', () => this.selectAllInsideEditor(editorEl), 'text-emerald-200 border-emerald-500/45 bg-emerald-500/10');
+      selAllBtn.dataset.v117SelectAll = editorEl.id || 'rich';
+      const copyAllBtn = makeBtn('📋 Sao chép tất cả', 'Sao chép toàn bộ nội dung trong khung này', () => this.copyAllFromEditor(editorEl), 'text-sky-200 border-sky-500/45 bg-sky-500/15');
+      copyAllBtn.dataset.v117CopyAll = editorEl.id || 'rich';
+      btnGroup.appendChild(selAllBtn);
+      btnGroup.appendChild(copyAllBtn);
+      btnGroup.appendChild(makeBtn('⫷', 'Căn trái (Align Left)', () => this.runWordExecCmd(editorEl, 'justifyLeft')));
+      btnGroup.appendChild(makeBtn('⫶', 'Căn giữa (Align Center)', () => this.runWordExecCmd(editorEl, 'justifyCenter')));
+      btnGroup.appendChild(makeBtn('⫸', 'Căn phải (Align Right)', () => this.runWordExecCmd(editorEl, 'justifyRight')));
+      btnGroup.appendChild(makeBtn('☰', 'Căn đều 2 bên (Justify)', () => this.runWordExecCmd(editorEl, 'justifyFull')));
+      btnGroup.appendChild(makeBtn('S̶', 'Gạch ngang chữ', () => this.runWordExecCmd(editorEl, 'strikeThrough')));
+      btnGroup.appendChild(makeBtn('•', 'Danh sách chấm đầu dòng', () => this.runWordExecCmd(editorEl, 'insertUnorderedList')));
+      btnGroup.appendChild(makeBtn('1.', 'Danh sách đánh số', () => this.runWordExecCmd(editorEl, 'insertOrderedList')));
+      btnGroup.appendChild(makeBtn('↶', 'Hoàn tác (Ctrl+Z)', () => this.runWordExecCmd(editorEl, 'undo')));
+      btnGroup.appendChild(makeBtn('↷', 'Làm lại (Ctrl+Y)', () => this.runWordExecCmd(editorEl, 'redo')));
+      btnGroup.appendChild(makeBtn('🧹', 'Xóa định dạng chữ đang chọn', () => this.runWordExecCmd(editorEl, 'removeFormat')));
+
+      // Chèn vào nhóm bên trái của toolbar (trước badge "Chế độ Word" nếu có)
+      const firstFlexGroup = toolbar.querySelector(':scope > div, :scope > span');
+      if (firstFlexGroup && toolbar.children.length >= 2 && toolbar.classList.contains('justify-between')) {
+        firstFlexGroup.appendChild(btnGroup);
+      } else {
+        toolbar.appendChild(btnGroup);
+      }
+    }
+
+    enhanceAllRichEditorsInDom() {
+      document.querySelectorAll('[contenteditable="true"]').forEach((el) => {
+        if (el.id === 'textarea-chapter-content') return;
+        this.enhanceToolbarForEditor(el);
+      });
+    }
+
+    clearSelections() {
+      if (this.selectedImg) {
+        this.selectedImg.classList.remove('v115-word-img-selected');
+        this.selectedImg = null;
+      }
+      if (this.selectedTable) {
+        this.selectedTable.classList.remove('v115-word-table-selected');
+        this.selectedTable = null;
+      }
+      this.selectedCell = null;
+      this.hideFloatingBar();
+    }
+
+    hideContextMenu() {
+      if (this.contextMenuEl) {
+        this.contextMenuEl.remove();
+        this.contextMenuEl = null;
+      }
+    }
+
+    hideFloatingBar() {
+      if (this.floatingBarEl) {
+        this.floatingBarEl.remove();
+        this.floatingBarEl = null;
+      }
+    }
+
+    showFloatingBarFor(targetEl, type, editorEl) {
+      this.hideFloatingBar();
+      if (!targetEl || !targetEl.isConnected) return;
+      const rect = targetEl.getBoundingClientRect();
+      if (rect.width < 10 || rect.height < 10) return;
+
+      const bar = document.createElement('div');
+      bar.id = 'v115-word-floating-bar';
+
+      const addBtn = (label, onClick, isDanger = false) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        if (isDanger) b.className = 'v115-fb-danger';
+        b.addEventListener('mousedown', (ev) => ev.preventDefault());
+        b.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          onClick();
+        });
+        bar.appendChild(b);
+      };
+
+      if (type === 'table') {
+        addBtn('+ Hàng', () => this.tableInsertRow(targetEl, this.selectedCell, 'after', editorEl));
+        addBtn('+ Cột', () => this.tableInsertCol(targetEl, this.selectedCell, 'after', editorEl));
+        addBtn('⚖️ Canh đều cột', () => this.tableDistributeColumns(targetEl, editorEl));
+        addBtn('🗑️ Xóa bảng', () => this.deleteTable(targetEl, editorEl), true);
+      } else if (type === 'img') {
+        addBtn('✂️ Cắt ảnh', () => this.openImageCropModal(targetEl, editorEl));
+        addBtn('50%', () => this.resizeImage(targetEl, '50%', editorEl));
+        addBtn('100%', () => this.resizeImage(targetEl, '100%', editorEl));
+        addBtn('🔄 Xoay 90°', () => this.rotateImage90(targetEl, editorEl));
+        addBtn('🗑️ Xóa ảnh', () => this.deleteImage(targetEl, editorEl), true);
+      }
+
+      document.body.appendChild(bar);
+      const barRect = bar.getBoundingClientRect();
+      const topPos = Math.max(8, rect.top - barRect.height - 6);
+      const leftPos = Math.max(8, Math.min(window.innerWidth - barRect.width - 8, rect.left));
+      bar.style.top = `${topPos}px`;
+      bar.style.left = `${leftPos}px`;
+      this.floatingBarEl = bar;
+    }
+
+    // --- CÁC THAO TÁC BẢNG CHUẨN WORD ---
+    deleteTable(tableEl, editorEl) {
+      if (!tableEl) return;
+      const ed = editorEl || tableEl.closest('[contenteditable="true"]');
+      const nextP = document.createElement('p');
+      nextP.innerHTML = '<br>';
+      if (tableEl.parentNode) {
+        tableEl.parentNode.insertBefore(nextP, tableEl.nextSibling);
+      }
+      tableEl.remove();
+      this.clearSelections();
+      if (ed) {
+        ed.focus();
+        try {
+          const r = document.createRange();
+          r.setStart(nextP, 0);
+          r.collapse(true);
+          const s = window.getSelection();
+          s?.removeAllRanges();
+          s?.addRange(r);
+        } catch (_e) {}
+        this.notifyEditorChanged(ed);
+      }
+      this.toast('🗑️ Đã xóa toàn bộ bảng!', 'success', 1800);
+    }
+
+    tableInsertRow(tableEl, cellEl, where = 'after', editorEl) {
+      if (!tableEl) return;
+      const rows = Array.from(tableEl.rows);
+      if (!rows.length) return;
+      const curRow = cellEl ? cellEl.closest('tr') : rows[rows.length - 1];
+      const colCount = Math.max(1, curRow ? curRow.cells.length : rows[0].cells.length);
+      const insertIdx = curRow ? (where === 'before' ? curRow.rowIndex : curRow.rowIndex + 1) : rows.length;
+      const newRow = tableEl.insertRow(insertIdx);
+      for (let i = 0; i < colCount; i++) {
+        const td = newRow.insertCell(i);
+        td.innerHTML = '<br>';
+        td.style.border = '1px solid #3f3f46';
+        td.style.padding = '4px 8px';
+      }
+      this.notifyEditorChanged(editorEl || tableEl.closest('[contenteditable="true"]'));
+      this.toast(where === 'before' ? '⬆️ Đã chèn thêm 1 hàng lên trên.' : '⬇️ Đã chèn thêm 1 hàng xuống dưới.', 'success', 1600);
+    }
+
+    tableDeleteRow(tableEl, cellEl, editorEl) {
+      if (!tableEl) return;
+      if (tableEl.rows.length <= 1) {
+        this.deleteTable(tableEl, editorEl);
+        return;
+      }
+      const row = cellEl ? cellEl.closest('tr') : tableEl.rows[tableEl.rows.length - 1];
+      if (row) row.remove();
+      this.notifyEditorChanged(editorEl || tableEl.closest('[contenteditable="true"]'));
+      this.toast('❌ Đã xóa hàng hiện tại.', 'info', 1600);
+    }
+
+    tableInsertCol(tableEl, cellEl, where = 'after', editorEl) {
+      if (!tableEl) return;
+      const colIdx = cellEl ? cellEl.cellIndex : 0;
+      const targetIdx = where === 'before' ? colIdx : colIdx + 1;
+      Array.from(tableEl.rows).forEach((row, rIdx) => {
+        const safeIdx = Math.max(0, Math.min(row.cells.length, targetIdx));
+        const newCell = document.createElement(rIdx === 0 && row.cells[0]?.tagName === 'TH' ? 'th' : 'td');
+        newCell.innerHTML = '<br>';
+        newCell.style.border = '1px solid #3f3f46';
+        newCell.style.padding = '4px 8px';
+        if (safeIdx >= row.cells.length) row.appendChild(newCell);
+        else row.insertBefore(newCell, row.cells[safeIdx]);
+      });
+      this.notifyEditorChanged(editorEl || tableEl.closest('[contenteditable="true"]'));
+      this.toast(where === 'before' ? '⬅️ Đã thêm 1 cột bên trái.' : '➡️ Đã thêm 1 cột bên phải.', 'success', 1600);
+    }
+
+    tableDeleteCol(tableEl, cellEl, editorEl) {
+      if (!tableEl) return;
+      const firstRowCols = tableEl.rows[0]?.cells?.length || 0;
+      if (firstRowCols <= 1) {
+        this.deleteTable(tableEl, editorEl);
+        return;
+      }
+      const colIdx = cellEl ? cellEl.cellIndex : firstRowCols - 1;
+      Array.from(tableEl.rows).forEach((row) => {
+        if (row.cells[colIdx]) row.deleteCell(colIdx);
+      });
+      this.notifyEditorChanged(editorEl || tableEl.closest('[contenteditable="true"]'));
+      this.toast('❌ Đã xóa cột hiện tại.', 'info', 1600);
+    }
+
+    tableDistributeColumns(tableEl, editorEl) {
+      if (!tableEl || !tableEl.rows.length) return;
+      const maxCols = Math.max(1, ...Array.from(tableEl.rows).map((r) => r.cells.length));
+      const pct = `${(100 / maxCols).toFixed(2)}%`;
+      tableEl.style.tableLayout = 'fixed';
+      tableEl.style.width = '100%';
+      Array.from(tableEl.rows).forEach((row) => {
+        Array.from(row.cells).forEach((cell) => {
+          cell.style.width = pct;
+        });
+      });
+      this.notifyEditorChanged(editorEl || tableEl.closest('[contenteditable="true"]'));
+      this.toast(`⚖️ Đã canh đều độ rộng ${maxCols} cột (${pct}/cột)!`, 'success', 1800);
+    }
+
+    tableAlignCells(tableEl, cellEl, alignVal, applyWholeTable, editorEl) {
+      if (applyWholeTable && tableEl) {
+        Array.from(tableEl.querySelectorAll('td, th')).forEach((c) => {
+          c.style.textAlign = alignVal;
+        });
+      } else if (cellEl) {
+        cellEl.style.textAlign = alignVal;
+      }
+      this.notifyEditorChanged(editorEl || tableEl?.closest?.('[contenteditable="true"]'));
+    }
+
+    async copyTableHtml(tableEl) {
+      if (!tableEl) return;
+      try {
+        if (navigator.clipboard && window.ClipboardItem) {
+          const htmlBlob = new Blob([tableEl.outerHTML], { type: 'text/html' });
+          const textBlob = new Blob([tableEl.innerText || ''], { type: 'text/plain' });
+          await navigator.clipboard.write([new window.ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })]);
+        } else {
+          await navigator.clipboard.writeText(tableEl.innerText || '');
+        }
+        this.toast('📋 Đã sao chép bảng (dán được sang Word/Docs)!', 'success', 1800);
+      } catch (_e) {
+        this.toast('⚠️ Trình duyệt chặn sao chép nhanh — hãy bôi đen bảng và nhấn Ctrl+C.', 'warning', 2200);
+      }
+    }
+
+    // --- CÁC THAO TÁC ẢNH CHUẨN WORD ---
+    deleteImage(imgEl, editorEl) {
+      if (!imgEl) return;
+      const ed = editorEl || imgEl.closest('[contenteditable="true"]');
+      imgEl.remove();
+      this.clearSelections();
+      if (ed) {
+        ed.focus();
+        this.notifyEditorChanged(ed);
+      }
+      this.toast('🗑️ Đã xóa ảnh!', 'success', 1600);
+    }
+
+    resizeImage(imgEl, widthVal, editorEl) {
+      if (!imgEl) return;
+      imgEl.style.width = widthVal === 'auto' ? '' : widthVal;
+      imgEl.style.height = 'auto';
+      this.notifyEditorChanged(editorEl || imgEl.closest('[contenteditable="true"]'));
+      this.showFloatingBarFor(imgEl, 'img', editorEl);
+    }
+
+    alignImage(imgEl, align, editorEl) {
+      if (!imgEl) return;
+      imgEl.style.display = 'block';
+      if (align === 'left') {
+        imgEl.style.marginLeft = '0';
+        imgEl.style.marginRight = 'auto';
+      } else if (align === 'center') {
+        imgEl.style.marginLeft = 'auto';
+        imgEl.style.marginRight = 'auto';
+      } else if (align === 'right') {
+        imgEl.style.marginLeft = 'auto';
+        imgEl.style.marginRight = '0';
+      }
+      this.notifyEditorChanged(editorEl || imgEl.closest('[contenteditable="true"]'));
+      this.showFloatingBarFor(imgEl, 'img', editorEl);
+    }
+
+    async copyImageToClipboard(imgEl) {
+      if (!imgEl) return;
+      try {
+        const c = document.createElement('canvas');
+        c.width = imgEl.naturalWidth || imgEl.width || 400;
+        c.height = imgEl.naturalHeight || imgEl.height || 300;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(imgEl, 0, 0, c.width, c.height);
+        const blob = await new Promise((res) => c.toBlob(res, 'image/png'));
+        if (blob && navigator.clipboard && window.ClipboardItem) {
+          await navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]);
+          this.toast('📋 Đã sao chép ảnh vào bộ nhớ tạm!', 'success', 1800);
+          return;
+        }
+      } catch (_e) {}
+      try {
+        await navigator.clipboard.writeText(imgEl.src || '');
+        this.toast('📋 Đã sao chép đường dẫn/dữ liệu ảnh.', 'info', 1800);
+      } catch (_e2) {}
+    }
+
+    rotateImage90(imgEl, editorEl) {
+      if (!imgEl) return;
+      try {
+        const w = imgEl.naturalWidth || imgEl.width;
+        const h = imgEl.naturalHeight || imgEl.height;
+        if (!w || !h) return;
+        const c = document.createElement('canvas');
+        c.width = h;
+        c.height = w;
+        const ctx = c.getContext('2d');
+        ctx.translate(h / 2, w / 2);
+        ctx.rotate(Math.PI / 2);
+        ctx.drawImage(imgEl, -w / 2, -h / 2, w, h);
+        imgEl.src = c.toDataURL('image/png');
+        this.notifyEditorChanged(editorEl || imgEl.closest('[contenteditable="true"]'));
+        this.toast('🔄 Đã xoay ảnh 90°!', 'success', 1600);
+      } catch (_e) {
+        this.toast('⚠️ Không thể xoay ảnh nguồn ngoài do chính sách CORS của trình duyệt.', 'warning', 2400);
+      }
+    }
+
+    openImageCropModal(imgEl, editorEl) {
+      if (!imgEl) return;
+      this._cropTargetImg = imgEl;
+      this._cropTargetEditor = editorEl || imgEl.closest('[contenteditable="true"]');
+      document.getElementById('modal-v115-word-img-crop')?.remove();
+
+      const modal = document.createElement('div');
+      modal.id = 'modal-v115-word-img-crop';
+      modal.className = 'fixed inset-0 z-[2147483610] bg-zinc-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5';
+      modal.innerHTML = `
+        <div class="w-full max-w-2xl rounded-2xl border border-emerald-500/50 bg-zinc-900 text-zinc-100 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+          <div class="px-4 py-3 border-b border-zinc-800 flex items-center justify-between gap-2">
+            <h3 class="text-sm font-black text-emerald-300">✂️ Cắt (Crop) Ảnh Trực Quan</h3>
+            <button type="button" id="btn-v115-crop-close" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-rose-600 text-xs font-bold">✕ Đóng</button>
+          </div>
+          <div class="p-4 overflow-y-auto space-y-3">
+            <div class="flex items-center justify-center bg-zinc-950 rounded-xl border border-zinc-800 p-2 min-h-[220px] max-h-[45vh] overflow-hidden">
+              <canvas id="canvas-v115-crop-preview" class="max-w-full max-h-[42vh] rounded-lg"></canvas>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <label class="space-y-1">
+                <span class="text-zinc-400 font-bold">Cắt Trái (<span id="v115-cl-val">0%</span>)</span>
+                <input id="v115-crop-left" type="range" min="0" max="45" value="0" class="w-full accent-emerald-400" />
+              </label>
+              <label class="space-y-1">
+                <span class="text-zinc-400 font-bold">Cắt Phải (<span id="v115-cr-val">0%</span>)</span>
+                <input id="v115-crop-right" type="range" min="0" max="45" value="0" class="w-full accent-emerald-400" />
+              </label>
+              <label class="space-y-1">
+                <span class="text-zinc-400 font-bold">Cắt Trên (<span id="v115-ct-val">0%</span>)</span>
+                <input id="v115-crop-top" type="range" min="0" max="45" value="0" class="w-full accent-emerald-400" />
+              </label>
+              <label class="space-y-1">
+                <span class="text-zinc-400 font-bold">Cắt Dưới (<span id="v115-cb-val">0%</span>)</span>
+                <input id="v115-crop-bottom" type="range" min="0" max="45" value="0" class="w-full accent-emerald-400" />
+              </label>
+            </div>
+            <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+              <span class="text-zinc-400 font-bold">Tỷ lệ nhanh:</span>
+              <button type="button" data-crop-preset="reset" class="px-2 py-1 rounded-lg border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 font-bold">Ảnh gốc</button>
+              <button type="button" data-crop-preset="1:1" class="px-2 py-1 rounded-lg border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 font-bold">Vuông 1:1</button>
+              <button type="button" data-crop-preset="16:9" class="px-2 py-1 rounded-lg border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 font-bold">Ngang 16:9</button>
+              <button type="button" data-crop-preset="2:3" class="px-2 py-1 rounded-lg border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 font-bold">Bìa sách 2:3</button>
+            </div>
+          </div>
+          <div class="px-4 py-3 border-t border-zinc-800 flex items-center justify-end gap-2">
+            <button type="button" id="btn-v115-crop-cancel" class="px-3.5 py-1.5 rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">Hủy</button>
+            <button type="button" id="btn-v115-crop-apply" class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow">✅ Áp dụng cắt ảnh</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const canvas = modal.querySelector('#canvas-v115-crop-preview');
+      const slL = modal.querySelector('#v115-crop-left');
+      const slR = modal.querySelector('#v115-crop-right');
+      const slT = modal.querySelector('#v115-crop-top');
+      const slB = modal.querySelector('#v115-crop-bottom');
+      const natW = imgEl.naturalWidth || imgEl.width || 400;
+      const natH = imgEl.naturalHeight || imgEl.height || 300;
+
+      const drawPreview = () => {
+        const l = Number(slL.value) / 100;
+        const r = Number(slR.value) / 100;
+        const t = Number(slT.value) / 100;
+        const b = Number(slB.value) / 100;
+        modal.querySelector('#v115-cl-val').textContent = `${slL.value}%`;
+        modal.querySelector('#v115-cr-val').textContent = `${slR.value}%`;
+        modal.querySelector('#v115-ct-val').textContent = `${slT.value}%`;
+        modal.querySelector('#v115-cb-val').textContent = `${slB.value}%`;
+
+        const scale = Math.min(1, 560 / Math.max(1, natW), 320 / Math.max(1, natH));
+        canvas.width = Math.max(40, Math.round(natW * scale));
+        canvas.height = Math.max(40, Math.round(natH * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
+        // Phủ vùng bị cắt mờ đi
+        const x1 = Math.round(canvas.width * l);
+        const y1 = Math.round(canvas.height * t);
+        const cw = Math.max(4, Math.round(canvas.width * (1 - l - r)));
+        const ch = Math.max(4, Math.round(canvas.height * (1 - t - b)));
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.62)';
+        ctx.fillRect(0, 0, canvas.width, y1);
+        ctx.fillRect(0, y1 + ch, canvas.width, canvas.height - (y1 + ch));
+        ctx.fillRect(0, y1, x1, ch);
+        ctx.fillRect(x1 + cw, y1, canvas.width - (x1 + cw), ch);
+        ctx.strokeStyle = '#34d399';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x1 + 1, y1 + 1, cw - 2, ch - 2);
+      };
+
+      [slL, slR, slT, slB].forEach((s) => s.addEventListener('input', drawPreview));
+      modal.querySelectorAll('[data-crop-preset]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const p = btn.getAttribute('data-crop-preset');
+          if (p === 'reset') {
+            slL.value = slR.value = slT.value = slB.value = 0;
+          } else {
+            const [rw, rh] = p.split(':').map(Number);
+            const targetRatio = rw / rh;
+            const curRatio = natW / natH;
+            if (curRatio > targetRatio) {
+              const keepW = (natH * targetRatio) / natW;
+              const cutSide = Math.max(0, Math.min(45, Math.round(((1 - keepW) / 2) * 100)));
+              slL.value = slR.value = cutSide;
+              slT.value = slB.value = 0;
+            } else {
+              const keepH = (natW / targetRatio) / natH;
+              const cutTB = Math.max(0, Math.min(45, Math.round(((1 - keepH) / 2) * 100)));
+              slT.value = slB.value = cutTB;
+              slL.value = slR.value = 0;
+            }
+          }
+          drawPreview();
+        });
+      });
+
+      const closeModal = () => modal.remove();
+      modal.querySelector('#btn-v115-crop-close')?.addEventListener('click', closeModal);
+      modal.querySelector('#btn-v115-crop-cancel')?.addEventListener('click', closeModal);
+      modal.querySelector('#btn-v115-crop-apply')?.addEventListener('click', () => {
+        try {
+          const l = Number(slL.value) / 100;
+          const r = Number(slR.value) / 100;
+          const t = Number(slT.value) / 100;
+          const b = Number(slB.value) / 100;
+          const sx = Math.round(natW * l);
+          const sy = Math.round(natH * t);
+          const sw = Math.max(8, Math.round(natW * (1 - l - r)));
+          const sh = Math.max(8, Math.round(natH * (1 - t - b)));
+          const out = document.createElement('canvas');
+          out.width = sw;
+          out.height = sh;
+          out.getContext('2d').drawImage(imgEl, sx, sy, sw, sh, 0, 0, sw, sh);
+          imgEl.src = out.toDataURL('image/png');
+          this.notifyEditorChanged(this._cropTargetEditor);
+          this.toast('✂️ Đã cắt ảnh thành công!', 'success', 2000);
+          closeModal();
+        } catch (_eCrop) {
+          this.toast('⚠️ Không thể cắt ảnh ngoài do hạn chế bảo mật CORS.', 'warning', 2500);
+        }
+      });
+
+      drawPreview();
+    }
+
+    openContextMenuAt(x, y, title, items) {
+      this.hideContextMenu();
+      const menu = document.createElement('div');
+      menu.id = 'v115-word-context-menu';
+      const ttl = document.createElement('div');
+      ttl.className = 'v115-ctx-title';
+      ttl.textContent = title;
+      menu.appendChild(ttl);
+
+      items.forEach((it) => {
+        if (it === 'SEP') {
+          const sep = document.createElement('div');
+          sep.className = 'v115-ctx-sep';
+          menu.appendChild(sep);
+          return;
+        }
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = it.label;
+        if (it.danger) b.className = 'v115-ctx-danger';
+        b.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          this.hideContextMenu();
+          it.action();
+        });
+        menu.appendChild(b);
+      });
+
+      document.body.appendChild(menu);
+      const rect = menu.getBoundingClientRect();
+      const left = Math.max(8, Math.min(window.innerWidth - rect.width - 8, x));
+      const top = Math.max(8, Math.min(window.innerHeight - rect.height - 8, y));
+      menu.style.left = `${left}px`;
+      menu.style.top = `${top}px`;
+      this.contextMenuEl = menu;
+    }
+
+    bindGlobalEvents() {
+      // 1) Click chọn Ảnh hoặc Bảng trong mọi khung contenteditable
+      document.addEventListener('click', (ev) => {
+        if (ev.target?.closest?.('#v115-word-context-menu') || ev.target?.closest?.('#v115-word-floating-bar')) {
+          return;
+        }
+        this.hideContextMenu();
+        const editorEl = ev.target?.closest?.('[contenteditable="true"]');
+        if (!editorEl) {
+          this.clearSelections();
+          return;
+        }
+        this.activeEditor = editorEl;
+        this.enhanceToolbarForEditor(editorEl);
+
+        const img = ev.target.closest('img');
+        if (img && editorEl.contains(img)) {
+          this.clearSelections();
+          this.selectedImg = img;
+          img.classList.add('v115-word-img-selected');
+          this.showFloatingBarFor(img, 'img', editorEl);
+          return;
+        }
+        const table = ev.target.closest('table');
+        if (table && editorEl.contains(table)) {
+          this.clearSelections();
+          this.selectedTable = table;
+          this.selectedCell = ev.target.closest('td, th');
+          table.classList.add('v115-word-table-selected');
+          this.showFloatingBarFor(table, 'table', editorEl);
+          return;
+        }
+        this.clearSelections();
+      });
+
+      // 2) Phím Backspace / Delete xóa Ảnh & Bảng chuẩn Word!
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key !== 'Backspace' && ev.key !== 'Delete') return;
+        const activeEd = document.activeElement?.closest?.('[contenteditable="true"]') || this.activeEditor;
+        if (!activeEd || !activeEd.isConnected) return;
+
+        // A) Đang chọn ảnh -> xóa ngay!
+        if (this.selectedImg && activeEd.contains(this.selectedImg)) {
+          ev.preventDefault();
+          this.deleteImage(this.selectedImg, activeEd);
+          return;
+        }
+
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return;
+        const range = sel.getRangeAt(0);
+
+        // B) Nếu bôi đen bao trùm hoặc ở trong bảng
+        const anchorNode = range.startContainer;
+        const anchorEl = anchorNode.nodeType === 1 ? anchorNode : anchorNode.parentElement;
+        const insideTable = anchorEl?.closest?.('table');
+
+        if (insideTable && activeEd.contains(insideTable)) {
+          // Ctrl+Backspace / Ctrl+Delete hoặc toàn bảng đang trống trơn -> xóa sạch bảng!
+          const tableTextEmpty = !String(insideTable.innerText || '').trim();
+          const wholeTableSelected = !range.collapsed && range.toString().trim() === String(insideTable.innerText || '').trim();
+          if (ev.ctrlKey || tableTextEmpty || wholeTableSelected) {
+            ev.preventDefault();
+            this.deleteTable(insideTable, activeEd);
+            return;
+          }
+        }
+
+        // C) Con trỏ nằm ngay sau Ảnh hoặc Bảng khi nhấn Backspace (hoặc ngay trước khi nhấn Delete)
+        if (range.collapsed) {
+          if (ev.key === 'Backspace') {
+            if (anchorNode.nodeType === 1 && range.startOffset > 0) {
+              const prevChild = anchorNode.childNodes[range.startOffset - 1];
+              if (prevChild?.tagName === 'IMG') {
+                ev.preventDefault();
+                this.deleteImage(prevChild, activeEd);
+                return;
+              }
+              if (prevChild?.tagName === 'TABLE') {
+                ev.preventDefault();
+                this.deleteTable(prevChild, activeEd);
+                return;
+              }
+            }
+            if (range.startOffset === 0 && anchorEl && anchorEl !== activeEd) {
+              const blockEl = anchorEl.closest('p, div, li') || anchorEl;
+              const prevSib = blockEl.previousElementSibling;
+              if (prevSib && activeEd.contains(prevSib)) {
+                if (prevSib.tagName === 'IMG') {
+                  ev.preventDefault();
+                  this.deleteImage(prevSib, activeEd);
+                  return;
+                }
+                if (prevSib.tagName === 'TABLE') {
+                  ev.preventDefault();
+                  this.deleteTable(prevSib, activeEd);
+                  return;
+                }
+              }
+            }
+          } else if (ev.key === 'Delete') {
+            if (anchorNode.nodeType === 1 && range.startOffset < anchorNode.childNodes.length) {
+              const nextChild = anchorNode.childNodes[range.startOffset];
+              if (nextChild?.tagName === 'IMG') {
+                ev.preventDefault();
+                this.deleteImage(nextChild, activeEd);
+                return;
+              }
+              if (nextChild?.tagName === 'TABLE') {
+                ev.preventDefault();
+                this.deleteTable(nextChild, activeEd);
+                return;
+              }
+            }
+          }
+        }
+      }, true);
+
+      // 3) Chuột phải (Context Menu) chuẩn Microsoft Word trên Bảng, Ảnh và Văn bản trong khung soạn thảo!
+      document.addEventListener('contextmenu', (ev) => {
+        const editorEl = ev.target?.closest?.('[contenteditable="true"]');
+        if (!editorEl) return;
+        this.activeEditor = editorEl;
+
+        const img = ev.target.closest('img');
+        if (img && editorEl.contains(img)) {
+          ev.preventDefault();
+          this.clearSelections();
+          this.selectedImg = img;
+          img.classList.add('v115-word-img-selected');
+          this.openContextMenuAt(ev.clientX, ev.clientY, '🖼️ Tùy chọn Ảnh (Chuẩn Word)', [
+            { label: '📋 Sao chép ảnh', action: () => this.copyImageToClipboard(img) },
+            { label: '✂️ Cắt (Crop) ảnh...', action: () => this.openImageCropModal(img, editorEl) },
+            { label: '🔄 Xoay ảnh 90°', action: () => this.rotateImage90(img, editorEl) },
+            'SEP',
+            { label: '📐 Kích cỡ: Nhỏ (35%)', action: () => this.resizeImage(img, '35%', editorEl) },
+            { label: '📐 Kích cỡ: Vừa (65%)', action: () => this.resizeImage(img, '65%', editorEl) },
+            { label: '📐 Kích cỡ: Đầy khung (100%)', action: () => this.resizeImage(img, '100%', editorEl) },
+            { label: '📐 Trả về kích cỡ gốc', action: () => this.resizeImage(img, 'auto', editorEl) },
+            'SEP',
+            { label: '⫷ Căn trái ảnh', action: () => this.alignImage(img, 'left', editorEl) },
+            { label: '⫶ Căn giữa ảnh', action: () => this.alignImage(img, 'center', editorEl) },
+            { label: '⫸ Căn phải ảnh', action: () => this.alignImage(img, 'right', editorEl) },
+            'SEP',
+            { label: '🗑️ Xóa ảnh này', danger: true, action: () => this.deleteImage(img, editorEl) }
+          ]);
+          return;
+        }
+
+        const table = ev.target.closest('table');
+        if (table && editorEl.contains(table)) {
+          ev.preventDefault();
+          const cell = ev.target.closest('td, th');
+          this.clearSelections();
+          this.selectedTable = table;
+          this.selectedCell = cell;
+          table.classList.add('v115-word-table-selected');
+          this.openContextMenuAt(ev.clientX, ev.clientY, '⊞ Tùy chọn Bảng (Chuẩn Word)', [
+            { label: '⬆️ Chèn hàng lên trên', action: () => this.tableInsertRow(table, cell, 'before', editorEl) },
+            { label: '⬇️ Chèn hàng xuống dưới', action: () => this.tableInsertRow(table, cell, 'after', editorEl) },
+            { label: '⬅️ Chèn cột bên trái', action: () => this.tableInsertCol(table, cell, 'before', editorEl) },
+            { label: '➡️ Chèn cột bên phải', action: () => this.tableInsertCol(table, cell, 'after', editorEl) },
+            'SEP',
+            { label: '⚖️ Canh đều độ rộng các cột', action: () => this.tableDistributeColumns(table, editorEl) },
+            { label: '⫷ Căn trái ô hiện tại', action: () => this.tableAlignCells(table, cell, 'left', false, editorEl) },
+            { label: '⫶ Căn giữa ô hiện tại', action: () => this.tableAlignCells(table, cell, 'center', false, editorEl) },
+            { label: '⫸ Căn phải ô hiện tại', action: () => this.tableAlignCells(table, cell, 'right', false, editorEl) },
+            { label: '☰ Canh giữa toàn bộ bảng', action: () => this.tableAlignCells(table, cell, 'center', true, editorEl) },
+            'SEP',
+            { label: '📋 Sao chép bảng', action: () => this.copyTableHtml(table) },
+            { label: '❌ Xóa hàng hiện tại', danger: true, action: () => this.tableDeleteRow(table, cell, editorEl) },
+            { label: '❌ Xóa cột hiện tại', danger: true, action: () => this.tableDeleteCol(table, cell, editorEl) },
+            { label: '🗑️ Xóa toàn bộ bảng', danger: true, action: () => this.deleteTable(table, editorEl) }
+          ]);
+        }
+      });
+
+      document.addEventListener('scroll', () => {
+        this.hideFloatingBar();
+      }, true);
+
+      // Khi người dùng focus vào bất kỳ khung contenteditable động nào (modal mới tạo), tự gắn nút Word!
+      document.addEventListener('focusin', (ev) => {
+        const ed = ev.target?.closest?.('[contenteditable="true"]');
+        if (ed) this.enhanceToolbarForEditor(ed);
+      });
+    }
+
+    init() {
+      if (this._initDone) return;
+      this._initDone = true;
+      this.injectStylesOnce();
+      this.bindGlobalEvents();
+      this.enhanceAllRichEditorsInDom();
+      this.enhancePlainPromptAndBibleTextareas();
+      setTimeout(() => {
+        this.enhanceAllRichEditorsInDom();
+        this.enhancePlainPromptAndBibleTextareas();
+      }, 800);
+    }
+  }
+
+  const v115WordPro = new V115WordRichEditorProSuite();
+  window.NoirStudio.wordRichPro = v115WordPro;
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => v115WordPro.init());
+  } else {
+    v115WordPro.init();
+  }
 })();

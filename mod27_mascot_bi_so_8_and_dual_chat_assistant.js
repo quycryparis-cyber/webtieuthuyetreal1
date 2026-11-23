@@ -236,12 +236,114 @@
 
   const STUDIO_USAGE_KNOWLEDGE_BASE = [
     {
-      keywords: ['prompt tổng', 'chạy ai', 'viết truyện', 'chế độ 1', 'câu lệnh', 'tab 3', 'model', 'mô hình'],
-      title: '🚀 Cách chạy Prompt Tổng Hợp 2 bước & Chọn Mô hình tại Tab 3',
+      keywords: [
+        'trang web này có gì', 'web này có gì', 'web có gì', 'app này có gì', 'ứng dụng này có gì',
+        'trang web có những gì', 'có những tính năng gì', 'có chức năng gì', 'làm được gì',
+        'giới thiệu trang web', 'giới thiệu web', 'tổng quan trang web', 'tổng quan', 'web này dùng để làm gì'
+      ],
+      title: '🌟 Tổng Quan Web Viết Tiểu Thuyết Của Bi (6 Màn Hình · 47 Module Miễn Phí 100%)',
       answer: [
-        'Để AI viết tiểu thuyết thông minh và không bao giờ quên chi tiết, bạn chỉ cần làm đúng 2 bước cực dễ ở **Tab 3 (🤖 Trợ Lý AI & 5 Chế Độ)**:',
-        '1. Bấm nút màu xanh **"🎛️ Chọn chế độ chạy mô hình, thông số và nhập câu lệnh"** -> Chọn Chế độ (1 đến 5), chỉnh số từ mong muốn và nhập yêu cầu vào khung siêu rộng.',
-        '2. Bấm **"🚀 Chạy Prompt Tổng Hợp"** -> Cửa sổ xác nhận sẽ hiện ra toàn văn Prompt đã tự động ghép nối 100% **Story Bible (Tab 4)** + **Mốc chuyển cảnh/POV**. Tại đây bạn có thể chọn lại mô hình một lần nữa (**Khuyên dùng từ Gemini 3.8 Flash hoặc Pro/Argon trở lên** thay vì Flash-Lite) rồi bấm **"✍️ Bắt Đầu Chạy Prompt Chính Thức"**!'
+        'Chào bạn! **Web Viết Tiểu Thuyết Của Bi** là studio sáng tác tiểu thuyết dài hơi & tiện ích đa năng chạy mượt trên cả **PC, Mobile và App PWA**, gồm **6 Tab chuyên biệt (47 Module)**:',
+        '• **Tab 1 — ✍️ Bàn Viết Truyện:** Soạn thảo chuẩn trang sách, chế độ Tập trung, Chia cột Split View, Quy trình 4 bước, duyệt đoạn AI tô màu kiểu Google Docs, chuẩn hóa hội thoại Việt, Từ điển Ngũ quan, quét sáo ngữ AI & Tự lưu 3 tầng mỗi 2 giây.',
+        '• **Tab 2 — 📂 Chương & File Nguồn:** Cây bản thảo phân cấp Quyển → Chương → Cảnh kéo thả, lọc Nháp / Đã duyệt, nạp hàng loạt `.DOCX / .PDF / .TXT` và tra cứu ký ức trăm chương trước miễn phí 0 Token.',
+        '• **Tab 3 — 🤖 Trung Tâm Điều Khiển AI (6 Chế Độ):** Chế độ 1 (Viết truyện nối Story Bible), Chế độ 2 (Tham mưu cốt truyện), Chế độ 3 (Soi Logic), Chế độ 4 (Độc giả chấm điểm), Chế độ 5 (Vẽ sơ đồ cốt truyện ASCII/SVG), Chế độ 6 (Tạo ảnh bìa truyện). Hỗ trợ chia đôi màn hình Gemini & NotebookLM + khung soạn thảo **Word Pro** (chèn/xóa bảng, cắt/crop ảnh, menu chuột phải).',
+        '• **Tab 4 — 🏛️ Story Bible & Nhân Vật:** Bộ nhớ chống quên cốt truyện dạng Word (hỗ trợ bảng, ảnh, tải PDF), Hồ sơ Nhân vật, Ma trận Ai Biết Gì, Sổ cái Phục bút & quy trình đồng bộ NotebookLM.',
+        '• **Tab 5 — 🎵 Nhạc, Pomodoro & Không Gian:** Rạp **YouTube sạch quảng cáo** (Tua ±10s, 0.25x–4x, Lặp A–B, **Cửa sổ nổi Desktop/Mobile**, chạy nền & phủ làm **Nền Video 16:9**), máy nghe **MP3 lặp A–B**, 7 âm thanh tự nhiên, **Pomodoro đồng bộ 2 chiều**, 8 tranh nền nghệ thuật & **Bầu trời Thời tiết 3D 60FPS** + Đồng hồ quốc tế / Báo thức MP3.',
+        '• **Tab 6 — ⚙️ Cài Đặt, Xuất Sách & Tiện Ích:** Nút **"📕 Xuất truyện qua PDF và dùng ĐăngLovePDF"** (Xuất sách `.PDF/.DOCX/.EPUB` + bộ **19 công cụ ĐăngLovePDF** gộp/tách/nén/ký tên/OCR/đổi Word-Excel-PPTX 100% trên máy), **Quản lý Hiệu năng & Tự ngủ RAM (Mod 47)**, Đồng bộ Google Drive / `.ZIP`, Video hướng dẫn 6 ngôn ngữ (giọng Google TTS), Kho Phiên Bản Time-Machine & **Máy tính Casio fx-570VN+ / Đồ thị Desmos**!',
+        '👉 Bạn chỉ cần gõ **"Mở + tên chức năng"** (vd: *Mở ĐăngLovePDF*, *Mở YouTube*, *Mở Quản lý RAM*, *Mở Tab 3*) là mình đưa bạn tới ngay!'
+      ].join('\n')
+    },
+    {
+      keywords: [
+        'đănglovepdf', 'danglovepdf', 'ilovepdf', 'ihatepdf', 'gộp pdf', 'tách pdf', 'nén pdf',
+        'ký tên pdf', 'đóng dấu pdf', 'xoay trang pdf', 'ocr', 'pdf sang word', 'word sang pdf',
+        'chuyển đổi định dạng', 'đổi định dạng', 'excel sang pdf', 'ảnh sang pdf', 'pdf sang ảnh'
+      ],
+      title: '❤️ Bộ Công Cụ ĐăngLovePDF (Mod 46 — 19 Công Cụ Xử Lý File 100% Trên Máy)',
+      answer: [
+        'Bạn vào **Tab 6** và bấm nút nhấp nháy nổi bật **"📕 Xuất truyện qua PDF và dùng ĐăngLovePDF"** ở thanh trên cùng -> chọn **"❤️ ĐăngLovePDF"**:',
+        '• **100% riêng tư trên máy:** Mọi thao tác xử lý trực tiếp trên trình duyệt, file không bao giờ bị tải lên máy chủ ngoài.',
+        '• **Gồm 5 cụm công cụ gọn gàng (có nút Thu gọn từng cụm & Rút gọn tất cả):** Gộp/Tách/Sắp xếp/Cắt viền PDF • Nén/Đánh số/Đóng dấu/Ký tên/Làm phẳng • Ảnh & Slide PPTX ↔ PDF • Word/TXT/MD/Excel/CSV/JSON ↔ PDF • Đọc chữ OCR (Tiếng Việt/Anh) & Làm sạch bảo mật PDF.',
+        '• Đóng cửa sổ là tự động giải phóng RAM & xóa sạch bộ đệm file tạm!'
+      ].join('\n')
+    },
+    {
+      keywords: [
+        'hiệu năng', 'tràn ram', 'dọn ram', 'ram', 'giật', 'lag', 'chậm', 'tự ngủ', 'auto-sleep',
+        'chạy nền', 'chạy ngầm', 'tắt mod', 'bật mod', 'tắt chức năng', 'tiết kiệm pin', 'mod 47'
+      ],
+      title: '⚡ Quản Lý Hiệu Năng, Dọn RAM & Tự Ngủ Thông Minh (Mod 47)',
+      answer: [
+        'Để tối ưu độ mượt và không bao giờ tràn RAM, bạn vào **Tab 6** và mở thẻ **"⚡ Quản Lý Hiệu Năng, Tự Ngủ (Auto-Sleep) & Tắt/Bật Chức Năng (Mod 47)"**:',
+        '• **1 chạm đổi chế độ:** Chọn **"🪶 Tiết Kiệm RAM Tối Đa"** nếu dùng máy cấu hình yếu, hoặc **"⚡ Cân Bằng Thông Minh"** để hệ thống tự ngủ hiệu ứng 60FPS & tự dọn RAM khi bạn đóng ĐăngLovePDF / Máy tính / Video hoặc chuyển Tab.',
+        '• **Công tắc Tắt/Bật riêng từng chức năng phụ:** Hạt 60FPS, Bầu trời thời tiết 3D, Nền Video YouTube 16:9, Linh vật Bi Số 8, Bộ đếm traffic, Âm gõ phím ASMR.',
+        '• **Luôn bảo vệ dịch vụ chạy ngầm thiết yếu:** Nhạc MP3, YouTube phát nền/PiP, Pomodoro, Báo thức & Tự lưu 3 tầng vẫn chạy liên tục không bị gián đoạn!'
+      ].join('\n')
+    },
+    {
+      keywords: [
+        'youtube', 'cửa sổ nổi', 'pip', 'lặp a-b', 'a-b', 'nền video', 'crop nền', 'tua video', 'không quảng cáo'
+      ],
+      title: '📺 Rạp YouTube Sạch Quảng Cáo, Cửa Sổ Nổi & Lặp A–B (Mod 39 & 40)',
+      answer: [
+        'Mở **Tab 5 (🎵 Nhạc, Pomodoro & Chữ)** -> mở khung **"📺 Trình Phát YouTube Không Quảng Cáo & Nền Video 16:9"**:',
+        '• Tìm kiếm video ngay trong web hoặc dán link YouTube để phát hoàn toàn **không quảng cáo** (`youtube-nocookie.com`).',
+        '• Hỗ trợ đủ **Tua ±10s, Dừng/Phát, Tốc độ 0.25x–4x, Lặp toàn video, Lặp đoạn A–B** (đồng bộ 100% kể cả khi bật **🖼️ Cửa sổ nổi** trên Desktop!).',
+        '• Bấm **"🎬 Cài Video Này Làm Nền"** để biến video thành nền web 16:9 xuyên suốt 6 Tab, kèm công cụ **✂️ Căn chỉnh/Crop**.'
+      ].join('\n')
+    },
+    {
+      keywords: [
+        'chèn bảng', 'xóa bảng', 'cắt ảnh', 'crop ảnh', 'chế độ word', 'căn lề', 'menu chuột phải', 'word pro'
+      ],
+      title: '📝 Trình Soạn Thảo Chuẩn Word Pro (Bảng, Cắt Ảnh & Định Dạng Nhanh)',
+      answer: [
+        'Ở các khung soạn giàu định dạng kiểu Word (Tab 3 Ô lệnh AI, Tab 3 Đầu ra AI, Tab 4 Story Bible):',
+        '• Thanh công cụ có sẵn nút **☑️ Chọn hết, Đậm/Nghiêng/Gạch chân/Gạch ngang, Căn lề Trái/Giữa/Phải/Đều, Danh sách, Hoàn tác/Làm lại, ⊞ + Bảng, 🖼️ + Ảnh**.',
+        '• **Thao tác trên Bảng:** Bấm chuột phải vào bảng để thêm/xóa hàng cột, canh đều cột, căn ô hoặc **🗑️ Xóa toàn bộ bảng** (hoặc nhấn `Ctrl + Backspace/Delete`).',
+        '• **Thao tác trên Ảnh:** Bấm chọn hoặc chuột phải vào ảnh để **✂️ Cắt ảnh (Crop)**, xoay 90°, chỉnh cỡ `35% / 65% / 100%`, căn lề hoặc nhấn `Backspace/Delete` để xóa.'
+      ].join('\n')
+    },
+    {
+      keywords: [
+        'casio', 'fx-570', 'máy tính', 'đồ thị', 'desmos', 'mod 45', 'tính toán'
+      ],
+      title: '🧮 Máy Tính Casio fx-570VN PLUS & Đồ Thị Desmos 100% Nội Bộ (Mod 45)',
+      answer: [
+        'Vào **Tab 6** -> mở mục **"🎲 Chức Năng Linh Tinh"** -> chọn **"🧮 Máy tính đồ thị (Casio fx-570VN+ & Desmos)"**:',
+        '• Đầy đủ chế độ tính toán khoa học (`COMP, CMPLX, STAT, EQN, MATRIX, VECTOR, SOLVE, ∫dx, d/dx`).',
+        '• Bấm **"📈 Tạo hàm đồ thị"** để vẽ đồ thị tương tác 60FPS kiểu Desmos hoàn toàn offline trên máy!'
+      ].join('\n')
+    },
+    {
+      keywords: [
+        'thời tiết', 'báo thức', 'múi giờ', 'đồng hồ', 'bầu trời', 'mod 42', 'mod 43'
+      ],
+      title: '🌤️ Đồng Hồ Quốc Tế, Báo Thức MP3 & Thời Tiết 3D 60FPS (Mod 42 & 43)',
+      answer: [
+        'Bấm ngay dòng chữ gạch chân đồng hồ phía trên thanh tiêu đề (hoặc ngay tại Cổng Kết Nối) để mở bảng **Giờ Quốc Tế, Báo Thức & Thời Tiết**:',
+        '• Chuyển múi giờ toàn cầu, đặt báo thức bằng chuông hệ thống hoặc chính bản nhạc `.MP3` từ Tab 5.',
+        '• Xem dự báo thời tiết 24 giờ từng tiếng theo GPS cấp Phường/Xã và bật hiệu ứng **Bầu trời Thời tiết 3D 60FPS** chạy nền!'
+      ].join('\n')
+    },
+    {
+      keywords: [
+        'google drive', 'đồng bộ', 'chuyển máy', 'oauth', 'client id', 'gói zip', 'mod 37'
+      ],
+      title: '🔄 Đồng Bộ Dữ Liệu Sang Máy Khác (.ZIP & Google Drive OAuth A–Z)',
+      answer: [
+        'Vào **Tab 6** và bấm nút **"🔄 Đồng bộ dữ liệu sang máy khác"** ở thanh trên cùng:',
+        '• Có sẵn 2 cách: (1) Xuất/Nạp gói `.ZIP / .JSON` 1 chạm siêu nhanh, hoặc (2) Liên kết trực tiếp **Google Drive** cá nhân (kèm hướng dẫn trực quan mô phỏng từng cú click lấy Google OAuth Client ID từ A → Z ngay bên trong cửa sổ!).'
+      ].join('\n')
+    },
+    {
+      keywords: ['prompt tổng', 'chạy ai', 'viết truyện', 'chế độ 1', 'chế độ 6', 'tạo bìa', 'câu lệnh', 'tab 3', 'model', 'mô hình'],
+      title: '🚀 Cách chạy 6 Chế Độ AI & Prompt Tổng Hợp tại Tab 3',
+      answer: [
+        'Tại **Tab 3 (🤖 Trung Tâm Điều Khiển AI & 6 Chế Độ)**:',
+        '1. Chọn Chế độ mong muốn (Chế độ 1: Viết truyện • Chế độ 2: Tham mưu cốt truyện • Chế độ 3: Kiểm toán Logic • Chế độ 4: Độc giả chấm điểm • Chế độ 5: Vẽ sơ đồ ASCII/SVG • Chế độ 6: Tạo ảnh bìa truyện).',
+        '2. Nhập yêu cầu vào khung chuẩn Word (bấm **⛶ Phóng to ô nhập** nếu muốn viết rộng rãi) rồi bấm **"🚀 Chạy Prompt Tổng Hợp"**.',
+        '3. Hệ thống tự động gắn Story Bible, hỗ trợ chạy trực tiếp qua API hoặc tự copy prompt + chia đôi màn hình mở **Gemini / NotebookLM** cực tiện!'
       ].join('\n')
     },
     {
@@ -1129,17 +1231,28 @@
       }
     }
 
-    classifyChatMessageIntent(text) {
+    classifyChatMessageIntent(text, activeMode = 'CASUAL_CHAT_AUTO') {
       const q = String(text || '').trim().toLowerCase();
       const webFeaturePatterns = [
         /\btab\s*[1-6]\b/,
-        'cách dùng', 'hướng dẫn', 'chức năng', 'tính năng', 'mở ', 'bật ', 'tắt ',
-        'xuất file', 'xuất sách', 'pdf', 'docx', 'epub', 'txt',
-        'story bible', 'pomodoro', 'nhạc', 'mp3', 'âm nhạc', 'hình nền', 'tranh nền',
-        'video nền', 'ảnh nền', 'hiệu ứng nền', 'api key', 'thư mục', 'lưu trữ',
-        'phiên bản', 'time-machine', 'mode 5', 'biểu đồ', 'cốt truyện trực quan',
-        'bm25', 'rag', 'duyệt', 'font chữ', 'cỡ chữ', 'thụt đầu dòng', 'mức tư duy',
-        'hạn mức', 'quota', 'mô hình', 'flash', 'argon', 'cài đặt', 'công cụ', 'chatbot'
+        /\bmod(?:ule)?\s*\d+\b/,
+        'trang web', 'web này', 'web có', 'app này', 'ứng dụng', 'studio', 'website', 'hệ thống',
+        'có gì', 'có những gì', 'có cái gì', 'làm được gì', 'dùng để làm gì', 'tổng quan', 'giới thiệu',
+        'ở đâu', 'chỗ nào', 'nằm ở đâu', 'tìm ở đâu', 'làm sao', 'làm thế nào', 'kiểu gì', 'sao không',
+        'cách dùng', 'hướng dẫn', 'chức năng', 'tính năng', 'mở ', 'bật ', 'tắt ', 'đóng ', 'thu gọn', 'mở rộng',
+        'xuất file', 'xuất sách', 'pdf', 'docx', 'epub', 'txt', 'đănglovepdf', 'danglovepdf', 'ilovepdf', 'ihatepdf',
+        'gộp pdf', 'tách pdf', 'nén pdf', 'ký tên', 'đóng dấu', 'ocr', 'đổi định dạng', 'chuyển đổi',
+        'story bible', 'notebooklm', 'gemini', 'pomodoro', 'nhạc', 'mp3', 'âm nhạc', 'youtube', 'cửa sổ nổi', 'pip',
+        'lặp a-b', 'a-b', 'hình nền', 'tranh nền', 'video nền', 'ảnh nền', 'hiệu ứng nền', 'crop', 'cắt ảnh',
+        'chèn bảng', 'xóa bảng', 'chế độ word', 'căn lề', 'api key', 'thư mục', 'lưu trữ', 'google drive', 'oauth',
+        'đồng bộ', 'sao lưu', 'backup', 'phiên bản', 'time-machine', 'mode 5', 'chế độ 5', 'chế độ 6', 'tạo bìa',
+        'biểu đồ', 'sơ đồ', 'bm25', 'rag', 'duyệt', 'font chữ', 'cỡ chữ', 'thụt đầu dòng', 'mức tư duy',
+        'hạn mức', 'quota', 'mô hình', 'flash', 'argon', 'hydrogen', 'neon', 'carbon', 'cài đặt', 'công cụ', 'chatbot',
+        'hiệu năng', 'ram', 'tràn ram', 'dọn ram', 'giật', 'lag', 'chậm', 'tự ngủ', 'auto-sleep', 'chạy nền', 'chạy ngầm',
+        'casio', 'fx-570', 'máy tính', 'đồ thị', 'desmos', 'thời tiết', 'báo thức', 'múi giờ', 'đồng hồ',
+        'video hướng dẫn', 'tutorial', 'giọng đọc', 'google tts', 'ngôn ngữ', 'tiếng anh', 'tiếng trung', 'tiếng hàn', 'tiếng nhật',
+        'guest mode', 'chế độ khách', 'phím tắt', 'báo lỗi', 'tác giả', 'ủng hộ', 'donate', 'qr', 'tải app', 'pwa',
+        'lỗi', 'hỏng', 'không bấm được', 'hỗ trợ', 'giúp tôi', 'giúp mình'
       ];
       const novelCraftPatterns = [
         'chương', 'bản thảo', 'nhân vật', 'cốt truyện', 'kịch bản', 'phân cảnh',
@@ -1148,11 +1261,11 @@
         'nữ chính', 'tiểu thuyết', 'light novel', 'truyện', 'lore', 'thế giới quan',
         'bối cảnh', 'phục bút', 'điểm nhìn', 'pov', 'lắc bi', 'đặt tên'
       ];
-      const casualPatterns = [
+      const strictPureCasualPatterns = [
         'đói quá', 'ăn gì', 'ăn cơm', 'mệt quá', 'buồn ngủ', 'chán quá', 'vui quá',
-        'buồn quá', 'thời tiết', 'hôm nay thế nào', 'chào bạn', 'hello', 'hi ', 'xin chào',
-        'kể chuyện cười', 'tán gẫu', 'nói chuyện phiếm', 'tâm sự', 'uống nước',
-        'cà phê', 'trà sữa', 'ngủ ngon', 'cảm ơn', 'thank', 'bạn khỏe không'
+        'buồn quá', 'hôm nay thế nào', 'kể chuyện cười', 'tán gẫu', 'nói chuyện phiếm',
+        'tâm sự', 'thất tình', 'uống nước', 'cà phê không', 'trà sữa', 'ngủ ngon',
+        'bạn khỏe không', 'bạn ăn chưa', 'chơi game không', 'kể chuyện vui'
       ];
 
       const matchesAny = (list) =>
@@ -1160,50 +1273,90 @@
 
       const hasWeb = matchesAny(webFeaturePatterns);
       const hasNovel = matchesAny(novelCraftPatterns);
-      const hasCasual = matchesAny(casualPatterns);
+      const isPureCasual = matchesAny(strictPureCasualPatterns);
 
-      if (hasWeb && !hasNovel) {
+      // Ở Chế độ 1 (Hỗ trợ Web): ưu tiên phục vụ mọi câu hỏi về trang web, tính năng, hướng dẫn, câu hỏi mở;
+      // CHỈ từ chối khi người dùng rõ ràng đang tán gẫu đời tư thuần túy (ăn uống/buồn ngủ/tâm sự) không dính dáng web.
+      if (activeMode === 'WEB_SUPPORT_STRICT') {
+        if (isPureCasual && !hasWeb && !hasNovel) {
+          return { category: 'CASUAL_CHITCHAT', label: 'TÁN GẪU ĐỜI THƯỜNG' };
+        }
         return { category: 'WEB_FEATURE', label: 'HỖ TRỢ TÍNH NĂNG WEB' };
       }
-      if (hasCasual && !hasWeb && !hasNovel) {
+
+      // Ở Chế độ 2 (Trò chuyện & Đồng hành thông minh): vẫn nhận diện chính xác câu hỏi về web để trả lời tận tình!
+      if (hasWeb) {
+        if (hasNovel && !q.includes('web') && !q.includes('app') && !q.includes('tab') && !q.includes('mở ') && !q.includes('cách') && !q.includes('ở đâu') && !q.includes('có gì')) {
+          return { category: 'NOVEL_CRAFT', label: 'SÁNG TÁC & CỐT TRUYỆN' };
+        }
+        return { category: 'WEB_FEATURE', label: 'HỖ TRỢ TÍNH NĂNG WEB' };
+      }
+      if (hasNovel) {
+        return { category: 'NOVEL_CRAFT', label: 'SÁNG TÁC & CỐT TRUYỆN' };
+      }
+      if (isPureCasual || q.split(/\s+/).length <= 16) {
         return { category: 'CASUAL_CHITCHAT', label: 'TÁN GẪU ĐỜI THƯỜNG' };
       }
-      if (!hasWeb && !hasNovel && q.split(/\s+/).length <= 16) {
-        return { category: 'CASUAL_CHITCHAT', label: 'TÁN GẪU / HỎI ĐÁP NGẮN' };
-      }
-      if (hasWeb && hasNovel) {
-        return q.includes('cách') || q.includes('mở ') || q.includes('tab')
-          ? { category: 'WEB_FEATURE', label: 'HỖ TRỢ TÍNH NĂNG WEB' }
-          : { category: 'NOVEL_CRAFT', label: 'SÁNG TÁC & CỐT TRUYỆN' };
-      }
-      return {
-        category: hasWeb ? 'WEB_FEATURE' : 'NOVEL_CRAFT',
-        label: hasWeb ? 'HỖ TRỢ TÍNH NĂNG WEB' : 'SÁNG TÁC & CỐT TRUYỆN'
-      };
+      return { category: 'NOVEL_CRAFT', label: 'SÁNG TÁC & CỐT TRUYỆN' };
     }
 
     detectAndExecuteWebFeatureAction(text) {
       const q = String(text || '').trim().toLowerCase();
       const wantsOpen =
-        q.includes('mở') || q.includes('chuyển sang') || q.includes('vào ') || q.includes('bật ');
+        q.includes('mở') || q.includes('chuyển sang') || q.includes('vào ') || q.includes('bật ') || q.includes('đi tới') || q.includes('đưa tôi tới');
       if (!wantsOpen) return null;
 
-      const navMap = [
-        { match: ['tab 1', 'bàn viết', 'soạn thảo'], screen: 'SCREEN_1_WRITE', label: 'Tab 1: Bàn Viết Truyện' },
-        { match: ['tab 2', 'chương', 'file nguồn'], screen: 'SCREEN_2_SOURCES', label: 'Tab 2: Chương & File Nguồn' },
-        { match: ['tab 3', 'trợ lý ai', '5 chế độ', 'biểu đồ'], screen: 'SCREEN_3_AI', label: 'Tab 3: Trợ Lý AI & 5 Chế Độ' },
-        { match: ['tab 4', 'story bible', 'nhân vật'], screen: 'SCREEN_4_BIBLE', label: 'Tab 4: Story Bible & Nhân Vật' },
-        { match: ['tab 5', 'nhạc', 'pomodoro', 'hình nền', 'tranh nền', 'cỡ chữ'], screen: 'SCREEN_5_AMBIENCE', label: 'Tab 5: Nhạc, Pomodoro & Chữ' },
-        { match: ['tab 6', 'phiên bản', 'xuất sách', 'cài đặt'], screen: 'SCREEN_6_SYSTEM', label: 'Tab 6: Phiên Bản, Xuất File & Cài Đặt' }
-      ];
-
-      for (const item of navMap) {
-        if (item.match.some((k) => q.includes(k))) {
-          this.navigateAndSpotlightFeature({ screen: item.screen, label: item.label }, false);
-          return item.label;
+      // Các công cụ đặc thù mở trực tiếp bằng API module
+      if (q.includes('đănglovepdf') || q.includes('danglovepdf') || q.includes('gộp pdf') || q.includes('tách pdf') || q.includes('nén pdf') || q.includes('đổi định dạng')) {
+        if (window.NoirStudio?.dangLovePdf?.openDangLovePdfStudio) {
+          this.closeChatModal();
+          window.NoirStudio.dangLovePdf.openDangLovePdfStudio();
+          return '❤️ ĐăngLovePDF — Trình xử lý PDF & Đổi định dạng 100% nội bộ (Mod 46)';
         }
       }
-
+      if (q.includes('autotester') || q.includes('bác sĩ app') || q.includes('kiểm thử') || q.includes('khám tổng quát')) {
+        if (window.NoirStudio?.autoTesterLoader?.open) {
+          this.closeChatModal();
+          window.NoirStudio.autoTesterLoader.open();
+          return '🩺 Autotester nội bộ ("Bác sĩ App" — Mod 48)';
+        }
+      }
+      if (q.includes('hiệu năng') || q.includes('dọn ram') || q.includes('quản lý ram') || q.includes('tự ngủ') || q.includes('tắt mod') || q.includes('bật mod')) {
+        if (window.NoirStudio?.perfManager?.openPerfManagerPanel) {
+          this.closeChatModal();
+          window.NoirStudio.perfManager.openPerfManagerPanel();
+          return '⚡ Quản Lý Hiệu Năng, Tự Ngủ & Tắt/Bật Chức Năng (Mod 47)';
+        }
+      }
+      if (q.includes('đồng bộ') || q.includes('google drive') || q.includes('chuyển máy')) {
+        this.navigateAndSpotlightFeature(
+          { screen: 'SCREEN_6_SYSTEM', selector: '#btn-tab6-top-sync-devices', clickSelector: '#btn-tab6-top-sync-devices', label: 'Cửa sổ Đồng Bộ Dữ Liệu & Google Drive (Mod 37)' },
+          true
+        );
+        return 'Cửa sổ Đồng Bộ Dữ Liệu & Google Drive (Mod 37)';
+      }
+      if (q.includes('máy tính') || q.includes('casio') || q.includes('desmos') || q.includes('đồ thị')) {
+        this.navigateAndSpotlightFeature(
+          { screen: 'SCREEN_6_SYSTEM', collapseTarget: 'tab6-acc-misc-body', selector: '#tab6-misc-fun-hub-root', label: 'Máy Tính Casio fx-570VN+ & Đồ Thị Desmos (Mod 45)' },
+          true
+        );
+        return 'Máy Tính Casio fx-570VN+ & Đồ Thị Desmos (Mod 45)';
+      }
+      if (q.includes('thời tiết') || q.includes('báo thức') || q.includes('múi giờ') || q.includes('đồng hồ quốc tế')) {
+        const trigger = document.querySelector('#btn-open-clock-weather-modal, [data-mod42-open-modal]');
+        if (trigger) {
+          this.closeChatModal();
+          trigger.click();
+          return 'Đồng Hồ Quốc Tế, Báo Thức & Thời Tiết 3D (Mod 42 & 43)';
+        }
+      }
+      if (q.includes('video hướng dẫn') || q.includes('tutorial')) {
+        this.navigateAndSpotlightFeature(
+          { screen: 'SCREEN_6_SYSTEM', collapseTarget: 'tab6-acc-4-body', selector: '#mod28-video-tutorial-canvas', label: 'Rạp Video Hướng Dẫn Tương Tác 6 Ngôn Ngữ (Mod 28)' },
+          true
+        );
+        return 'Rạp Video Hướng Dẫn Tương Tác 6 Ngôn Ngữ (Mod 28)';
+      }
       if (q.includes('cổng kết nối') || q.includes('đổi api key') || q.includes('kiểm tra key')) {
         this.navigateAndSpotlightFeature(
           { screen: 'SCREEN_6_SYSTEM', selector: '#btn-s6-open-connection-gate', label: 'Cổng Kiểm Tra API Key & Thư Mục' },
@@ -1212,11 +1365,32 @@
         return 'Cổng Kiểm Tra API Key & Thư Mục';
       }
       if (q.includes('xuất pdf') || q.includes('xuất file') || q.includes('xuất sách')) {
+        if (window.NoirStudio?.dangLovePdf?.openTwoChoiceChooserModal) {
+          this.closeChatModal();
+          window.NoirStudio.dangLovePdf.openTwoChoiceChooserModal();
+          return 'Chọn Xuất Truyện Qua PDF hoặc ĐăngLovePDF';
+        }
         this.navigateAndSpotlightFeature(
           { screen: 'SCREEN_1_WRITE', selector: '#btn-export-modal', clickSelector: '#btn-export-modal', label: 'Cửa sổ Xuất Sách Đa Định Dạng' },
           true
         );
         return 'Cửa sổ Xuất Sách Đa Định Dạng (PDF/DOCX/TXT)';
+      }
+
+      const navMap = [
+        { match: ['tab 1', 'bàn viết', 'soạn thảo'], screen: 'SCREEN_1_WRITE', label: 'Tab 1: Bàn Viết Truyện' },
+        { match: ['tab 2', 'chương', 'file nguồn'], screen: 'SCREEN_2_SOURCES', label: 'Tab 2: Chương & File Nguồn' },
+        { match: ['tab 3', 'trợ lý ai', '5 chế độ', '6 chế độ', 'biểu đồ', 'tạo bìa'], screen: 'SCREEN_3_AI', label: 'Tab 3: Trung Tâm Điều Khiển AI & 6 Chế Độ' },
+        { match: ['tab 4', 'story bible', 'nhân vật'], screen: 'SCREEN_4_BIBLE', label: 'Tab 4: Story Bible & Nhân Vật' },
+        { match: ['tab 5', 'youtube', 'nhạc', 'mp3', 'pomodoro', 'hình nền', 'tranh nền', 'cỡ chữ'], screen: 'SCREEN_5_AMBIENCE', label: 'Tab 5: Nhạc, YouTube, Pomodoro & Chữ' },
+        { match: ['tab 6', 'phiên bản', 'cài đặt'], screen: 'SCREEN_6_SYSTEM', label: 'Tab 6: Phiên Bản, Xuất File, ĐăngLovePDF & Cài Đặt' }
+      ];
+
+      for (const item of navMap) {
+        if (item.match.some((k) => q.includes(k))) {
+          this.navigateAndSpotlightFeature({ screen: item.screen, label: item.label }, false);
+          return item.label;
+        }
       }
       return null;
     }
@@ -1290,11 +1464,34 @@
       const combined = `${String(userQuery || '')} ${String(replyText || '')}`.toLowerCase();
       const catalog = [
         {
+          id: 'DANGLOVEPDF',
+          keys: ['đănglovepdf', 'danglovepdf', 'gộp pdf', 'tách pdf', 'nén pdf', 'ocr', 'đổi định dạng', 'xuất pdf', 'xuất file', 'xuất sách', 'trang web này có gì', 'web này có gì'],
+          label: '❤️ Mở Xuất PDF & ĐăngLovePDF (19 Công Cụ)',
+          screen: 'SCREEN_6_SYSTEM',
+          selector: '#btn-tab6-top-export-pdf',
+          clickSelector: '#btn-tab6-top-export-pdf'
+        },
+        {
+          id: 'PERF_RAM',
+          keys: ['hiệu năng', 'ram', 'lag', 'giật', 'tự ngủ', 'auto-sleep', 'tắt mod', 'bật mod', 'dọn ram'],
+          label: '⚡ Mở Quản Lý Hiệu Năng, Tự Ngủ & RAM (Mod 47)',
+          screen: 'SCREEN_6_SYSTEM',
+          collapseTarget: 'tab6-perf-ram-body',
+          selector: '#tab6-acc-perf-ram-manager'
+        },
+        {
           id: 'AI_CMD',
-          keys: ['prompt tổng', 'chế độ 1', 'chế độ 2', 'chế độ 3', 'chế độ 4', 'trợ lý ai', 'tab 3', 'câu lệnh', 'mô hình', 'chạy ai'],
-          label: '🎛️ Mở Tab 3 & Nổi bật nút Nhập Lệnh AI',
+          keys: ['prompt tổng', 'chế độ 1', 'chế độ 2', 'chế độ 3', 'chế độ 4', 'chế độ 6', 'tạo bìa', 'trợ lý ai', 'tab 3', 'câu lệnh', 'mô hình', 'chạy ai', 'trang web này có gì', 'web này có gì'],
+          label: '🎛️ Mở Tab 3: Trung Tâm AI & 6 Chế Độ',
           screen: 'SCREEN_3_AI',
           selector: '#btn-open-fullscreen-ai-command'
+        },
+        {
+          id: 'YOUTUBE_MOD39',
+          keys: ['youtube', 'cửa sổ nổi', 'pip', 'lặp a-b', 'nền video', 'trang web này có gì', 'web này có gì'],
+          label: '📺 Mở Tab 5: Rạp YouTube Sạch Quảng Cáo & Cửa Sổ Nổi',
+          screen: 'SCREEN_5_AMBIENCE',
+          selector: '#tab5-youtube-big-card'
         },
         {
           id: 'MODE5',
@@ -2002,18 +2199,35 @@
         ].join('\n\n');
       }
 
-      // 2. Đối chiếu với Cẩm nang sử dụng Studio (Không kèm chẩn đoán chương dư thừa)
+      // 2. Đối chiếu với Cẩm nang sử dụng Studio (Ưu tiên khớp cụm chính xác trước)
       for (const item of STUDIO_USAGE_KNOWLEDGE_BASE) {
         if (item.keywords.some((kw) => q.includes(kw))) {
           return `### ${item.title}\n\n${item.answer}`;
         }
       }
 
-      // 3. Mặc định: Trả lời tự nhiên bằng Quẻ Tiên Tri / Gợi ý đồng hành mà không nhồi báo cáo chẩn đoán
+      // 2.5 Nếu hỏi chung về trang web / tính năng / cần giúp đỡ mà chưa trúng từ khóa riêng -> trả về Tổng quan 6 Tab & 47 Module
+      if (
+        q.includes('web') ||
+        q.includes('app') ||
+        q.includes('ứng dụng') ||
+        q.includes('tính năng') ||
+        q.includes('chức năng') ||
+        q.includes('có gì') ||
+        q.includes('giới thiệu') ||
+        q.includes('hướng dẫn') ||
+        q.includes('hỗ trợ') ||
+        this.prefs?.chatBehaviorMode === 'WEB_SUPPORT_STRICT'
+      ) {
+        const overview = STUDIO_USAGE_KNOWLEDGE_BASE[0];
+        return `### ${overview.title}\n\n${overview.answer}`;
+      }
+
+      // 3. Mặc định ở Chế độ 2: Trả lời tự nhiên bằng Quẻ Tiên Tri / Gợi ý đồng hành mà không nhồi báo cáo chẩn đoán
       return [
         this.shakeMagic8BallOracle(userQuery),
         ``,
-        `💡 *Mẹo:* Nếu bạn muốn trò chuyện sâu hoặc hỏi thao tác Studio chi tiết hơn, hãy bấm nút **"🧭 Chế Độ 1: Chỉ Hỗ Trợ Web"** để mở khóa nút dẫn thẳng tới từng tính năng nhé!`
+        `💡 *Mẹo:* Bạn có thể hỏi bất kỳ tính năng nào của trang web (vd: *"Trang web này có gì?"*, *"Mở ĐăngLovePDF"*, *"Cách dọn RAM"*) ở cả Chế độ 1 lẫn Chế độ 2 nhé!`
       ].join('\n');
     }
 
@@ -2166,19 +2380,19 @@
         return;
       }
 
-      // 2.5 Phân loại ý định & tách biệt nghiêm ngặt 2 Chế độ Chatbot (Mode 1: Chỉ Hỗ Trợ Web vs Mode 2: Trò Chuyện & Tự Nhận Diện)
+      // 2.5 Phân loại ý định thông minh giữa 2 Chế độ Chatbot (không bao giờ đẩy qua đẩy lại vô lý!)
       const activeMode =
         this.prefs.chatBehaviorMode === 'WEB_SUPPORT_STRICT'
           ? 'WEB_SUPPORT_STRICT'
           : 'CASUAL_CHAT_AUTO';
-      const intent = this.classifyChatMessageIntent(rawUserMessage);
+      const intent = this.classifyChatMessageIntent(rawUserMessage, activeMode);
       const openedFeatureLabel = this.detectAndExecuteWebFeatureAction(rawUserMessage);
 
-      if (activeMode === 'WEB_SUPPORT_STRICT' && intent.category !== 'WEB_FEATURE') {
+      if (activeMode === 'WEB_SUPPORT_STRICT' && intent.category === 'CASUAL_CHITCHAT') {
         const refusalText = [
-          '🔒 Chế độ 1 chỉ giải đáp và mở các chức năng quanh trang web.',
+          '🔒 Câu này thuộc tán gẫu đời thường ngoài phạm vi tính năng trang web.',
           '',
-          'Nếu bạn muốn tán gẫu hoặc trò chuyện thoải mái, hãy bấm nút "💬 Chế độ 2: Trò chuyện" ở góc trên chatbot nhé!'
+          'Bạn bấm nút "💬 Chế độ 2: Trò chuyện" ở góc trên chatbot để tâm sự thoải mái với Viên Bi Số 8 nhé — còn mọi câu hỏi về trang web, mở tính năng hay hướng dẫn sử dụng thì cứ hỏi thẳng ở Chế độ 1 này!'
         ].join('\n');
         this.appendMessage(
           'assistant',
@@ -2310,34 +2524,46 @@
         const cleanProseRule =
           'ĐỊNH DẠNG VĂN BẢN THUẦN SẠCH (BẮT BUỘC): Tuyệt đối KHÔNG dùng ký hiệu Markdown như **...**, *...*, ###, ##, #, ---, ___ hoặc ``` / `; chỉ dùng văn bản tự nhiên, xuống dòng rõ ràng và gạch đầu dòng (- ) khi cần.';
 
+        const fullWebsiteMap = [
+          'BẢN ĐỒ TOÀN BỘ TRANG WEB "WEB VIẾT TIỂU THUYẾT CỦA BI" (6 TAB · 47 MODULE · MIỄN PHÍ 100%):',
+          '- Tab 1 (Bàn Viết Truyện): Soạn thảo chuẩn sách, Chế độ Tập trung, Chia cột Split View, Quy trình 4 bước, Duyệt đoạn AI tô màu kiểu Google Docs (Mod 11), Chuẩn hóa hội thoại Việt (Mod 23), Từ điển Ngũ quan & Soát từ sáo ngữ (Mod 24-25), Tự lưu 3 tầng mỗi 2 giây (Mod 09).',
+          '- Tab 2 (Chương & File Nguồn): Cây phân cấp Quyển -> Chương -> Cảnh kéo thả, Lọc Nháp/Đã duyệt (Mod 08), Nạp hàng loạt DOCX/PDF/TXT (Mod 06), Tra cứu ký ức 0 Token (Mod 07).',
+          '- Tab 3 (Trung Tâm Điều Khiển AI — 6 Chế Độ): CĐ1 Viết truyện (nối Story Bible), CĐ2 Tham mưu cốt truyện, CĐ3 Kiểm toán Logic, CĐ4 Độc giả chấm điểm, CĐ5 Vẽ sơ đồ cốt truyện ASCII/SVG (Mod 18), CĐ6 Tạo ảnh bìa truyện. Có trình soạn thảo Word Pro (chèn/xóa bảng, cắt/crop ảnh, căn lề, menu chuột phải), chia đôi màn hình Gemini & NotebookLM.',
+          '- Tab 4 (Story Bible & Nhân Vật): Bộ nhớ chống quên kiểu Word (bảng + ảnh + xuất PDF), Nhân vật, Ma trận Ai Biết Gì, Sổ cái Phục bút (Mod 12 & 19).',
+          '- Tab 5 (Nhạc, YouTube, Pomodoro & Không Gian): Rạp YouTube không quảng cáo (Tua ±10s, 0.25x-4x, Lặp A-B, Cửa sổ nổi đồng bộ Desktop/Mobile, phát nền & Cài Video Làm Nền 16:9 + Crop — Mod 39 & 40), MP3 lặp A-B & 7 âm thanh tự nhiên (Mod 21), Pomodoro 2 chiều (Mod 20), Chữ & 8 tranh nền nghệ thuật (Mod 22 & 32), Đồng hồ quốc tế / Báo thức MP3 / Bầu trời Thời tiết 3D 60FPS (Mod 42 & 43).',
+          '- Tab 6 (Cài Đặt, Xuất Sách & Tiện Ích): Nút nhấp nháy "Xuất truyện qua PDF và dùng ĐăngLovePDF" gồm Xuất sách PDF/DOCX/EPUB (Mod 26) & bộ 19 công cụ ĐăngLovePDF 100% nội bộ trên máy (Gộp/Tách/Nén/Ký tên/OCR/Đổi Word-Excel-PPTX-Ảnh — Mod 46); Quản lý Hiệu năng, Tự ngủ Auto-Sleep & Dọn RAM + Tắt/Bật chức năng (Mod 47); Đồng bộ Google Drive OAuth & .ZIP (Mod 37); Video Hướng Dẫn 6 ngôn ngữ giọng Google TTS (Mod 28 & 33); Bách khoa 47 Module (Mod 31); Máy tính Casio fx-570VN+ & Đồ thị Desmos (Mod 45); Kho Phiên Bản Time-Machine (Mod 10); Guest Mode (Mod 41); 6 Ngôn ngữ giao diện.'
+        ].join('\n');
+
         const systemInstruction =
           activeMode === 'WEB_SUPPORT_STRICT' || intent.category === 'WEB_FEATURE'
             ? [
-                'Bạn là "🧭 Trợ Lý Hướng Dẫn Tính Năng Web Viết Tiểu Thuyết Của Bi" (CHẾ ĐỘ 1: CHỈ HỖ TRỢ TÍNH NĂNG WEB).',
+                'Bạn là "🧭 Trợ Lý Hướng Dẫn & Điều Khiển Web Viết Tiểu Thuyết Của Bi" (CHẾ ĐỘ 1: HỖ TRỢ TOÀN DIỆN TRANG WEB).',
+                fullWebsiteMap,
                 'NGUYÊN TẮC BẮT BUỘC:',
-                '1. Chỉ giải đáp, hướng dẫn thao tác và giúp người dùng sử dụng các tính năng của Studio (Tab 1: Bàn viết & Duyệt màu, Tab 2: Cây chương & BM25, Tab 3: Trung tâm Prompt & Biểu đồ Mode 5, Tab 4: Story Bible & Ai Biết Gì, Tab 5: Nhạc MP3/Pomodoro/Hình nền/Cỡ chữ, Tab 6: Lưu phiên bản Time-Machine, Báo lỗi, Ghi công & Xuất PDF/DOCX/EPUB, Cổng Kết Nối API Key & Thư mục).',
-                activeMode === 'WEB_SUPPORT_STRICT'
-                  ? '2. TUYỆT ĐỐI KHÔNG tán gẫu, KHÔNG trả lời chuyện ăn uống/đời tư/viết truyện trong Chế độ 1; nếu người dùng tán gẫu thì nhắc chuyển sang Chế độ 2.'
-                  : '2. Người dùng đang hỏi về tính năng Studio (được tự nhận diện trong Chế độ 2): trả lời chính xác, ngắn gọn, dễ làm theo.',
+                '1. Luôn hiểu mọi cách hỏi tự nhiên của người dùng về trang web (vd: "trang web này có gì", "app làm được gì", "tính năng này ở đâu", "cách sửa lỗi / dọn RAM / xuất PDF / dùng ĐăngLovePDF / mở YouTube nổi...") và trả lời ĐẦY ĐỦ, RÕ RÀNG, THÂN THIỆN, nêu rõ tên Tab và tên nút bấm cụ thể.',
+                '2. TUYỆT ĐỐI KHÔNG BAO GIỜ từ chối hoặc bảo người dùng qua Chế độ 2 đối với bất kỳ câu hỏi nào liên quan tới trang web, tính năng, hướng dẫn hay cách dùng!',
                 openedFeatureLabel
-                  ? `3. Lưu ý: Giao diện vừa tự động mở sẵn "${openedFeatureLabel}" giúp tác giả rồi — hãy xác nhận điều đó.`
-                  : '3. Nêu rõ tên Tab và nút bấm cụ thể để tác giả bấm theo ngay.',
+                  ? `3. Lưu ý: Giao diện vừa tự động mở sẵn "${openedFeatureLabel}" giúp tác giả rồi — hãy xác nhận ngắn gọn điều đó.`
+                  : '3. Gợi ý người dùng có thể gõ "Mở + tên tính năng" để bạn mở trực tiếp giúp họ.',
                 cleanProseRule
               ].join('\n')
             : intent.category === 'CASUAL_CHITCHAT'
             ? [
-                'Bạn là "💬 Viên Bi Số 8 (🎱)" — người bạn đồng hành thân thiện của tác giả Bi trong CHẾ ĐỘ 2 (Trò Chuyện Bình Thường).',
-                'NGUYÊN TẮC: Câu này được tự nhận diện là TÁN GẪU ĐỜI THƯỜNG (không phải hỏi bản thảo hay tính năng web).',
-                'Hãy trò chuyện tự nhiên, ấm áp, hóm hỉnh và quan tâm đúng tâm trạng tác giả bằng Tiếng Việt tự nhiên; KHÔNG nhắc đến Story Bible hay ép phân tích chương truyện trừ khi tác giả chủ động hỏi.',
+                'Bạn là "💬 Viên Bi Số 8 (🎱)" — người bạn đồng hành thân thiện của tác giả Bi bên trong ứng dụng "Web Viết Tiểu Thuyết Của Bi" (CHẾ ĐỘ 2: TRÒ CHUYỆN & ĐỒNG HÀNH).',
+                fullWebsiteMap,
+                'NGUYÊN TẮC:',
+                '1. Trò chuyện tự nhiên, ấm áp, hóm hỉnh và quan tâm đúng tâm trạng tác giả bằng Tiếng Việt tự nhiên.',
+                '2. Nếu tác giả có hỏi về trang web hay tính năng nào đó ngay trong Chế độ 2, TUYỆT ĐỐI KHÔNG nói "mình không biết trang web nào" hay đuổi sang Chế độ 1 — hãy trả lời ngắn gọn, thân thiện theo đúng bản đồ trang web ở trên rồi gợi ý thêm rằng có thể chuyển Chế độ 1 nếu muốn mở nhanh từng nút!',
                 cleanProseRule
               ].join('\n')
             : [
-                'Bạn là "Trợ Lý Viên Bi Số 8 (🎱)" kiêm Quân Sư Sáng Tác Tiểu Thuyết & Biên Tập Viên Đồng Hành của tác giả Bi trong ứng dụng "Web Viết Tiểu Thuyết Của Bi (v38.5)".',
+                'Bạn là "Trợ Lý Viên Bi Số 8 (🎱)" kiêm Quân Sư Sáng Tác Tiểu Thuyết & Biên Tập Viên Đồng Hành của tác giả Bi trong ứng dụng "Web Viết Tiểu Thuyết Của Bi".',
+                fullWebsiteMap,
                 'PHONG CÁCH PHẢN HỒI:',
                 '1. Giọng điệu Tiếng Việt ấm áp, thông minh, giàu cảm hứng văn chương, trình bày rõ ràng dễ đọc.',
                 '2. Khi viết câu thoại mẫu cho nhân vật, luôn tuân thủ quy ước chuẩn của Studio: - Câu thoại (Tên nhân vật).',
                 '3. Luôn bám sát ngữ cảnh Chương đang viết và Hồ sơ Story Bible (nếu được đính kèm) để đưa ra gợi ý sát thực tế cốt truyện nhất.',
-                '4. Nếu tác giả hỏi về cách dùng ứng dụng, hãy hướng dẫn cụ thể theo đúng 6 Tab của Studio.',
+                '4. Nếu tác giả hỏi về cách dùng ứng dụng hay trang web này có gì, trả lời đầy đủ, chính xác theo đúng 6 Tab và 47 Module ở trên (không bao giờ đùn đẩy qua lại giữa Chế độ 1 và Chế độ 2).',
                 cleanProseRule
               ].join('\n');
 

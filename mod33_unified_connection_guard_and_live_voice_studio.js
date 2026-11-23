@@ -1399,46 +1399,83 @@
 
         const item = clauses[idx];
         idx += 1;
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(
+        const primaryUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(
+          tl
+        )}&q=${encodeURIComponent(item.text)}`;
+        const backupUrl = `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=${encodeURIComponent(
           tl
         )}&q=${encodeURIComponent(item.text)}`;
 
-        try {
-          const audio = new Audio();
+        const playUrl = (urlToTry, isBackup) => {
           try {
-            audio.referrerPolicy = 'no-referrer';
-          } catch (_eRef) {}
-          audio.preload = 'auto';
-          audio.volume = 0.96;
-          audio.playbackRate = Math.max(0.75, Math.min(1.6, Number(baseRate) || 1.0));
-          audio.src = url;
-          this.currentGttsAudio = audio;
+            const audio = new Audio();
+            try {
+              audio.referrerPolicy = 'no-referrer';
+            } catch (_eRef) {}
+            audio.preload = 'auto';
+            audio.volume = 0.96;
+            audio.playbackRate = Math.max(0.75, Math.min(1.6, Number(baseRate) || 1.0));
+            audio.src = urlToTry;
+            this.currentGttsAudio = audio;
 
-          const nextStep = () => {
-            if (this.currentGttsAudio === audio) {
-              this.currentGttsAudio = null;
+            const nextStep = () => {
+              if (this.currentGttsAudio === audio) {
+                this.currentGttsAudio = null;
+              }
+              if (myToken !== this.activePlaybackToken) {
+                this.isSpeaking = false;
+                return;
+              }
+              if (typeof options.isAllowedFn === 'function' && !options.isAllowedFn()) {
+                this.stop();
+                return;
+              }
+              this.pendingPauseTimer = setTimeout(playNextChunk, item.pauseAfterMs || 90);
+            };
+
+            const onFail = () => {
+              if (myToken !== this.activePlaybackToken) {
+                this.isSpeaking = false;
+                return;
+              }
+              if (!isBackup) {
+                playUrl(backupUrl, true);
+              } else {
+                // Nếu cả 2 cổng Google TTS bị chặn mạng/CORS -> fallback sang giọng hệ thống ngay cho câu này
+                try {
+                  if (this.isSupported()) {
+                    const u = new globalScope.SpeechSynthesisUtterance(item.text);
+                    u.lang = targetLang;
+                    const best = this.getRankedVoicesForLanguage(targetLang)[0];
+                    if (best) u.voice = best;
+                    u.rate = Math.max(0.78, Math.min(1.45, Number(baseRate) || 1.0));
+                    u.onend = nextStep;
+                    u.onerror = nextStep;
+                    globalScope.speechSynthesis.speak(u);
+                    return;
+                  }
+                } catch (_eFallback) {}
+                nextStep();
+              }
+            };
+
+            audio.onended = nextStep;
+            audio.onerror = onFail;
+            const p = audio.play();
+            if (p && typeof p.catch === 'function') {
+              p.catch(() => onFail());
             }
-            if (myToken !== this.activePlaybackToken) {
+          } catch (_ePlay) {
+            if (!isBackup) {
+              playUrl(backupUrl, true);
+            } else {
               this.isSpeaking = false;
-              return;
+              if (typeof options.onComplete === 'function') options.onComplete();
             }
-            if (typeof options.isAllowedFn === 'function' && !options.isAllowedFn()) {
-              this.stop();
-              return;
-            }
-            this.pendingPauseTimer = setTimeout(playNextChunk, item.pauseAfterMs || 90);
-          };
-
-          audio.onended = nextStep;
-          audio.onerror = nextStep;
-          const p = audio.play();
-          if (p && typeof p.catch === 'function') {
-            p.catch(() => nextStep());
           }
-        } catch (_ePlay) {
-          this.isSpeaking = false;
-          if (typeof options.onComplete === 'function') options.onComplete();
-        }
+        };
+
+        playUrl(primaryUrl, false);
       };
 
       playNextChunk();
@@ -1578,7 +1615,7 @@
       if (selectEl) {
         const gttsOpt = `<option value="${GOOGLE_TRANSLATE_TTS_URI}"${
           isGttsSelected ? ' selected' : ''
-        }>🌐 Google Dịch TTS (${escapeHtmlSafe(langMeta.label)} — 6 Ngôn Ngữ)</option>`;
+        }>🌐 Google Dịch TTS (${escapeHtmlSafe(langMeta.label)} — Chuẩn 6 Ngôn Ngữ)</option>`;
         const osOpts = voices
           .map((v) => {
             const isNeural = /natural|neural|online/i.test(v.name);
@@ -1592,7 +1629,7 @@
             )}</option>`;
           })
           .join('');
-        selectEl.innerHTML = osOpts + gttsOpt;
+        selectEl.innerHTML = gttsOpt + osOpts;
       }
 
       const hasAnyVoice = this.hasVoiceForLanguage(lang);

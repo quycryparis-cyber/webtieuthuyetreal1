@@ -1,5 +1,9 @@
+# Build & packaging outputs (never commit heavy generated artifacts to GitHub Pages)
+node_modules/
+dist-app/
+release/
+android/
+ios/
 _studio_workspace_state.json
-_tmp_*
 *.tmp
-.DS_Store
-Thumbs.db
+*.log

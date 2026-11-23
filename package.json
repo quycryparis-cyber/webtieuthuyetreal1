@@ -1,0 +1,60 @@
+{
+  "name": "bi-novel-writing-studio",
+  "version": "117.0.0",
+  "description": "Sổ Tay Tiểu Thuyết Của Bi — Studio Sáng Tác Đa Nền Tảng (48 Module, ĐăngLovePDF & Autotester Nội Bộ)",
+  "author": "Mai Hải Đăng (Bi)",
+  "license": "MIT",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "prepare:dist": "node scripts/prepare-dist.mjs",
+    "start:desktop": "npm run prepare:dist && electron .",
+    "build:win": "npm run prepare:dist && electron-builder --win --x64",
+    "build:win:portable": "npm run prepare:dist && electron-builder --win portable --x64",
+    "cap:init:android": "npm run prepare:dist && npx cap add android && npx cap sync android",
+    "cap:sync:android": "npm run prepare:dist && npx cap sync android",
+    "cap:init:ios": "npm run prepare:dist && npx cap add ios && npx cap sync ios",
+    "cap:sync:ios": "npm run prepare:dist && npx cap sync ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/ios": "^6.1.2",
+    "electron": "^32.2.5",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.maihaidang.binovelstudio",
+    "productName": "So Tay Tieu Thuyet Cua Bi",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "dist-app/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "dist-app/assets/app-icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Sổ Tay Tiểu Thuyết Của Bi"
+    }
+  }
+}

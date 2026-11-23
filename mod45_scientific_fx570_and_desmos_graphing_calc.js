@@ -4632,7 +4632,7 @@
             }
           }
         });
-        if (anyPlaying) {
+        if (anyPlaying && (!document.hidden) && this.rootHost && this.rootHost.offsetParent !== null) {
           this.graph.render();
           this._sliderAnimId = requestAnimationFrame(step);
         } else {
@@ -4640,6 +4640,16 @@
         }
       };
       this._sliderAnimId = requestAnimationFrame(step);
+    }
+
+    pauseBackgroundActivity() {
+      if (this._sliderAnimId) {
+        try { cancelAnimationFrame(this._sliderAnimId); } catch (_) {}
+        this._sliderAnimId = null;
+      }
+      if (this.graph && this.graph.sliders) {
+        Object.values(this.graph.sliders).forEach((sl) => { if (sl) sl.playing = false; });
+      }
     }
 
     mountIntoContainer(containerEl) {

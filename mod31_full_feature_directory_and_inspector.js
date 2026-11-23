@@ -1594,6 +1594,78 @@
       targetDomId: 'btn-misc-open-graphing-calc',
       actionLabel: 'Mở Máy Tính Casio fx-570VN PLUS & Đồ Thị Desmos',
     },
+    {
+      id: 'FEAT_MOD46_DANGLOVEPDF',
+      category: 'TAB6',
+      categoryLabel: 'Tab 6: Phiên Bản & Xuất Sách',
+      title: 'ĐăngLovePDF — 19 Công Cụ Xử Lý PDF & Đổi Định Dạng 100% Nội Bộ (Mod 46)',
+      badge: '100% Trên Trình Duyệt · File Không Rời Máy',
+      moduleRef: 'Mod 46 (Tab 6 — Nút nhấp nháy "Xuất truyện qua PDF và dùng ĐăngLovePDF")',
+      summary:
+        'Bộ 19 công cụ xử lý PDF & chuyển đổi định dạng chia làm 5 cụm thu gọn (Gộp/Tách/Sắp xếp/Cắt viền, Nén/Đánh số/Đóng dấu/Ký tên/Làm phẳng, Ảnh & PPTX ↔ PDF, Word/TXT/MD/Excel/CSV/JSON ↔ PDF, Đọc chữ OCR & Làm sạch PDF) chạy 100% cục bộ trên trình duyệt.',
+      whenToUse:
+        'Khi cần gộp/tách/nén file PDF, ký tên, chuyển đổi giữa Word/Excel/PowerPoint/Ảnh và PDF hoặc nhận diện chữ OCR mà vẫn giữ tuyệt đối quyền riêng tư trên thiết bị.',
+      stepByStep: [
+        'Tại Tab 6, bấm nút nhấp nháy nổi bật "📕 Xuất truyện qua PDF và dùng ĐăngLovePDF" ở thanh trên cùng.',
+        'Chọn "❤️ ĐăngLovePDF" trong hộp thoại 2 lựa chọn (hoặc chọn "📖 Xuất truyện đã viết qua PDF" để xuất bản thảo truyện).',
+        'Chọn công cụ trong 5 cụm rút gọn hoặc tìm nhanh, thả tệp vào và tải kết quả (tự giải phóng RAM ngay khi bấm đóng).',
+      ],
+      proTip:
+        'Hỗ trợ Nối chuỗi công cụ (Workflow Chaining) đẩy thẳng tệp đầu ra sang bước kế tiếp và gộp tải .ZIP khi có nhiều tệp.',
+      relatedIds: ['FEAT_MOD47_PERF_RAM_AUTOSLEEP', 'FEAT_TAB6_EXPORT_PDF_DOCX'],
+      screenKey: 'SCREEN_6_SYSTEM',
+      expandCollapseIds: [],
+      targetDomId: 'btn-tab6-top-export-pdf',
+      actionLabel: 'Mở Nút Xuất PDF & ĐăngLovePDF',
+    },
+    {
+      id: 'FEAT_MOD47_PERF_RAM_AUTOSLEEP',
+      category: 'TAB6',
+      categoryLabel: 'Tab 6: Phiên Bản & Xuất Sách',
+      title: 'Quản Lý Hiệu Năng, Tự Ngủ (Auto-Sleep) & Dọn RAM (Mod 47)',
+      badge: 'Chống Tràn RAM · Giữ Nguyên Nhạc/YouTube/Pomodoro',
+      moduleRef: 'Mod 47 (Tab 6 — Thẻ "Quản Lý Hiệu Năng, Tự Ngủ & Tắt/Bật Chức Năng")',
+      summary:
+        'Tự động tạm ngủ các hiệu ứng đồ họa 60FPS và giải phóng bộ đệm RAM ngay khi đóng công cụ nặng (ĐăngLovePDF, Desmos, Video Tutorial) hoặc chuyển Tab/ẩn trình duyệt, đồng thời bảo vệ tuyệt đối nhạc nền, YouTube PiP/Audio, Pomodoro, Báo thức & Tự lưu 3 tầng.',
+      whenToUse:
+        'Khi muốn máy luôn siêu mượt không tràn RAM, bật chế độ "Tiết Kiệm RAM Tối Đa" trên máy yếu/điện thoại hoặc chủ động tắt/bật từng hiệu ứng phụ.',
+      stepByStep: [
+        'Vào Tab 6 và bấm mở thẻ "⚡ Quản Lý Hiệu Năng, Tự Ngủ (Auto-Sleep) & Tắt/Bật Chức Năng (Mod 47)".',
+        'Chọn 1 trong 3 chế độ (Cân Bằng Thông Minh / Tiết Kiệm RAM Tối Đa / Đầy Đủ Hiệu Ứng) hoặc bật/tắt từng nút tính năng riêng.',
+        'Bấm "🧹 Dọn RAM & Dừng Tiến Trình Thừa Ngay" bất cứ lúc nào để làm sạch bộ nhớ tạm tức thì.',
+      ],
+      proTip:
+        'Toàn bộ Mod 47 chạy 100% hướng sự kiện (0 vòng lặp nền) nên không tiêu tốn bất kỳ tài nguyên CPU nào khi rảnh.',
+      relatedIds: ['FEAT_MOD46_DANGLOVEPDF', 'FEAT_MOD45_CASIO_FX570_AND_DESMOS'],
+      screenKey: 'SCREEN_6_SYSTEM',
+      expandCollapseIds: ['tab6-perf-ram-body'],
+      targetDomId: 'btn-toggle-tab6-perf-ram',
+      actionLabel: 'Mở Bảng Quản Lý Hiệu Năng & Dọn RAM (Mod 47)',
+    },
+    {
+      id: 'FEAT_MOD48_AUTOTESTER',
+      category: 'TAB6',
+      categoryLabel: 'Tab 6: Phiên Bản & Xuất Sách',
+      title: 'Autotester Nội Bộ — "Bác Sĩ App" Toàn Năng (Mod 48)',
+      badge: '0 RAM Khi Tắt · Laptop & Điện Thoại · 100% Tiếng Việt',
+      moduleRef: 'Mod 48 (Tab 6 — Nút "🩺 Autotester nội bộ" dưới Viết Báo Lỗi)',
+      summary:
+        'Công cụ tự động khám tổng quát toàn bộ ứng dụng chạy 100% nội bộ trên cả Laptop (bảng nổi bên phải) và Điện thoại (ngăn kéo 3 nấc), bảo vệ bản thảo thật bằng Sandbox, đo 4 trụ cột (Chạy đúng, Độ mượt, Dễ bấm, Chống sập), quay thao tác mẫu và chép sẵn "Đơn thuốc gửi AI sửa lỗi".',
+      whenToUse:
+        'Khi muốn kiểm tra nhanh toàn bộ app có bị tràn màn hình, nút khó bấm, tụt FPS, rò rỉ RAM hay lỗi ngầm sau mỗi lần nâng cấp không.',
+      stepByStep: [
+        'Vào Tab 6 → mục "Báo lỗi, góp ý và kiểm thử Web/App" → bấm nút "🩺 Autotester nội bộ" (hoặc nhấn Ctrl+Shift+Alt+T trên Laptop / chạm 5 lần logo trên Điện thoại).',
+        'Bấm nút xanh "▶ Khám tổng quát" hoặc "⚡ Kiểm tra trang này" để Bác sĩ App tự động chạy kiểm tra thật.',
+        'Xem điểm sức khỏe 0–100, bấm "🎯 Chỉ chỗ bị lỗi" để nhấp nháy đỏ đúng phần tử hỏng hoặc bấm "📋 Chép đơn thuốc gửi AI sửa lỗi". Gạt sang TẮT là giải phóng toàn bộ RAM!',
+      ],
+      proTip:
+        'Bác sĩ App chỉ nạp mã nguồn khi bạn bấm bật; lúc bình thường không tiêu tốn bất kỳ RAM hay CPU nào.',
+      relatedIds: ['FEAT_MOD47_PERF_RAM_AUTOSLEEP', 'FEAT_MOD46_DANGLOVEPDF'],
+      screenKey: 'SCREEN_6_SYSTEM',
+      expandCollapseIds: [],
+      targetDomId: 'btn-tab6-top-autotester',
+      actionLabel: 'Mở Autotester Nội Bộ ("Bác Sĩ App")',
+    },
   ]);
 
   const WORKFLOW_PLAYBOOKS_CATALOG = Object.freeze([
@@ -1775,7 +1847,7 @@
     { group: 'Nhóm Chương & Lịch Sử (Mod 06–10)', modules: 'mod06 (Nạp DOCX/PDF/TXT), mod07 (Tìm kiếm BM25 0-Token), mod08 (Cây chương 2 chiều), mod09 (Lưu 3 tầng & Undo), mod10 (Time-Machine Preview)' },
     { group: 'Nhóm AI & Story Bible (Mod 11–19)', modules: 'mod11 (Google Docs AI Diff), mod12 (Story Bible & NotebookLM), mod13 (Radar Anti-Cliché), mod14 (Soát logic), mod15 (API Vault & Quotas 5h/Tuần), mod16 (Prompt Tổng Hợp 2 Bước), mod17 (Đầu ra 5 Chế độ Tab 3), mod18 (Biểu đồ Mode 5), mod19 (Duyệt lũy tiến Ch.1..cuối)' },
     { group: 'Nhóm Tập Trung, Soạn Thảo & Xuất Sách (Mod 20–26)', modules: 'mod20 (Pomodoro 2 chiều), mod21 (MP3 Lặp A-B & 7 Âm tự nhiên), mod22 (60FPS Mưa & 6 Tranh nền), mod23 (Bàn viết Tab 1 & Tìm/Thay), mod24 (Lore Whisper & Mục tiêu chữ), mod25 (Từ điển Ngũ quan & Lời tác giả), mod26 (Xuất OOXML .DOCX & .PDF 1-Trang Bìa)' },
-    { group: 'Nhóm Trợ Lý, Điều Hướng, Bảo Chứng & Tiện Ích Studio (Mod 27–45 + 5 Gói Ngôn Ngữ JS)', modules: 'mod09 (Lưu 3 tầng mỗi 2s & Sức Khỏe mở rộng kèm Chân dung Tác giả), mod27 (Bi Số 8 3D + Chat Kép 6 ngôn ngữ), mod28 (Video Hướng Dẫn 28 Mốc Đủ 45 Module + Nhật Ký), mod29 (6 Tab + Cài App PWA 4 thẻ 1-chạm), mod30 (Cổng Kết Nối + Bộ Điều Phối Đa Ngôn Ngữ NS.i18n), mod31 (Bách Khoa Toàn Thư 45 Module), mod32 (Sân khấu Hình nền & Cầu nối Argon 4), mod33 (Đồng bộ Key/Pro-Ultra & Giọng AI 6 Ngôn Ngữ Neural + Google Dịch TTS), mod34 (Báo lỗi Google Sheets), mod35 (Author Credits & VietQR Offline Fallback), mod36 (Khiên Chống Reload 7 tầng), mod37 (Đồng bộ .ZIP & Google Drive), mod38 (Điểm danh & Local Compute), mod39 (Desktop YouTube Trực Tiếp 0.25x–4x, Cửa Sổ Nổi, Mobile A–B Auto-Jump & YTSave), mod40 (Nền Video Không Nút Che + Crop Vùng Khung Hình), mod41 (Guest Mode Nhảy Thẳng Tab 5 + Nhấp Nháy 4s), mod42 (Giờ Quốc Tế & Báo Thức MP3), mod43 (Thời Tiết Thực 24h Từng Giờ Cấp Phường + Bầu Trời 60FPS), mod44 (Thống Kê Truy Cập Toàn Cầu v3), mod45 (Máy Tính Casio fx-570VN PLUS & Đồ Thị Desmos 100% Local), i18n_lang_en / zh_cn / zh_tw / ko / ja (5 Module Ngôn Ngữ Quốc Tế)' },
+    { group: 'Nhóm Trợ Lý, Điều Hướng, Bảo Chứng & Tiện Ích Studio (Mod 27–48 + 5 Gói Ngôn Ngữ JS)', modules: 'mod09 (Lưu 3 tầng mỗi 2s & Sức Khỏe mở rộng kèm Chân dung Tác giả), mod27 (Bi Số 8 3D + Chat Kép 48 Module), mod28 (Video Hướng Dẫn 31 Mốc Đủ 48 Module + Nhật Ký), mod29 (6 Tab + Cài App PWA 4 thẻ 1-chạm), mod30 (Cổng Kết Nối + Bộ Điều Phối Đa Ngôn Ngữ NS.i18n), mod31 (Bách Khoa Toàn Thư 48 Module), mod32 (Sân khấu Hình nền & Cầu nối Argon 4), mod33 (Đồng bộ Key/Pro-Ultra & Giọng AI 6 Ngôn Ngữ Neural + Google Dịch TTS), mod34 (Báo lỗi, Góp ý & Kiểm thử Web/App), mod35 (Author Credits & VietQR Offline Fallback), mod36 (Khiên Chống Reload 7 tầng), mod37 (Đồng bộ .ZIP & Google Drive OAuth A–Z), mod38 (Điểm danh & Local Compute), mod39 (Desktop YouTube Trực Tiếp 0.25x–4x, Cửa Sổ Nổi đồng bộ Tua & Lặp A–B), mod40 (Nền Video Không Nút Che + Crop Vùng Khung Hình), mod41 (Guest Mode Nhảy Thẳng Tab 5 + Nhấp Nháy 4s), mod42 (Giờ Quốc Tế & Báo Thức MP3), mod43 (Thời Tiết Thực 24h Từng Giờ Cấp Phường + Bầu Trời 60FPS), mod44 (Thống Kê Truy Cập Toàn Cầu v3), mod45 (Máy Tính Casio fx-570VN PLUS & Đồ Thị Desmos 100% Local), mod46 (ĐăngLovePDF — 19 Công Cụ PDF & Đổi Định Dạng 100% Nội Bộ), mod47 (Quản Lý Hiệu Năng, Tự Ngủ Auto-Sleep & Tắt/Bật Chức Năng), mod48 (Autotester Nội Bộ "Bác Sĩ App" Zero-Overhead Laptop & Mobile), i18n_lang_en / zh_cn / zh_tw / ko / ja (5 Module Ngôn Ngữ Quốc Tế)' },
   ]);
 
   const TONE_BADGE_CLASSES = Object.freeze({
@@ -2200,7 +2272,7 @@
         },
         {
           id: 'SYSTEM_MAP',
-          label: '🏗️ Kiến Trúc 45 Module & Trạng Thái',
+          label: '🏗️ Kiến Trúc 48 Module & Trạng Thái',
         },
       ];
 

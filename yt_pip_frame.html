@@ -14,7 +14,7 @@
       background: #000;
       overflow: hidden;
     }
-    #mount, #yt-player-slot, iframe {
+    #mount, iframe {
       width: 100%;
       height: 100%;
       border: 0;
@@ -23,63 +23,105 @@
   </style>
 </head>
 <body>
-  <div id="mount"><div id="yt-player-slot"></div></div>
+  <div id="mount"></div>
   <script>
     (function () {
       var params = new URLSearchParams(window.location.search || '');
       var vid = String(params.get('v') || params.get('vid') || '').replace(/[^A-Za-z0-9_-]/g, '');
       var listId = String(params.get('list') || '').replace(/[^A-Za-z0-9_-]/g, '');
       var start = Math.max(0, Math.floor(Number(params.get('start')) || 0));
-      var autoplay = params.get('autoplay') === '0' ? 0 : 1;
+      var autoplay = params.get('autoplay') === '0' ? '0' : '1';
       var loopEnabled = params.get('loop') === '1';
-      var mute = params.get('mute') === '1' ? 1 : 0;
+      var mute = params.get('mute') === '1' ? '1' : '0';
       var rate = Number(params.get('rate')) || 1;
       var vol = params.has('vol') ? Math.max(0, Math.min(100, Number(params.get('vol')) || 85)) : 85;
       var sid = String(params.get('sid') || 'default');
 
+      // Tham số Lặp đoạn A-B chạy trực tiếp bên trong Cửa sổ nổi (chính xác ngay cả khi tab chính bị thu nhỏ!)
+      var abState = {
+        enabled: params.get('ab') === '1',
+        startSec: params.has('aba') && params.get('aba') !== '' ? Number(params.get('aba')) : null,
+        endSec: params.has('abb') && params.get('abb') !== '' ? Number(params.get('abb')) : null,
+        lastJumpAtMs: 0
+      };
+
       if (!vid && !listId) return;
+
+      // Dựng <iframe> trước với đầy đủ referrerpolicy & enablejsapi=1 (y hệt khung chính đã chứng minh chạy 100% trên Desktop!)
+      var q = new URLSearchParams();
+      q.set('enablejsapi', '1');
+      q.set('rel', '0');
+      q.set('modestbranding', '1');
+      q.set('playsinline', '1');
+      q.set('iv_load_policy', '3');
+      q.set('autoplay', autoplay);
+      q.set('controls', '1');
+      if (start > 0) q.set('start', String(start));
+      if (mute === '1') q.set('mute', '1');
+      if (loopEnabled && vid) {
+        q.set('loop', '1');
+        q.set('playlist', vid);
+      }
+      if (listId) q.set('list', listId);
+      if (window.location.origin && /^https?:/i.test(window.location.origin)) {
+        q.set('origin', window.location.origin);
+      }
+
+      var base = vid
+        ? 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(vid)
+        : 'https://www.youtube-nocookie.com/embed/videoseries';
+
+      var iframe = document.createElement('iframe');
+      iframe.id = 'yt-inner-embed';
+      iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+      iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
+      iframe.setAttribute('allowfullscreen', 'true');
+      iframe.src = base + '?' + q.toString();
+      document.getElementById('mount').appendChild(iframe);
 
       var ytPlayer = null;
       var ytReady = false;
-      var fallbackIframe = null;
       var acked = false;
+      var ytWidgetId = 1;
       var appliedInitialPrefs = false;
       var handshakeTimer = null;
       var pollTimer = null;
-      var apiFallbackTimer = null;
       var pendingCmds = [];
       var lastInfo = {
         videoId: vid,
         title: '',
         currentTime: start,
         duration: 0,
-        playerState: autoplay === 1 ? 1 : 2,
+        playerState: autoplay === '1' ? 1 : 2,
         playbackRate: rate,
         volume: vol,
-        muted: mute === 1
+        muted: mute === '1'
       };
 
-      function getActiveIframe() {
+      function postSyncToParent(infoObj) {
+        if (!infoObj) return;
+        var msg = { __mod39PipSync: true, type: 'sync', sid: sid, info: infoObj };
+        var sentToParent = false;
         try {
-          if (ytPlayer && typeof ytPlayer.getIframe === 'function') {
-            var ifr = ytPlayer.getIframe();
-            if (ifr && ifr.tagName === 'IFRAME') return ifr;
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage(msg, '*');
+            sentToParent = true;
           }
-        } catch (_e) {}
-        return fallbackIframe || document.querySelector('#mount iframe');
+        } catch (_eP) {}
+        if (!sentToParent) {
+          try {
+            if (window.opener && !window.opener.closed) {
+              window.opener.postMessage(msg, '*');
+            }
+          } catch (_eO) {}
+        }
       }
 
-      function hardenIframeAttributes() {
-        var ifr = getActiveIframe();
-        if (!ifr) return;
+      function sendRawToYt(payload) {
         try {
-          ifr.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
-          ifr.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
-          ifr.setAttribute('allowfullscreen', '');
-          ifr.style.width = '100%';
-          ifr.style.height = '100%';
-          ifr.style.border = '0';
-          ifr.style.display = 'block';
+          if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage(JSON.stringify(payload), '*');
+          }
         } catch (_e) {}
       }
 
@@ -103,47 +145,48 @@
               if (vd.video_id && /^[A-Za-z0-9_-]{11}$/.test(String(vd.video_id))) {
                 lastInfo.videoId = String(vd.video_id);
               }
-              if (vd.title) {
-                lastInfo.title = String(vd.title);
-              }
+              if (vd.title) lastInfo.title = String(vd.title);
             }
           } catch (_eRead) {}
         }
         return Object.assign({}, lastInfo);
       }
 
-      function postSyncToParent(infoObj) {
-        if (!infoObj) return;
-        var msg = { __mod39PipSync: true, type: 'sync', sid: sid, info: infoObj };
-        var sentToParent = false;
-        try {
-          if (window.parent && window.parent !== window) {
-            window.parent.postMessage(msg, '*');
-            sentToParent = true;
-          }
-        } catch (_eP) {}
-        if (!sentToParent) {
-          try {
-            if (window.opener && !window.opener.closed) {
-              window.opener.postMessage(msg, '*');
-            }
-          } catch (_eO) {}
+      function enforceLocalAbLoop() {
+        if (!abState.enabled) return false;
+        if (typeof abState.startSec !== 'number' || typeof abState.endSec !== 'number') return false;
+        if (!isFinite(abState.startSec) || !isFinite(abState.endSec) || abState.endSec <= abState.startSec) return false;
+        if (lastInfo.playerState !== 1 && lastInfo.playerState !== 3) return false;
+        var now = Date.now();
+        if (now - abState.lastJumpAtMs < 350) return false;
+        var cur = Number(lastInfo.currentTime);
+        if (!isFinite(cur) || cur < 0) return false;
+        var effEnd = lastInfo.duration > 1 && abState.endSec >= lastInfo.duration - 0.35
+          ? Math.max(abState.startSec + 0.5, lastInfo.duration - 0.35)
+          : abState.endSec;
+        if (cur >= effEnd - 0.05 || (abState.startSec > 0 && cur < abState.startSec - 1.2)) {
+          abState.lastJumpAtMs = now;
+          execYtCommand('seekTo', [abState.startSec, true]);
+          execYtCommand('playVideo', []);
+          return true;
         }
-      }
-
-      function sendRawToYt(payload) {
-        try {
-          var ifr = getActiveIframe();
-          if (ifr && ifr.contentWindow) {
-            ifr.contentWindow.postMessage(JSON.stringify(payload), '*');
-          }
-        } catch (_e) {}
+        return false;
       }
 
       function execYtCommand(func, args) {
         var safeArgs = Array.isArray(args) ? args.slice() : [];
         if (func === 'setLoop') {
           loopEnabled = Boolean(safeArgs[0]);
+        }
+        if (func === 'setAbLoop') {
+          abState.enabled = Boolean(safeArgs[0]);
+          abState.startSec = typeof safeArgs[1] === 'number' && isFinite(safeArgs[1]) ? safeArgs[1] : null;
+          abState.endSec = typeof safeArgs[2] === 'number' && isFinite(safeArgs[2]) ? safeArgs[2] : null;
+          abState.lastJumpAtMs = 0;
+          if (abState.enabled && abState.startSec !== null && abState.endSec !== null) {
+            enforceLocalAbLoop();
+          }
+          return true;
         }
         if (func === 'setPlaybackRate' && typeof safeArgs[0] === 'number' && safeArgs[0] > 2) {
           safeArgs[0] = 2;
@@ -153,14 +196,21 @@
             pendingCmds.push({ func: func, args: safeArgs });
           }
         }
-        var invokedDirectApi = false;
+        // 1) Gửi qua YT.Player API chính thức nếu sẵn sàng
         if (ytPlayer && ytReady && typeof ytPlayer[func] === 'function') {
           try {
             ytPlayer[func].apply(ytPlayer, safeArgs);
-            invokedDirectApi = true;
           } catch (_eApi) {}
         }
-        if (!invokedDirectApi) {
+        // 2) LUÔN gửi đồng thời qua postMessage JSON chuẩn với ĐÚNG ytWidgetId để 100% lệnh Tua/Dừng/Phát/Tốc độ/Âm thanh đi thẳng vào iframe!
+        sendRawToYt({
+          event: 'command',
+          func: func,
+          args: safeArgs,
+          id: ytWidgetId,
+          channel: 'widget'
+        });
+        if (ytWidgetId !== 1) {
           sendRawToYt({
             event: 'command',
             func: func,
@@ -169,6 +219,7 @@
             channel: 'widget'
           });
         }
+
         if (func === 'seekTo' && typeof safeArgs[0] === 'number') {
           lastInfo.currentTime = Math.max(0, safeArgs[0]);
         } else if (func === 'playVideo') {
@@ -188,7 +239,6 @@
         return true;
       }
 
-      // Cầu nối đồng bộ trực tiếp cùng origin cho Studio chính (không độ trễ, không bị Storage Partitioning chặn!)
       window.__mod39ExecPipCommand = function (func, args) {
         if (!func) return false;
         return execYtCommand(func, args || []);
@@ -199,15 +249,13 @@
       window.__mod39ShutdownPipPlayer = function () {
         if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
         if (handshakeTimer) { clearInterval(handshakeTimer); handshakeTimer = null; }
-        if (apiFallbackTimer) { clearTimeout(apiFallbackTimer); apiFallbackTimer = null; }
         var finalSnap = readLiveSnapshotFromYtPlayer();
         try {
           if (ytPlayer && typeof ytPlayer.stopVideo === 'function') ytPlayer.stopVideo();
           if (ytPlayer && typeof ytPlayer.destroy === 'function') ytPlayer.destroy();
         } catch (_eD) {}
         try {
-          var ifr = getActiveIframe();
-          if (ifr) ifr.src = 'about:blank';
+          if (iframe) iframe.src = 'about:blank';
         } catch (_eI) {}
         return finalSnap;
       };
@@ -227,114 +275,56 @@
           if (rate && Math.abs(rate - 1) > 0.01) {
             execYtCommand('setPlaybackRate', [rate > 2 ? 2 : rate]);
           }
-          if (mute === 1) {
+          if (mute === '1') {
             execYtCommand('mute', []);
           } else {
             execYtCommand('unMute', []);
             execYtCommand('setVolume', [vol]);
           }
           flushPendingCommands();
-        }, 120);
+        }, 140);
       }
 
-      function startPollingYtPlayer() {
-        if (pollTimer) clearInterval(pollTimer);
-        pollTimer = setInterval(function () {
-          if (!ytPlayer || !ytReady) return;
-          postSyncToParent(readLiveSnapshotFromYtPlayer());
-        }, 250);
-      }
-
-      function mountRawFallbackIframe() {
-        if (ytPlayer || fallbackIframe) return;
-        var q = new URLSearchParams();
-        q.set('autoplay', String(autoplay));
-        q.set('rel', '0');
-        q.set('modestbranding', '1');
-        q.set('playsinline', '1');
-        q.set('enablejsapi', '1');
-        q.set('controls', '1');
-        if (start > 0) q.set('start', String(start));
-        if (mute === 1) q.set('mute', '1');
-        if (loopEnabled && vid) {
-          q.set('loop', '1');
-          q.set('playlist', vid);
-        }
-        if (listId) q.set('list', listId);
-        if (window.location.origin && /^https?:/i.test(window.location.origin)) {
-          q.set('origin', window.location.origin);
-        }
-        var base = vid
-          ? 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(vid)
-          : 'https://www.youtube-nocookie.com/embed/videoseries';
-        var mount = document.getElementById('mount');
-        if (!mount) return;
-        mount.innerHTML = '';
-        fallbackIframe = document.createElement('iframe');
-        fallbackIframe.id = 'yt-inner-embed';
-        fallbackIframe.src = base + '?' + q.toString();
-        mount.appendChild(fallbackIframe);
-        hardenIframeAttributes();
-        fallbackIframe.addEventListener('load', function () {
-          acked = false;
-          var tries = 0;
-          if (handshakeTimer) clearInterval(handshakeTimer);
-          var pulse = function () {
-            if (acked || tries >= 30) {
+      function startListeningHandshake() {
+        if (handshakeTimer) clearInterval(handshakeTimer);
+        var tries = 0;
+        var pulse = function () {
+          if (acked || tries >= 40) {
+            if (handshakeTimer) {
               clearInterval(handshakeTimer);
               handshakeTimer = null;
-              return;
             }
-            tries += 1;
-            sendRawToYt({ event: 'listening', id: 1, channel: 'widget' });
-          };
-          pulse();
-          handshakeTimer = setInterval(pulse, 200);
-        });
+            return;
+          }
+          tries += 1;
+          sendRawToYt({ event: 'listening', id: 1, channel: 'widget' });
+        };
+        pulse();
+        handshakeTimer = setInterval(pulse, 180);
       }
 
-      function initNativeYtPlayer() {
+      function startPollingLoop() {
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(function () {
+          var snap = readLiveSnapshotFromYtPlayer();
+          enforceLocalAbLoop();
+          postSyncToParent(snap);
+        }, 160);
+      }
+
+      function attachYtApi() {
         if (ytPlayer || !window.YT || !window.YT.Player) return;
-        if (apiFallbackTimer) {
-          clearTimeout(apiFallbackTimer);
-          apiFallbackTimer = null;
-        }
-        var playerVars = {
-          autoplay: autoplay,
-          rel: 0,
-          modestbranding: 1,
-          playsinline: 1,
-          enablejsapi: 1,
-          controls: 1,
-          mute: mute
-        };
-        if (start > 0) playerVars.start = start;
-        if (loopEnabled && vid) {
-          playerVars.loop = 1;
-          playerVars.playlist = vid;
-        }
-        if (listId) {
-          playerVars.listType = 'playlist';
-          playerVars.list = listId;
-        }
-        if (window.location.origin && /^https?:/i.test(window.location.origin)) {
-          playerVars.origin = window.location.origin;
-        }
         try {
-          ytPlayer = new window.YT.Player('yt-player-slot', {
-            width: '100%',
-            height: '100%',
+          ytPlayer = new window.YT.Player('yt-inner-embed', {
             host: 'https://www.youtube-nocookie.com',
-            videoId: vid || undefined,
-            playerVars: playerVars,
             events: {
               onReady: function () {
                 ytReady = true;
                 acked = true;
-                hardenIframeAttributes();
+                if (handshakeTimer) { clearInterval(handshakeTimer); handshakeTimer = null; }
                 applyInitialPrefsOnce();
                 flushPendingCommands();
-                startPollingYtPlayer();
+                startPollingLoop();
                 postSyncToParent(readLiveSnapshotFromYtPlayer());
               },
               onStateChange: function (e) {
@@ -342,7 +332,7 @@
                   lastInfo.playerState = e.data;
                   var snap = readLiveSnapshotFromYtPlayer();
                   postSyncToParent(snap);
-                  if (e.data === 0 && loopEnabled) {
+                  if (e.data === 0 && loopEnabled && !abState.enabled) {
                     execYtCommand('seekTo', [0, true]);
                     execYtCommand('playVideo', []);
                   }
@@ -356,25 +346,21 @@
               }
             }
           });
-          setTimeout(hardenIframeAttributes, 50);
-        } catch (_eYt) {
-          mountRawFallbackIframe();
-        }
+        } catch (_eYt) {}
       }
 
-      window.onYouTubeIframeAPIReady = initNativeYtPlayer;
-      if (window.YT && window.YT.Player) {
-        initNativeYtPlayer();
-      } else {
-        var apiScript = document.createElement('script');
-        apiScript.src = 'https://www.youtube.com/iframe_api';
-        apiScript.async = true;
-        apiScript.onerror = mountRawFallbackIframe;
-        document.head.appendChild(apiScript);
-        apiFallbackTimer = setTimeout(function () {
-          if (!ytPlayer) mountRawFallbackIframe();
-        }, 4000);
-      }
+      iframe.addEventListener('load', function () {
+        acked = false;
+        startListeningHandshake();
+        startPollingLoop();
+        if (window.YT && window.YT.Player) attachYtApi();
+      });
+
+      window.onYouTubeIframeAPIReady = attachYtApi;
+      var apiScript = document.createElement('script');
+      apiScript.src = 'https://www.youtube.com/iframe_api';
+      apiScript.async = true;
+      document.head.appendChild(apiScript);
 
       window.addEventListener('message', function (ev) {
         if (!ev || !ev.data) return;
@@ -391,7 +377,7 @@
           return;
         }
 
-        // Thông điệp infoDelivery dự phòng khi chạy fallbackIframe
+        // Nhận infoDelivery trực tiếp từ youtube-nocookie.com (hoạt động 100% kể cả khi YT.Player onReady không kích hoạt trong Document PiP!)
         var org = String(ev.origin || '');
         if (org && org.indexOf('youtube.com') === -1 && org.indexOf('youtube-nocookie.com') === -1) return;
         var data = ev.data;
@@ -400,23 +386,30 @@
         }
         if (!data || typeof data !== 'object') return;
 
+        if (data.id !== undefined && data.id !== null) {
+          ytWidgetId = data.id;
+        }
+
         if (!acked) {
           acked = true;
           if (handshakeTimer) { clearInterval(handshakeTimer); handshakeTimer = null; }
           ['onStateChange', 'onPlaybackRateChange', 'onError'].forEach(function (evName) {
-            sendRawToYt({ event: 'command', func: 'addEventListener', args: [evName], id: 1, channel: 'widget' });
+            sendRawToYt({ event: 'command', func: 'addEventListener', args: [evName], id: ytWidgetId, channel: 'widget' });
           });
+          startPollingLoop();
           flushPendingCommands();
         }
+
         if (data.event === 'onReady' || data.event === 'initialDelivery' || data.event === 'infoDelivery') {
           applyInitialPrefsOnce();
         }
+
         if ((data.event === 'infoDelivery' || data.event === 'initialDelivery') && data.info && typeof data.info === 'object') {
           if (typeof data.info.currentTime === 'number' && isFinite(data.info.currentTime)) lastInfo.currentTime = data.info.currentTime;
           if (typeof data.info.duration === 'number' && data.info.duration > 0) lastInfo.duration = data.info.duration;
           if (typeof data.info.playerState === 'number') {
             lastInfo.playerState = data.info.playerState;
-            if (data.info.playerState === 0 && loopEnabled) {
+            if (data.info.playerState === 0 && loopEnabled && !abState.enabled) {
               execYtCommand('seekTo', [0, true]);
               execYtCommand('playVideo', []);
             }
@@ -430,6 +423,7 @@
             }
             if (data.info.videoData.title) lastInfo.title = String(data.info.videoData.title);
           }
+          enforceLocalAbLoop();
           postSyncToParent(Object.assign({}, lastInfo));
         }
       });
@@ -438,7 +432,6 @@
         postSyncToParent(readLiveSnapshotFromYtPlayer());
         if (pollTimer) clearInterval(pollTimer);
         if (handshakeTimer) clearInterval(handshakeTimer);
-        if (apiFallbackTimer) clearTimeout(apiFallbackTimer);
       });
     })();
   </script>

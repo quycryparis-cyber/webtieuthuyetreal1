@@ -1894,9 +1894,15 @@
       if (this.timerId || typeof globalScope.setInterval !== 'function') return;
       this.timerId = globalScope.setInterval(() => {
         if (typeof document !== 'undefined' && document.hidden) return;
+        if (globalScope.NoirStudio?.perfManager?.isFeatureDisabled?.('ambient_particles')) return;
         const wpId = this.artPainter.activeWallpaperId;
+        const spec = wpId ? STAGE_ARTWORK_CATALOG[wpId] : null;
         if (
           !wpId ||
+          !spec ||
+          spec.isSolidBlack ||
+          spec.isSolidWhite ||
+          !spec.moon ||
           !this.artPainter.canvas ||
           this.artPainter.canvas.classList.contains('hidden')
         ) {
@@ -1905,7 +1911,7 @@
         this.phase = (this.phase + 0.18) % (Math.PI * 2);
         this.artPainter.paintWallpaper(wpId);
         this.overlayPulseHighlight(wpId);
-      }, 2200);
+      }, 4500);
     }
 
     stopAmbientPulse() {

@@ -5385,6 +5385,11 @@
           bridgeObj.searchParams.set('rate', String(Number(this.playerCtrl?.prefs?.speed) || 1));
           bridgeObj.searchParams.set('vol', String(Math.max(0, Math.min(100, Number(this.playerCtrl?.prefs?.volume ?? 85)))));
           bridgeObj.searchParams.set('sid', pipSid);
+          if (this.playerCtrl?.abLoop?.enabled && this.playerCtrl?.isAbPairValid?.()) {
+            bridgeObj.searchParams.set('ab', '1');
+            bridgeObj.searchParams.set('aba', String(this.playerCtrl.abLoop.startSec));
+            bridgeObj.searchParams.set('abb', String(this.playerCtrl.abLoop.endSec));
+          }
           pipBridgeUrl = bridgeObj.toString();
         } catch (_eUrl) {}
       }
@@ -5444,9 +5449,14 @@
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
           doc.body.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:#18181b;border-bottom:1px solid #27272a;font-size:11px;font-weight:700;">
-              <span id="pip-header-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">🖼️ ${safeTitle}</span>
-              <button id="pip-close-btn" type="button" style="background:#e11d48;color:#fff;border:0;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;">✕ Đóng &amp; Trả về gốc</button>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 8px;background:#18181b;border-bottom:1px solid #27272a;font-size:11px;font-weight:700;">
+              <span id="pip-header-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">🖼️ ${safeTitle}</span>
+              <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+                <button id="pip-back10-btn" type="button" title="Tua lùi 10 giây" style="background:#27272a;color:#e4e4e7;border:1px solid #3f3f46;border-radius:6px;padding:2px 6px;font-size:10.5px;font-weight:700;cursor:pointer;">-10s</button>
+                <button id="pip-playpause-btn" type="button" title="Phát / Tạm dừng" style="background:#059669;color:#fff;border:0;border-radius:6px;padding:2px 7px;font-size:10.5px;font-weight:700;cursor:pointer;">⏯</button>
+                <button id="pip-fwd10-btn" type="button" title="Tua tới 10 giây" style="background:#27272a;color:#e4e4e7;border:1px solid #3f3f46;border-radius:6px;padding:2px 6px;font-size:10.5px;font-weight:700;cursor:pointer;">+10s</button>
+                <button id="pip-close-btn" type="button" style="background:#e11d48;color:#fff;border:0;border-radius:6px;padding:2px 8px;font-size:10.5px;font-weight:700;cursor:pointer;">✕ Đóng</button>
+              </div>
             </div>
             <div style="flex:1;position:relative;background:#000;">
               <iframe id="pip-yt-iframe" src="${pipBridgeUrl}" style="width:100%;height:100%;border:0;" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
@@ -5456,6 +5466,9 @@
             this._docPipClosedByUser = true;
             this.closeDesktopFloatingWindow();
           };
+          doc.getElementById('pip-back10-btn')?.addEventListener('click', () => this.playerCtrl?.seekRelative?.(-10));
+          doc.getElementById('pip-playpause-btn')?.addEventListener('click', () => this.playerCtrl?.togglePlayPause?.());
+          doc.getElementById('pip-fwd10-btn')?.addEventListener('click', () => this.playerCtrl?.seekRelative?.(10));
           doc.getElementById('pip-close-btn')?.addEventListener('click', closeAndCleanDocPip);
           pipWin.addEventListener('pagehide', () => {
             const autoDismissedByHost = !this._docPipClosedByUser && Date.now() - pipOpenedAtMs < 600;
@@ -6471,6 +6484,21 @@
     }
 
     emitUiSync() {
+      // Đẩy ngay cấu hình Lặp đoạn A–B mới nhất sang Cửa sổ nổi Desktop nếu đang mở!
+      if (this.bridge?._activePipSyncSid) {
+        const abOk = Boolean(this.abLoop?.enabled && this.isAbPairValid?.() && !this.isVideoLiveStream?.());
+        const sig = `${abOk ? 1 : 0}:${abOk ? this.abLoop.startSec : ''}:${abOk ? this.abLoop.endSec : ''}`;
+        if (this._lastPipAbSyncSig !== sig) {
+          this._lastPipAbSyncSig = sig;
+          this.bridge.dispatchPlayerCommand('setAbLoop', [
+            abOk,
+            abOk ? this.abLoop.startSec : null,
+            abOk ? this.abLoop.endSec : null
+          ]);
+        }
+      } else {
+        this._lastPipAbSyncSig = '';
+      }
       if (this.uiSyncCallback) {
         try {
           this.uiSyncCallback();
@@ -7154,7 +7182,9 @@
             })
             .catch(() => {});
         } else {
-          this.bridge.ensureBridgeConnected(this.prefs);
+          if (!this.bridge._activePipSyncSid) {
+            this.bridge.ensureBridgeConnected(this.prefs);
+          }
           this.bridge.dispatchPlayerCommand('playVideo', []);
           if (this.prefs.audioOnlyMode) {
             this.mobileBgAudio?.activateNativeAudioPlayback('audio-only');

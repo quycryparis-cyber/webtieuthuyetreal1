@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Sổ Tay Tiểu Thuyết Của Bi — Studio Sáng Tác Đa Nền Tảng",
   "short_name": "Studio Tiểu Thuyết Bi",
-  "description": "Không gian sáng tác tiểu thuyết hiện đại dành cho tác giả Việt — Hỗ trợ AI 5 chế độ, Story Bible chống quên, duyệt thay đổi kiểu Google Docs, lưu trữ phiên bản Time-Machine và xuất sách PDF/DOCX chuyên nghiệp.",
+  "description": "Không gian sáng tác tiểu thuyết hiện đại dành cho tác giả Việt — Hỗ trợ AI 6 chế độ, Story Bible chống quên, ĐăngLovePDF 19 công cụ nội bộ, Quản lý RAM tự ngủ, Autotester nội bộ và xuất sách PDF/DOCX/EPUB chuyên nghiệp.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

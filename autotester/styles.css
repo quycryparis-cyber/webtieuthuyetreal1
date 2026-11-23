@@ -1,0 +1,534 @@
+/* ============================================================================
+ * 🩺 BÁC SĨ APP — AUTOTESTER NỘI BỘ (CSS CÔ LẬP 100% THEO TIỀN TỐ .at-*)
+ * Không bao giờ ghi đè font, màu nền hay bố cục của trang web chính.
+ * ============================================================================ */
+
+.at-root,
+.at-root * {
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.at-root {
+  position: fixed;
+  z-index: 2147483635;
+  color: #f4f4f5;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* Laptop: Bảng nổi bên cạnh phải rộng 360px, không khóa màn hình bên trái */
+@media (min-width: 768px) {
+  .at-panel {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: 368px;
+    max-width: calc(100vw - 24px);
+    background: rgba(15, 18, 26, 0.94);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1.5px solid rgba(52, 211, 153, 0.45);
+    border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .at-sheet-handle-row {
+    display: none;
+  }
+}
+
+/* Điện thoại: Ngăn kéo từ đáy màn hình (Bottom Sheet 3 nấc: 8% / 46% / 92%) */
+@media (max-width: 767px) {
+  .at-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 46dvh;
+    background: rgba(13, 16, 24, 0.97);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 2px solid rgba(52, 211, 153, 0.55);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.72);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: height 0.22s ease;
+  }
+  .at-panel.at-snap-mini { height: 64px; }
+  .at-panel.at-snap-mid  { height: 48dvh; }
+  .at-panel.at-snap-full { height: 92dvh; }
+  .at-sheet-handle-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 6px 12px 2px;
+    cursor: grab;
+    touch-action: none;
+    flex-shrink: 0;
+  }
+  .at-sheet-pill {
+    width: 42px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(161, 161, 170, 0.55);
+  }
+  .at-snap-btn {
+    border: 1px solid rgba(113, 113, 122, 0.5);
+    background: rgba(39, 39, 42, 0.9);
+    color: #e4e4e7;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+}
+
+/* Viên thuốc nổi khi thu gọn trên Laptop */
+.at-minimized-pill {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 2px solid #10b981;
+  color: #ecfdf5;
+  font-weight: 800;
+  font-size: 13px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  user-select: none;
+  z-index: 2147483636;
+}
+
+/* Header gọn 1 dòng */
+.at-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(63, 63, 70, 0.7);
+  background: rgba(24, 24, 27, 0.85);
+  flex-shrink: 0;
+}
+.at-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 900;
+  font-size: 14px;
+  color: #6ee7b7;
+  min-width: 0;
+  white-space: nowrap;
+}
+.at-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.at-icon-btn {
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(82, 82, 91, 0.7);
+  background: rgba(39, 39, 42, 0.9);
+  color: #f4f4f5;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.at-icon-btn:hover { background: rgba(63, 63, 70, 0.95); }
+
+/* Công tắc gạt Bật / Tắt */
+.at-power-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.65);
+  background: rgba(16, 185, 129, 0.2);
+  color: #a7f3d0;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.at-power-toggle:hover {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: rgba(248, 113, 113, 0.8);
+  color: #fecaca;
+}
+
+/* 3 Nút bấm chính (cao tối thiểu 48px) */
+.at-primary-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px 12px 8px;
+  flex-shrink: 0;
+}
+.at-btn-big {
+  min-height: 48px;
+  padding: 10px 12px;
+  border-radius: 13px;
+  border: none;
+  font-weight: 900;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: transform 0.1s ease, filter 0.15s ease;
+  text-align: center;
+}
+.at-btn-big:active { transform: scale(0.98); }
+.at-btn-green {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+.at-btn-blue {
+  background: linear-gradient(135deg, #0284c7, #0ea5e9);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.3);
+}
+.at-btn-red {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+}
+.at-btn-copy-rx {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 8px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(251, 191, 36, 0.8);
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: #18181b;
+  font-weight: 900;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.35);
+}
+.at-btn-copy-rx:hover { filter: brightness(1.08); }
+
+/* Thanh tiến trình chạy trực tiếp */
+.at-progress-wrap {
+  padding: 0 12px 8px;
+  flex-shrink: 0;
+}
+.at-progress-track {
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(63, 63, 70, 0.7);
+  overflow: hidden;
+}
+.at-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #10b981, #38bdf8);
+  transition: width 0.2s ease;
+}
+.at-progress-text {
+  font-size: 11px;
+  color: #a1a1aa;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Đúng 2 Tab chuyển mục */
+.at-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 0 12px 8px;
+  border-bottom: 1px solid rgba(63, 63, 70, 0.65);
+  flex-shrink: 0;
+}
+.at-tab-btn {
+  min-height: 38px;
+  border-radius: 11px;
+  border: 1px solid rgba(63, 63, 70, 0.7);
+  background: rgba(24, 24, 27, 0.8);
+  color: #a1a1aa;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+}
+.at-tab-btn.at-active {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(52, 211, 153, 0.8);
+  color: #ecfdf5;
+}
+
+/* Thân cuộn nội dung */
+.at-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Thẻ điểm sức khỏe */
+.at-score-card {
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(24, 24, 27, 0.92);
+  border: 1px solid rgba(82, 82, 91, 0.75);
+}
+.at-score-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.at-score-num {
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+}
+.at-score-good { color: #34d399; }
+.at-score-warn { color: #fbbf24; }
+.at-score-bad  { color: #f87171; }
+.at-delta-pill {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(52, 211, 153, 0.16);
+  color: #6ee7b7;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+}
+.at-pillars {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  margin-top: 10px;
+}
+.at-pillar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #d4d4d8;
+  font-weight: 700;
+}
+.at-pillar-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(63, 63, 70, 0.75);
+  overflow: hidden;
+  margin-top: 2px;
+}
+.at-pillar-fill { height: 100%; border-radius: 999px; }
+
+/* Cảnh báo hồi quy */
+.at-regression-banner {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(248, 113, 113, 0.7);
+  color: #fecaca;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+/* Thẻ lỗi & thẻ đạt chuẩn thu gọn */
+.at-issue-card {
+  border-radius: 12px;
+  padding: 10px 11px;
+  background: rgba(24, 24, 27, 0.9);
+  border-left: 4px solid #ef4444;
+  border-top: 1px solid rgba(63, 63, 70, 0.65);
+  border-right: 1px solid rgba(63, 63, 70, 0.65);
+  border-bottom: 1px solid rgba(63, 63, 70, 0.65);
+}
+.at-issue-card.at-sev-p1 { border-left-color: #f97316; }
+.at-issue-card.at-sev-p2 { border-left-color: #eab308; }
+.at-issue-title {
+  font-weight: 900;
+  font-size: 12.5px;
+  color: #fafafa;
+}
+.at-issue-desc {
+  font-size: 11.5px;
+  color: #d4d4d8;
+  margin-top: 3px;
+}
+.at-issue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+.at-small-btn {
+  padding: 5px 9px;
+  border-radius: 8px;
+  border: 1px solid rgba(82, 82, 91, 0.8);
+  background: rgba(39, 39, 42, 0.95);
+  color: #f4f4f5;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.at-small-btn:hover { background: rgba(63, 63, 70, 0.95); }
+.at-small-btn-target {
+  border-color: rgba(248, 113, 113, 0.7);
+  background: rgba(239, 68, 68, 0.2);
+  color: #fecaca;
+}
+.at-dev-details {
+  margin-top: 7px;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(9, 9, 11, 0.92);
+  border: 1px solid rgba(63, 63, 70, 0.7);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10.5px;
+  color: #a7f3d0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.at-passed-summary {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  background: rgba(16, 185, 129, 0.14);
+  color: #a7f3d0;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.at-passed-list {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.at-passed-item {
+  font-size: 11.5px;
+  color: #d4d4d8;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: rgba(24, 24, 27, 0.8);
+}
+
+/* 4 Cụm bài kiểm tra thu gọn ở Tab 2 */
+.at-group-box {
+  border-radius: 12px;
+  border: 1px solid rgba(63, 63, 70, 0.75);
+  background: rgba(24, 24, 27, 0.88);
+  overflow: hidden;
+}
+.at-group-head {
+  width: 100%;
+  padding: 11px 12px;
+  border: none;
+  background: transparent;
+  color: #f4f4f5;
+  font-weight: 800;
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  text-align: left;
+}
+.at-group-body {
+  padding: 6px 12px 10px;
+  border-top: 1px solid rgba(63, 63, 70, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.at-check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: #e4e4e7;
+  cursor: pointer;
+}
+.at-check-row input {
+  margin-top: 2px;
+  accent-color: #10b981;
+}
+
+/* Hộp Cài đặt phụ */
+.at-settings-popover {
+  margin: 0 12px 8px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(9, 9, 11, 0.96);
+  border: 1px solid rgba(82, 82, 91, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* Khung viền đỏ nhấp nháy + mũi tên chỉ thẳng chỗ bị lỗi (4 giây) */
+.at-spotlight-box {
+  position: fixed;
+  z-index: 2147483640;
+  pointer-events: none;
+  border: 3px solid #ef4444;
+  border-radius: 10px;
+  box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.28), 0 0 24px rgba(239, 68, 68, 0.85);
+  animation: atSpotlightPulse 0.65s ease-in-out infinite alternate;
+}
+.at-spotlight-tag {
+  position: absolute;
+  top: -32px;
+  left: 0;
+  background: #dc2626;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+@keyframes atSpotlightPulse {
+  from { transform: scale(1); opacity: 1; }
+  to   { transform: scale(1.015); opacity: 0.72; }
+}
+
+.at-hidden { display: none !important; }

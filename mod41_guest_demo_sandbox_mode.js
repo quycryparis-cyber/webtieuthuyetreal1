@@ -69,8 +69,7 @@
       's18-fullscreen-prompt-textarea',
       'mode5-prompt-input',
       'textarea-synthesized-master-prompt',
-      'textarea-sysprompt-editor',
-      'free-chat-input'
+      'textarea-sysprompt-editor'
     ]),
     PROTECTED_STORAGE_PREFIXES: Object.freeze([
       'noir_',
@@ -1085,18 +1084,11 @@
         });
       }
 
-      // 7. Chặn Chatbot tự do (mod27) khi không đến từ Câu hỏi mẫu Guest Mode
+      // 7. Chatbot Viên Bi Số 8 (mod27): Cho phép hỏi đáp & mở tính năng nội bộ 100% miễn phí ngay cả trong Guest Mode (0 API call)
       if (NS.mascotAndChat) {
         wrapMethod(NS.mascotAndChat, 'sendChatMessage', (orig, target) => async function guardedChatSend(customPromptText = null) {
-          if (sandbox.isGuestActive()) {
-            if (sandbox.internalBypassDepth > 0) {
-              return true;
-            }
-            owner.showRestrictionNotice({
-              requirementType: MOD41_CONSTANTS.REQUIREMENT_TYPES.API_KEY,
-              featureName: 'Nhắn tin tự do với Trợ lý Viên Bi Số 8 (Chỉ dùng Câu hỏi mẫu trong Guest Mode)'
-            });
-            return false;
+          if (sandbox.isGuestActive() && sandbox.internalBypassDepth > 0) {
+            return true;
           }
           return orig.apply(target, [customPromptText]);
         });
@@ -2149,7 +2141,6 @@
         ['btn-s6-quick-gate', { requirementType: REQ.BOTH_API_AND_FOLDER, featureName: 'Kết nối API Key & Thư mục' }],
         ['btn-s6-quick-verify-all-links', { requirementType: REQ.API_KEY, featureName: 'Kiểm chứng kết nối Gemini API' }],
         ['btn-s6-card-share-bundle', { requirementType: REQ.WORKSPACE_FOLDER, featureName: 'Xuất gói chia sẻ dữ liệu dự án' }],
-        ['btn-send-free-chat', { requirementType: REQ.API_KEY, featureName: 'Gửi câu hỏi tự do tới Chatbot Bi Số 8' }],
         ['btn-save-sysprompt-config', { requirementType: REQ.WORKSPACE_FOLDER, featureName: 'Lưu cấu hình System Prompt hệ thống' }],
         ['btn-reset-default-sysprompt', { requirementType: REQ.WORKSPACE_FOLDER, featureName: 'Đặt lại & lưu System Prompt hệ thống' }]
       ]);

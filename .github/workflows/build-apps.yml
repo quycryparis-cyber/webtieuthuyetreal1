@@ -1,0 +1,80 @@
+name: Build Desktop (.exe) & Android (.apk) Apps
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows-exe:
+    name: Build Windows Installer & Portable (.exe)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Prepare clean dist-app & Build Windows .exe
+        run: npm run build:win
+
+      - name: Upload Windows .exe Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: So-Tay-Tieu-Thuyet-Bi-Windows-EXE
+          path: |
+            release/*.exe
+          retention-days: 30
+
+  build-android-apk:
+    name: Build Android App (.apk via Capacitor)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java 17 (JDK for Gradle)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Prepare clean dist-app & Sync Capacitor Android
+        run: |
+          npm run prepare:dist
+          if [ ! -d "android" ]; then npx cap add android; fi
+          npx cap sync android
+
+      - name: Inject Storage & Download Permissions for PDF/DOCX/EPUB Export
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if ! grep -q "READ_EXTERNAL_STORAGE" "$MANIFEST"; then
+            sed -i 's|<application|<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <application|' "$MANIFEST"
+          fi
+
+      - name: Build Debug APK
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload Android .apk Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: So-Tay-Tieu-Thuyet-Bi-Android-APK
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30

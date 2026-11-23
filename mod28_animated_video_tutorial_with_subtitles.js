@@ -516,14 +516,68 @@
       startSec: 806,
       endSec: 840,
       accentColor: '#f59e0b',
-      badgeLabel: 'MODULE 45 CASIO FX-570VN+ & DESMOS · AI NÓI 6 THỨ TIẾNG · 45 MODULE',
+      badgeLabel: 'MODULE 45 CASIO FX-570VN+ & DESMOS · AI NÓI 6 THỨ TIẾNG',
       sceneType: 'MINI_PLAYER_AND_TRAFFIC_STAGE',
       summary:
         'Ra mắt Module 45 (Tab 6 Mục #5 Linh Tinh & Credit): Máy tính Casio fx-570VN PLUS đầy đủ SHIFT/ALPHA/SOLVE/Tích phân/Ma trận + Đồ thị Desmos 100% Local, cùng giọng đọc AI 6 thứ tiếng (Google Dịch TTS) & Tự lưu 2 giây toàn diện!',
       keyActionSteps: [
         'Vào Tab 6 → Ô #5 "Chức năng linh tinh" → Mục 6 "Máy tính đồ thị" (hoặc nút trong Credit) để dùng Casio fx-570VN PLUS đầy đủ phép toán khoa học + bấm "Tạo hàm đồ thị" vẽ đồ thị tương tác kiểu Desmos 100% nội bộ không cần mạng!',
         'Chọn bất kỳ trong 6 ngôn ngữ giọng đọc AI (Tiếng Việt, English, 中文 简体, 中文 繁體, 한국어, 日本語) ngay trên Rạp Video Hướng Dẫn hoặc Trợ lý AI — tự động phát mượt qua Neural Voice hoặc Google Dịch TTS!',
-        'Trọn bộ 45 Module + Tự lưu mỗi 2 giây ghi nhớ mọi trạng thái người dùng (bản thảo, con trỏ, tab, nhạc, cài đặt) sẵn sàng đồng hành cùng tác giả trên Desktop, Mobile & App PWA!',
+        'Trọn bộ tính năng kết hợp Tự lưu mỗi 2 giây ghi nhớ mọi trạng thái người dùng (bản thảo, con trỏ, tab, nhạc, cài đặt) sẵn sàng đồng hành cùng tác giả trên Desktop, Mobile & App PWA!',
+      ],
+    },
+    {
+      id: 'CHAP_29_WORD_PRO_MODE6_YT_PIP_GDRIVE',
+      index: 29,
+      title: '29. 6 Chế Độ AI (Tạo Bìa), Trình Soạn Word Pro, Cửa Sổ Nổi YouTube A–B & Đồng Bộ Google Drive (Mod 17, 37, 39)',
+      durationSec: 34,
+      startSec: 840,
+      endSec: 874,
+      accentColor: '#10b981',
+      badgeLabel: '6 CHẾ ĐỘ AI · WORD PRO · YOUTUBE CỬA SỔ NỔI A–B · GOOGLE DRIVE',
+      sceneType: 'TWO_STEP_PROMPT',
+      summary:
+        'Nâng cấp toàn diện 6 Chế độ AI (thêm Chế độ 6 Tạo Bìa Truyện) + chia đôi màn hình Gemini/NotebookLM, trình soạn thảo Word Pro (chèn/xóa bảng, cắt ảnh Crop, menu chuột phải), cửa sổ nổi YouTube Desktop đồng bộ Tua ±10s & Lặp A–B, cùng hướng dẫn OAuth Google Drive A–Z.',
+      keyActionSteps: [
+        'Ở Tab 3, dùng đủ 6 Chế độ AI (Chế độ 6 Tạo Bìa Truyện kèm hướng dẫn tạo ảnh Gemini), khung soạn chuẩn Word Pro có Chọn hết, Căn lề, chèn/xóa Bảng & cắt/Crop ảnh bằng chuột phải.',
+        'Trên Desktop Tab 5, mở Cửa sổ nổi YouTube vẫn điều khiển trọn vẹn Tua ±10s, Dừng/Phát, Lặp toàn bài và Lặp đoạn A–B tự động đồng bộ 2 chiều khi đóng trả về khung chính.',
+        'Tại Tab 6 → Đồng bộ sang máy khác (Mod 37), làm theo hướng dẫn từng click A–Z để kết nối Google Drive cá nhân hoặc xuất/nhập gói .ZIP 1 chạm.',
+      ],
+    },
+    {
+      id: 'CHAP_30_MOD46_DANGLOVEPDF_MOD47_RAM_AI',
+      index: 30,
+      title: '30. Module 46 ĐăngLovePDF (19 Công Cụ 100% Nội Bộ), Module 47 Tự Ngủ Dọn RAM & Trợ Lý Bi Số 8 Thông Minh',
+      durationSec: 34,
+      startSec: 874,
+      endSec: 908,
+      accentColor: '#f43f5e',
+      badgeLabel: 'MOD 46 ĐĂNGLOVEPDF · MOD 47 QUẢN LÝ RAM AUTO-SLEEP',
+      sceneType: 'VERSION_VAULT_AND_PDF',
+      summary:
+        'Ra mắt nút nhấp nháy "Xuất truyện qua PDF và dùng ĐăngLovePDF" (19 công cụ gộp/tách/nén/ký tên/OCR/đổi Word-Excel-PPTX-Ảnh 100% trên máy), Bộ Quản Lý Hiệu Năng & Tự Ngủ RAM (Mod 47) cùng Trợ lý Bi Số 8 Chế độ 1 & 2 am hiểu trọn bộ ứng dụng!',
+      keyActionSteps: [
+        'Tại Tab 6, bấm nút nhấp nháy "📕 Xuất truyện qua PDF và dùng ĐăngLovePDF" để chọn Xuất sách truyện PDF/DOCX hoặc mở ĐăngLovePDF gồm 19 công cụ xử lý file riêng tư 100% trên máy.',
+        'Mở thẻ "⚡ Quản Lý Hiệu Năng, Tự Ngủ & Tắt/Bật Chức Năng (Mod 47)" tại Tab 6 để bật Tiết Kiệm RAM Tối Đa, tắt/bật hiệu ứng phụ hoặc Dọn RAM 1 chạm (nhạc nền, YouTube, Pomodoro & tự lưu luôn được bảo vệ).',
+        'Hỏi Trợ lý Viên Bi Số 8 ở Chế độ 1 bất kỳ câu nào (vd: "Trang web này có gì?", "Mở ĐăngLovePDF", "Mở Autotester") để được giải đáp chi tiết và mở thẳng tính năng trong 1 giây!',
+      ],
+    },
+    {
+      id: 'CHAP_31_MOD48_AUTOTESTER_COPYALL_APPS',
+      index: 31,
+      title: '31. Module 48 Autotester Nội Bộ ("Bác Sĩ App"), Chọn/Chép Tất Cả & Đóng Gói App Windows/Android/iOS (48 Module)',
+      durationSec: 34,
+      startSec: 908,
+      endSec: 942,
+      accentColor: '#14b8a6',
+      badgeLabel: 'MOD 48 BÁC SĨ APP AUTOTESTER · CHỌN/CHÉP TẤT CẢ · APP .EXE/.APK · 48 MODULE',
+      sceneType: 'SIX_SCREENS_MAP',
+      summary:
+        'Ra mắt nút "🩺 Autotester nội bộ" ngay dưới Viết Báo Lỗi (Tab 6): tự khám tổng quát toàn app trên cả Laptop & Điện thoại, 0 tốn RAM khi tắt, 100% tiếng Việt dễ hiểu, tự xuất Đơn thuốc gửi AI sửa lỗi, đủ nút Chọn tất cả / Sao chép tất cả trên mọi khung & bộ cấu hình đóng gói App Windows (.exe), Android (.apk) & iOS PWA!',
+      keyActionSteps: [
+        'Vào Tab 6 → "Báo lỗi, góp ý và kiểm thử Web/App" → bấm nút "🩺 Autotester nội bộ" (hoặc Ctrl+Shift+Alt+T trên Laptop / chạm 5 lần logo trên Điện thoại) để mở bảng Bác sĩ App không tốn RAM khi tắt.',
+        'Bấm "▶ Khám tổng quát" để tự kiểm tra 4 trụ cột (Chạy đúng, Độ mượt, Dễ bấm, Chống sập), quay thao tác mẫu không cần code và bấm "📋 Chép đơn thuốc gửi AI sửa lỗi" chỉ với 1 chạm.',
+        'Mọi khung Câu lệnh AI, Đầu ra AI và Story Bible đều có sẵn nút "☑️ Chọn tất cả" + "📋 Sao chép tất cả", cùng bộ đóng gói sẵn Electron (.exe), Capacitor (.apk) & GitHub Actions CI!',
       ],
     },
   ]);
@@ -1307,10 +1361,154 @@
       chapterId: 'CHAP_28_MOD45_CASIO_DESMOS_VOICE6LANG',
       startSec: 828.0,
       endSec: 840.0,
-      speaker: 'Hoàn Thiện 45 Module & Tự Lưu 2 Giây Mọi Trạng Thái!',
-      speakerEn: 'All 45 Modules Complete with Full 2-Second Autosave!',
-      text: 'Cả 45 Module kết hợp cơ chế Tự Lưu mỗi 2 giây ghi nhớ trọn vẹn văn bản, vị trí con trỏ, tab và cài đặt đang dùng. Chúc tác giả sáng tác bùng nổ cùng Web Viết Tiểu Thuyết Của Bi!',
-      textEn: 'All 45 Modules work together with full 2-second autosave preserving your manuscript, cursor, active tab, and settings. Happy writing with Bi’s Novel Writing Studio!',
+      speaker: 'Tự Lưu 2 Giây Mọi Trạng Thái!',
+      speakerEn: 'Full 2-Second Autosave Across Devices!',
+      text: 'Cơ chế Tự Lưu mỗi 2 giây ghi nhớ trọn vẹn văn bản, vị trí con trỏ, tab và cài đặt đang dùng, sẵn sàng tiếp nối mượt mà sang các bản nâng cấp mới nhất!',
+      textEn: 'Full 2-second autosave preserves your manuscript, cursor, active tab, and preferences seamlessly across every device!',
+    },
+    {
+      id: 'SUB_79',
+      chapterId: 'CHAP_29_WORD_PRO_MODE6_YT_PIP_GDRIVE',
+      startSec: 840.0,
+      endSec: 851.0,
+      speaker: '6 Chế Độ AI (Tạo Bìa) & Trình Soạn Word Pro',
+      speakerEn: '6 AI Modes (Book Cover) & Word Pro Editor',
+      text: 'Tab 3 nay đủ 6 Chế độ AI với Chế độ 6 Tạo Ảnh Bìa và trình soạn thảo Word Pro hỗ trợ Chọn hết, Căn lề, chèn hoặc xóa Bảng và cắt ảnh Crop bằng chuột phải!',
+      textEn: 'Tab 3 now features all 6 AI Modes including Book Cover Generation, plus the Word Pro Editor with Select All, Alignment, Table editing, and right-click Image Crop!',
+      textByLang: {
+        'zh-CN': '标签页 3 现已升级为 6 大 AI 模式（含第 6 模式封面生成），搭配 Word Pro 富文本编辑器，支持全选、对齐、插入/删除表格及右键裁剪图片！',
+        'zh-TW': '分頁 3 現已升級為 6 大 AI 模式（含第 6 模式封面生成），搭配 Word Pro 富文本編輯器，支援全選、對齊、插入/刪除表格及右鍵裁剪圖片！',
+        'ko-KR': '탭 3은 이제 책 표지 생성을 포함한 6가지 AI 모드와 전체 선택, 정렬, 표 편집, 우클릭 이미지 자르기를 지원하는 Word Pro 에디터를 제공합니다!',
+        'ja-JP': 'タブ3は表紙生成を含む全6つのAIモードに対応し、全選択・配置・表の挿入削除・右クリック画像トリミングができるWord Proエディタを搭載しました！',
+      },
+    },
+    {
+      id: 'SUB_80',
+      chapterId: 'CHAP_29_WORD_PRO_MODE6_YT_PIP_GDRIVE',
+      startSec: 851.0,
+      endSec: 862.0,
+      speaker: 'Cửa Sổ Nổi YouTube Desktop Đồng Bộ Tua & Lặp A–B',
+      speakerEn: 'Synced Desktop YouTube Floating Window & A–B Loop',
+      text: 'Trên Desktop, Cửa sổ nổi YouTube hỗ trợ trọn vẹn Tua ±10 giây, Dừng phát và Lặp đoạn A–B tự động đồng bộ 2 chiều, đóng lại là trả mượt về đúng giây đang xem!',
+      textEn: 'On Desktop, the YouTube Floating Window fully supports ±10s seek, Play/Pause, and autonomous A–B Looping, syncing cleanly back to the main frame on close!',
+      textByLang: {
+        'zh-CN': '在电脑端，YouTube 悬浮窗全面支持快进/后退 10 秒、暂停播放与独立 A–B 片段循环，关闭悬浮窗后自动无缝同步回主画面当前秒数！',
+        'zh-TW': '在電腦端，YouTube 懸浮窗全面支援快轉/倒轉 10 秒、暫停播放與獨立 A–B 片段循環，關閉懸浮窗後自動無縫同步回主畫面目前秒數！',
+        'ko-KR': '데스크톱 YouTube 플로팅 창은 ±10초 탐색, 재생/일시정지, 자동 A–B 구간 반복을 완벽 지원하며 닫을 때 메인 플레이어와 시간이 정확히 동기화됩니다!',
+        'ja-JP': 'デスクトップ版YouTubeフローティング窓は±10秒シーク・再生一時停止・A–B区間ループに完全対応し、閉じても元の再生位置へ滑らかに同期します！',
+      },
+    },
+    {
+      id: 'SUB_81',
+      chapterId: 'CHAP_29_WORD_PRO_MODE6_YT_PIP_GDRIVE',
+      startSec: 862.0,
+      endSec: 874.0,
+      speaker: 'Đồng Bộ Google Drive OAuth A–Z & Chia Đôi Màn Hình',
+      speakerEn: 'Google Drive OAuth A–Z Guide & Split-Screen AI',
+      text: 'Cửa sổ Đồng bộ sang máy khác nay có sẵn hướng dẫn mô phỏng từng cú click lấy Google OAuth Client ID từ A đến Z giúp đồng bộ toàn bộ tiểu thuyết qua Google Drive cực dễ!',
+      textEn: 'Device Sync now includes a visual click-by-click A–Z guide to set up Google OAuth and sync your entire novel safely across devices via Google Drive!',
+      textByLang: {
+        'zh-CN': '跨设备同步窗口内置了从 A 到 Z 的可视化点击教程，手把手教您配置 Google Drive 同步，一键在多台设备间同步全部小说数据！',
+        'zh-TW': '跨裝置同步視窗內建了從 A 到 Z 的視覺化點擊教學，手把手教您設定 Google Drive 同步，一鍵在多台裝置間同步全部小說資料！',
+        'ko-KR': '기기 동기화 창에는 Google Drive 연동을 위한 A부터 Z까지 단계별 시각 가이드가 포함되어 여러 기기 간 소설 데이터를 손쉽게 동기화할 수 있습니다!',
+        'ja-JP': 'デバイス同期画面にはGoogle Drive連携のA〜Zステップガイドが内蔵されており、複数端末間で小説データを安全かつ簡単に同期できます！',
+      },
+    },
+    {
+      id: 'SUB_82',
+      chapterId: 'CHAP_30_MOD46_DANGLOVEPDF_MOD47_RAM_AI',
+      startSec: 874.0,
+      endSec: 885.0,
+      speaker: 'Module 46 Mới: ĐăngLovePDF — 19 Công Cụ PDF Nội Bộ',
+      speakerEn: 'New Module 46: ĐăngLovePDF — 19 Local PDF Tools',
+      text: 'Tại Tab 6, bấm nút nhấp nháy Xuất truyện qua PDF và dùng ĐăngLovePDF để mở 19 công cụ gộp, tách, nén, ký tên, OCR và đổi Word, Excel, Ảnh sang PDF 100% trên máy!',
+      textEn: 'In Tab 6, click the glowing Export PDF & ĐăngLovePDF button for 19 100% client-side tools to merge, split, compress, sign, OCR, and convert Word, Excel, or Images!',
+      textByLang: {
+        'zh-CN': '在标签页 6 点击闪烁的“导出小说为 PDF 并使用 ĐăngLovePDF”按钮，即可使用 19 款 100% 本地隐私处理的合并、拆分、压缩、签名、OCR 及格式转换工具！',
+        'zh-TW': '在分頁 6 點擊閃爍的「匯出小說為 PDF 並使用 ĐăngLovePDF」按鈕，即可使用 19 款 100% 本機隱私處理的合併、分割、壓縮、簽名、OCR 及格式轉換工具！',
+        'ko-KR': '탭 6의 반짝이는 PDF 내보내기 및 ĐăngLovePDF 버튼을 누르면 병합, 분할, 압축, 서명, OCR, 문서 변환 등 19가지 100% 로컬 PDF 도구를 바로 쓸 수 있습니다!',
+        'ja-JP': 'タブ6の光るPDF出力＆ĐăngLovePDFボタンから、結合・分割・圧縮・署名・OCR・WordやExcel変換など19種類の完全ローカルPDFツールを利用できます！',
+      },
+    },
+    {
+      id: 'SUB_83',
+      chapterId: 'CHAP_30_MOD46_DANGLOVEPDF_MOD47_RAM_AI',
+      startSec: 885.0,
+      endSec: 896.0,
+      speaker: 'Module 47: Tự Ngủ Chống Tràn RAM & Tắt/Bật Chức Năng',
+      speakerEn: 'Module 47: Auto-Sleep RAM Optimizer & Feature Toggles',
+      text: 'Module 47 tự động ngủ đồ họa 60FPS và giải phóng RAM ngay khi bạn đóng công cụ hoặc chuyển tab, cho phép tắt bật từng tính năng phụ mà vẫn giữ nguyên nhạc nền và Pomodoro!',
+      textEn: 'Module 47 auto-sleeps 60FPS graphics and frees RAM the moment you close tools or switch tabs, with per-feature toggles while protecting background music and Pomodoro!',
+      textByLang: {
+        'zh-CN': 'Module 47 会在您关闭工具或切换标签页时自动休眠 60FPS 动画并释放内存，支持逐项开关附加模块，同时完全保护后台音乐、YouTube 与番茄钟运行！',
+        'zh-TW': 'Module 47 會在您關閉工具或切換分頁時自動休眠 60FPS 動畫並釋放記憶體，支援逐項開關附加模組，同時完全保護背景音樂、YouTube 與番茄鐘執行！',
+        'ko-KR': 'Module 47은 도구를 닫거나 탭을 전환하면 60FPS 그래픽을 자동 절전하고 RAM을 정리하며, 배경 음악과 포모도로는 유지한 채 보조 기능을 개별 제어할 수 있습니다!',
+        'ja-JP': 'Module 47はツール終了やタブ切替時に60FPS描画を自動スリープしRAMを解放。BGMやYouTube、ポモドーロを守りながら各機能を自由にオンオフできます！',
+      },
+    },
+    {
+      id: 'SUB_84',
+      chapterId: 'CHAP_30_MOD46_DANGLOVEPDF_MOD47_RAM_AI',
+      startSec: 896.0,
+      endSec: 908.0,
+      speaker: 'Trợ Lý Bi Số 8 Thông Minh & 47 Module Hoàn Chỉnh!',
+      speakerEn: 'Upgraded Chatbot Bi #8 & All 47 Modules Ready!',
+      text: 'Trợ lý Viên Bi Số 8 nay hiểu trọn vẹn 47 Module ở cả Chế độ 1 lẫn Chế độ 2 và hỗ trợ mở nhanh mọi tính năng. Chúc bạn sáng tác thật mượt mà cùng Web Viết Tiểu Thuyết Của Bi!',
+      textEn: 'Chatbot Bi #8 now understands all 47 Modules across Mode 1 and Mode 2 and launches any tool on command. Happy writing with Bi’s Novel Writing Studio!',
+      textByLang: {
+        'zh-CN': '8 号球助手现已在模式 1 和模式 2 中全面掌握全部功能模块，可为您一键打开任意工具！',
+        'zh-TW': '8 號球助手現已在模式 1 和模式 2 中全面掌握全部功能模組，可為您一鍵開啟任意工具！',
+        'ko-KR': '챗봇 비 8호는 이제 모드 1과 모드 2 모두에서 전체 모듈을 완벽히 이해하고 원하는 기능을 바로 열어줍니다!',
+        'ja-JP': 'チャットボットBi8号はモード1・2の両方で全モジュールを把握し、あらゆる機能を即座に開けます！',
+      },
+    },
+    {
+      id: 'SUB_85',
+      chapterId: 'CHAP_31_MOD48_AUTOTESTER_COPYALL_APPS',
+      startSec: 908.0,
+      endSec: 919.0,
+      speaker: 'Module 48: Autotester Nội Bộ ("Bác Sĩ App" — 0 RAM Khi Tắt)',
+      speakerEn: 'Module 48: Built-in AutoTester ("App Doctor" — Zero RAM When Off)',
+      text: 'Ngay dưới nút Viết Báo Lỗi ở Tab 6 nay có nút Autotester nội bộ giúp tự khám tổng quát toàn app trên cả Laptop và Điện thoại, tắt là dọn sạch bộ nhớ 0 tốn RAM!',
+      textEn: 'Right below Write Bug Report in Tab 6 sits the Built-in AutoTester button to run full health checks on both Laptop and Mobile with zero RAM overhead when turned off!',
+      textByLang: {
+        'zh-CN': '在标签页 6 “提交反馈”按钮下方新增“内置自动测试 (App 医生)”按钮，支持电脑和手机一键全面体检，关闭后自动释放零内存占用！',
+        'zh-TW': '在分頁 6「填寫錯誤回報」按鈕下方新增「內建自動測試 (App 醫生)」按鈕，支援電腦和手機一鍵全面體檢，關閉後自動釋放零記憶體佔用！',
+        'ko-KR': '탭 6 버그 신고 버튼 아래에 내장 자동 테스터(앱 주치의) 버튼이 추가되어 PC와 모바일에서 앱 전체를 점검하며 끄면 RAM을 전혀 사용하지 않습니다!',
+        'ja-JP': 'タブ6のバグ報告ボタンの下に内蔵オートテスター（アプリドクター）を追加。PC・スマホ両対応で全体診断でき、オフ時はRAM消費ゼロです！',
+      },
+    },
+    {
+      id: 'SUB_86',
+      chapterId: 'CHAP_31_MOD48_AUTOTESTER_COPYALL_APPS',
+      startSec: 919.0,
+      endSec: 930.0,
+      speaker: '100% Tiếng Việt Dễ Hiểu & Chép Đơn Thuốc Gửi AI Sửa Lỗi',
+      speakerEn: 'Plain-Language UI & 1-Click AI Fix Prescription',
+      text: 'Bác sĩ App chấm điểm sức khỏe theo 4 trụ cột, chỉ thẳng chỗ lỗi nhấp nháy đỏ trên màn hình, quay thao tác mẫu và chép sẵn đơn thuốc kỹ thuật gửi AI sửa lỗi 1 phát ăn ngay!',
+      textEn: 'App Doctor scores 4 health pillars, flashes exact failing elements on screen, records zero-code replays, and copies a structured AI fix prescription in one tap!',
+      textByLang: {
+        'zh-CN': 'App 医生从四大维度打分，可在屏幕上红框高亮指向故障位置，支持零代码录制操作并一键复制发给 AI 的技术修复处方！',
+        'zh-TW': 'App 醫生從四大維度評分，可在螢幕上紅框高亮指向故障位置，支援零程式碼錄製操作並一鍵複製發給 AI 的技術修復處方！',
+        'ko-KR': '앱 주치의는 4가지 건강 지표를 채점하고 화면의 오류 위치를 빨간 테두리로 표시하며, 원클릭으로 AI 수정 처방전을 복사해 줍니다!',
+        'ja-JP': 'アプリドクターは4つの指標でスコア化し、画面上の問題箇所を赤枠でハイライト。ワンクリックでAI修正用レポートをコピーできます！',
+      },
+    },
+    {
+      id: 'SUB_87',
+      chapterId: 'CHAP_31_MOD48_AUTOTESTER_COPYALL_APPS',
+      startSec: 930.0,
+      endSec: 942.0,
+      speaker: 'Đủ Nút Chọn/Chép Tất Cả & Đóng Gói App Windows/Android/iOS!',
+      speakerEn: 'Select/Copy All Everywhere & Windows/Android/iOS App Packaging!',
+      text: 'Mọi khung câu lệnh, đầu ra AI và Story Bible đều có nút Chọn tất cả và Sao chép tất cả, cùng cấu hình đóng gói sẵn thành ứng dụng Windows .exe, Android .apk và iOS PWA!',
+      textEn: 'Every prompt, AI output, and Story Bible frame now includes Select All & Copy All buttons, plus ready-to-build Windows .exe, Android .apk, and iOS PWA packaging!',
+      textByLang: {
+        'zh-CN': '所有提示词、AI 输出与设定集输入框均配有全选和一键全复制按钮，并已配置好 Windows .exe、Android .apk 与 iOS PWA 一键打包方案！',
+        'zh-TW': '所有提示詞、AI 輸出與設定集輸入框均配有全選和一鍵全複製按鈕，並已配置好 Windows .exe、Android .apk 與 iOS PWA 一鍵打包方案！',
+        'ko-KR': '모든 프롬프트, AI 출력 및 스토리 바이블 입력창에 전체 선택 및 전체 복사 버튼이 추가되었으며 Windows .exe, Android .apk, iOS PWA 패키징이 완비되었습니다!',
+        'ja-JP': '全プロンプト・AI出力・Story Bible欄にすべて選択＆すべてコピーを搭載し、Windows(.exe)・Android(.apk)・iOS PWAアプリ化構成も完備しました！',
+      },
     },
   ]);
 
@@ -1660,6 +1858,11 @@
       if (langCode === 'vi-VN') return cue.text || cue.textEn || '';
       if (langCode === 'en-US') return cue.textEn || cue.text || '';
       if (cue.textByLang && cue.textByLang[langCode]) return cue.textByLang[langCode];
+      if (!this._liveCueTransCache) this._liveCueTransCache = new Map();
+      const cacheKey = `${cue.id}_${langCode}`;
+      if (this._liveCueTransCache.has(cacheKey)) {
+        return this._liveCueTransCache.get(cacheKey);
+      }
       const i18nMap = {
         'zh-CN': 'zh-CN',
         'zh-TW': 'zh-TW',
@@ -1670,8 +1873,44 @@
       const i18nInst = globalScope.NoirStudio?.i18n || globalScope.NoirNovel?.i18n;
       if (targetI18n && i18nInst && typeof i18nInst.translateText === 'function') {
         const translated = i18nInst.translateText(cue.text || '', targetI18n);
-        if (translated && translated !== cue.text) return translated;
+        if (translated && translated !== cue.text) {
+          this._liveCueTransCache.set(cacheKey, translated);
+          return translated;
+        }
       }
+      return '';
+    }
+
+    async fetchGoogleTranslateCueText(cue, langCode) {
+      if (!cue || langCode === 'vi-VN' || langCode === 'en-US') {
+        return this.resolveLocalizedCueText(cue, langCode);
+      }
+      const cached = this.resolveLocalizedCueText(cue, langCode);
+      if (cached) return cached;
+      if (!this._liveCueTransCache) this._liveCueTransCache = new Map();
+      const cacheKey = `${cue.id}_${langCode}`;
+      const tlMap = { 'zh-CN': 'zh-CN', 'zh-TW': 'zh-TW', 'ko-KR': 'ko', 'ja-JP': 'ja' };
+      const tl = tlMap[langCode];
+      if (!tl || typeof fetch !== 'function' || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+        return cue.textEn || cue.text || '';
+      }
+      try {
+        const src = cue.text || cue.textEn || '';
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=${encodeURIComponent(
+          tl
+        )}&dt=t&q=${encodeURIComponent(src)}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          const joined = Array.isArray(data?.[0])
+            ? data[0].map((seg) => (Array.isArray(seg) ? seg[0] : '')).join('').trim()
+            : '';
+          if (joined) {
+            this._liveCueTransCache.set(cacheKey, joined);
+            return joined;
+          }
+        }
+      } catch (_eTr) {}
       return cue.textEn || cue.text || '';
     }
 
@@ -1681,40 +1920,52 @@
       if (this.lastSpokenCueKey === cueKey) return;
       this.lastSpokenCueKey = cueKey;
 
-      const textToRead = this.resolveLocalizedCueText(cue, this.language);
-      if (!textToRead) return;
-
-      const neuralVoice = globalScope.NoirStudio?.neuralVoice;
-      if (neuralVoice && typeof neuralVoice.speakText === 'function') {
-        const spoken = neuralVoice.speakText(textToRead, this.language, {
-          source: 'VIDEO',
-          suppressInstallModal: true,
-          rate: Math.min(1.32, Math.max(0.88, this.playbackRate * 1.0)),
-          pitch: 1.0,
-          isAllowedFn: () => Boolean(this.enabled && this.isPlayerPlayingFn()),
-        });
-        if (spoken || neuralVoice.lastFailureReason === 'NO_VI_VOICE') {
-          return;
+      const speakNow = (textToRead) => {
+        if (!textToRead || !this.enabled || !this.isPlayerPlayingFn()) return;
+        if (this.lastSpokenCueKey !== cueKey) return;
+        const subEnEl = document.getElementById('mod28-live-sub-text-en');
+        if (subEnEl && this.language !== 'vi-VN') {
+          const flagMap = { 'en-US': '🇺🇸', 'zh-CN': '🇨🇳', 'zh-TW': '🇹🇼', 'ko-KR': '🇰🇷', 'ja-JP': '🇯🇵' };
+          subEnEl.textContent = `${flagMap[this.language] || '🌐'} ${textToRead}`;
+          subEnEl.classList.remove('hidden');
         }
-      }
-
-      if (!this.isSupported()) return;
-      try {
-        const bestVoice = this.pickBestCuteVoice(this.language);
-        if (this.language === 'vi-VN' && !bestVoice) {
-          return;
+        const neuralVoice = globalScope.NoirStudio?.neuralVoice;
+        if (neuralVoice && typeof neuralVoice.speakText === 'function') {
+          const isIntlLang = this.language !== 'vi-VN';
+          const hasNativeNeural = neuralVoice.getRankedVoicesForLanguage?.(this.language)?.some?.((v) => /natural|neural|google/i.test(v.name || ''));
+          const spoken = neuralVoice.speakText(textToRead, this.language, {
+            source: 'VIDEO',
+            suppressInstallModal: true,
+            preferGoogleTts: isIntlLang && !hasNativeNeural,
+            rate: Math.min(1.32, Math.max(0.88, this.playbackRate * 1.0)),
+            pitch: 1.0,
+            isAllowedFn: () => Boolean(this.enabled && this.isPlayerPlayingFn()),
+          });
+          if (spoken || neuralVoice.lastFailureReason === 'NO_VI_VOICE') {
+            return;
+          }
         }
-        globalScope.speechSynthesis.pause?.();
-        globalScope.speechSynthesis.cancel();
-        const utter = new globalScope.SpeechSynthesisUtterance(textToRead);
-        utter.lang = bestVoice?.lang || this.language;
-        if (bestVoice) utter.voice = bestVoice;
-        utter.pitch = 1.0;
-        utter.rate = Math.min(1.32, Math.max(0.88, this.playbackRate * 1.0));
-        utter.volume = 0.95;
-        globalScope.speechSynthesis.speak(utter);
-      } catch (_err) {
-        // Bỏ qua an toàn nếu trình duyệt chưa cấp quyền SpeechSynthesis
+        if (!this.isSupported()) return;
+        try {
+          const bestVoice = this.pickBestCuteVoice(this.language);
+          if (this.language === 'vi-VN' && !bestVoice) return;
+          globalScope.speechSynthesis.pause?.();
+          globalScope.speechSynthesis.cancel();
+          const utter = new globalScope.SpeechSynthesisUtterance(textToRead);
+          utter.lang = bestVoice?.lang || this.language;
+          if (bestVoice) utter.voice = bestVoice;
+          utter.pitch = 1.0;
+          utter.rate = Math.min(1.32, Math.max(0.88, this.playbackRate * 1.0));
+          utter.volume = 0.95;
+          globalScope.speechSynthesis.speak(utter);
+        } catch (_err) {}
+      };
+
+      const directText = this.resolveLocalizedCueText(cue, this.language);
+      if (directText) {
+        speakNow(directText);
+      } else {
+        this.fetchGoogleTranslateCueText(cue, this.language).then(speakNow);
       }
     }
 
@@ -3930,7 +4181,14 @@
         subTextEl.classList.toggle('hidden', this.player.subtitleLangMode === 'EN');
       }
       if (subTextEnEl && snap.cue) {
-        subTextEnEl.textContent = `🇬🇧 ${snap.cue.textEn || ''}`;
+        const vLang = this.player.voiceNarrator?.language || 'vi-VN';
+        const flagMap = { 'en-US': '🇺🇸', 'zh-CN': '🇨🇳', 'zh-TW': '🇹🇼', 'ko-KR': '🇰🇷', 'ja-JP': '🇯🇵' };
+        if (vLang !== 'vi-VN' && vLang !== 'en-US') {
+          const locTxt = this.player.voiceNarrator?.resolveLocalizedCueText?.(snap.cue, vLang);
+          subTextEnEl.textContent = `${flagMap[vLang] || '🌐'} ${locTxt || snap.cue.textEn || ''}`;
+        } else {
+          subTextEnEl.textContent = `🇬🇧 ${snap.cue.textEn || ''}`;
+        }
         subTextEnEl.classList.toggle('hidden', this.player.subtitleLangMode === 'VI');
       }
       if (subSpeakerEl && snap.cue) {

@@ -1275,25 +1275,36 @@
                 🐞 MODULE 34
               </span>
               <h3 class="text-sm sm:text-base font-extrabold text-rose-300 group-hover:text-rose-200 transition">
-                Báo Lỗi &amp; Góp Ý Cải Thiện Web (Report Bug)
+                Báo lỗi, góp ý và kiểm thử Web/App
               </h3>
               <span id="mod34-collapse-arrow" class="text-xs text-zinc-400 transition-transform">▾</span>
             </div>
             <p class="text-[11px] text-zinc-400 mt-1 leading-relaxed">
-              Gặp nút khó bấm, lỗi hiển thị hoặc tính năng hoạt động chưa mượt? Bấm mở khung này để báo cho tác giả sửa nhanh nhất nhé.
+              Gặp nút khó bấm, lỗi hiển thị hoặc muốn chạy kiểm thử tự động toàn bộ Web/App? Viết báo lỗi hoặc mở Autotester nội bộ ngay bên cạnh.
             </p>
           </button>
 
-          <div class="flex items-center gap-2 shrink-0">
-            <span id="mod34-outbox-badge" class="px-2.5 py-1 rounded-xl bg-rose-500/15 border border-rose-500/35 font-monoCode text-[11px] font-bold text-rose-300">
-              ${this.outbox.records.length} biên nhận
-            </span>
+          <div class="flex flex-col items-stretch gap-1.5 shrink-0">
+            <div class="flex items-center gap-2">
+              <span id="mod34-outbox-badge" class="px-2.5 py-1 rounded-xl bg-rose-500/15 border border-rose-500/35 font-monoCode text-[11px] font-bold text-rose-300">
+                ${this.outbox.records.length} biên nhận
+              </span>
+              <button
+                type="button"
+                id="btn-mod34-quick-open-form"
+                class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow transition"
+              >
+                ✍️ Viết Báo Lỗi
+              </button>
+            </div>
             <button
               type="button"
-              id="btn-mod34-quick-open-form"
-              class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow transition"
+              id="btn-mod48-open-autotester"
+              data-open-autotester="true"
+              class="w-full px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-300/60 text-white font-extrabold text-xs shadow-lg transition cursor-pointer"
+              title="Mở Bác sĩ App — Autotester nội bộ tự dò lỗi 100% trên máy (Laptop & Điện thoại)"
             >
-              ✍️ Viết Báo Lỗi
+              🩺 Autotester nội bộ
             </button>
           </div>
         </div>

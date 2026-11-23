@@ -1233,8 +1233,12 @@
         ORNAMENTAL_SCENE_DIVIDERS[this.prefs.dividerId] ||
         ORNAMENTAL_SCENE_DIVIDERS.STARS_CLASSIC;
 
-      // Áp dụng trực tiếp Font Family, Font Size, Line Height lên #export-pdf-live-preview
-      previewEl.style.fontFamily = this.prefs.fontFamily;
+      // Áp dụng trực tiếp Font Family (khử Georgia fallback gây tách dấu tiếng Việt trên Windows!), Font Size, Line Height lên #export-pdf-live-preview
+      const previewSafeFont = String(this.prefs.fontFamily || '')
+        .replace(/,?\s*Georgia/gi, ", 'Noto Serif', 'Times New Roman'");
+      previewEl.style.fontFamily = previewSafeFont;
+      previewEl.style.fontKerning = 'normal';
+      previewEl.style.fontVariantLigatures = 'none';
       previewEl.style.fontSize = this.prefs.fontSize;
       previewEl.style.lineHeight = this.prefs.lineHeight;
       previewEl.style.backgroundColor = paperTheme.bgHex;

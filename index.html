@@ -1112,7 +1112,7 @@
         }, true);
       } catch (_eSub) {}
       try {
-        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v114';
+        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v117';
         window.__noirAppUserEntered = false;
         if (typeof window !== 'undefined' && 'caches' in window && window.caches && typeof window.caches.keys === 'function') {
           window.caches.keys().then(function (keys) {
@@ -1161,7 +1161,7 @@
     </div>
     <div style="text-align:center;max-width:340px;">
       <div style="font-size:15px;font-weight:900;color:#ecfdf5;letter-spacing:0.02em;">Sổ Tay Tiểu Thuyết Của Bi</div>
-      <div id="app-boot-splash-status" style="margin-top:6px;font-size:12px;font-weight:600;color:#a7f3d0;">⏳ Đang tải toàn bộ tài nguyên &amp; 45 module Studio...</div>
+      <div id="app-boot-splash-status" style="margin-top:6px;font-size:12px;font-weight:600;color:#a7f3d0;">⏳ Đang tải toàn bộ tài nguyên &amp; 48 module Studio...</div>
     </div>
   </div>
   <script>
@@ -2894,13 +2894,22 @@
 
         <!-- HÀNG GÓC TRÊN TAB 6: GÓC TRÁI BÁO LỖI + GIỮA THỐNG KÊ TRUY CẬP (MOD 44) + GÓC PHẢI NGƯỜI LÀM WEB & ỦNG HỘ CÀ PHÊ -->
         <div id="tab6-top-corners-row" class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-row lg:items-start lg:justify-between gap-2.5 sm:gap-3 min-w-0">
-          <div class="flex items-start order-1 lg:shrink-0">
+          <div class="flex flex-col items-stretch gap-1.5 order-1 lg:shrink-0">
             <button
               type="button"
               id="btn-tab6-top-bug-report"
-              class="px-4 py-2.5 min-w-[152px] justify-center whitespace-nowrap rounded-2xl border-2 border-rose-400/70 bg-rose-500/20 hover:bg-rose-500/35 text-rose-100 font-extrabold text-xs sm:text-sm shadow-lg shadow-rose-950/30 transition flex items-center gap-2 max-w-full"
+              class="px-4 py-2.5 min-w-[168px] justify-center whitespace-nowrap rounded-2xl border-2 border-rose-400/70 bg-rose-500/20 hover:bg-rose-500/35 text-rose-100 font-extrabold text-xs sm:text-sm shadow-lg shadow-rose-950/30 transition flex items-center gap-2 max-w-full"
             >
-              <span>🐞 Báo cáo lỗi</span>
+              <span>🐞 Báo lỗi &amp; Kiểm thử</span>
+            </button>
+            <button
+              type="button"
+              id="btn-tab6-top-autotester"
+              data-open-autotester="true"
+              class="px-3.5 py-1.5 min-w-[168px] justify-center whitespace-nowrap rounded-xl border border-emerald-400/70 bg-emerald-600/25 hover:bg-emerald-600/45 text-emerald-100 font-extrabold text-xs shadow transition flex items-center gap-1.5 max-w-full cursor-pointer"
+              title="Mở Bác sĩ App — Autotester nội bộ chạy trên Laptop &amp; Điện thoại (Tắt là không tốn RAM)"
+            >
+              <span>🩺 Autotester nội bộ</span>
             </button>
           </div>
 
@@ -2964,8 +2973,8 @@
             <button type="button" id="btn-tab6-top-sync-devices" class="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 border border-teal-400/50 text-white font-extrabold text-[11px] shadow-lg transition">
               🔄 Đồng bộ dữ liệu sang máy khác
             </button>
-            <button type="button" id="btn-tab6-top-export-pdf" class="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 border border-amber-400/50 text-white font-extrabold text-[11px] shadow-lg transition">
-              📕 Xuất truyện qua PDF
+            <button type="button" id="btn-tab6-top-export-pdf" class="noir-danglovepdf-glow-btn px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 border border-amber-400/50 text-white font-extrabold text-[11px] shadow-lg transition">
+              📕 Xuất truyện qua PDF và dùng ĐăngLovePDF
             </button>
           </div>
         </div>
@@ -2987,7 +2996,7 @@
                 </h3>
               </div>
               <p class="text-[11px] text-emerald-100/85 mt-1">
-                Xem video tương tác chiếu trực tiếp giao diện web thật kèm giọng Neural VI/EN, cẩm nang trực quan A → Z dùng Gemini &amp; Google NotebookLM và tra cứu toàn bộ 45 Module chức năng với nút điều hướng 1 chạm.
+                Xem video tương tác chiếu trực tiếp giao diện web thật kèm giọng Google TTS 6 ngôn ngữ, cẩm nang trực quan A → Z dùng Gemini &amp; Google NotebookLM và tra cứu toàn bộ 48 Module chức năng với nút điều hướng 1 chạm.
               </p>
             </div>
             <span class="px-2 py-0.5 rounded-md border border-emerald-400/50 bg-emerald-500/15 text-[10px] font-bold text-emerald-200 whitespace-nowrap shrink-0"><span class="noir-collapse-state-label">Mở rộng</span> <span class="noir-collapse-arrow">▾</span></span>
@@ -3253,6 +3262,36 @@
   </div>
 
   <!-- Thanh AI Rút Gọn Sẵn & Linh Vật Viên Bi Số 8 góc dưới phải (Kéo di chuyển tự do & đóng được) -->
+  <style>
+    /* v116: Chống chồng lấn 3 thanh nổi (Pomodoro, Âm nhạc, Bi Số 8) trên màn hình điện thoại nhỏ (< 640px) */
+    @media (max-width: 639px) {
+      #s15-floating-pomodoro-pill {
+        bottom: 66px !important;
+        left: 8px !important;
+        max-width: calc(100vw - 84px) !important;
+      }
+      #s15-floating-audio-pill {
+        bottom: 112px !important;
+        left: 8px !important;
+        max-width: calc(100vw - 92px) !important;
+      }
+      #s11-mascot-bi-corner {
+        bottom: 64px !important;
+        right: 8px !important;
+      }
+      #s11-mascot-bi-corner #floating-ai-controls:not(.hidden) {
+        position: absolute !important;
+        bottom: calc(100% + 8px) !important;
+        right: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-end !important;
+        gap: 6px !important;
+        padding-right: 0 !important;
+        white-space: nowrap !important;
+      }
+    }
+  </style>
   <div id="s11-mascot-bi-corner" data-floating-bar="ai" class="fixed bottom-16 lg:bottom-4 right-2 sm:right-3 z-40 flex items-center select-none bg-transparent border-0 p-0 transition-all">
     <button type="button" id="btn-close-floating-ai" class="absolute -top-1.5 -left-1.5 z-20 w-5 h-5 rounded-full bg-zinc-900/95 hover:bg-rose-600 border border-zinc-400/75 text-white text-[10px] font-black shadow-lg flex items-center justify-center leading-none transition" title="Đóng Viên Bi Số 8 (Có thể mở lại ở Tab 6)">✕</button>
     <div id="floating-ai-controls" class="hidden flex items-center gap-1.5 pr-1">
@@ -4254,7 +4293,7 @@
     <div class="my-auto w-full max-w-3xl rounded-2xl border-2 border-rose-500/60 bg-studioLightPanel dark:bg-zinc-900 shadow-2xl overflow-hidden text-xs flex flex-col max-h-[92dvh]">
       <div class="px-4 sm:px-5 py-3 border-b border-zinc-800 bg-rose-950/45 flex items-center justify-between shrink-0">
         <h3 class="font-extrabold uppercase text-xs sm:text-sm text-rose-300">
-          🐞 Báo Lỗi &amp; Góp Ý Cải Thiện (Gửi Tự Động Google Sheet / Gmail)
+          🐞 Báo lỗi, góp ý và kiểm thử Web/App (Gửi Tự Động Google Sheet / Gmail)
         </h3>
         <button type="button" id="btn-close-modal-mod34" class="px-3 py-1 rounded-lg bg-zinc-800 hover:bg-rose-600 text-zinc-100 font-extrabold transition" aria-label="Đóng cửa sổ báo lỗi">✕</button>
       </div>
@@ -4329,6 +4368,9 @@
   <script src="mod43_realtime_weather_sky_engine.js"></script>
   <script src="mod44_site_traffic_analytics_box.js"></script>
   <script src="mod45_scientific_fx570_and_desmos_graphing_calc.js"></script>
+  <script src="mod46_danglovepdf_and_doc_converter.js"></script>
+  <script src="mod47_performance_ram_and_lifecycle_manager.js"></script>
+  <script src="mod48_autotester_loader.js"></script>
   <script src="systemFontScale.js"></script>
   <script src="miscFunHub.js"></script>
   <script src="i18n_lang_en.js"></script>
