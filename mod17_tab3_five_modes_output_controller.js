@@ -734,6 +734,7 @@
 
       const stdWrapper = document.getElementById('tab3-standard-output-wrapper');
       const mode5Studio = document.getElementById('mode5-plot-diagram-studio');
+      const mode6Studio = document.getElementById('tab3-mode6-cover-studio');
       const outTextarea = document.getElementById('s20-quad-output-textarea');
 
       const descriptor =
@@ -749,11 +750,14 @@
         document.getElementById('btn-s20-insert-append'),
         document.getElementById('btn-s20-insert-replace'),
         document.getElementById('btn-insert-ai-append'),
-        document.getElementById('btn-insert-ai-replace')
+        document.getElementById('btn-insert-ai-replace'),
+        document.getElementById('btn-tab3-append-to-manuscript'),
+        document.getElementById('btn-tab3-replace-manuscript')
       ].filter(Boolean);
 
       if (modeKey === 'MODE_5_DIAGRAM') {
         stdWrapper?.classList.add('hidden');
+        mode6Studio?.classList.add('hidden');
         mode5Studio?.classList.remove('hidden');
         insertBtns.forEach((b) => {
           b.disabled = true;
@@ -761,8 +765,19 @@
         });
         window.NoirStudio?.mode5Studio?.refreshChapterChecklist?.();
         this.updateOutputWordBadge(this.modeOutputs.MODE_5_DIAGRAM || '');
+      } else if (modeKey === 'MODE_6_BOOK_COVER') {
+        stdWrapper?.classList.add('hidden');
+        mode5Studio?.classList.add('hidden');
+        mode6Studio?.classList.remove('hidden');
+        insertBtns.forEach((b) => {
+          b.disabled = true;
+          b.classList.add('opacity-40', 'cursor-not-allowed');
+        });
+        window.NoirStudio?.coverGallery?.renderGalleryUI?.();
+        this.updateOutputWordBadge('');
       } else {
         mode5Studio?.classList.add('hidden');
+        mode6Studio?.classList.add('hidden');
         stdWrapper?.classList.remove('hidden');
         insertBtns.forEach((b) => {
           b.disabled = false;
@@ -772,6 +787,7 @@
           outTextarea.value = this.modeOutputs[modeKey] || '';
           this.updateOutputWordBadge(outTextarea.value);
         }
+        window.NoirStudio?.tab3RichBridge?.loadModeRichOutput?.(modeKey, this.modeOutputs[modeKey] || '');
         this.refreshRevisionDropdownUI();
         this.refreshAnalyticsFooterBar();
       }
@@ -832,6 +848,7 @@
           outTextarea.value = this.modeOutputs[cleanMode];
           outTextarea.scrollTop = 0;
         }
+        window.NoirStudio?.tab3RichBridge?.setModeOutputText?.(cleanMode, this.modeOutputs[cleanMode]);
         this.updateOutputWordBadge(this.modeOutputs[cleanMode]);
         this.refreshRevisionDropdownUI();
         this.refreshAnalyticsFooterBar();
@@ -2178,4 +2195,1257 @@
     tab3Controller
   );
   window.NoirStudio.tab3Controller = tab3Controller;
+
+  // ==========================================================================
+  // PHẦN 12 (v109): CỬA SỔ ĐẦU RA CHUẨN WORD + XUẤT PDF + MÃ ASCII MODE 5 + KHO ẢNH BÌA MODE 6
+  // ==========================================================================
+  class V109Tab3RichAsciiAndCoverManager {
+    constructor(controller) {
+      this.controller = controller;
+      this.RICH_STORAGE_PREFIX = 'noir_v109_tab3_rich_';
+      this.ASCII_STORAGE_KEY = 'noir_v109_mode5_ascii_text';
+      this.COVER_META_KEY = 'noir_v109_cover_gallery_meta_v1';
+      this.ACTIVE_COVER_KEY = 'noir_v109_active_cover_id_v1';
+      this.USE_CUSTOM_PDF_COVER_KEY = 'noir_v109_use_custom_pdf_cover_v1';
+      this.COVER_FOLDER_NAME = '06_Anh_Bia_Truyen';
+      this.IDB_NAME = 'NoirNovelCoversDB_v109';
+      this.IDB_STORE = 'covers';
+
+      this.isRichMode = true;
+      this._suppressRichSync = false;
+      this._idbPromise = null;
+      this.coversMeta = this._loadCoversMeta();
+      this.activeCoverId = this._safeGetLS(this.ACTIVE_COVER_KEY) || '';
+      this.coverDataUrlCache = new Map();
+
+      this._initAll();
+    }
+
+    _safeGetLS(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    _safeSetLS(key, val) {
+      try {
+        if (val === null || val === undefined) localStorage.removeItem(key);
+        else localStorage.setItem(key, String(val));
+      } catch (_) {}
+    }
+
+    _toast(msg, type = 'info', ms = 3600) {
+      if (window.NoirStudio?.utils?.showToast) {
+        window.NoirStudio.utils.showToast(msg, type, ms);
+      }
+    }
+
+    _escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    _initAll() {
+      const boot = () => {
+        this._bindRichEditorAndPdf();
+        this._bindMode5AsciiStudio();
+        this._bindMode6CoverStudio();
+        this._preloadAllCoversFromIdb();
+      };
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot, { once: true });
+      } else {
+        boot();
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // A. CỬA SỔ ĐẦU RA CHUẨN WORD (CHẾ ĐỘ 1–4) + XUẤT PDF
+    // ------------------------------------------------------------------------
+    _modeDisplayName(modeKey) {
+      const map = {
+        MODE_1_DRAFT: 'Chế độ 1: Viết Bản Nháp',
+        MODE_2_BRAINSTORM: 'Chế độ 2: Tham Mưu Cốt Truyện',
+        MODE_3_AUDIT: 'Chế độ 3: Kiểm Toán Logic',
+        MODE_4_REVIEW: 'Chế độ 4: Đánh Giá & Chấm Điểm',
+        MODE_5_DIAGRAM: 'Chế độ 5: Sơ Đồ Cốt Truyện ASCII',
+        MODE_6_BOOK_COVER: 'Chế độ 6: Kho Ảnh Bìa Tiểu Thuyết'
+      };
+      return map[modeKey] || modeKey || 'Chế độ 1';
+    }
+
+    _plainToBasicHtml(text) {
+      const s = String(text || '');
+      if (!s.trim()) return '';
+      return this._escapeHtml(s).replace(/\r\n|\r|\n/g, '<br>');
+    }
+
+    loadModeRichOutput(modeKey, plainText = '') {
+      const mk = modeKey || this.controller?.activeMode || 'MODE_1_DRAFT';
+      const pill = document.getElementById('tab3-output-mode-pill');
+      if (pill) {
+        pill.textContent = `📄 Đầu ra riêng: ${this._modeDisplayName(mk)}`;
+      }
+      const editor = document.getElementById('tab3-rich-output-editor');
+      const textarea = document.getElementById('s20-quad-output-textarea');
+      if (!editor) return;
+
+      const savedHtml = this._safeGetLS(this.RICH_STORAGE_PREFIX + mk);
+      this._suppressRichSync = true;
+      try {
+        if (savedHtml && savedHtml.trim()) {
+          editor.innerHTML = savedHtml;
+          if (textarea && !textarea.value.trim()) {
+            textarea.value = editor.innerText || plainText || '';
+          }
+        } else if (plainText && String(plainText).trim()) {
+          editor.innerHTML = this._plainToBasicHtml(plainText);
+        } else {
+          editor.innerHTML = '';
+        }
+      } finally {
+        this._suppressRichSync = false;
+      }
+      this._updateWordBadgeFromActiveEditor();
+    }
+
+    syncFromPlainOutput(modeKey, plainText) {
+      const mk = modeKey || this.controller?.activeMode || 'MODE_1_DRAFT';
+      const html = this._plainToBasicHtml(plainText);
+      this._safeSetLS(this.RICH_STORAGE_PREFIX + mk, html);
+      if (mk === (this.controller?.activeMode || 'MODE_1_DRAFT')) {
+        const editor = document.getElementById('tab3-rich-output-editor');
+        if (editor) {
+          this._suppressRichSync = true;
+          try {
+            editor.innerHTML = html;
+          } finally {
+            this._suppressRichSync = false;
+          }
+        }
+      }
+    }
+
+    _updateWordBadgeFromActiveEditor() {
+      const editor = document.getElementById('tab3-rich-output-editor');
+      const textarea = document.getElementById('s20-quad-output-textarea');
+      const badge = document.getElementById('tab3-output-word-badge');
+      if (!badge) return;
+      const text = this.isRichMode && editor ? editor.innerText || '' : textarea?.value || '';
+      const words = window.NoirStudio?.utils?.countVietnameseWords
+        ? window.NoirStudio.utils.countVietnameseWords(text)
+        : text.trim()
+        ? text.trim().split(/\s+/).length
+        : 0;
+      badge.textContent = `${words.toLocaleString('vi-VN')} từ`;
+    }
+
+    _bindRichEditorAndPdf() {
+      const editor = document.getElementById('tab3-rich-output-editor');
+      const textarea = document.getElementById('s20-quad-output-textarea');
+      const toggleBtn = document.getElementById('btn-tab3-toggle-rich-output');
+      const addImgBtn = document.getElementById('btn-tab3-rich-add-img');
+      const imgInput = document.getElementById('input-tab3-rich-img');
+      const exportPdfBtn = document.getElementById('btn-tab3-export-output-pdf');
+      const clearBtn = document.getElementById('btn-tab3-clear-output');
+
+      const syncEditorToController = () => {
+        if (this._suppressRichSync || !editor) return;
+        const mk = this.controller?.activeMode || 'MODE_1_DRAFT';
+        if (mk === 'MODE_5_DIAGRAM' || mk === 'MODE_6_BOOK_COVER') return;
+        const html = editor.innerHTML;
+        const plain = editor.innerText || '';
+        this._safeSetLS(this.RICH_STORAGE_PREFIX + mk, html);
+        if (textarea) {
+          textarea.value = plain;
+        }
+        if (this.controller && this.controller.modeOutputs) {
+          this.controller.modeOutputs[mk] = plain;
+          if (typeof this.controller.saveState === 'function') {
+            this.controller.saveState();
+          }
+        }
+        this._updateWordBadgeFromActiveEditor();
+      };
+
+      if (editor && !editor.dataset.v109Bound) {
+        editor.dataset.v109Bound = '1';
+        editor.addEventListener('input', syncEditorToController);
+        editor.addEventListener('paste', (e) => {
+          const items = e.clipboardData?.items;
+          if (!items) return;
+          for (let i = 0; i < items.length; i++) {
+            const it = items[i];
+            if (it && it.type && it.type.startsWith('image/')) {
+              const file = it.getAsFile();
+              if (!file) continue;
+              e.preventDefault();
+              const reader = new FileReader();
+              reader.onload = () => {
+                const imgHtml = `<p><img src="${reader.result}" style="max-width:100%;border-radius:10px;margin:8px 0;" /></p>`;
+                try {
+                  document.execCommand('insertHTML', false, imgHtml);
+                } catch (_) {
+                  editor.innerHTML += imgHtml;
+                }
+                syncEditorToController();
+              };
+              reader.readAsDataURL(file);
+              return;
+            }
+          }
+        });
+      }
+
+      if (textarea && !textarea.dataset.v109PlainSyncBound) {
+        textarea.dataset.v109PlainSyncBound = '1';
+        textarea.addEventListener('input', () => {
+          if (this.isRichMode) return;
+          const mk = this.controller?.activeMode || 'MODE_1_DRAFT';
+          this._safeSetLS(this.RICH_STORAGE_PREFIX + mk, this._plainToBasicHtml(textarea.value));
+          this._updateWordBadgeFromActiveEditor();
+        });
+      }
+
+      document.querySelectorAll('[data-tab3-rich-exec]').forEach((btn) => {
+        if (btn.dataset.v109Bound) return;
+        btn.dataset.v109Bound = '1';
+        btn.addEventListener('click', () => {
+          if (!editor) return;
+          if (!this.isRichMode && toggleBtn) toggleBtn.click();
+          editor.focus();
+          try {
+            document.execCommand(btn.getAttribute('data-tab3-rich-exec'), false, null);
+          } catch (_) {}
+          syncEditorToController();
+        });
+      });
+
+      if (addImgBtn && imgInput && !addImgBtn.dataset.v109Bound) {
+        addImgBtn.dataset.v109Bound = '1';
+        addImgBtn.addEventListener('click', () => imgInput.click());
+        imgInput.addEventListener('change', () => {
+          const f = imgInput.files && imgInput.files[0];
+          imgInput.value = '';
+          if (!f || !editor) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (!this.isRichMode && toggleBtn) toggleBtn.click();
+            editor.focus();
+            const imgHtml = `<p><img src="${reader.result}" style="max-width:100%;border-radius:10px;margin:8px 0;" /></p>`;
+            try {
+              document.execCommand('insertHTML', false, imgHtml);
+            } catch (_) {
+              editor.innerHTML += imgHtml;
+            }
+            syncEditorToController();
+            this._toast('🖼️ Đã chèn ảnh vào khung đầu ra chuẩn Word!', 'success', 2400);
+          };
+          reader.readAsDataURL(f);
+        });
+      }
+
+      if (toggleBtn && !toggleBtn.dataset.v109Bound) {
+        toggleBtn.dataset.v109Bound = '1';
+        toggleBtn.addEventListener('click', () => {
+          this.isRichMode = !this.isRichMode;
+          if (this.isRichMode) {
+            if (editor && textarea) {
+              const mk = this.controller?.activeMode || 'MODE_1_DRAFT';
+              const saved = this._safeGetLS(this.RICH_STORAGE_PREFIX + mk);
+              editor.innerHTML = saved || this._plainToBasicHtml(textarea.value);
+              editor.classList.remove('hidden');
+              textarea.classList.add('hidden');
+            }
+            toggleBtn.textContent = '📄 Chế độ Word (Bảng + Ảnh)';
+          } else {
+            if (editor && textarea) {
+              textarea.value = editor.innerText || textarea.value || '';
+              editor.classList.add('hidden');
+              textarea.classList.remove('hidden');
+            }
+            toggleBtn.textContent = '📝 Chế độ Văn bản thuần';
+          }
+          this._updateWordBadgeFromActiveEditor();
+        });
+      }
+
+      if (clearBtn && !clearBtn.dataset.v109RichClearBound) {
+        clearBtn.dataset.v109RichClearBound = '1';
+        clearBtn.addEventListener('click', () => {
+          setTimeout(() => {
+            const mk = this.controller?.activeMode || 'MODE_1_DRAFT';
+            if (textarea && !textarea.value.trim()) {
+              this._safeSetLS(this.RICH_STORAGE_PREFIX + mk, '');
+              if (editor) editor.innerHTML = '';
+              this._updateWordBadgeFromActiveEditor();
+            }
+          }, 40);
+        });
+      }
+
+      if (exportPdfBtn && !exportPdfBtn.dataset.v109Bound) {
+        exportPdfBtn.dataset.v109Bound = '1';
+        exportPdfBtn.addEventListener('click', () => this.exportCurrentTab3OutputToPdf());
+      }
+
+      // Khởi nạp chế độ hiện hành ngay sau khi DOM sẵn sàng
+      const initialMode = this.controller?.activeMode || 'MODE_1_DRAFT';
+      const initialText =
+        this.controller?.modeOutputs?.[initialMode] || textarea?.value || '';
+      this.loadModeRichOutput(initialMode, initialText);
+    }
+
+    exportCurrentTab3OutputToPdf() {
+      const mk = this.controller?.activeMode || 'MODE_1_DRAFT';
+      const modeTitle = this._modeDisplayName(mk);
+      const bookTitle =
+        window.NoirStudio?.bookExporter?.prefs?.bookTitle ||
+        document.getElementById('project-title-input')?.value ||
+        'Sổ Tay Tiểu Thuyết Của Bi';
+      let bodyHtml = '';
+
+      if (mk === 'MODE_5_DIAGRAM') {
+        const ascii = (document.getElementById('textarea-mode5-ascii-diagram')?.value || '').trim();
+        const report = (document.getElementById('mode5-chronicle-report')?.innerText || '').trim();
+        if (!ascii && !report) {
+          this._toast('⚠️ Chưa có nội dung sơ đồ ở Chế độ 5 để tải PDF!', 'warning');
+          return;
+        }
+        bodyHtml =
+          (ascii
+            ? `<h2>📐 Sơ Đồ Cốt Truyện Mã ASCII</h2><pre class="ascii-box">${this._escapeHtml(
+                ascii
+              )}</pre>`
+            : '') +
+          (report ? `<h2>⏳ Nhật Ký Sự Kiện</h2><div>${this._plainToBasicHtml(report)}</div>` : '');
+      } else if (mk === 'MODE_6_BOOK_COVER') {
+        const coverUrl = this.getActiveCoverDataUrl();
+        if (!coverUrl) {
+          this._toast('⚠️ Chưa có ảnh bìa ở Chế độ 6 để xuất PDF!', 'warning');
+          return;
+        }
+        bodyHtml = `<div style="text-align:center;"><img src="${coverUrl}" style="max-width:100%;max-height:245mm;object-fit:contain;border-radius:6px;" /></div>`;
+      } else {
+        const editor = document.getElementById('tab3-rich-output-editor');
+        const textarea = document.getElementById('s20-quad-output-textarea');
+        const html =
+          this.isRichMode && editor && editor.innerHTML.trim()
+            ? editor.innerHTML
+            : this._plainToBasicHtml(textarea?.value || '');
+        if (!html.trim()) {
+          this._toast(`⚠️ Cửa sổ đầu ra ${modeTitle} đang trống!`, 'warning');
+          return;
+        }
+        bodyHtml = `<div class="rich-doc">${html}</div>`;
+      }
+
+      const safeTitle = this._escapeHtml(`${bookTitle} — ${modeTitle}`);
+      const nowStr = new Date().toLocaleString('vi-VN');
+      const docHtml = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>${safeTitle}</title>
+<style>
+  @page { size: A4; margin: 16mm 16mm 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0; font-family: 'Times New Roman', Georgia, serif; font-size: 12.5pt; line-height: 1.65; color: #18181b; background: #fff; }
+  .print-bar { position: sticky; top: 0; z-index: 99; background: #18181b; color: #f4f4f5; padding: 10px 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-family: system-ui, sans-serif; font-size: 13px; border-bottom: 2px solid #8b5cf6; }
+  .print-bar button { background: #8b5cf6; color: #fff; border: 0; border-radius: 8px; padding: 7px 14px; font-weight: 800; cursor: pointer; }
+  .doc-wrap { max-width: 820px; margin: 0 auto; padding: 22px 24px 48px; }
+  .doc-header { border-bottom: 2px solid #e4e4e7; padding-bottom: 10px; margin-bottom: 18px; }
+  .doc-header h1 { margin: 0 0 4px; font-size: 17pt; color: #111827; }
+  .doc-header .meta { font-size: 10pt; color: #52525b; font-family: system-ui, sans-serif; }
+  .rich-doc { white-space: pre-wrap; word-break: break-word; }
+  .rich-doc table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 11pt; page-break-inside: auto; }
+  .rich-doc tr { page-break-inside: avoid; break-inside: avoid; }
+  .rich-doc th, .rich-doc td { border: 1px solid #9ca3af; padding: 6px 8px; text-align: left; vertical-align: top; }
+  .rich-doc th { background: #f3f4f6; font-weight: 700; }
+  .rich-doc img { max-width: 100%; height: auto; border-radius: 6px; margin: 8px 0; page-break-inside: avoid; }
+  .ascii-box { font-family: 'Consolas', 'Courier New', monospace; font-size: 9pt; line-height: 1.35; white-space: pre; overflow-x: auto; border: 1px solid #d4d4d8; padding: 12px; border-radius: 8px; background: #fafafa; }
+  @media print { .print-bar { display: none !important; } .doc-wrap { padding: 0; max-width: 100%; } }
+</style>
+</head>
+<body>
+  <div class="print-bar">
+    <div><strong>📄 XUẤT PDF ĐẦU RA TAB 3:</strong> ${safeTitle}</div>
+    <button type="button" onclick="window.print()">🖨️ Lưu Thành File .PDF</button>
+  </div>
+  <div class="doc-wrap">
+    <div class="doc-header">
+      <h1>${safeTitle}</h1>
+      <div class="meta">Xuất cục bộ 100% trên máy • ${this._escapeHtml(nowStr)}</div>
+    </div>
+    ${bodyHtml}
+  </div>
+  <script>window.addEventListener('load',function(){setTimeout(function(){try{window.focus();window.print();}catch(e){}},350);});</script>
+</body>
+</html>`;
+
+      const win = window.open('', '_blank', 'width=980,height=800');
+      if (win && win.document) {
+        win.document.open();
+        win.document.write(docHtml);
+        win.document.close();
+        this._toast(`📄 Đã mở bản PDF cho ${modeTitle}! Chọn "Save as PDF" để lưu ngay.`, 'success', 4200);
+        return;
+      }
+
+      let iframe = document.getElementById('noir-v109-tab3-pdf-iframe');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'noir-v109-tab3-pdf-iframe';
+        iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+        document.body.appendChild(iframe);
+      }
+      const d = iframe.contentWindow?.document || iframe.contentDocument;
+      d.open();
+      d.write(docHtml);
+      d.close();
+      setTimeout(() => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } catch (_) {}
+      }, 450);
+    }
+
+    // ------------------------------------------------------------------------
+    // B. CHẾ ĐỘ 5: KHUNG DÁN & CHUYỂN MÃ ASCII QUA ẢNH ĐẸP GEMINI
+    // ------------------------------------------------------------------------
+    _downloadAsciiTxtFile(asciiContent) {
+      const content = String(asciiContent || '').trim();
+      if (!content) {
+        this._toast('⚠️ Bạn hãy dán mã sơ đồ ASCII vào khung trước khi tải file nhé!', 'warning');
+        return false;
+      }
+      const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const blob = new Blob(['\uFEFF' + content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `So_Do_Cot_Truyen_ASCII_${stamp}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        try {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (_) {}
+      }, 600);
+      this._toast('⬇️ Đã tải file sơ đồ (.TXT UTF-8 chuẩn không vỡ ký tự ASCII)!', 'success', 3200);
+      return true;
+    }
+
+    _buildAsciiToBeautifulImagePrompt() {
+      return [
+        'Hãy đọc kỹ toàn bộ tệp sơ đồ mã ASCII (.TXT) tôi vừa đính kèm ở trên và CHUYỂN HÓA nó thành một BỨC ẢNH SƠ ĐỒ / INFOGRAPHIC TUYỆT ĐẸP, SẮC NÉT, CHUYÊN NGHIỆP (độ phân giải cao, dễ đọc 100%).',
+        '',
+        'YÊU CẦU BẮT BUỘC:',
+        '1. Giữ NGUYÊN CHÍNH XÁC 100% toàn bộ nội dung tiếng Việt có dấu, tên nhân vật, mốc thời gian, mối quan hệ, hướng mũi tên và phân nhánh từ file sơ đồ ASCII — TUYỆT ĐỐI không bỏ sót nhánh, không sai chính tả tiếng Việt, không bịa thêm chi tiết ngoài file.',
+        '2. Thiết kế bố cục sạch sẽ, trực quan theo phong cách Infographic biên kịch / Bản đồ cốt truyện tiểu thuyết cao cấp: phân cấp màu sắc hài hòa giữa các Arc / Hồi / Tuyến nhân vật, khung thẻ bo góc sắc nét, mũi tên liên kết rõ ràng không chồng chéo.',
+        '3. Chữ viết trên ảnh phải rõ ràng, tương phản cao, cỡ chữ đủ lớn để tác giả phóng to đọc mượt cả trên điện thoại lẫn máy tính.',
+        '4. Hãy tạo trực tiếp hình ảnh sơ đồ hoàn chỉnh ngay trong phản hồi này (kèm bản tóm tắt cấu trúc ngắn gọn nếu cần).'
+      ].join('\n');
+    }
+
+    _openAsciiToImageHelperModal(asciiText, promptText) {
+      const existing = document.getElementById('modal-v109-ascii-to-image');
+      if (existing) existing.remove();
+
+      const modal = document.createElement('div');
+      modal.id = 'modal-v109-ascii-to-image';
+      modal.className =
+        'fixed inset-0 z-[10060] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4';
+      modal.innerHTML = `
+        <div class="w-full max-w-lg rounded-2xl border-2 border-amber-400/70 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden">
+          <div class="px-4 py-3 border-b border-amber-500/35 bg-gradient-to-r from-amber-950/70 via-zinc-900 to-rose-950/60 flex items-center justify-between gap-2">
+            <h3 class="text-sm font-black text-amber-300 flex items-center gap-1.5">
+              <span>✨ Chuyển Mã ASCII Sang Ảnh Sơ Đồ Đẹp</span>
+            </h3>
+            <button type="button" id="btn-close-v109-ascii-modal" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs">✕</button>
+          </div>
+          <div class="p-4 space-y-3 text-xs leading-relaxed">
+            <div class="p-3 rounded-xl border border-emerald-500/45 bg-emerald-950/40 text-emerald-100 font-bold text-[12.5px]">
+              ✅ Câu lệnh chuyển mã ASCII của bạn đã hoàn tất (và đã tự động sao chép sẵn vào bộ nhớ tạm), bạn chỉ cần tải file này về và đưa lên Gemini, dán câu lệnh là có sơ đồ đẹp!
+            </div>
+            <p class="text-[11px] text-zinc-400">
+              💡 <strong>Vì sao dùng định dạng <code>.TXT (UTF-8)</code>?</strong> File <code>.TXT</code> giữ nguyên 100% từng ký tự kẻ khung (<code>┌─┐ │ └─┘ ──▶ ▼</code>) và khoảng trắng căn lề mà không bị tự động xuống dòng vỡ khung như PDF/Word — giúp Gemini đọc sơ đồ chính xác tuyệt đối.
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <button type="button" id="btn-v109-modal-download-ascii" class="px-3.5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold text-xs shadow-lg transition">
+                ⬇️ Tải File Sơ Đồ (.TXT)
+              </button>
+              <button type="button" id="btn-v109-modal-open-gemini" class="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-lg transition">
+                🪟 Chia Đôi Màn Hình Gemini
+              </button>
+            </div>
+            <div class="flex items-center justify-between pt-1">
+              <button type="button" id="btn-v109-modal-recopy" class="px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold text-[11px]">
+                📋 Copy Lại Câu Lệnh
+              </button>
+              <button type="button" id="btn-v109-modal-done" class="px-3 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-[11px]">
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const close = () => modal.remove();
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+      });
+      modal.querySelector('#btn-close-v109-ascii-modal')?.addEventListener('click', close);
+      modal.querySelector('#btn-v109-modal-done')?.addEventListener('click', close);
+      modal.querySelector('#btn-v109-modal-download-ascii')?.addEventListener('click', () => {
+        this._downloadAsciiTxtFile(asciiText);
+      });
+      modal.querySelector('#btn-v109-modal-recopy')?.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(promptText);
+          this._toast('📋 Đã copy lại câu lệnh chuyển mã ASCII sang ảnh đẹp!', 'success', 2600);
+        } catch (_) {}
+      });
+      modal.querySelector('#btn-v109-modal-open-gemini')?.addEventListener('click', () => {
+        if (window.NoirStudio?.promptSynth?.openGeminiWebOrApp) {
+          window.NoirStudio.promptSynth.openGeminiWebOrApp(true);
+        } else {
+          window.open('https://gemini.google.com/app', '_blank', 'noopener');
+        }
+      });
+    }
+
+    _bindMode5AsciiStudio() {
+      const box = document.getElementById('textarea-mode5-ascii-diagram');
+      const btnImg = document.getElementById('btn-mode5-ascii-to-beautiful-img');
+      const btnDl = document.getElementById('btn-mode5-download-ascii-txt');
+      const btnCopy = document.getElementById('btn-mode5-copy-ascii');
+
+      if (box && !box.dataset.v109Bound) {
+        box.dataset.v109Bound = '1';
+        const saved = this._safeGetLS(this.ASCII_STORAGE_KEY);
+        if (saved) box.value = saved;
+        box.addEventListener('input', () => {
+          this._safeSetLS(this.ASCII_STORAGE_KEY, box.value);
+        });
+      }
+
+      if (btnCopy && !btnCopy.dataset.v109Bound) {
+        btnCopy.dataset.v109Bound = '1';
+        btnCopy.addEventListener('click', async () => {
+          const val = (box?.value || '').trim();
+          if (!val) {
+            this._toast('⚠️ Khung sơ đồ ASCII đang trống!', 'warning');
+            return;
+          }
+          try {
+            await navigator.clipboard.writeText(val);
+            this._toast('📋 Đã copy nguyên vẹn mã sơ đồ ASCII!', 'success', 2400);
+          } catch (_) {
+            this._toast('⚠️ Không thể tự động copy, hãy bôi đen và nhấn Ctrl+C.', 'warning');
+          }
+        });
+      }
+
+      if (btnDl && !btnDl.dataset.v109Bound) {
+        btnDl.dataset.v109Bound = '1';
+        btnDl.addEventListener('click', () => {
+          this._downloadAsciiTxtFile(box?.value || '');
+        });
+      }
+
+      if (btnImg && !btnImg.dataset.v109Bound) {
+        btnImg.dataset.v109Bound = '1';
+        btnImg.addEventListener('click', async () => {
+          const asciiVal = (box?.value || '').trim();
+          if (!asciiVal) {
+            this._toast(
+              '⚠️ Bạn hãy dán mã sơ đồ ASCII từ NotebookLM vào khung bên dưới trước nhé!',
+              'warning',
+              3600
+            );
+            box?.focus();
+            return;
+          }
+          const promptText = this._buildAsciiToBeautifulImagePrompt();
+          try {
+            await navigator.clipboard.writeText(promptText);
+          } catch (_) {}
+          this._openAsciiToImageHelperModal(asciiVal, promptText);
+        });
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // C. CHẾ ĐỘ 6: KHO ẢNH BÌA TIỂU THUYẾT + ĐỒNG BỘ THƯ MỤC + XUẤT PDF
+    // ------------------------------------------------------------------------
+    _loadCoversMeta() {
+      try {
+        const raw = localStorage.getItem(this.COVER_META_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    _saveCoversMeta() {
+      this._safeSetLS(this.COVER_META_KEY, JSON.stringify(this.coversMeta));
+    }
+
+    _openCoversIdb() {
+      if (this._idbPromise) return this._idbPromise;
+      this._idbPromise = new Promise((resolve) => {
+        if (typeof indexedDB === 'undefined') {
+          resolve(null);
+          return;
+        }
+        try {
+          const req = indexedDB.open(this.IDB_NAME, 1);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(this.IDB_STORE)) {
+              db.createObjectStore(this.IDB_STORE, { keyPath: 'id' });
+            }
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => resolve(null);
+        } catch (_) {
+          resolve(null);
+        }
+      });
+      return this._idbPromise;
+    }
+
+    async _putCoverDataUrlIdb(id, dataUrl) {
+      this.coverDataUrlCache.set(id, dataUrl);
+      const db = await this._openCoversIdb();
+      if (!db) return;
+      await new Promise((resolve) => {
+        try {
+          const tx = db.transaction(this.IDB_STORE, 'readwrite');
+          tx.objectStore(this.IDB_STORE).put({ id, dataUrl });
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch (_) {
+          resolve(false);
+        }
+      });
+    }
+
+    async _deleteCoverDataUrlIdb(id) {
+      this.coverDataUrlCache.delete(id);
+      const db = await this._openCoversIdb();
+      if (!db) return;
+      await new Promise((resolve) => {
+        try {
+          const tx = db.transaction(this.IDB_STORE, 'readwrite');
+          tx.objectStore(this.IDB_STORE).delete(id);
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch (_) {
+          resolve(false);
+        }
+      });
+    }
+
+    async _preloadAllCoversFromIdb() {
+      const db = await this._openCoversIdb();
+      if (db) {
+        await new Promise((resolve) => {
+          try {
+            const tx = db.transaction(this.IDB_STORE, 'readonly');
+            const req = tx.objectStore(this.IDB_STORE).getAll();
+            req.onsuccess = () => {
+              const rows = Array.isArray(req.result) ? req.result : [];
+              rows.forEach((r) => {
+                if (r && r.id && r.dataUrl) this.coverDataUrlCache.set(r.id, r.dataUrl);
+              });
+              resolve(true);
+            };
+            req.onerror = () => resolve(false);
+          } catch (_) {
+            resolve(false);
+          }
+        });
+      }
+      if (!this.activeCoverId && this.coversMeta.length > 0) {
+        this.activeCoverId = this.coversMeta[0].id;
+        this._safeSetLS(this.ACTIVE_COVER_KEY, this.activeCoverId);
+      }
+      this.renderGalleryUI();
+    }
+
+    _sanitizeCoverFileName(rawName, ext = 'png') {
+      const cleaned = String(rawName || 'Bia_Truyen')
+        .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 72);
+      const base = cleaned || 'Bia_Truyen';
+      const safeExt = String(ext || 'png').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'png';
+      return base.toLowerCase().endsWith('.' + safeExt) ? base : `${base}.${safeExt}`;
+    }
+
+    async _getCoverFolderHandle(create = true) {
+      const root = window.NoirStudio?.fsEngine?.rootDirHandle;
+      if (!root || typeof root.getDirectoryHandle !== 'function') return null;
+      try {
+        return await root.getDirectoryHandle(this.COVER_FOLDER_NAME, { create });
+      } catch (_) {
+        return null;
+      }
+    }
+
+    async _dataUrlToBlob(dataUrl) {
+      const res = await fetch(dataUrl);
+      return await res.blob();
+    }
+
+    async _writeCoverToWorkspaceFolder(fileName, dataUrl) {
+      const dir = await this._getCoverFolderHandle(true);
+      if (!dir) return false;
+      try {
+        const blob = await this._dataUrlToBlob(dataUrl);
+        const fh = await dir.getFileHandle(fileName, { create: true });
+        const writable = await fh.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    async _removeCoverFromWorkspaceFolder(fileName) {
+      if (!fileName) return false;
+      const dir = await this._getCoverFolderHandle(false);
+      if (!dir || typeof dir.removeEntry !== 'function') return false;
+      try {
+        await dir.removeEntry(fileName);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    async _renameCoverInWorkspaceFolder(oldFileName, newFileName, dataUrl) {
+      if (!newFileName || oldFileName === newFileName) return false;
+      const okWrite = await this._writeCoverToWorkspaceFolder(newFileName, dataUrl);
+      if (okWrite && oldFileName) {
+        await this._removeCoverFromWorkspaceFolder(oldFileName);
+      }
+      return okWrite;
+    }
+
+    hasAnyCover() {
+      return Boolean(this.getActiveCoverDataUrl());
+    }
+
+    getActiveCoverMeta() {
+      if (!this.coversMeta.length) return null;
+      return (
+        this.coversMeta.find((c) => c.id === this.activeCoverId) || this.coversMeta[0] || null
+      );
+    }
+
+    getActiveCoverDataUrl() {
+      const meta = this.getActiveCoverMeta();
+      if (!meta) return '';
+      return this.coverDataUrlCache.get(meta.id) || '';
+    }
+
+    isCustomPdfCoverEnabled() {
+      const enabled = this._safeGetLS(this.USE_CUSTOM_PDF_COVER_KEY) === '1';
+      return enabled && Boolean(this.getActiveCoverDataUrl());
+    }
+
+    setCustomPdfCoverEnabled(enabled, source = '') {
+      const want = Boolean(enabled);
+      if (want && !this.getActiveCoverDataUrl()) {
+        this._safeSetLS(this.USE_CUSTOM_PDF_COVER_KEY, '0');
+        this._syncPdfCoverCheckboxes(false);
+        return false;
+      }
+      this._safeSetLS(this.USE_CUSTOM_PDF_COVER_KEY, want ? '1' : '0');
+      this._syncPdfCoverCheckboxes(want);
+      if (source !== 'exporter' && window.NoirStudio?.bookExporter) {
+        try {
+          window.NoirStudio.bookExporter.prefs.useCustomCoverImage = want;
+          if (typeof window.NoirStudio.bookExporter.savePreferences === 'function') {
+            window.NoirStudio.bookExporter.savePreferences();
+          }
+          if (typeof window.NoirStudio.bookExporter.updateLivePreview === 'function') {
+            window.NoirStudio.bookExporter.updateLivePreview();
+          }
+        } catch (_) {}
+      }
+      return true;
+    }
+
+    _syncPdfCoverCheckboxes(checked) {
+      const c1 = document.getElementById('chk-mode6-use-as-pdf-cover');
+      const c2 = document.getElementById('chk-export-use-custom-cover');
+      if (c1) c1.checked = Boolean(checked);
+      if (c2) c2.checked = Boolean(checked);
+    }
+
+    async addCoverFromFileOrBlob(blobOrFile, preferredName = '') {
+      if (!blobOrFile) return null;
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Không đọc được ảnh'));
+        reader.readAsDataURL(blobOrFile);
+      });
+      if (!dataUrl.startsWith('data:image/')) {
+        this._toast('⚠️ Tệp không phải định dạng hình ảnh hợp lệ!', 'warning');
+        return null;
+      }
+
+      const mimeMatch = dataUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);/);
+      const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+      const ext = mimeType.includes('jpeg') || mimeType.includes('jpg') ? 'jpg' : 'png';
+      const num = this.coversMeta.length + 1;
+      const baseTitle = preferredName
+        ? preferredName.replace(/\.[^.]+$/, '')
+        : `Bia_Truyen_${num}`;
+      const fileName = this._sanitizeCoverFileName(baseTitle, ext);
+      const id = `cov_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+      const meta = {
+        id,
+        name: baseTitle,
+        fileName,
+        mimeType,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+
+      await this._putCoverDataUrlIdb(id, dataUrl);
+      this.coversMeta.unshift(meta);
+      this.activeCoverId = id;
+      this._saveCoversMeta();
+      this._safeSetLS(this.ACTIVE_COVER_KEY, id);
+      this.renderGalleryUI();
+
+      const savedToDir = await this._writeCoverToWorkspaceFolder(fileName, dataUrl);
+      this._toast(
+        savedToDir
+          ? `🖼️ Đã lưu ảnh bìa "${meta.name}" vào Kho Bìa & thư mục ${this.COVER_FOLDER_NAME}/!`
+          : `🖼️ Đã lưu ảnh bìa "${meta.name}" vào Kho Bìa trên máy!`,
+        'success',
+        3400
+      );
+      return meta;
+    }
+
+    selectCover(id) {
+      const found = this.coversMeta.find((c) => c.id === id);
+      if (!found) return;
+      this.activeCoverId = found.id;
+      this._safeSetLS(this.ACTIVE_COVER_KEY, found.id);
+      this.renderGalleryUI();
+    }
+
+    _openRenameCoverModal(meta) {
+      const existing = document.getElementById('modal-v109-rename-cover');
+      if (existing) existing.remove();
+      const modal = document.createElement('div');
+      modal.id = 'modal-v109-rename-cover';
+      modal.className =
+        'fixed inset-0 z-[10065] bg-black/70 backdrop-blur-sm flex items-center justify-center p-3';
+      modal.innerHTML = `
+        <div class="w-full max-w-sm rounded-2xl border-2 border-violet-400/70 bg-zinc-950 text-zinc-100 p-4 space-y-3 shadow-2xl">
+          <div class="text-sm font-black text-violet-300">✏️ Đổi Tên Ảnh Bìa (Đồng Bộ Thư Mục)</div>
+          <input type="text" id="input-v109-rename-cover" value="${this._escapeHtml(
+            meta.name
+          )}" class="w-full px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 text-sm text-white focus:outline-none focus:border-violet-400" placeholder="Ví dụ: Quyển 1 - Khởi Nguyên" />
+          <p class="text-[11px] text-zinc-400">Tên file trong <code>${this.COVER_FOLDER_NAME}/</code> cũng sẽ tự động đổi tên tương ứng.</p>
+          <div class="flex justify-end gap-2">
+            <button type="button" id="btn-v109-rename-cancel" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">Hủy</button>
+            <button type="button" id="btn-v109-rename-save" class="px-3.5 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-extrabold">Lưu Tên Mới</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      const inp = modal.querySelector('#input-v109-rename-cover');
+      inp?.focus();
+      inp?.select();
+
+      const close = () => modal.remove();
+      const commit = async () => {
+        const nextName = (inp?.value || '').trim();
+        if (!nextName) return;
+        const oldFile = meta.fileName;
+        const ext = (oldFile && oldFile.split('.').pop()) || 'png';
+        const nextFile = this._sanitizeCoverFileName(nextName, ext);
+        meta.name = nextName;
+        meta.fileName = nextFile;
+        meta.updatedAt = Date.now();
+        this._saveCoversMeta();
+        this.renderGalleryUI();
+        const dataUrl = this.coverDataUrlCache.get(meta.id);
+        let synced = false;
+        if (dataUrl) {
+          synced = await this._renameCoverInWorkspaceFolder(oldFile, nextFile, dataUrl);
+        }
+        this._toast(
+          synced
+            ? `✅ Đã đổi tên thành "${nextName}" & đồng bộ file ${nextFile} trong thư mục!`
+            : `✅ Đã đổi tên ảnh bìa thành "${nextName}"!`,
+          'success',
+          2800
+        );
+        close();
+      };
+
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+      });
+      modal.querySelector('#btn-v109-rename-cancel')?.addEventListener('click', close);
+      modal.querySelector('#btn-v109-rename-save')?.addEventListener('click', commit);
+      inp?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') commit();
+        if (e.key === 'Escape') close();
+      });
+    }
+
+    async deleteCover(id) {
+      const idx = this.coversMeta.findIndex((c) => c.id === id);
+      if (idx === -1) return;
+      const [removed] = this.coversMeta.splice(idx, 1);
+      await this._deleteCoverDataUrlIdb(id);
+      if (removed?.fileName) {
+        await this._removeCoverFromWorkspaceFolder(removed.fileName);
+      }
+      if (this.activeCoverId === id) {
+        this.activeCoverId = this.coversMeta[0]?.id || '';
+        this._safeSetLS(this.ACTIVE_COVER_KEY, this.activeCoverId);
+      }
+      if (!this.coversMeta.length) {
+        this.setCustomPdfCoverEnabled(false);
+      }
+      this._saveCoversMeta();
+      this.renderGalleryUI();
+      this._toast(`🗑️ Đã xóa ảnh bìa "${removed?.name || ''}".`, 'info', 2400);
+    }
+
+    async downloadActiveCover(format = 'png') {
+      const dataUrl = this.getActiveCoverDataUrl();
+      const meta = this.getActiveCoverMeta();
+      if (!dataUrl || !meta) {
+        this._toast('⚠️ Bạn chưa có ảnh bìa nào để tải về!', 'warning');
+        return;
+      }
+      const isJpg = format === 'jpg' || format === 'jpeg';
+      const outMime = isJpg ? 'image/jpeg' : 'image/png';
+      const outExt = isJpg ? 'jpg' : 'png';
+      try {
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = dataUrl;
+        });
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width || 1024;
+        canvas.height = img.naturalHeight || img.height || 1536;
+        const ctx = canvas.getContext('2d');
+        if (isJpg) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const outUrl = canvas.toDataURL(outMime, isJpg ? 0.96 : 1.0);
+        const a = document.createElement('a');
+        a.href = outUrl;
+        a.download = this._sanitizeCoverFileName(meta.name || 'Bia_Truyen', outExt);
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          try {
+            document.body.removeChild(a);
+          } catch (_) {}
+        }, 400);
+        this._toast(`⬇️ Đã tải ảnh bìa sắc nét (.${outExt.toUpperCase()})!`, 'success', 2600);
+      } catch (_) {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = this._sanitizeCoverFileName(meta.name || 'Bia_Truyen', outExt);
+        a.click();
+      }
+    }
+
+    async syncWithWorkspaceCoverFolder() {
+      const dir = await this._getCoverFolderHandle(true);
+      if (!dir) {
+        this._toast(
+          '📂 Hãy kết nối Thư mục Công Việc trên máy trước (Tab 6 / nút Mở Thư Mục) để đồng bộ thư mục 06_Anh_Bia_Truyen/ nhé!',
+          'warning',
+          4200
+        );
+        return;
+      }
+      let imported = 0;
+      let exported = 0;
+      const existingByFile = new Map(
+        this.coversMeta.map((c) => [String(c.fileName || '').toLowerCase(), c])
+      );
+      const seenInFolder = new Set();
+
+      try {
+        for await (const entry of dir.values()) {
+          if (entry.kind !== 'file') continue;
+          if (!/\.(png|jpe?g|webp)$/i.test(entry.name)) continue;
+          seenInFolder.add(entry.name.toLowerCase());
+          if (!existingByFile.has(entry.name.toLowerCase())) {
+            const file = await entry.getFile();
+            await this.addCoverFromFileOrBlob(file, entry.name);
+            imported++;
+          }
+        }
+        for (const meta of this.coversMeta) {
+          const fn = String(meta.fileName || '').toLowerCase();
+          if (fn && !seenInFolder.has(fn)) {
+            const dataUrl = this.coverDataUrlCache.get(meta.id);
+            if (dataUrl) {
+              const ok = await this._writeCoverToWorkspaceFolder(meta.fileName, dataUrl);
+              if (ok) exported++;
+            }
+          }
+        }
+      } catch (_) {}
+
+      this._toast(
+        `🔄 Đồng bộ xong thư mục ${this.COVER_FOLDER_NAME}/: nhập ${imported} ảnh mới, lưu thêm ${exported} ảnh ra thư mục!`,
+        'success',
+        3600
+      );
+    }
+
+    renderGalleryUI() {
+      const listEl = document.getElementById('mode6-cover-gallery-list');
+      const countEl = document.getElementById('mode6-cover-count-badge');
+      const previewImg = document.getElementById('img-mode6-active-cover-preview');
+      const emptyHint = document.getElementById('mode6-cover-empty-hint');
+      const controls = document.getElementById('mode6-active-cover-controls');
+      const activeNameEl = document.getElementById('label-mode6-active-cover-name');
+
+      if (countEl) countEl.textContent = String(this.coversMeta.length);
+
+      const activeMeta = this.getActiveCoverMeta();
+      const activeUrl = activeMeta ? this.coverDataUrlCache.get(activeMeta.id) || '' : '';
+
+      if (previewImg && emptyHint && controls) {
+        if (activeMeta && activeUrl) {
+          previewImg.src = activeUrl;
+          previewImg.classList.remove('hidden');
+          emptyHint.classList.add('hidden');
+          controls.classList.remove('hidden');
+          if (activeNameEl) activeNameEl.textContent = `📘 ${activeMeta.name}`;
+        } else {
+          previewImg.src = '';
+          previewImg.classList.add('hidden');
+          emptyHint.classList.remove('hidden');
+          controls.classList.add('hidden');
+        }
+      }
+
+      this._syncPdfCoverCheckboxes(this.isCustomPdfCoverEnabled());
+
+      if (!listEl) return;
+      if (!this.coversMeta.length) {
+        listEl.innerHTML =
+          '<div class="col-span-full py-8 text-center text-zinc-500 italic">Chưa có ảnh bìa nào được lưu. Hãy dán ảnh (Ctrl+V) vào khung bên trái!</div>';
+        return;
+      }
+
+      listEl.innerHTML = this.coversMeta
+        .map((c) => {
+          const url = this.coverDataUrlCache.get(c.id) || '';
+          const isActive = activeMeta && activeMeta.id === c.id;
+          return `
+            <div data-cover-id="${this._escapeHtml(
+              c.id
+            )}" class="group rounded-xl border-2 ${
+            isActive
+              ? 'border-emerald-400 bg-emerald-950/30 shadow-lg'
+              : 'border-zinc-800 bg-zinc-900/80 hover:border-violet-400/60'
+          } p-2 flex flex-col gap-1.5 transition">
+              <div class="relative aspect-[2/3] w-full rounded-lg overflow-hidden bg-zinc-950 cursor-pointer flex items-center justify-center" data-cover-action="select" data-cover-id="${this._escapeHtml(
+                c.id
+              )}">
+                ${
+                  url
+                    ? `<img src="${url}" alt="${this._escapeHtml(
+                        c.name
+                      )}" class="w-full h-full object-cover" />`
+                    : `<span class="text-zinc-500 text-[10px]">Đang tải...</span>`
+                }
+                ${
+                  isActive
+                    ? '<span class="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-emerald-500 text-zinc-950 font-black text-[9px]">ĐANG CHỌN</span>'
+                    : ''
+                }
+              </div>
+              <div class="font-bold text-[11px] text-zinc-200 truncate" title="${this._escapeHtml(
+                c.name
+              )}">${this._escapeHtml(c.name)}</div>
+              <div class="flex items-center gap-1">
+                <button type="button" data-cover-action="rename" data-cover-id="${this._escapeHtml(
+                  c.id
+                )}" class="flex-1 px-1.5 py-1 rounded-md bg-zinc-800 hover:bg-violet-600 text-zinc-200 hover:text-white font-bold text-[10px] transition">✏️ Đổi tên</button>
+                <button type="button" data-cover-action="delete" data-cover-id="${this._escapeHtml(
+                  c.id
+                )}" class="px-1.5 py-1 rounded-md bg-zinc-800 hover:bg-rose-600 text-rose-300 hover:text-white font-bold text-[10px] transition" title="Xóa ảnh bìa">🗑️</button>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    _bindMode6CoverStudio() {
+      const pasteZone = document.getElementById('mode6-cover-paste-zone');
+      const uploadBtn = document.getElementById('btn-mode6-upload-cover');
+      const fileInput = document.getElementById('input-mode6-cover-file');
+      const syncBtn = document.getElementById('btn-mode6-sync-folder-covers');
+      const dlPngBtn = document.getElementById('btn-mode6-download-png');
+      const dlJpgBtn = document.getElementById('btn-mode6-download-jpg');
+      const chkPdf = document.getElementById('chk-mode6-use-as-pdf-cover');
+      const galleryList = document.getElementById('mode6-cover-gallery-list');
+
+      const handlePasteEvent = async (e) => {
+        const items = e.clipboardData?.items;
+        if (!items) return false;
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i];
+          if (it && it.type && it.type.startsWith('image/')) {
+            const blob = it.getAsFile();
+            if (!blob) continue;
+            e.preventDefault();
+            await this.addCoverFromFileOrBlob(blob);
+            return true;
+          }
+        }
+        return false;
+      };
+
+      if (pasteZone && !pasteZone.dataset.v109Bound) {
+        pasteZone.dataset.v109Bound = '1';
+        pasteZone.addEventListener('click', () => {
+          pasteZone.focus();
+          if (!this.coversMeta.length && fileInput) {
+            // Focus để Ctrl+V hoạt động ngay; nhấp đúp mở hộp chọn tệp
+          }
+        });
+        pasteZone.addEventListener('dblclick', () => fileInput?.click());
+        pasteZone.addEventListener('paste', handlePasteEvent);
+        pasteZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          pasteZone.classList.add('border-emerald-400', 'bg-emerald-950/25');
+        });
+        pasteZone.addEventListener('dragleave', () => {
+          pasteZone.classList.remove('border-emerald-400', 'bg-emerald-950/25');
+        });
+        pasteZone.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          pasteZone.classList.remove('border-emerald-400', 'bg-emerald-950/25');
+          const files = Array.from(e.dataTransfer?.files || []).filter((f) =>
+            f.type.startsWith('image/')
+          );
+          for (const f of files) {
+            await this.addCoverFromFileOrBlob(f, f.name);
+          }
+        });
+      }
+
+      // Hỗ trợ Ctrl+V toàn cục khi người dùng đang mở Chế độ 6 Tab 3
+      if (!document.documentElement.dataset.v109CoverGlobalPasteBound) {
+        document.documentElement.dataset.v109CoverGlobalPasteBound = '1';
+        document.addEventListener('paste', (e) => {
+          const studio = document.getElementById('tab3-mode6-cover-studio');
+          if (!studio || studio.classList.contains('hidden')) return;
+          const tag = (document.activeElement?.tagName || '').toLowerCase();
+          if (tag === 'input' || tag === 'textarea' || document.activeElement?.isContentEditable) {
+            return;
+          }
+          handlePasteEvent(e);
+        });
+      }
+
+      if (uploadBtn && fileInput && !uploadBtn.dataset.v109Bound) {
+        uploadBtn.dataset.v109Bound = '1';
+        uploadBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', async () => {
+          const files = Array.from(fileInput.files || []);
+          fileInput.value = '';
+          for (const f of files) {
+            await this.addCoverFromFileOrBlob(f, f.name);
+          }
+        });
+      }
+
+      if (syncBtn && !syncBtn.dataset.v109Bound) {
+        syncBtn.dataset.v109Bound = '1';
+        syncBtn.addEventListener('click', () => this.syncWithWorkspaceCoverFolder());
+      }
+      if (dlPngBtn && !dlPngBtn.dataset.v109Bound) {
+        dlPngBtn.dataset.v109Bound = '1';
+        dlPngBtn.addEventListener('click', () => this.downloadActiveCover('png'));
+      }
+      if (dlJpgBtn && !dlJpgBtn.dataset.v109Bound) {
+        dlJpgBtn.dataset.v109Bound = '1';
+        dlJpgBtn.addEventListener('click', () => this.downloadActiveCover('jpg'));
+      }
+      if (chkPdf && !chkPdf.dataset.v109Bound) {
+        chkPdf.dataset.v109Bound = '1';
+        chkPdf.addEventListener('change', () => {
+          const ok = this.setCustomPdfCoverEnabled(chkPdf.checked, 'mode6');
+          if (chkPdf.checked && ok) {
+            this._toast(
+              '📕 Đã bật áp dụng ảnh bìa này khi xuất truyện PDF (đã đồng bộ sang khung Xuất PDF)!',
+              'success',
+              3200
+            );
+          } else if (!chkPdf.checked) {
+            this._toast('📘 Đã tắt áp dụng ảnh bìa riêng khi xuất PDF.', 'info', 2200);
+          }
+        });
+      }
+
+      if (galleryList && !galleryList.dataset.v109Bound) {
+        galleryList.dataset.v109Bound = '1';
+        galleryList.addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-cover-action]');
+          if (!btn) return;
+          const action = btn.getAttribute('data-cover-action');
+          const id = btn.getAttribute('data-cover-id');
+          if (!id) return;
+          if (action === 'select') this.selectCover(id);
+          else if (action === 'rename') {
+            const meta = this.coversMeta.find((c) => c.id === id);
+            if (meta) this._openRenameCoverModal(meta);
+          } else if (action === 'delete') {
+            this.deleteCover(id);
+          }
+        });
+      }
+    }
+  }
+
+  const v109Tab3Manager = new V109Tab3RichAsciiAndCoverManager(tab3Controller);
+  window.NoirStudio.tab3RichBridge = v109Tab3Manager;
+  window.NoirStudio.coverGallery = v109Tab3Manager;
 })();

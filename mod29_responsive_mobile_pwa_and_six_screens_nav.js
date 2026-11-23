@@ -2720,6 +2720,15 @@
       target.classList.toggle('hidden', collapsed);
       if (btn) {
         btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        const tr = (s) =>
+          window.NoirStudio?.i18n?.translateText
+            ? window.NoirStudio.i18n.translateText(s)
+            : s;
+        const nextLabel = collapsed ? tr('Mở rộng') : tr('Thu gọn');
+        const stateLabel = btn.querySelector('.noir-collapse-state-label');
+        if (stateLabel) {
+          stateLabel.textContent = nextLabel;
+        }
         const arrow = btn.querySelector('.noir-collapse-arrow');
         if (arrow) {
           arrow.textContent = collapsed ? '▾' : '▴';

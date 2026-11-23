@@ -253,7 +253,8 @@
         enableDropCap: true,
         enableFirstLineIndent: true,
         enablePageNumbers: true,
-        formatDialogueAttributionItalic: true
+        formatDialogueAttributionItalic: true,
+        useCustomCoverImage: false
       };
       this.storageKeyWorksHistory = 'noir_s10_exporter_works_history_v1';
       this.isAdvancedPanelInjected = false;
@@ -553,6 +554,29 @@
           </div>
         </div>
 
+        <!-- Khung nổi bật: Áp dụng ảnh bìa tùy chỉnh từ Chế độ 6 Tab 3 (Mặc định KHÔNG tick) -->
+        <div id="export-custom-cover-highlight-card" class="p-3 rounded-xl border-2 border-amber-400/75 bg-gradient-to-r from-amber-950/55 via-violet-950/45 to-zinc-900 shadow-lg space-y-2">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <label class="flex items-start gap-2 cursor-pointer select-none flex-1 min-w-0">
+              <input type="checkbox" id="chk-export-use-custom-cover" class="accent-amber-400 w-4 h-4 mt-0.5 rounded shrink-0" />
+              <span class="space-y-1">
+                <span class="block text-xs font-black text-amber-200">🖼️ Áp dụng ảnh bìa mà bạn đã có</span>
+                <span class="block text-[11px] text-zinc-200 leading-relaxed">
+                  (Nếu ở khung cửa sổ đầu ra Chế độ 6 Tab 3 chưa có thì bạn paste vào,
+                  <button type="button" id="btn-export-jump-mode6-cover" class="inline font-extrabold text-cyan-300 hover:text-white underline decoration-2 underline-offset-2 cursor-pointer bg-transparent border-0 p-0">bấm vào đây</button>
+                  để dán ảnh bìa tiểu thuyết vào nè)
+                </span>
+              </span>
+            </label>
+            <div id="export-custom-cover-mini-badge" class="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg border border-zinc-700 bg-zinc-950/90 text-[10px] text-zinc-400">
+              <span>Chưa có ảnh bìa</span>
+            </div>
+          </div>
+          <div class="text-[10px] text-amber-200/85">
+            ✨ Khi tick chọn: <strong>Trang 1</strong> là ảnh bìa sắc nét vừa khít 1 trang, <strong>Trang 2</strong> tự động sinh trang Thông tin xuất bản riêng biệt (Tên tác phẩm, Tác giả, NXB Web tiểu thuyết của Bi, Số chương).
+          </div>
+        </div>
+
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
           <label class="flex items-center gap-1.5 cursor-pointer select-none">
             <input type="checkbox" id="chk-export-cover" ${
@@ -718,7 +742,106 @@
       setChk('chk-export-indent', this.prefs.enableFirstLineIndent);
       setChk('chk-export-characters', this.prefs.includeCharacterAppendix);
       setChk('chk-export-bible', this.prefs.includeStoryBibleAppendix);
+      const gallery = window.NoirStudio?.coverGallery;
+      const customCoverOn = Boolean(gallery?.isCustomPdfCoverEnabled?.());
+      this.prefs.useCustomCoverImage = customCoverOn;
+      setChk('chk-export-use-custom-cover', customCoverOn);
+      this.refreshCustomCoverStatusBadge();
       this.populateDynamicExportSelectors();
+    }
+
+    jumpToMode6CoverStudio() {
+      try {
+        this.closeModal();
+      } catch (_) {}
+      const missingModal = document.getElementById('modal-v109-missing-cover-warning');
+      if (missingModal) missingModal.remove();
+
+      if (window.NoirStudio?.screenNav?.switchScreen) {
+        window.NoirStudio.screenNav.switchScreen('TAB_3_AI_STUDIO');
+      } else {
+        const tab3Btn =
+          document.querySelector('.s14-nav-tab[data-s14-tab="TAB_3_AI_STUDIO"]') ||
+          document.querySelector('[data-s14-tab="TAB_3_AI_STUDIO"]');
+        if (tab3Btn) tab3Btn.click();
+      }
+
+      setTimeout(() => {
+        if (window.NoirStudio?.tab3Controller?.switchMode) {
+          window.NoirStudio.tab3Controller.switchMode('MODE_6_BOOK_COVER', true);
+        }
+        const modeSel = document.getElementById('s20-quad-tab-selector');
+        if (modeSel) {
+          modeSel.value = 'MODE_6_BOOK_COVER';
+          modeSel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        const promptModeSel = document.getElementById('ai-prompt-mode-select');
+        if (promptModeSel) {
+          promptModeSel.value = 'MODE_6_BOOK_COVER';
+          promptModeSel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        const pasteZone = document.getElementById('mode6-cover-paste-zone');
+        if (pasteZone) {
+          pasteZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          pasteZone.focus();
+        }
+      }, 120);
+    }
+
+    showMissingCoverAlertPopup() {
+      const existing = document.getElementById('modal-v109-missing-cover-warning');
+      if (existing) existing.remove();
+      const modal = document.createElement('div');
+      modal.id = 'modal-v109-missing-cover-warning';
+      modal.className =
+        'fixed inset-0 z-[10080] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3';
+      modal.innerHTML = `
+        <div class="w-full max-w-md rounded-2xl border-2 border-amber-400/80 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden">
+          <div class="px-4 py-3 border-b border-amber-500/35 bg-amber-950/60 flex items-center justify-between gap-2">
+            <h3 class="text-sm font-black text-amber-300">🖼️ Chưa Có Ảnh Bìa Tiểu Thuyết</h3>
+            <button type="button" id="btn-close-v109-missing-cover" class="px-2 py-0.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">✕</button>
+          </div>
+          <div class="p-4 space-y-4 text-sm leading-relaxed">
+            <p class="text-zinc-100 font-semibold">
+              Hệ thống chưa thấy bạn có ảnh bìa nè, bạn
+              <button type="button" id="btn-v109-missing-cover-jump" class="inline font-black text-cyan-300 hover:text-white underline decoration-2 underline-offset-4 cursor-pointer bg-transparent border-0 p-0">qua đấy</button>
+              để bỏ ảnh nhé!
+            </p>
+            <div class="flex items-center justify-end gap-2">
+              <button type="button" id="btn-v109-missing-cover-ok" class="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs">Để sau</button>
+              <button type="button" id="btn-v109-missing-cover-go-cta" class="px-3.5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-xs shadow">🖼️ Qua Chế Độ 6 Dán Ảnh Ngay</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      const close = () => modal.remove();
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+      });
+      modal.querySelector('#btn-close-v109-missing-cover')?.addEventListener('click', close);
+      modal.querySelector('#btn-v109-missing-cover-ok')?.addEventListener('click', close);
+      modal.querySelector('#btn-v109-missing-cover-jump')?.addEventListener('click', () => {
+        this.jumpToMode6CoverStudio();
+      });
+      modal.querySelector('#btn-v109-missing-cover-go-cta')?.addEventListener('click', () => {
+        this.jumpToMode6CoverStudio();
+      });
+    }
+
+    refreshCustomCoverStatusBadge() {
+      const badge = document.getElementById('export-custom-cover-mini-badge');
+      if (!badge) return;
+      const gallery = window.NoirStudio?.coverGallery;
+      const dataUrl = gallery?.getActiveCoverDataUrl?.() || '';
+      const meta = gallery?.getActiveCoverMeta?.() || null;
+      if (dataUrl && meta) {
+        badge.innerHTML = `<img src="${dataUrl}" alt="Bìa" class="w-7 h-10 object-cover rounded border border-emerald-400/60" /><span class="text-emerald-300 font-bold max-w-[120px] truncate">${this.getUtils().escapeHtml(
+          meta.name || 'Ảnh bìa'
+        )}</span>`;
+      } else {
+        badge.innerHTML = '<span class="text-zinc-400">Chưa có ảnh bìa</span>';
+      }
     }
 
     readPrefsFromDOMControls() {
@@ -797,6 +920,37 @@
         'chk-export-characters',
         'chk-export-bible'
       ].forEach((id) => bindChange(id, onAnyControlChanged));
+
+      const jumpMode6Btn = document.getElementById('btn-export-jump-mode6-cover');
+      if (jumpMode6Btn && !jumpMode6Btn.dataset.mod26Bound) {
+        jumpMode6Btn.dataset.mod26Bound = '1';
+        jumpMode6Btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.jumpToMode6CoverStudio();
+        });
+      }
+
+      const customCoverChk = document.getElementById('chk-export-use-custom-cover');
+      if (customCoverChk && !customCoverChk.dataset.mod26Bound) {
+        customCoverChk.dataset.mod26Bound = '1';
+        customCoverChk.addEventListener('change', () => {
+          const gallery = window.NoirStudio?.coverGallery;
+          const hasCover = Boolean(gallery?.getActiveCoverDataUrl?.());
+          if (customCoverChk.checked && !hasCover) {
+            customCoverChk.checked = false;
+            this.prefs.useCustomCoverImage = false;
+            gallery?.setCustomPdfCoverEnabled?.(false, 'exporter');
+            this.showMissingCoverAlertPopup();
+            return;
+          }
+          this.prefs.useCustomCoverImage = Boolean(customCoverChk.checked && hasCover);
+          gallery?.setCustomPdfCoverEnabled?.(this.prefs.useCustomCoverImage, 'exporter');
+          this.refreshCustomCoverStatusBadge();
+          this.savePreferences();
+          this.updateLivePreview();
+        });
+      }
 
       const historySel = document.getElementById('export-book-title-history-select');
       if (historySel && !historySel.dataset.mod26Bound) {
@@ -1234,11 +1388,73 @@
     }
 
     // ------------------------------------------------------------------------
-    // Tạo Trang Bìa Trong (Half-Title & Full Title Page), Trang Bản Quyền,
-    // Mục Lục Tự Động & Phụ Lục Nhân Vật / Story Bible
+    // Tính toán chiều cao chuẩn đúng 1 trang riêng biệt cho Desktop & Mobile
+    // (Chống tràn trang bìa sang trang 2 ở mọi khổ sách & trình duyệt in)
+    // ------------------------------------------------------------------------
+    computeSafeSinglePageMetrics(trimPreset) {
+      const sizeStr = String(trimPreset?.pageSizeCss || '145mm 205mm').trim();
+      let pageHeightMm = 205;
+      if (/a4/i.test(sizeStr)) {
+        pageHeightMm = 297;
+      } else {
+        const nums = sizeStr.match(/[\d.]+/g);
+        if (nums && nums.length >= 2) {
+          pageHeightMm = parseFloat(nums[1]) || 205;
+        }
+      }
+
+      const marginNums = String(trimPreset?.marginCss || '20mm 18mm 22mm 22mm')
+        .match(/[\d.]+/g)
+        ?.map((n) => parseFloat(n) || 0) || [20, 18, 22, 22];
+      const mTop = marginNums[0] ?? 20;
+      const mBottom = marginNums[2] ?? marginNums[0] ?? 22;
+      const innerMm = Math.max(130, pageHeightMm - mTop - mBottom);
+
+      const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+      const isMobileEnv =
+        /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
+        (typeof window !== 'undefined' &&
+          window.innerWidth <= 820 &&
+          typeof window.matchMedia === 'function' &&
+          window.matchMedia('(pointer: coarse)').matches);
+
+      // Desktop & Mobile dùng ngưỡng an toàn riêng biệt để 100% không tràn sang trang 2
+      const desktopBoxHeightMm = Math.max(122, Math.floor(innerMm - 10));
+      const mobileCapMm = trimPreset?.id === 'MANUSCRIPT_A4_REVIEW' ? 208 : 136;
+      const mobileBoxHeightMm = Math.max(116, Math.min(Math.floor(innerMm - 14), mobileCapMm));
+      const coverBoxHeightMm = isMobileEnv ? mobileBoxHeightMm : desktopBoxHeightMm;
+
+      const customCoverMarginMm = isMobileEnv ? 6 : 8;
+      const customImageHeightMm = isMobileEnv
+        ? Math.max(126, Math.min(Math.floor(pageHeightMm - customCoverMarginMm * 2 - 14), trimPreset?.id === 'MANUSCRIPT_A4_REVIEW' ? 228 : 152))
+        : Math.max(136, Math.floor(pageHeightMm - customCoverMarginMm * 2 - 8));
+
+      return {
+        isMobileEnv,
+        pageHeightMm,
+        coverBoxHeightMm,
+        customCoverMarginMm,
+        customImageHeightMm
+      };
+    }
+
+    getActiveCustomCoverForExport() {
+      const gallery = window.NoirStudio?.coverGallery;
+      if (!gallery || typeof gallery.isCustomPdfCoverEnabled !== 'function') {
+        return '';
+      }
+      if (!gallery.isCustomPdfCoverEnabled()) return '';
+      return gallery.getActiveCoverDataUrl() || '';
+    }
+
+    // ------------------------------------------------------------------------
+    // Tạo Trang Bìa Trong (Half-Title & Full Title Page), Trang Ảnh Bìa Tùy Chỉnh,
+    // Trang Thông Tin Xuất Bản Riêng (Page 2), Mục Lục & Phụ Lục
     // ------------------------------------------------------------------------
     generateBookCoverPageHtml(chapters, metrics) {
-      if (!this.prefs.includeCoverPage) return '';
+      const customCoverUrl = this.getActiveCustomCoverForExport();
+      if (!this.prefs.includeCoverPage && !customCoverUrl) return '';
+
       const utils = this.getUtils();
       const dateStr = utils.formatTimestampVN(Date.now());
       const chapLabel =
@@ -1247,6 +1463,60 @@
           ? chapters[0]?.displayTitle || chapters[0]?.title || 'Chương 1'
           : `Tuyển tập ${chapters.length} chương`);
       const publisherDisplay = this.prefs.publisherLabel || 'Web tiểu thuyết của Bi';
+      const trimPreset =
+        BOOK_TYPOGRAPHY_PRESETS[this.prefs.trimPresetId] ||
+        BOOK_TYPOGRAPHY_PRESETS.VIETNAM_TRADE_14X20;
+      const wordsFormatted = window.NoirStudio?.i18n?.formatNumber
+        ? window.NoirStudio.i18n.formatNumber(metrics.totalWords)
+        : metrics.totalWords.toLocaleString('vi-VN');
+
+      if (customCoverUrl) {
+        return `
+          <section class="book-cover-page book-custom-image-cover">
+            <img class="book-custom-cover-img" src="${customCoverUrl}" alt="${utils.escapeHtml(
+          this.prefs.bookTitle
+        )}" />
+          </section>
+          <section class="book-pubinfo-page">
+            <div class="book-cover-ornament-top">✦ ─── ❖ ─── ✦</div>
+            <div class="book-pubinfo-center">
+              <div class="book-cover-subtitle-top">${utils.escapeHtml(publisherDisplay)}</div>
+              <h1 class="book-cover-main-title">${utils.escapeHtml(this.prefs.bookTitle)}</h1>
+              <div class="book-cover-subtitle">${utils.escapeHtml(chapLabel)} • ${utils.escapeHtml(
+          this.prefs.bookSubtitle
+        )}</div>
+              <div class="book-cover-divider">─── ❦ ───</div>
+              <div class="book-cover-author-box">
+                <div class="book-cover-author-label">TÁC GIẢ</div>
+                <div class="book-cover-author-name">${utils.escapeHtml(this.prefs.authorName)}</div>
+              </div>
+              <div class="book-pubinfo-card">
+                <div class="book-pubinfo-card-heading">THÔNG TIN XUẤT BẢN</div>
+                <div class="book-pubinfo-row"><span>Tác phẩm:</span><strong>${utils.escapeHtml(
+                  this.prefs.bookTitle
+                )}</strong></div>
+                <div class="book-pubinfo-row"><span>Bút danh tác giả:</span><strong>${utils.escapeHtml(
+                  this.prefs.authorName
+                )}</strong></div>
+                <div class="book-pubinfo-row"><span>Quy mô ấn bản:</span><strong>${
+                  metrics.chapterCount
+                } chương • ${wordsFormatted} từ</strong></div>
+                <div class="book-pubinfo-row"><span>Khổ sách:</span><strong>${utils.escapeHtml(
+                  trimPreset.name
+                )}</strong></div>
+                <div class="book-pubinfo-row"><span>Nhà xuất bản:</span><strong>${utils.escapeHtml(
+                  publisherDisplay
+                )}</strong></div>
+                <div class="book-pubinfo-row"><span>Chế bản &amp; xuất bản:</span><strong>${utils.escapeHtml(
+                  dateStr
+                )}</strong></div>
+              </div>
+            </div>
+            <div class="book-cover-ornament-bottom">✦ ─────────────── ✦</div>
+          </section>
+        `;
+      }
+
       return `
         <section class="book-cover-page">
           <div class="book-cover-ornament-top">✦ ─── ❖ ─── ✦</div>
@@ -1261,9 +1531,9 @@
             <div class="book-cover-author-name">${utils.escapeHtml(this.prefs.authorName)}</div>
           </div>
           <div class="book-cover-meta-footer">
-            <div>Ấn bản gồm <strong>${metrics.chapterCount}</strong> chương • Tổng cộng <strong>${(window.NoirStudio?.i18n?.formatNumber ? window.NoirStudio.i18n.formatNumber(metrics.totalWords) : metrics.totalWords.toLocaleString('vi-VN'))}</strong> từ</div>
+            <div>Ấn bản gồm <strong>${metrics.chapterCount}</strong> chương • Tổng cộng <strong>${wordsFormatted}</strong> từ</div>
             <div>Nhà xuất bản: <strong>${utils.escapeHtml(publisherDisplay)}</strong></div>
-            <div>Chế bản & Kết xuất lúc: ${utils.escapeHtml(dateStr)}</div>
+            <div>Chế bản &amp; Kết xuất lúc: ${utils.escapeHtml(dateStr)}</div>
           </div>
           <div class="book-cover-ornament-bottom">✦ ─────────────── ✦</div>
         </section>
@@ -1273,7 +1543,8 @@
     generateTableOfContentsHtml(chapters) {
       if (!this.prefs.includeTableOfContents || chapters.length <= 1) return '';
       const utils = this.getUtils();
-      let runningPage = this.prefs.includeCoverPage ? 3 : 2;
+      const hasCustomCover = Boolean(this.getActiveCustomCoverForExport());
+      let runningPage = hasCustomCover ? 4 : this.prefs.includeCoverPage ? 3 : 2;
       const metrics = this.calculateBookPublishingMetrics(chapters);
       const wordsPerPage = metrics.wordsPerPrintedPage || 300;
 
@@ -1411,6 +1682,7 @@
       const safeCssBookTitle = String(this.prefs.bookTitle || 'Tác Phẩm Tiểu Thuyết')
         .replace(/["\\\r\n]/g, ' ')
         .trim();
+      const singlePageMetrics = this.computeSafeSinglePageMetrics(trimPreset);
 
       return `<!DOCTYPE html>
 <html lang="vi">
@@ -1446,6 +1718,18 @@
       @bottom-right { content: ""; }
     }
     @page :first {
+      @top-center { content: ""; }
+      @bottom-center { content: ""; }
+    }
+    @page bookcoverpage {
+      size: ${trimPreset.pageSizeCss};
+      margin: ${singlePageMetrics.customCoverMarginMm}mm;
+      @top-center { content: ""; }
+      @bottom-center { content: ""; }
+    }
+    @page pubinfopage {
+      size: ${trimPreset.pageSizeCss};
+      margin: ${trimPreset.marginCss};
       @top-center { content: ""; }
       @bottom-center { content: ""; }
     }
@@ -1504,75 +1788,145 @@
       padding: 36px 28px 80px 28px;
     }
 
-    /* Trang Bìa Sách — Luôn gói gọn nghiêm ngặt trong đúng 1 trang */
-    .book-cover-page {
+    /* Trang Bìa Sách & Trang Thông Tin Xuất Bản — Khóa chặt 1 trang riêng cho cả Desktop & Mobile */
+    .book-cover-page,
+    .book-pubinfo-page {
       min-height: 0;
-      height: 215mm;
-      max-height: 222mm;
+      height: ${singlePageMetrics.coverBoxHeightMm}mm;
+      max-height: ${singlePageMetrics.coverBoxHeightMm}mm;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       align-items: center;
       text-align: center;
       border: 3px double ${paperTheme.borderHex};
-      padding: 26px 24px;
-      margin: 0 auto 32px auto;
+      padding: ${singlePageMetrics.isMobileEnv ? '14px 14px' : '22px 22px'};
+      margin: 0 auto 28px auto;
       overflow: hidden;
       page-break-inside: avoid;
       break-inside: avoid;
       page-break-after: always;
       break-after: page;
     }
+    .book-custom-image-cover {
+      page: bookcoverpage;
+      height: ${singlePageMetrics.customImageHeightMm}mm;
+      max-height: ${singlePageMetrics.customImageHeightMm}mm;
+      padding: 0 !important;
+      border: none !important;
+      background: transparent;
+      justify-content: center;
+      align-items: center;
+    }
+    .book-custom-cover-img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      margin: 0 auto;
+    }
+    .book-pubinfo-page {
+      page: pubinfopage;
+    }
+    .book-pubinfo-center {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .book-pubinfo-card {
+      width: 100%;
+      max-width: 440px;
+      margin-top: 8px;
+      padding: 10px 14px;
+      border: 1px solid ${paperTheme.borderHex};
+      border-radius: 8px;
+      text-align: left;
+      font-size: ${singlePageMetrics.isMobileEnv ? '0.72em' : '0.78em'};
+      line-height: 1.45;
+    }
+    .book-pubinfo-card-heading {
+      text-align: center;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      color: ${paperTheme.accentHex};
+      border-bottom: 1px solid ${paperTheme.borderHex};
+      padding-bottom: 5px;
+      margin-bottom: 6px;
+      font-size: 0.92em;
+    }
+    .book-pubinfo-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 2px 0;
+      border-bottom: 1px dotted ${paperTheme.borderHex};
+    }
+    .book-pubinfo-row:last-child {
+      border-bottom: none;
+    }
+    .book-pubinfo-row span {
+      color: ${paperTheme.mutedHex};
+      flex-shrink: 0;
+    }
+    .book-pubinfo-row strong {
+      text-align: right;
+      color: ${paperTheme.textHex};
+    }
     .book-cover-ornament-top,
     .book-cover-ornament-bottom {
       color: ${paperTheme.accentHex};
-      font-size: 1.05em;
-      letter-spacing: 0.25em;
-      margin: 6px 0;
+      font-size: ${singlePageMetrics.isMobileEnv ? '0.9em' : '1.02em'};
+      letter-spacing: 0.22em;
+      margin: 2px 0;
     }
     .book-cover-subtitle-top {
-      font-size: 0.78em;
+      font-size: 0.74em;
       text-transform: uppercase;
-      letter-spacing: 0.18em;
-      color: ${paperTheme.mutedHex};
-      margin-bottom: 10px;
-    }
-    .book-cover-main-title {
-      font-size: 2.05em;
-      font-weight: 800;
-      color: ${paperTheme.accentHex};
-      line-height: 1.25;
-      margin: 6px 0 10px 0;
-    }
-    .book-cover-subtitle {
-      font-size: 0.98em;
-      font-style: italic;
-      color: ${paperTheme.mutedHex};
-      margin-bottom: 14px;
-    }
-    .book-cover-divider {
-      color: ${paperTheme.accentHex};
-      margin: 10px 0;
-      font-size: 1.15em;
-    }
-    .book-cover-author-box {
-      margin: 12px 0 18px 0;
-    }
-    .book-cover-author-label {
-      font-size: 0.72em;
-      letter-spacing: 0.25em;
+      letter-spacing: 0.16em;
       color: ${paperTheme.mutedHex};
       margin-bottom: 4px;
     }
+    .book-cover-main-title {
+      font-size: ${singlePageMetrics.isMobileEnv ? '1.55em' : '1.9em'};
+      font-weight: 800;
+      color: ${paperTheme.accentHex};
+      line-height: 1.2;
+      margin: 4px 0 6px 0;
+    }
+    .book-cover-subtitle {
+      font-size: ${singlePageMetrics.isMobileEnv ? '0.86em' : '0.94em'};
+      font-style: italic;
+      color: ${paperTheme.mutedHex};
+      margin-bottom: 8px;
+    }
+    .book-cover-divider {
+      color: ${paperTheme.accentHex};
+      margin: 6px 0;
+      font-size: 1.05em;
+    }
+    .book-cover-author-box {
+      margin: 6px 0 10px 0;
+    }
+    .book-cover-author-label {
+      font-size: 0.7em;
+      letter-spacing: 0.22em;
+      color: ${paperTheme.mutedHex};
+      margin-bottom: 2px;
+    }
     .book-cover-author-name {
-      font-size: 1.32em;
+      font-size: ${singlePageMetrics.isMobileEnv ? '1.12em' : '1.26em'};
       font-weight: 700;
     }
     .book-cover-meta-footer {
-      margin-top: 8px;
-      font-size: 0.8em;
+      margin-top: 6px;
+      font-size: ${singlePageMetrics.isMobileEnv ? '0.72em' : '0.78em'};
       color: ${paperTheme.mutedHex};
-      line-height: 1.5;
+      line-height: 1.45;
     }
 
     /* Mục lục */
@@ -1747,18 +2101,33 @@
       .book-master-container {
         max-width: 100%;
         padding: 0;
+        margin: 0;
       }
-      .book-cover-page {
-        height: calc(100vh - 8mm);
-        max-height: 222mm;
-        min-height: 0;
+      .book-cover-page,
+      .book-pubinfo-page {
+        height: ${singlePageMetrics.coverBoxHeightMm}mm !important;
+        max-height: ${singlePageMetrics.coverBoxHeightMm}mm !important;
+        min-height: 0 !important;
         margin: 0 !important;
-        padding: 22px 24px !important;
-        overflow: hidden;
-        page-break-inside: avoid;
-        break-inside: avoid;
-        page-break-after: always;
-        break-after: page;
+        padding: ${singlePageMetrics.isMobileEnv ? '12px 12px' : '18px 20px'} !important;
+        overflow: hidden !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      .book-custom-image-cover {
+        height: ${singlePageMetrics.customImageHeightMm}mm !important;
+        max-height: ${singlePageMetrics.customImageHeightMm}mm !important;
+        padding: 0 !important;
+        border: none !important;
+      }
+      .book-custom-cover-img {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        object-fit: contain !important;
       }
     }
   </style>

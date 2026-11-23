@@ -1929,12 +1929,9 @@
 
       const sysInstruction =
         this.sysPrompts?.getPromptForMode?.(modeKey) || modeSpec.primaryGoal;
-      const bibleBlock =
-        this.storyBible?.buildCompiledBibleBlockForPrompt?.() ||
-        '(Chưa có dữ liệu Story Bible)';
       const sceneMarkersBlock =
         this.sceneBuilder?.buildCompiledSceneMarkersBlockForPrompt?.() ||
-        '(Chưa đặt mốc chuyển phân cảnh riêng)';
+        '';
 
       const activeChap =
         this.chapterMgr?.syncEditorToActiveChapter?.() ||
@@ -1946,148 +1943,79 @@
         };
 
       const userCommand = this.getResolvedUserCommand();
+      const antiClicheRaw = String(
+        document.getElementById('textarea-anti-cliche-blacklist')?.value || ''
+      ).trim().slice(0, 600);
 
-      // Truy xuất ký ức chống quên BM25 từ câu lệnh, tên chương và các mốc phân cảnh
-      const sceneKeywords = Array.isArray(this.sceneBuilder?.markers)
-        ? this.sceneBuilder.markers
-            .map((m) => `${m.pov || ''} ${m.location || ''} ${m.goal || ''}`)
-            .join(' ')
-        : '';
-      const ragQuery = `${userCommand} ${activeChap?.displayTitle || ''} ${sceneKeywords}`.trim();
-      const ragHits = this.rag?.search ? this.rag.search(ragQuery, 5) : [];
-      const ragBlock =
-        Array.isArray(ragHits) && ragHits.length > 0
-          ? ragHits
-              .map(
-                (h, i) =>
-                  `  • [Ký ức liên quan #${i + 1} từ ${h.chapterTitle}]:\n    "${h.text}"`
-              )
-              .join('\n')
-          : '  (Không có đoạn ký ức BM25 đặc biệt nào cần trích xuất thêm)';
-
-      // Bug 3: Không chèn đoạn [TÓM TẮT CÁC CHƯƠNG ĐÃ DUYỆT TRƯỚC ĐÓ] dư thừa vào Prompt Tổng —
-      // toàn bộ Story Bible chính thức (#textarea-rendered-bible-content + Nhân vật + Ma trận) đã được chép thẳng vào `bibleBlock`!
-      const approvedSummaries = '';
-
-      // Phân tích đoạn cuối bản thảo hiện tại để nối mạch mượt mà
+      // Đoạn cuối ngắn (~700 ký tự) của chương hiện tại để nối mạch mượt mà mà không làm phình prompt
       const currentText = String(activeChap?.content || '').trim();
-      const continuationInfo = this.inspector.buildSeamlessContinuationDirective(currentText);
-      const tailContext = continuationInfo.tailExcerpt;
+      const tailShort = currentText ? currentText.slice(-700).trim() : '';
 
-      // Xây dựng bảng kiểm định nhận thức nhân vật & phục bút tự động (Pre-Flight Guardrails)
-      const guardrailsBlock = this.inspector.buildEpistemicAndContinuityGuardrails(
-        this.storyBible,
-        this.sceneBuilder,
-        activeChap,
-        userCommand
-      );
-
-      // Nếu tác giả chưa nhập câu lệnh riêng, tự động tổng hợp chỉ thị thông minh từ Mốc phân cảnh & Story Bible
+      // Nếu tác giả chưa nhập câu lệnh riêng, tự tổng hợp chỉ thị súc tích
       const resolvedCommandText =
         userCommand ||
         `Hãy triển khai tiếp diễn biến của "${
           activeChap?.displayTitle || 'Chương hiện tại'
-        }" dựa theo các Mốc chuyển phân cảnh, Hồ sơ Story Bible và mạch văn bên trên một cách tự nhiên, sâu sắc và lôi cuốn nhất.`;
-
-      // Khi chạy Chế độ 1 (Viết bản thảo), gắn nguyên văn (KHÔNG CẮT XÉN) Tham mưu cốt truyện theo AI Gemini và/hoặc Tác giả tự viết
-      const mode2OutlineText =
-        modeKey === 'MODE_1_DRAFT' ? this.getCompiledMode1PlotOutlineForPrompt() : '';
-      const mode2WeaveSection = mode2OutlineText
-        ? [
-            ``,
-            `====================================================================`,
-            `🧭 THAM MƯU CỐT TRUYỆN & DIỄN BIẾN ĐÃ LIÊN KẾT (NGUYÊN VĂN 100%)`,
-            `====================================================================`,
-            `Hãy lồng ghép khéo léo và triển khai chậm rãi, giàu chiều sâu tâm lý theo toàn bộ diễn biến cốt truyện dưới đây kết hợp hài hòa với Story Bible, Mốc chuyển phân cảnh và Yêu cầu cá nhân của tác giả (tuyệt đối không tua nhanh sự kiện):`,
-            mode2OutlineText
-          ].join('\n')
-        : '';
+        }" bám sát tuyệt đối 2 tệp đính kèm (File Story Bible + File Tham mưu cốt truyện) một cách chậm rãi, sâu tâm lý, giàu ngũ quan và lôi cuốn nhất.`;
 
       const techSpecLines = [
-        `- Chương đang thực hiện : ${activeChap?.displayTitle || 'Chương 1'}`,
-        `- Chế độ thực thi       : ${modeSpec.title} (${modeKey})`,
-        `- Mục tiêu cốt lõi      : ${modeSpec.primaryGoal}`,
-        `- Độ dài mục tiêu       : Khoảng ${targetWords.toLocaleString('vi-VN')} từ (Triển khai kỹ lưỡng, giàu chi tiết)`,
-        `- Điểm nhìn (POV)       : ${pov}`,
-        `- Độ bay bổng (Temp)    : ${temp}`,
-        `- Định dạng hội thoại   : Bắt buộc dùng "- Câu thoại (Tên nhân vật)"`,
-        `- Hướng dẫn cấu trúc    :`,
+        `- Chương đang viết    : ${activeChap?.displayTitle || 'Chương 1'}`,
+        `- Chế độ thực thi     : ${modeSpec.title} (${modeKey})`,
+        `- Độ dài mục tiêu     : Khoảng ${targetWords.toLocaleString('vi-VN')} từ (Triển khai kỹ lưỡng, không tua nhanh sự kiện)`,
+        `- Điểm nhìn (POV)     : ${pov}`,
+        `- Độ bay bổng (Temp)  : ${temp}`,
+        `- Định dạng hội thoại : Bắt buộc dùng "- Câu thoại (Tên nhân vật)"`,
+        `- Cấu trúc đầu ra     :`,
         ...modeSpec.outputStructureGuide.map((line) => `  ${line}`)
       ].join('\n');
 
-      // Lưu bảng phân tích dung lượng ngữ cảnh để hiển thị trong Cửa sổ Kiểm tra Ngữ cảnh
+      // Lưu thống kê ngữ cảnh gọn nhẹ
       this.lastContextBreakdown = this.inspector.analyzeContextLayers({
         sysInstruction,
         techSpecBlock: techSpecLines,
-        bibleBlock,
-        sceneMarkersBlock,
-        approvedSummariesBlock: mode2OutlineText || approvedSummaries,
-        ragBlock,
-        tailContextBlock: tailContext,
+        bibleBlock: '(Đính kèm qua File PDF Story Bible)',
+        sceneMarkersBlock: sceneMarkersBlock || '(Không có)',
+        approvedSummariesBlock: '(Đính kèm qua File PDF Tham Mưu Cốt Truyện)',
+        ragBlock: '(Đọc trực tiếp từ 2 file đính kèm)',
+        tailContextBlock: tailShort,
         userCommandBlock: resolvedCommandText
       });
 
-      const modeSceneWeaveDirective =
-        modeKey === 'MODE_2_BRAINSTORM'
-          ? [
-              ``,
-              `====================================================================`,
-              `🎬 CHỈ THỊ HỢP NHẤT CHẾ ĐỘ 2 × STORY BIBLE × MỐC PHÂN CẢNH / POV`,
-              `====================================================================`,
-              `• Khi đề xuất dàn ý & diễn biến cốt truyện ở Chế độ 2, BẮT BUỘC đối chiếu 100% Hồ sơ Story Bible (Ma trận Ai Biết Gì, Sổ cái phục bút) VÀ tuân thủ đúng Mốc chuyển phân cảnh + Điểm nhìn POV [${pov}] đã cài đặt bên dưới.`,
-              `• Chia dàn ý rõ ràng theo từng phân cảnh/POV (không tua nhanh, không làm lộ bí mật cho nhân vật chưa biết).`
-            ].join('\n')
-          : modeKey === 'MODE_1_DRAFT'
-            ? [
-                ``,
-                `====================================================================`,
-                `🎬 CHỈ THỊ HỢP NHẤT CHẾ ĐỘ 1 × STORY BIBLE × MỐC PHÂN CẢNH / POV`,
-                `====================================================================`,
-                `• Khi viết bản thảo Chế độ 1, BẮT BUỘC bám sát 100% Hồ sơ Story Bible, toàn bộ Mốc chuyển phân cảnh / Đổi góc nhìn POV đã cài đặt và Dàn ý Chế độ 2 (nếu có) theo điểm nhìn [${pov}].`
-              ].join('\n')
-            : '';
+      const sysTrimmed = String(sysInstruction || '').trim().slice(0, 3200);
+      const sceneSection =
+        sceneMarkersBlock && !/Chưa đặt mốc/i.test(sceneMarkersBlock)
+          ? `\n=== [MỐC CHUYỂN PHÂN CẢNH / ĐỔI POV] ===\n${sceneMarkersBlock.slice(0, 1400)}\n`
+          : '';
+      const antiClicheSection = antiClicheRaw
+        ? `\n[TỪ SÁO RỖNG CẤM DÙNG]: ${antiClicheRaw}\n`
+        : '';
+      const tailSection = tailShort
+        ? `\n=== [ĐOẠN CUỐI CHƯƠNG HIỆN TẠI ĐỂ NỐI MẠCH] ===\n...${tailShort}\n`
+        : '';
 
       const rawPrompt = [
-        `####################################################################`,
-        `🌟 PROMPT TỔNG HỢP CHÍNH THỨC (MASTER SYNTHESIZED NOVEL PROMPT)`,
-        `####################################################################`,
+        `🌟 PROMPT VIẾT TIỂU THUYẾT CHÍNH THỨC — CHẾ ĐỘ 1 (SÚC TÍCH ≤ 10.000 KÝ TỰ)`,
         ``,
-        `=== [PHẦN 1: VAI TRÒ & CHỈ THỊ HỆ THỐNG (${modeKey})] ===`,
-        sysInstruction,
+        `📎 TÀI LIỆU ĐÍNH KÈM (TÁC GIẢ TẢI KÈM 2 FILE LÊN GEMINI CÙNG CÂU LỆNH NÀY):`,
+        `  1. 📄 FILE 1 — STORY BIBLE (PDF): Đọc kỹ 100% Hồ sơ nhân vật, Dòng thời gian, Tài sản/Thương tích, Sổ cái phục bút và Ma trận "Ai Biết Gì" (TUYỆT ĐỐI không để lộ bí mật cho nhân vật chưa biết, không lệch mốc giờ/tiền bạc/OOC).`,
+        `  2. 🧭 FILE 2 — THAM MƯU CỐT TRUYỆN (PDF): Bám sát toàn bộ diễn biến & dàn ý đã chốt trong file này, triển khai nhịp chậm rãi, giàu căng thẳng tâm lý và chiều sâu ngũ quan (KHÔNG tua nhanh hay rút gọn sự kiện).`,
         ``,
-        `=== [PHẦN 2: THÔNG SỐ KỸ THUẬT & TIÊU CHUẨN ĐẦU RA] ===`,
+        `=== [VAI TRÒ & QUY TẮC VĂN HỌC CỐT LÕI] ===`,
+        sysTrimmed,
+        ``,
+        `=== [THÔNG SỐ KỸ THUẬT] ===`,
         techSpecLines,
-        modeSceneWeaveDirective,
-        ``,
-        bibleBlock,
-        ``,
-        sceneMarkersBlock,
-        mode2WeaveSection,
-        ``,
-        `====================================================================`,
-        `🛡️ KIỂM ĐỊNH LOGIC, NHẬN THỨC NHÂN VẬT & PHỤC BÚT TRƯỚC KHI VIẾT`,
-        `====================================================================`,
-        guardrailsBlock || '• Tuân thủ đầy đủ hồ sơ nhân vật và bối cảnh trong Story Bible.',
-        ``,
-        `====================================================================`,
-        `🔗 NGỮ CẢNH KÝ ỨC CỤC BỘ (BM25 RAG) & ĐOẠN NỐI MẠCH CHƯƠNG HIỆN TẠI`,
-        `====================================================================`,
-        `[CHI TIẾT KÝ ỨC CỤC BỘ TRÍCH XUẤT THEO NGỮ CẢNH (BM25 RAG)]:`,
-        ragBlock,
-        ``,
-        `[ĐOẠN VĂN CUỐI TRONG BẢN THẢO HIỆN TẠI ĐỂ NỐI MẠCH]:`,
-        tailContext,
-        `-> Chỉ dẫn nối mạch: ${continuationInfo.continuationHint}`,
-        ``,
+        sceneSection,
+        antiClicheSection,
+        tailSection,
         `********************************************************************`,
         `⭐ YÊU CẦU / CÂU LỆNH CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN THỰC THI CAO NHẤT) ⭐`,
         `********************************************************************`,
         resolvedCommandText,
         `********************************************************************`,
         ``,
-        `====================================================================`,
-        `🚀 CHỈ THỊ BẮT ĐẦU: Hãy thực thi ngay yêu cầu cá nhân trên với chất lượng văn học cao nhất, tuân thủ 100% Story Bible, Tham mưu cốt truyện, Mốc chuyển phân cảnh và Ma trận Ai Biết Gì!`
-      ].join('\n');
+        `🚀 BẮT ĐẦU: Đọc kỹ 2 file đính kèm (Story Bible + Tham mưu cốt truyện) rồi viết thẳng bản thảo chương truyện đạt chất lượng văn học cao nhất!`
+      ].join('\n').replace(/\n{3,}/g, '\n\n');
       const trPrompt = window.NoirNovel?.i18n?.translatePromptFrame;
       return typeof trPrompt === 'function' ? trPrompt(rawPrompt) : rawPrompt;
     }
@@ -2266,52 +2194,39 @@
       };
 
       if (modeKey === 'MODE_2_BRAINSTORM') {
-        const recentChapterHint = chapText || '(Chương hiện tại đang trống)';
+        const recentChapterHint = chapText ? chapText.slice(-650).trim() : '';
         const sceneMarkersBlock =
-          this.sceneBuilder?.buildCompiledSceneMarkersBlockForPrompt?.() ||
-          '(Chưa đặt mốc chuyển phân cảnh riêng)';
-        let guardrailsBlock = '';
-        try {
-          guardrailsBlock = this.inspector?.buildEpistemicAndContinuityGuardrails?.(
-            this.storyBible,
-            this.sceneBuilder,
-            activeChap,
-            cleanCmd
-          ) || '';
-        } catch (_eGuard) {
-          guardrailsBlock = '';
-        }
+          this.sceneBuilder?.buildCompiledSceneMarkersBlockForPrompt?.() || '';
+        const sysTrimmed = String(sysInstruction || '').trim().slice(0, 3200);
+        const sceneSection =
+          sceneMarkersBlock && !/Chưa đặt mốc/i.test(sceneMarkersBlock)
+            ? `\n[MỐC CHUYỂN PHÂN CẢNH / POV]:\n${sceneMarkersBlock.slice(0, 1200)}\n`
+            : '';
+        const tailSection = recentChapterHint
+          ? `\n[ĐOẠN CUỐI CHƯƠNG HIỆN TẠI (${activeChap?.displayTitle || 'Chương hiện tại'})]:\n...${recentChapterHint}\n`
+          : '';
         return wrapModePrompt([
-          `####################################################################`,
-          `🧭 CHẾ ĐỘ 2: THAM MƯU CỐT TRUYỆN & THIẾT KẾ DIỄN BIẾN CHUYÊN SÂU`,
-          `####################################################################`,
-          `[1. KHUNG PROMPT CỐ ĐỊNH & VAI TRÒ THAM MƯU]:`,
-          sysInstruction,
+          `🧭 CHẾ ĐỘ 2: THAM MƯU CỐT TRUYỆN & THIẾT KẾ DIỄN BIẾN CHUYÊN SÂU (SÚC TÍCH ≤ 10.000 KÝ TỰ)`,
           ``,
-          `[2. TOÀN BỘ STORY BIBLE, HỒ SƠ NHÂN VẬT, MA TRẬN AI BIẾT GÌ, SỔ CÁI PHỤC BÚT & TỪ CẤM (NGUYÊN VĂN 100%)]:`,
-          bibleBlock,
+          `📎 TÀI LIỆU ĐÍNH KÈM: Tác giả sẽ tải kèm FILE PDF STORY BIBLE lên Gemini cùng câu lệnh này. AI BẮT BUỘC đối chiếu 100% File PDF Story Bible đính kèm (Hồ sơ nhân vật, Dòng thời gian, Tài sản/Thương tích, Sổ cái phục bút và Ma trận "Ai Biết Gì") — TUYỆT ĐỐI không lệch logic và không làm lộ bí mật cho nhân vật chưa biết!`,
           ``,
-          sceneMarkersBlock,
+          `[1. VAI TRÒ & KHUNG THAM MƯU CỐT LÕI]:`,
+          sysTrimmed,
           ``,
-          `[3. RÀNG BUỘC LOGIC & NHẬN THỨC NHÂN VẬT]:`,
-          guardrailsBlock || '• Tuyệt đối tôn trọng Ma trận Ai Biết Gì và tính nhất quán nhân vật.',
-          ``,
-          `[4. NGỮ CẢNH BẢN THẢO HIỆN TẠI (${activeChap?.displayTitle || 'Chương hiện tại'})]:`,
-          recentChapterHint,
-          ``,
-          `[5. CHƯƠNG ĐANG CHUẨN BỊ / ĐIỂM NHÌN POV]: ${activeChap?.displayTitle || 'Chương tiếp theo'} · POV: ${pov}`,
-          `[MỤC TIÊU ĐẦU RA]:`,
+          `[2. CHƯƠNG ĐANG CHUẨN BỊ & TIÊU CHUẨN ĐẦU RA]:`,
+          `- Chương: ${activeChap?.displayTitle || 'Chương tiếp theo'} · Điểm nhìn POV: ${pov}`,
           ...modeSpec.outputStructureGuide,
-          `- Tuyệt đối triển khai nhịp chậm, giàu căng thẳng tâm lý, không tua nhanh sự kiện hay giải quyết mâu thuẫn hời hợt.`,
-          ``,
+          `- Triển khai nhịp chậm rãi, giàu đấu trí và căng thẳng tâm lý; chia rõ từng phân cảnh cụ thể, tuyệt đối không tua nhanh sự kiện hay giải quyết mâu thuẫn hời hợt.`,
+          sceneSection,
+          tailSection,
           `********************************************************************`,
           `⭐ YÊU CẦU / DÀN Ý CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN THỰC THI CAO NHẤT) ⭐`,
           `********************************************************************`,
-          cleanCmd || `Hãy phát triển 3 phương án diễn biến chi tiết cho chương tiếp theo khớp 100% Story Bible bên trên (triển khai chậm rãi, gài phục bút tinh tế, không tua nhanh sự kiện).`,
+          cleanCmd || `Hãy đọc kỹ File PDF Story Bible tôi đính kèm và phát triển 3 phương án diễn biến chi tiết theo từng phân cảnh cho chương tiếp theo (chậm rãi, gài phục bút tinh tế, không tua nhanh sự kiện).`,
           `********************************************************************`,
           ``,
-          `🚀 Hãy trả lời thành bản tham mưu rõ ràng từng phân cảnh để tác giả chốt và chuyển thẳng sang Chế độ 1 viết tiểu thuyết.`
-        ]);
+          `🚀 Hãy trình bày bản tham mưu rõ ràng từng phân cảnh (có thể dùng bảng biểu) để tôi chốt và đưa sang Chế độ 1 viết tiểu thuyết.`
+        ].join('\n').replace(/\n{3,}/g, '\n\n'));
       }
 
       if (modeKey === 'MODE_3_AUDIT') {
@@ -2397,16 +2312,19 @@
       }
 
       const rawMode5 = [
-        `🎨 CHẾ ĐỘ 5: VẼ SƠ ĐỒ CỐT TRUYỆN, TIMELINE & MINDMAP (GOOGLE NOTEBOOKLM)`,
+        `🎨 CHẾ ĐỘ 5: VẼ SƠ ĐỒ CỐT TRUYỆN, TIMELINE & MẠNG LƯỚI NHÂN VẬT DẠNG PLAINTEXT MÃ ASCII CHUẨN ĐẸP`,
         `(Bám sát tuyệt đối bản Story Bible bạn đã tổng hợp ở phần trên và toàn bộ các chương truyện tôi đã tải lên làm nguồn).`,
         ``,
-        `Hãy tổng hợp ngắn gọn, rõ ràng theo đúng 3 sơ đồ phân nhánh để tôi dễ theo dõi (và tạo Bản đồ tư duy / Báo cáo ở thanh Studio bên phải NotebookLM):`,
-        `1. SƠ ĐỒ TRỤC THỜI GIAN (TIMELINE): Theo đúng thứ tự Arc → Hồi/Chương → Mốc giờ/ngày → Địa điểm → Bước ngoặt chính.`,
-        `2. SƠ ĐỒ MẠNG LƯỚI NHÂN VẬT & PHE PHÁI: Đồng minh, đối thủ, và bí mật mỗi người đang nắm giữ.`,
-        `3. CÂY PHỤC BÚT & NGÒI NỔ: Phân tách [ĐÃ KÍCH NỔ] vs [ĐANG TREO CHỜ BÙNG NỔ] (kèm ghi chú nếu phát hiện điểm lệch logic).`,
+        `YÊU CẦU ĐỊNH DẠNG BẮT BUỘC (ĐỂ TÔI COPY THẲNG KHÔNG BỊ VỠ KHUNG):`,
+        `- Hãy vẽ toàn bộ sơ đồ đặt bên trong 1 khối mã Plaintext (code block \`\`\`text ... \`\`\`) dùng ký tự kẻ khung Unicode sắc nét (┌ ─ ┐ │ └ ┘ ├ ┤ ┬ ┴ ┼ ──▶ ▼ ◄── ═══), căn lề thẳng hàng tuyệt đối, mũi tên chỉ hướng rõ ràng, khoảng trắng thoáng dễ nhìn, KHÔNG bị lệch dòng.`,
+        `- Nếu dùng Google NotebookLM: hãy vừa vẽ khối sơ đồ Plaintext ASCII thật đẹp rõ mũi tên trong khung chat, vừa gợi ý cấu trúc để tạo Bản đồ tư duy / Báo cáo trực quan ở thanh Studio bên phải.`,
+        `- Bao gồm 3 sơ đồ nối tiếp rõ ràng:`,
+        `  1. SƠ ĐỒ TRỤC THỜI GIAN (TIMELINE): Arc → Hồi/Chương → Mốc giờ/ngày → Địa điểm → Bước ngoặt chính (có mũi tên ──▶ và ▼ mạch lạc).`,
+        `  2. SƠ ĐỒ MẠNG LƯỚI NHÂN VẬT & PHE PHÁI: Ai là đồng minh (<══>), đối thủ (──✖──), ai đang giấu bí mật gì với ai.`,
+        `  3. CÂY PHỤC BÚT & NGÒI NỔ: Phân tách [ĐÃ KÍCH NỔ] vs [ĐANG TREO CHỜ BÙNG NỔ] (kèm đánh dấu [!] nếu có điểm lệch logic).`,
         ``,
         `⭐ YÊU CẦU VẼ SƠ ĐỒ CÁ NHÂN CỦA NGƯỜI DÙNG:`,
-        cleanCmd || `Hãy vẽ sơ đồ cốt truyện, trục timeline hiện tại, mạng lưới nhân vật và tạo thêm Mindmap trực quan dựa trên Story Bible và toàn bộ các chương đã tải lên.`
+        cleanCmd || `Hãy vẽ sơ đồ cốt truyện, trục timeline hiện tại, mạng lưới nhân vật và cây phục bút dạng Plaintext mã ASCII sắc nét, mũi tên rõ ràng dễ nhìn để tôi copy trực tiếp vào Studio.`
       ].join('\n');
       const trPrompt = window.NoirNovel?.i18n?.translatePromptFrame;
       return typeof trPrompt === 'function' ? trPrompt(rawMode5) : rawMode5;
@@ -3971,9 +3889,27 @@
       } catch (_eResize) {}
 
       const winName = isNotebook ? 'noir_split_notebooklm_window' : 'noir_split_gemini_window';
+      // Singleton: tối đa 1 cửa sổ Gemini + 1 cửa sổ NotebookLM bật cùng lúc — nếu cửa sổ đó đang mở sẵn thì điều hướng & focus thẳng qua nó, KHÔNG tạo cửa sổ thứ 2!
+      const existingWin = isNotebook ? this._activeNotebookLmWin : this._activeGeminiWin;
+      if (existingWin && !existingWin.closed) {
+        try {
+          existingWin.focus();
+          window.NoirStudio?.utils?.showToast?.(
+            isNotebook
+              ? '✨ Cửa sổ Google NotebookLM đang mở sẵn — Đã chuyển thẳng qua cửa sổ đó (bấm Ctrl+V để dán câu lệnh)!'
+              : '✨ Cửa sổ Gemini đang mở sẵn — Đã chuyển thẳng qua cửa sổ đó (bấm Ctrl+V để dán câu lệnh)!',
+            'success',
+            3600
+          );
+          return true;
+        } catch (_eFocus) {}
+      }
+
       const features = `popup=yes,resizable=yes,scrollbars=yes,left=${rightX},top=${availTop},width=${halfW},height=${availH}`;
       const opened = window.open(webUrl, winName, features);
       if (opened) {
+        if (isNotebook) this._activeNotebookLmWin = opened;
+        else this._activeGeminiWin = opened;
         try { opened.focus(); } catch (_eF) {}
         window.NoirStudio?.utils?.showToast?.(
           isNotebook
@@ -4104,19 +4040,26 @@
         </div>
       `;
 
+      const guideDrawerHtml =
+        window.NoirStudio?.aiGuides?.buildCollapsibleSplitGuideHtml?.(
+          isNotebook ? 'NOTEBOOKLM' : 'GEMINI',
+          modeKey
+        ) || '';
+
       modal.innerHTML = `
-        <div class="my-auto w-full max-w-xl rounded-2xl border-2 border-indigo-400/75 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden text-xs">
+        <div class="my-auto w-full max-w-2xl rounded-2xl border-2 border-indigo-400/75 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden text-xs">
           <div class="px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-indigo-950/80 via-violet-950/60 to-zinc-950 flex items-center justify-between gap-2">
             <div class="font-extrabold text-sm text-indigo-200">${targetTitle}</div>
             <button type="button" id="btn-close-split-bridge-modal" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-rose-600 text-white font-bold">✕</button>
           </div>
-          <div class="p-4 space-y-3">
+          <div class="p-4 space-y-3 max-h-[82vh] overflow-y-auto">
             <div class="p-2.5 rounded-xl border border-emerald-500/50 bg-emerald-950/35 text-emerald-100 font-bold flex items-center justify-between gap-2">
               <span>✅ Đã copy câu lệnh thành công vào bộ nhớ tạm!</span>
               <button type="button" id="btn-split-bridge-recopy" class="px-2.5 py-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-500 text-white text-[10.5px] font-bold shrink-0">📋 Copy lại</button>
             </div>
             ${modelReminderHtml}
             ${mode6TipHtml}
+            ${guideDrawerHtml}
             ${explainBoxHtml}
             <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
               ${
@@ -4146,6 +4089,7 @@
       `;
 
       document.body.appendChild(modal);
+      window.NoirStudio?.aiGuides?.bindCollapsibleSplitGuideEvents?.(modal);
       window.NoirStudio?.i18n?.translateElement?.(modal);
 
       const close = () => modal.remove();
@@ -5587,18 +5531,371 @@
     }
   }
 
+  // ============================================================================
+  // PHẦN V110: CẨM NANG HƯỚNG DẪN TRỰC QUAN GEMINI & NOTEBOOKLM TỪ A ĐẾN Z
+  // (Mô phỏng giống hệt giao diện thật — nhúng vào mọi popup Chia đôi & Tab 6 Mục 1)
+  // ============================================================================
+  class V110AiPlatformVisualGuideStudio {
+    constructor() {
+      this._styleInjected = false;
+    }
+
+    ensureStyles() {
+      if (this._styleInjected || typeof document === 'undefined') return;
+      if (document.getElementById('noir-v110-ai-guide-styles')) {
+        this._styleInjected = true;
+        return;
+      }
+      const st = document.createElement('style');
+      st.id = 'noir-v110-ai-guide-styles';
+      st.textContent = `
+        @keyframes noirV110GuideBlink6s {
+          0%, 100% {
+            box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.25);
+            border-color: rgba(251, 191, 36, 0.65);
+            background-color: rgba(120, 53, 15, 0.35);
+          }
+          50% {
+            box-shadow: 0 0 22px 4px rgba(251, 191, 36, 0.72);
+            border-color: rgba(253, 224, 71, 1);
+            background-color: rgba(180, 83, 9, 0.55);
+          }
+        }
+        .noir-v110-blink-6s {
+          animation: noirV110GuideBlink6s 1s ease-in-out 6;
+        }
+      `;
+      document.head.appendChild(st);
+      this._styleInjected = true;
+    }
+
+    buildGeminiGuideStepsHtml(modeKey = '') {
+      const isCoverMode = modeKey === 'MODE_6_BOOK_COVER';
+      return `
+        <div class="space-y-3 text-[11.5px] leading-relaxed text-zinc-200">
+          <!-- Bước 1: Mở thẳng Gemini & giao diện chính -->
+          <div class="p-3 rounded-xl border border-indigo-500/40 bg-zinc-900/90 space-y-2.5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="font-black text-amber-300">Bước 1: Mở thẳng giao diện chính Gemini &amp; chọn mô hình</div>
+              <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[11px] shadow transition">
+                🚀 Mở thẳng Gemini (gemini.google.com) ↗
+              </a>
+            </div>
+            <p class="text-[11px] text-zinc-300">Bấm nút xanh bên phải (hoặc nút Chia đôi màn hình) để vào thẳng màn hình chính của Gemini. Ở góc phải thanh chat, chọn mô hình phù hợp (<strong class="text-emerald-300">Pro / Flash / Neon</strong>).</p>
+            <!-- Mockup giao diện chính Gemini -->
+            <div class="rounded-xl border border-zinc-700/80 bg-[#131314] p-3 space-y-2.5 font-sans shadow-inner">
+              <div class="flex items-center justify-between text-[11px] text-zinc-400">
+                <span class="font-bold text-zinc-200 flex items-center gap-1.5"><span class="text-sky-400">✦</span> Gemini</span>
+                <span class="px-2 py-0.5 rounded-full bg-zinc-800 border border-zinc-700 text-[10px] text-zinc-300">Tài khoản Google của bạn</span>
+              </div>
+              <div class="text-center py-1">
+                <div class="text-sm font-bold bg-gradient-to-r from-sky-400 via-indigo-300 to-rose-300 bg-clip-text text-transparent">Xin chào, hôm nay chúng ta viết chương nào?</div>
+              </div>
+              <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-full border border-zinc-700 bg-[#1e1f20]">
+                <div class="flex items-center gap-2 text-zinc-400">
+                  <span class="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-600 flex items-center justify-center text-white font-black text-sm">+</span>
+                  <span class="text-xs">Hỏi Gemini</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="px-2 py-0.5 rounded-lg border-2 border-amber-400 bg-amber-500/20 text-amber-200 font-extrabold text-[10.5px]">Pro / Neon ▾</span>
+                  <span class="px-1.5 py-0.5 rounded bg-amber-400 text-zinc-950 font-black text-[9px]">CHỌN MÔ HÌNH</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bước 2: Bấm dấu + để tải tệp PDF Story Bible / Tham mưu / File .TXT ASCII -->
+          <div class="p-3 rounded-xl border border-emerald-500/40 bg-zinc-900/90 space-y-2.5">
+            <div class="font-black text-emerald-300">Bước 2: Bấm dấu (+) bên trái thanh "Hỏi Gemini" → Tải tệp PDF lên</div>
+            <p class="text-[11px] text-zinc-300">
+              • <strong>Chế độ 2 (Tham mưu):</strong> Up <strong>1 file PDF Story Bible</strong>.<br/>
+              • <strong>Chế độ 1 (Viết truyện):</strong> Up <strong>2 file PDF</strong> (<em>Story Bible</em> + <em>Tham mưu cốt truyện</em>).<br/>
+              • <strong>Chế độ 5 (Chuyển mã ASCII → Ảnh đẹp):</strong> Up <strong>1 file <code>.TXT</code></strong> mã sơ đồ ASCII.
+            </p>
+            <!-- Mockup menu dấu + của Gemini giống thật -->
+            <div class="rounded-xl border border-zinc-700/80 bg-[#0d1122] p-3 flex flex-col items-center">
+              <div class="w-full max-w-md space-y-2">
+                <div class="flex items-center justify-between px-3 py-2 rounded-full border border-zinc-600 bg-[#1e1f20]">
+                  <div class="flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-amber-400 text-zinc-950 flex items-center justify-center font-black text-sm shadow">+</span>
+                    <span class="text-xs text-zinc-400">Hỏi Gemini</span>
+                  </div>
+                  <span class="text-xs font-bold text-indigo-300">Neon ▾</span>
+                </div>
+                <div class="w-64 rounded-2xl border border-zinc-700 bg-[#1e1f20] p-2 space-y-1 shadow-xl">
+                  <div class="flex items-center justify-between px-2.5 py-2 rounded-xl border-2 border-amber-400 bg-amber-500/15">
+                    <span class="font-extrabold text-amber-100 text-xs">📎 Tải tệp lên</span>
+                    <span class="px-2 py-0.5 rounded-md bg-amber-400 text-zinc-950 font-black text-[9.5px]">BẤM ĐÂY</span>
+                  </div>
+                  <div class="px-2.5 py-1.5 rounded-lg text-zinc-400 text-xs">▲ Thêm từ Drive</div>
+                  <div class="flex items-center justify-between px-2.5 py-1.5 rounded-xl ${
+                    isCoverMode ? 'border-2 border-violet-400 bg-violet-500/20 text-violet-100 font-extrabold' : 'text-zinc-300'
+                  } text-xs">
+                    <span>🖼️ Tạo hình ảnh</span>
+                    ${isCoverMode ? '<span class="px-1.5 py-0.5 rounded bg-violet-400 text-zinc-950 font-black text-[9px]">DÙNG CHO BÌA</span>' : '<span class="text-[9.5px] text-zinc-500">(Chế độ 6 / Vẽ ảnh)</span>'}
+                  </div>
+                  <div class="px-2.5 py-1.5 rounded-lg text-zinc-500 text-xs">🎬 Tạo video</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bước 3: Dán câu lệnh đã copy & bấm Gửi -->
+          <div class="p-3 rounded-xl border border-violet-500/40 bg-zinc-900/90 space-y-2.5">
+            <div class="font-black text-violet-300">Bước 3: Dán câu lệnh đã copy (Ctrl+V / Dán) &amp; bấm Gửi (➤)</div>
+            <p class="text-[11px] text-zinc-300">Câu lệnh tổng hợp đã được web tự động copy sẵn. Bạn chỉ cần nhấn <kbd class="px-1.5 py-0.5 rounded bg-zinc-800 text-emerald-300 font-mono">Ctrl+V</kbd> (hoặc chạm giữ → Dán trên điện thoại) rồi bấm nút Gửi.</p>
+            <div class="rounded-xl border border-zinc-700/80 bg-[#1e1f20] p-3 space-y-2">
+              <div class="flex flex-wrap gap-1.5">
+                <span class="px-2 py-1 rounded-lg bg-rose-500/15 border border-rose-400/45 text-rose-200 text-[10.5px] font-bold">📄 Story_Bible.pdf</span>
+                <span class="px-2 py-1 rounded-lg bg-cyan-500/15 border border-cyan-400/45 text-cyan-200 text-[10.5px] font-bold">📄 Tham_Muu_Cot_Truyen.pdf</span>
+              </div>
+              <div class="flex items-end justify-between gap-2 pt-1 border-t border-zinc-700/60">
+                <div class="text-[11px] text-emerald-200 italic truncate">✍️ [Đã dán câu lệnh tổng hợp tối ưu &lt; 10.000 ký tự...]</div>
+                <span class="px-2.5 py-1 rounded-full bg-indigo-500 text-white font-black text-xs shrink-0 shadow">➤ Gửi</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bước 4: Copy kết quả về Web -->
+          <div class="p-3 rounded-xl border border-cyan-500/40 bg-zinc-900/90 space-y-1.5">
+            <div class="font-black text-cyan-300">Bước 4: Chép kết quả ngược về Web Viết Tiểu Thuyết Của Bi</div>
+            <p class="text-[11px] text-zinc-300">
+              • Bấm biểu tượng <strong>📋 Sao chép</strong> ở cuối câu trả lời Gemini → dán vào <strong>Cửa sổ đầu ra Tab 3</strong> (hỗ trợ chuẩn Word giữ nguyên bảng biểu &amp; ảnh, có nút tải PDF) hoặc bấm <strong>Chèn nối tiếp / Thay thế</strong> đưa thẳng vào bản thảo.<br/>
+              • Riêng <strong>Ảnh Bìa (Chế độ 6)</strong>: Chuột phải <em>Sao chép hình ảnh</em> (hoặc tải ảnh) → dán <code>Ctrl+V</code> vào Kho Bìa Chế độ 6 để tự động lưu thư mục &amp; gắn vào xuất sách PDF!
+            </p>
+          </div>
+        </div>
+      `;
+    }
+
+    buildNotebookLmGuideStepsHtml() {
+      return `
+        <div class="space-y-3 text-[11.5px] leading-relaxed text-zinc-200">
+          <!-- Bước 1: Mở thẳng Google NotebookLM & Tạo Sổ mới -->
+          <div class="p-3 rounded-xl border border-sky-500/45 bg-zinc-900/90 space-y-2.5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="font-black text-amber-300">Bước 1: Mở thẳng Google NotebookLM &amp; bấm "+ Tạo mới"</div>
+              <a href="https://notebooklm.google.com/" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-[11px] shadow transition">
+                🚀 Mở thẳng NotebookLM (notebooklm.google.com) ↗
+              </a>
+            </div>
+            <p class="text-[11px] text-zinc-300">Bấm link xanh bên phải để mở trang chủ Google NotebookLM, sau đó bấm nút <strong class="text-amber-200">+ Tạo mới (Create new)</strong> để mở một Sổ tay riêng cho bộ tiểu thuyết của bạn.</p>
+            <!-- Mockup màn hình chính NotebookLM -->
+            <div class="rounded-xl border border-zinc-700/80 bg-[#17191e] p-3 space-y-2.5 font-sans">
+              <div class="flex items-center justify-between">
+                <span class="font-extrabold text-zinc-100 text-xs flex items-center gap-1.5">📓 NotebookLM</span>
+                <span class="px-2.5 py-1 rounded-full border-2 border-amber-400 bg-amber-500/20 text-amber-100 font-black text-[10.5px] flex items-center gap-1.5 shadow">
+                  <span>+ Tạo mới</span>
+                  <span class="px-1.5 py-0.5 rounded bg-amber-400 text-zinc-950 text-[9px]">BẤM ĐÂY</span>
+                </span>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="p-2.5 rounded-xl border border-dashed border-sky-400/60 bg-sky-950/25 text-center text-[10.5px] text-sky-200 font-bold">
+                  ➕ Tạo sổ ghi chú tiểu thuyết mới
+                </div>
+                <div class="p-2.5 rounded-xl border border-zinc-700 bg-zinc-900/80 text-[10.5px]">
+                  <div class="font-bold text-zinc-200 truncate">📘 Sổ tay Truyện của tôi</div>
+                  <div class="text-[9.5px] text-zinc-400 mt-0.5">3 nguồn · Story Bible</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bước 2: Up file nguồn (Sources) bên trái -->
+          <div class="p-3 rounded-xl border border-emerald-500/45 bg-zinc-900/90 space-y-2.5">
+            <div class="font-black text-emerald-300">Bước 2: Tải file chương truyện (.TXT / .PDF) vào cột "Nguồn (Sources)" bên trái</div>
+            <p class="text-[11px] text-zinc-300">Bấm <strong>+ Thêm nguồn</strong> ở cột trái → chọn <strong>📤 Tải tệp lên</strong> để nạp file gộp toàn bộ chương (tải ở Tab 4) và/hoặc file PDF Story Bible. NotebookLM đọc chính xác hàng trăm chương mà <strong>không bao giờ quên chi tiết</strong>!</p>
+            <!-- Mockup giao diện 3 cột NotebookLM thật -->
+            <div class="rounded-xl border border-zinc-700/80 bg-[#17191e] p-2.5 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10.5px]">
+              <!-- Cột 1: Nguồn -->
+              <div class="p-2 rounded-lg border-2 border-amber-400 bg-zinc-950/90 space-y-1.5">
+                <div class="flex items-center justify-between font-bold text-amber-200">
+                  <span>📂 Nguồn (Sources)</span>
+                  <span class="px-1 py-0.5 rounded bg-amber-400 text-zinc-950 font-black text-[8.5px]">BƯỚC 2</span>
+                </div>
+                <div class="px-2 py-1.5 rounded-lg bg-emerald-600/25 border border-emerald-400/60 text-emerald-200 font-extrabold text-center">
+                  + Thêm nguồn (Upload PDF/TXT)
+                </div>
+                <div class="space-y-1 text-[10px] text-zinc-300">
+                  <div class="px-1.5 py-1 rounded bg-zinc-900 flex items-center gap-1">☑️ 📄 Toan_Bo_Chuong.txt</div>
+                  <div class="px-1.5 py-1 rounded bg-zinc-900 flex items-center gap-1">☑️ 📄 Story_Bible.pdf</div>
+                </div>
+              </div>
+              <!-- Cột 2: Trò chuyện -->
+              <div class="p-2 rounded-lg border border-sky-500/50 bg-zinc-950/80 space-y-1.5">
+                <div class="font-bold text-sky-300">💬 Trò chuyện (Chat)</div>
+                <div class="p-1.5 rounded bg-zinc-900 text-[9.5px] text-zinc-300">
+                  Dán <code>Ctrl+V</code> câu lệnh đã copy → Bấm <strong>➤</strong> để cập nhật Story Bible / vẽ mã sơ đồ ASCII!
+                </div>
+                <div class="px-2 py-1 rounded-lg border border-amber-400/70 bg-amber-500/15 text-amber-200 font-bold text-[9.5px] text-center">
+                  📌 Lưu vào ghi chú (Save to note)
+                </div>
+              </div>
+              <!-- Cột 3: Studio -->
+              <div class="p-2 rounded-lg border border-violet-500/55 bg-zinc-950/80 space-y-1.5">
+                <div class="font-bold text-violet-300">✨ Studio (Cột Phải)</div>
+                <div class="grid grid-cols-1 gap-1 text-[9.5px]">
+                  <div class="px-1.5 py-1 rounded bg-violet-500/20 border border-violet-400/50 text-violet-100 font-bold">🗺️ Bản đồ tư duy (Mind Map)</div>
+                  <div class="px-1.5 py-1 rounded bg-cyan-500/20 border border-cyan-400/50 text-cyan-100 font-bold">📊 Báo cáo &amp; Hình ảnh / Slide</div>
+                  <div class="px-1.5 py-1 rounded bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 font-bold">📝 Ghi chú đã lưu (+ Thêm ghi chú)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bước 3: Chat, Tạo Ghi Chú & Xem Báo Cáo Hình Ảnh / Mind Map trong Studio -->
+          <div class="p-3 rounded-xl border border-violet-500/45 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-violet-300">Bước 3: Tạo Ghi Chú, Bản Đồ Tư Duy (Mind Map) &amp; Xem Báo Cáo Hình Ảnh ở cột Studio</div>
+            <ul class="list-disc pl-4 space-y-1 text-[11px] text-zinc-300">
+              <li><strong>Dán câu lệnh vào cột Trò chuyện (giữa):</strong> Nhấn <code>Ctrl+V</code> → gửi đi. Ngay dưới câu trả lời hay, bấm <strong>📌 Lưu vào ghi chú (Save to note)</strong> để chốt lại thành ghi chú bên cột Studio (không bị trôi mất khi tải lại trang!).</li>
+              <li><strong>Bản đồ tư duy (Mind Map):</strong> Ở cột <strong>Studio bên phải</strong>, bấm <strong>🗺️ Bản đồ tư duy</strong> để NotebookLM tự động vẽ sơ đồ cây tương tác (bấm vào từng nhánh để xem chi tiết nhân vật, mâu thuẫn &amp; sự kiện).</li>
+              <li><strong>Báo cáo &amp; Tổng quan hình ảnh / Slide / Audio:</strong> Cũng tại cột <strong>Studio</strong>, bấm <strong>📊 Báo cáo (Reports)</strong> hoặc <strong>🎨 Tổng quan hình ảnh / Slide</strong> để xem tóm tắt trực quan toàn bộ thế giới truyện.</li>
+            </ul>
+          </div>
+
+          <!-- Bước 4: Đưa kết quả về Web -->
+          <div class="p-3 rounded-xl border border-amber-500/40 bg-zinc-900/90 space-y-1.5">
+            <div class="font-black text-amber-300">Bước 4: Đưa kết quả từ NotebookLM về Web Viết Tiểu Thuyết Của Bi</div>
+            <p class="text-[11px] text-zinc-300">
+              • <strong>Cập nhật Story Bible:</strong> Copy câu trả lời từ NotebookLM → dán vào <strong>Tab 4 Mục 2</strong> (giữ chuẩn Word, tự động bóc tách Hồ sơ nhân vật, Ma trận bí mật &amp; Phục bút).<br/>
+              • <strong>Chuyển sơ đồ ASCII sang ảnh đẹp:</strong> Copy đoạn sơ đồ mã ASCII → dán vào <strong>Tab 3 Chế độ 5</strong> → bấm nút <strong>✨ Chuyển mã ASCII từ NotebookLM qua ảnh đẹp</strong> để tải file <code>.TXT</code> và gửi sang Gemini vẽ infographic sắc nét!
+            </p>
+          </div>
+        </div>
+      `;
+    }
+
+    buildCollapsibleSplitGuideHtml(platform = 'GEMINI', modeKey = '') {
+      this.ensureStyles();
+      const isNotebook = platform === 'NOTEBOOKLM';
+      const uid = `v110-split-guide-${Date.now()}-${Math.floor(Math.random() * 999)}`;
+      const btnText = isNotebook
+        ? '📖 Hướng dẫn dùng NotebookLM từ A → Z (Tạo sổ · Up file · Ghi chú · Báo cáo & Mindmap)'
+        : '📖 Hướng dẫn dùng Gemini từ A → Z (Up file PDF · Chọn mô hình · Dán lệnh · Tạo ảnh bìa)';
+      const bodyHtml = isNotebook
+        ? this.buildNotebookLmGuideStepsHtml()
+        : this.buildGeminiGuideStepsHtml(modeKey);
+
+      return `
+        <div class="rounded-xl border border-amber-400/55 bg-zinc-950/90 overflow-hidden" data-v110-guide-box="1">
+          <button
+            type="button"
+            data-v110-guide-toggle="${uid}"
+            aria-expanded="false"
+            class="noir-v110-blink-6s w-full px-3.5 py-2.5 flex items-center justify-between gap-2 text-left border border-amber-400/70 rounded-xl bg-amber-950/40 hover:bg-amber-900/50 text-amber-100 font-extrabold text-[11.5px] transition cursor-pointer"
+          >
+            <span class="min-w-0 flex-1">${btnText}</span>
+            <span class="shrink-0 px-2 py-0.5 rounded-md bg-amber-400/20 border border-amber-300/60 text-amber-200 text-[10.5px] font-black whitespace-nowrap">
+              <span data-v110-guide-state="${uid}">Mở rộng</span> <span data-v110-guide-arrow="${uid}">▾</span>
+            </span>
+          </button>
+          <div id="${uid}" class="hidden p-3 border-t border-amber-500/30 bg-zinc-950/95">
+            ${bodyHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    bindCollapsibleSplitGuideEvents(rootEl) {
+      if (!rootEl) return;
+      rootEl.querySelectorAll('[data-v110-guide-toggle]').forEach((btn) => {
+        if (btn.dataset.v110Bound === '1') return;
+        btn.dataset.v110Bound = '1';
+        const targetId = btn.getAttribute('data-v110-guide-toggle');
+        btn.addEventListener('click', () => {
+          const panel = targetId ? document.getElementById(targetId) : null;
+          if (!panel) return;
+          const willOpen = panel.classList.contains('hidden');
+          panel.classList.toggle('hidden', !willOpen);
+          btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+          btn.classList.remove('noir-v110-blink-6s');
+          const tr = (s) =>
+            window.NoirStudio?.i18n?.translateText
+              ? window.NoirStudio.i18n.translateText(s)
+              : s;
+          const lbl = rootEl.querySelector(`[data-v110-guide-state="${targetId}"]`);
+          const arr = rootEl.querySelector(`[data-v110-guide-arrow="${targetId}"]`);
+          if (lbl) lbl.textContent = willOpen ? tr('Thu gọn') : tr('Mở rộng');
+          if (arr) arr.textContent = willOpen ? '▴' : '▾';
+          if (willOpen) {
+            window.NoirStudio?.i18n?.translateElement?.(panel);
+          }
+        });
+      });
+    }
+
+    mountTab6Guides() {
+      if (typeof document === 'undefined') return;
+      const root = document.getElementById('tab6-v110-ai-guides-root');
+      if (!root) return;
+      this.ensureStyles();
+      root.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-amber-500/30">
+          <div>
+            <div class="text-sm font-black text-amber-300 flex items-center gap-1.5">
+              <span>🧭 Cẩm Nang Trực Quan A → Z: Dùng Gemini &amp; Google NotebookLM</span>
+            </div>
+            <p class="text-[11px] text-zinc-300 mt-0.5">Ảnh minh họa giống hệt giao diện thật: cách mở trang chủ, up file PDF/TXT, dán câu lệnh, tạo ghi chú, xem Mind Map &amp; Báo cáo hình ảnh.</p>
+          </div>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button type="button" id="btn-tab6-guide-tab-gemini" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-extrabold text-xs shadow transition">
+              ✨ Hướng dẫn Gemini (A → Z)
+            </button>
+            <button type="button" id="btn-tab6-guide-tab-notebooklm" class="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition">
+              📓 Hướng dẫn NotebookLM (A → Z)
+            </button>
+          </div>
+        </div>
+        <div id="tab6-guide-pane-gemini" class="pt-3">
+          ${this.buildGeminiGuideStepsHtml('MODE_6_BOOK_COVER')}
+        </div>
+        <div id="tab6-guide-pane-notebooklm" class="hidden pt-3">
+          ${this.buildNotebookLmGuideStepsHtml()}
+        </div>
+      `;
+
+      const btnG = document.getElementById('btn-tab6-guide-tab-gemini');
+      const btnN = document.getElementById('btn-tab6-guide-tab-notebooklm');
+      const paneG = document.getElementById('tab6-guide-pane-gemini');
+      const paneN = document.getElementById('tab6-guide-pane-notebooklm');
+
+      const setActive = (which) => {
+        const isG = which === 'GEMINI';
+        paneG?.classList.toggle('hidden', !isG);
+        paneN?.classList.toggle('hidden', isG);
+        if (btnG) {
+          btnG.className = isG
+            ? 'px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-extrabold text-xs shadow transition'
+            : 'px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition';
+        }
+        if (btnN) {
+          btnN.className = !isG
+            ? 'px-3 py-1.5 rounded-xl bg-sky-600 text-white font-extrabold text-xs shadow transition'
+            : 'px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition';
+        }
+      };
+
+      btnG?.addEventListener('click', () => setActive('GEMINI'));
+      btnN?.addEventListener('click', () => setActive('NOTEBOOKLM'));
+      window.NoirStudio?.i18n?.translateElement?.(root);
+    }
+  }
+
   const manuscriptSyncTracker = new ManuscriptSyncChangeTracker(promptSynthesizer);
   const geminiSplitBridge = new GeminiAndNotebookLmSplitBridge(promptSynthesizer);
   const v106CommandSuite = new V106CommandBoxAndLimitGuards(promptSynthesizer);
+  const v110AiGuides = new V110AiPlatformVisualGuideStudio();
   window.NoirStudio.manuscriptSyncTracker = manuscriptSyncTracker;
   window.NoirStudio.geminiSplitBridge = geminiSplitBridge;
   window.NoirStudio.v106CommandSuite = v106CommandSuite;
+  window.NoirStudio.aiGuides = v110AiGuides;
 
   const bootV105SplitAndTrackers = () => {
     try {
       manuscriptSyncTracker.init();
       geminiSplitBridge.init();
       v106CommandSuite.init();
+      v110AiGuides.mountTab6Guides();
     } catch (_eBoot) {}
   };
   if (typeof document !== 'undefined') {

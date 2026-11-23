@@ -3070,9 +3070,167 @@
       return true;
     }
 
+    _ensureWaitOverlayTicker(active) {
+      if (typeof document === 'undefined') return;
+      const badge = document.getElementById('mod39-wait-elapsed-badge');
+      const pillText = document.getElementById('mod39-probing-pill-text');
+      if (!active) {
+        if (this._waitOverlayIntervalId) {
+          clearInterval(this._waitOverlayIntervalId);
+          this._waitOverlayIntervalId = null;
+        }
+        this._waitOverlayStartedAt = 0;
+        return;
+      }
+      if (!this._waitOverlayStartedAt) {
+        this._waitOverlayStartedAt = Date.now();
+      }
+      const updateText = () => {
+        const sec = Math.max(0, Math.floor((Date.now() - (this._waitOverlayStartedAt || Date.now())) / 1000));
+        if (badge) {
+          badge.textContent = `⏱️ Đang dò & đệm luồng công cộng: ${sec}s`;
+        }
+        if (pillText) {
+          pillText.textContent = `Đang xem tạm No-Cookie · Dò luồng nền & Cửa sổ nổi (${sec}s)...`;
+        }
+      };
+      updateText();
+      if (!this._waitOverlayIntervalId) {
+        this._waitOverlayIntervalId = setInterval(updateText, 1000);
+      }
+    }
+
+    _bindWaitOverlayButtonsOnce() {
+      if (typeof document === 'undefined') return;
+      const bindOne = (id) => {
+        const btn = document.getElementById(id);
+        if (!btn || btn.dataset.v110CancelBound === '1') return;
+        btn.dataset.v110CancelBound = '1';
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.cancelPublicStreamAndUseNoCookie();
+        });
+      };
+      bindOne('btn-mod39-cancel-public-stream-now');
+      bindOne('btn-mod39-stop-probing-pill');
+    }
+
+    _bindNativeVideoFrameListenersOnce() {
+      if (typeof document === 'undefined') return;
+      const vidEl = document.getElementById('core-media-player');
+      if (!vidEl || vidEl.dataset.v110FrameWatchBound === '1') return;
+      vidEl.dataset.v110FrameWatchBound = '1';
+
+      const markWaiting = () => {
+        if (!NS.nativePlayer?.isActive?.() || NS.nativePlayer.mode !== 'video') return;
+        if (vidEl.readyState < 2) {
+          this._nativeVideoFramePending = true;
+          this.syncAudioBridgeStageCard();
+        }
+      };
+      const markReady = () => {
+        if (this._nativeVideoFramePending || vidEl.readyState >= 2) {
+          this._nativeVideoFramePending = false;
+          this.syncAudioBridgeStageCard();
+        }
+      };
+      vidEl.addEventListener('loadstart', markWaiting);
+      vidEl.addEventListener('waiting', () => {
+        if (!NS.nativePlayer?.isActive?.() || NS.nativePlayer.mode !== 'video') return;
+        if (vidEl.readyState < 2) {
+          this._nativeVideoFramePending = true;
+          this.syncAudioBridgeStageCard();
+        }
+      });
+      vidEl.addEventListener('loadeddata', markReady);
+      vidEl.addEventListener('canplay', markReady);
+      vidEl.addEventListener('playing', markReady);
+      vidEl.addEventListener('timeupdate', () => {
+        if (this._nativeVideoFramePending && vidEl.readyState >= 2) {
+          this._nativeVideoFramePending = false;
+          this.syncAudioBridgeStageCard();
+        }
+      });
+    }
+
+    cancelPublicStreamAndUseNoCookie() {
+      const ctrl = this.playerCtrl;
+      if (!ctrl) return false;
+      const curSession = ctrl._engineSessionId || 0;
+      const activeVid = ctrl.activeVideo;
+      const curTime = Math.max(
+        0,
+        Math.floor(
+          Number(NS.audioStudio?.getExternalAudioState?.()?.currentTime) ||
+            Number(ctrl.bridge?.lastKnownTime) ||
+            0
+        )
+      );
+
+      this._userCancelledPublicStreamForSession = curSession;
+      ctrl._lockedIframeSessionId = curSession;
+      this._nativeVideoFramePending = false;
+      this.stopAutoReconnectLoop({ silent: true });
+      this._ensureWaitOverlayTicker(false);
+
+      try {
+        NS.audioStudio?.pauseExternalAudioStream?.(true);
+      } catch (_) {}
+      try {
+        NS.nativePlayer?.deactivate?.(false, { preservePiP: false });
+      } catch (_) {}
+
+      this._bgAudioTookOver = false;
+      this._iframeMutedVisualCompanion = false;
+      this._silencedIframeForBgAudio = false;
+      ctrl.bridge._mountedMutedOverride = null;
+      this.mode = 'iframe-fallback';
+      ctrl.activeEngine = 'IFRAME';
+      this.streamFallbackReason =
+        'Bạn đã tắt dò luồng công cộng — đang phát trực tiếp qua YouTube No-Cookie (Không quảng cáo).';
+      this.statusText = `📺 ${this.streamFallbackReason}`;
+
+      if (typeof document !== 'undefined') {
+        document.getElementById('mod39-resolving-poster-card')?.classList.add('hidden');
+        document.getElementById('mod39-probing-top-pill')?.classList.add('hidden');
+        document.getElementById('mod39-native-video-host')?.classList.add('hidden');
+        document.getElementById('mod39-audio-only-stage')?.classList.add('hidden');
+        const iframeEl = document.getElementById(ctrl.bridge.mainIframeId);
+        iframeEl?.classList.remove('hidden');
+        const curIfrSrc = String(iframeEl?.getAttribute('src') || '');
+        const alreadyMountedSame = Boolean(
+          activeVid?.videoId &&
+            curIfrSrc.indexOf('youtube') !== -1 &&
+            curIfrSrc.indexOf(activeVid.videoId) !== -1
+        );
+        if (activeVid && !alreadyMountedSame) {
+          ctrl.bridge.mountEmbedUrlIntoIframe(
+            { ...activeVid, startSeconds: curTime },
+            ctrl.prefs,
+            { autoplay: true }
+          );
+        }
+      }
+
+      this.syncAudioBridgeStageCard();
+      this.syncStatusUi();
+      ctrl.emitUiSync?.();
+      NS.utils?.showToast?.(
+        '⚡ Đã chuyển ngay sang YouTube No-Cookie (Không quảng cáo)! Lưu ý trên điện thoại chế độ này không phát nền & cửa sổ nổi.',
+        'info',
+        3800
+      );
+      return true;
+    }
+
     syncAudioBridgeStageCard() {
       if (typeof document === 'undefined') return;
+      this._bindWaitOverlayButtonsOnce();
+      this._bindNativeVideoFrameListenersOnce();
+
       const resolvingCard = document.getElementById('mod39-resolving-poster-card');
+      const probingPill = document.getElementById('mod39-probing-top-pill');
       const audioStage = document.getElementById('mod39-audio-only-stage');
       const emptyCard = document.getElementById('mod39-empty-stage-card');
       const nativeHost = document.getElementById('mod39-native-video-host');
@@ -3080,11 +3238,30 @@
       const video = this.playerCtrl?.activeVideo;
       const engine = this.playerCtrl?.activeEngine || 'IFRAME';
 
+      const setPosterThumb = () => {
+        if (!resolvingCard || !video) return;
+        const thumbImg = document.getElementById('mod39-resolving-poster-thumb');
+        const thumbUrl =
+          video.thumbnailUrl ||
+          (video.videoId ? `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg` : '');
+        if (thumbImg) {
+          if (thumbUrl) {
+            if (thumbImg.getAttribute('src') !== thumbUrl) thumbImg.setAttribute('src', thumbUrl);
+            thumbImg.classList.remove('hidden');
+          } else {
+            thumbImg.removeAttribute('src');
+            thumbImg.classList.add('hidden');
+          }
+        }
+      };
+
       if (!video) {
         resolvingCard?.classList.add('hidden');
+        probingPill?.classList.add('hidden');
         audioStage?.classList.add('hidden');
         nativeHost?.classList.add('hidden');
         emptyCard?.classList.remove('hidden');
+        this._ensureWaitOverlayTicker(false);
         return;
       }
 
@@ -3095,10 +3272,26 @@
         !NS.nativePlayer._provisionalStageTakeover
       );
       if (nativeVideoVisible) {
-        resolvingCard?.classList.add('hidden');
+        probingPill?.classList.add('hidden');
         audioStage?.classList.add('hidden');
         nativeHost?.classList.remove('hidden');
         iframeEl?.classList.add('hidden');
+        const vidEl = document.getElementById('core-media-player');
+        const isBlackBufferingFrame = Boolean(
+          vidEl && (vidEl.readyState < 2 || this._nativeVideoFramePending)
+        );
+        if (isBlackBufferingFrame && !isDesktopDirectYoutubeEnv()) {
+          setPosterThumb();
+          const titleEl = document.getElementById('mod39-wait-overlay-title');
+          if (titleEl) {
+            titleEl.textContent = '⏳ Đang chuyển sang luồng công cộng mượt nhất...';
+          }
+          resolvingCard?.classList.remove('hidden');
+          this._ensureWaitOverlayTicker(true);
+        } else {
+          resolvingCard?.classList.add('hidden');
+          this._ensureWaitOverlayTicker(false);
+        }
         return;
       }
 
@@ -3116,29 +3309,32 @@
         if (hasProvisionalYoutubeIframe) {
           resolvingCard?.classList.add('hidden');
           iframeEl?.classList.remove('hidden');
+          if (!isDesktopDirectYoutubeEnv()) {
+            probingPill?.classList.remove('hidden');
+            this._ensureWaitOverlayTicker(true);
+          } else {
+            probingPill?.classList.add('hidden');
+            this._ensureWaitOverlayTicker(false);
+          }
           return;
         }
+        probingPill?.classList.add('hidden');
         iframeEl?.classList.add('hidden');
         if (resolvingCard) {
-          const thumbImg = document.getElementById('mod39-resolving-poster-thumb');
-          const thumbUrl =
-            video.thumbnailUrl ||
-            (video.videoId ? `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg` : '');
-          if (thumbImg) {
-            if (thumbUrl) {
-              if (thumbImg.getAttribute('src') !== thumbUrl) thumbImg.setAttribute('src', thumbUrl);
-              thumbImg.classList.remove('hidden');
-            } else {
-              thumbImg.removeAttribute('src');
-              thumbImg.classList.add('hidden');
-            }
+          setPosterThumb();
+          const titleEl = document.getElementById('mod39-wait-overlay-title');
+          if (titleEl) {
+            titleEl.textContent = '⏳ Đang kết nối luồng phát công cộng cho Mobile...';
           }
           resolvingCard.classList.remove('hidden');
+          this._ensureWaitOverlayTicker(true);
         }
         return;
       }
 
       resolvingCard?.classList.add('hidden');
+      probingPill?.classList.add('hidden');
+      this._ensureWaitOverlayTicker(false);
 
       if (engine === 'MOD21_AUDIO') {
         const ifrSrc = String(iframeEl?.getAttribute('src') || '');
@@ -4780,17 +4976,29 @@
       }
 
       if (wasActive && video && (video.videoId || video.playlistId)) {
-        const targetSec = sec !== null ? sec : Math.max(0, Math.floor(Number(this.playerCtrl?.bridge?.lastKnownTime) || 0));
+        const targetSec = sec !== null ? sec : Math.max(0, Math.floor(Number(this._preFloatingStartSec) || Number(this.playerCtrl?.bridge?.lastKnownTime) || 0));
+        const shouldPlayBack = typeof shouldResume === 'boolean' ? shouldResume : Boolean(this._preFloatingWasPlaying);
+        const iframeStage = document.getElementById('mod39-iframe-stage-container') || document.getElementById('mod39-iframe-wrapper');
+        if (iframeStage) {
+          iframeStage.classList.remove('hidden');
+          iframeStage.style.display = '';
+          iframeStage.style.visibility = 'visible';
+          iframeStage.style.opacity = '1';
+        }
         const iframe = document.getElementById('mod39-youtube-iframe');
         const parser = NS.youtubeStudio?.parser;
         if (iframe && parser) {
-          // Đồng bộ lại đúng mốc giây và trạng thái mute/play của khung video chính
-          if (!iframe.src || iframe.src === 'about:blank') {
+          iframe.classList.remove('hidden');
+          iframe.style.display = '';
+          iframe.style.visibility = 'visible';
+          iframe.style.opacity = '1';
+          const needsReload = !iframe.src || iframe.src === 'about:blank' || !/youtube(?:-nocookie)?\.com\/embed\//i.test(iframe.src);
+          if (needsReload) {
             iframe.src = parser.buildPrivacyEmbedUrl({
               videoId: video.videoId,
               playlistId: video.playlistId,
               startSeconds: targetSec,
-              autoplay: Boolean(shouldResume),
+              autoplay: Boolean(shouldPlayBack),
               loop: !video.isLive && Boolean(this.playerCtrl?.prefs?.repeatMode),
               muted: Boolean(this.playerCtrl?.prefs?.muted),
               controls: true,
@@ -4802,7 +5010,7 @@
                 this.playerCtrl?.bridge?.dispatchPlayerCommand?.('unMute', []);
               }
               if (targetSec > 0) this.playerCtrl?.bridge?.dispatchPlayerCommand?.('seekTo', [targetSec, true]);
-              if (shouldResume) {
+              if (shouldPlayBack) {
                 this.playerCtrl?.bridge?.dispatchPlayerCommand?.('playVideo', []);
               } else {
                 this.playerCtrl?.bridge?.dispatchPlayerCommand?.('pauseVideo', []);
@@ -4844,13 +5052,14 @@
 
       const snap = this.playerCtrl?.bridge?.getCurrentPlaybackSnapshot?.() || {};
       const startSec = Math.max(0, Math.floor(Number(snap.currentTime) || Number(video.startSeconds) || 0));
+      this._preFloatingStartSec = startSec;
+      this._preFloatingWasPlaying = snap.state === MOD39_CONSTANTS.YT_PLAYER_STATES.PLAYING || Boolean(this.playerCtrl?.bridge?.assumedAutoplaying);
 
-      // 1) Tắt & tắt tiếng hoàn toàn iframe youtube-nocookie.com TRƯỚC khi mở Cửa sổ nổi (tránh phát trùng tiếng!)
+      // 1) Tạm dừng & tắt tiếng iframe youtube-nocookie.com TRƯỚC khi mở Cửa sổ nổi (KHÔNG xóa src hay phá khung gốc để đóng là trả lại nguyên vẹn!)
       this._desktopFloatingIframePaused = true;
       try {
         this.playerCtrl?.bridge?.dispatchPlayerCommand?.('pauseVideo', []);
         this.playerCtrl?.bridge?.dispatchPlayerCommand?.('mute', []);
-        this._silenceForegroundIframeForNativeTakeover?.();
         this.playerCtrl?.pause?.();
       } catch (_ePause) {}
 
@@ -4868,11 +5077,27 @@
           })
         : `https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.videoId || '')}?autoplay=1&start=${startSec}&rel=0`;
 
-      // 2) Ưu tiên #1 trên Desktop (Chrome / Edge / Brave / Desktop PWA):
-      //    Document Picture-in-Picture (Cửa sổ nổi Always-On-Top thật của Windows/macOS, nổi trên mọi ứng dụng khác,
-      //    chạy youtube-nocookie.com trực tiếp tức thì 100%, KHÔNG bị YouTube chặn bot như các server Piped/Invidious công cộng!)
+      // Xây dựng cầu nối same-origin yt_pip_frame.html có đầy đủ HTTP Referer (FIX TRIỆT ĐỂ YouTube Error 153 trong Document PiP!)
+      let pipBridgeUrl = embedUrl;
+      const isHttpOrigin = typeof window !== 'undefined' && /^https?:/i.test(window.location?.protocol || '');
+      if (isHttpOrigin) {
+        try {
+          const bridgeObj = new URL('yt_pip_frame.html', window.location.href);
+          if (video.videoId) bridgeObj.searchParams.set('v', video.videoId);
+          if (video.playlistId) bridgeObj.searchParams.set('list', video.playlistId);
+          bridgeObj.searchParams.set('start', String(startSec));
+          bridgeObj.searchParams.set('autoplay', '1');
+          bridgeObj.searchParams.set('loop', !video.isLive && Boolean(this.playerCtrl?.prefs?.repeatMode) ? '1' : '0');
+          bridgeObj.searchParams.set('mute', Boolean(this.playerCtrl?.prefs?.muted) ? '1' : '0');
+          pipBridgeUrl = bridgeObj.toString();
+        } catch (_eUrl) {}
+      }
+
+      // 2) Ưu tiên #1 trên Desktop (Chrome / Edge / Brave / Desktop PWA qua HTTPS/HTTP):
+      //    Document Picture-in-Picture nạp qua cầu nối same-origin yt_pip_frame.html (gửi chuẩn Referer -> KHÔNG BAO GIỜ dính Error 153!)
       if (
         isDesktopDirectYoutubeEnv() &&
+        isHttpOrigin &&
         typeof window !== 'undefined' &&
         window.documentPictureInPicture &&
         typeof window.documentPictureInPicture.requestWindow === 'function'
@@ -4898,7 +5123,7 @@
               <button id="pip-close-btn" type="button" style="background:#e11d48;color:#fff;border:0;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;">✕ Đóng &amp; Trả về gốc</button>
             </div>
             <div style="flex:1;position:relative;background:#000;">
-              <iframe id="pip-yt-iframe" src="${embedUrl}" style="width:100%;height:100%;border:0;" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+              <iframe id="pip-yt-iframe" src="${pipBridgeUrl}" style="width:100%;height:100%;border:0;" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
             </div>
           `;
           const closeAndCleanDocPip = () => {
@@ -8728,13 +8953,50 @@
                   id="mod39-native-video-host"
                   class="hidden absolute inset-0 z-[5] bg-black flex items-center justify-center"
                 ></div>
-                <!-- Ảnh nền chờ thụ động khi đang lấy luồng trực tiếp (không có nút hỏi/chọn chế độ) -->
+                <!-- Màn hình chờ trực quan khi đang kết nối / đệm luồng phát công cộng trên Mobile (tránh màn hình đen khó hiểu) -->
                 <div
                   id="mod39-resolving-poster-card"
-                  class="hidden pointer-events-none absolute inset-0 z-[6] bg-zinc-950/90 flex flex-col items-center justify-center p-4 text-center gap-2"
+                  class="hidden absolute inset-0 z-[12] bg-zinc-950/92 flex flex-col items-center justify-center p-3 sm:p-5 text-center gap-2.5 overflow-y-auto"
                 >
-                  <img id="mod39-resolving-poster-thumb" alt="" class="absolute inset-0 w-full h-full object-cover opacity-40 pointer-events-none" />
-                  <div class="relative z-10 px-3 py-1.5 rounded-full bg-zinc-950/85 border border-emerald-400/50 text-emerald-200 text-xs font-extrabold shadow-lg">⏳ Đang nạp trình phát video mượt...</div>
+                  <img id="mod39-resolving-poster-thumb" alt="" class="absolute inset-0 w-full h-full object-cover opacity-25 pointer-events-none" />
+                  <div class="relative z-10 max-w-md w-full rounded-2xl border border-emerald-400/50 bg-zinc-950/88 backdrop-blur-md p-3.5 sm:p-4 shadow-2xl space-y-2.5">
+                    <div class="flex items-center justify-center gap-2">
+                      <span class="inline-block w-4 h-4 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin shrink-0"></span>
+                      <span id="mod39-wait-overlay-title" class="text-xs sm:text-sm font-black text-emerald-300">⏳ Đang kết nối luồng phát công cộng cho Mobile...</span>
+                    </div>
+                    <p id="mod39-wait-overlay-desc" class="text-[11px] sm:text-xs text-zinc-200 leading-relaxed">
+                      Hệ thống đang cố gắng kết nối luồng phát công cộng để bạn có thể <strong class="text-emerald-300">phát nhạc trong nền (tắt màn hình)</strong> và chạy <strong class="text-cyan-300">Cửa sổ nổi</strong> trên điện thoại. Vui lòng đợi vài giây...
+                    </p>
+                    <div id="mod39-wait-elapsed-badge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-700 text-[10.5px] font-mono text-amber-300">
+                      ⏱️ Đang dò &amp; đệm luồng: 0s
+                    </div>
+                    <div class="pt-1 space-y-1">
+                      <button
+                        type="button"
+                        id="btn-mod39-cancel-public-stream-now"
+                        class="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-[11.5px] shadow-lg transition cursor-pointer"
+                      >⚡ Tắt dò luồng · Dùng ngay YouTube No-Cookie (Không quảng cáo)</button>
+                      <div class="text-[10px] text-zinc-400 leading-snug">
+                        (Xem ngay lập tức không cần chờ, nhưng trên điện thoại sẽ không thể phát trong nền &amp; cửa sổ nổi)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Thanh trạng thái nổi gọn góc trên khi đang xem tạm YouTube No-Cookie lúc dò luồng công cộng -->
+                <div
+                  id="mod39-probing-top-pill"
+                  class="hidden absolute top-2 left-2 right-2 z-[11] flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-zinc-950/88 backdrop-blur-md border border-emerald-400/50 text-[11px] text-zinc-100 shadow-lg"
+                >
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <span class="inline-block w-3 h-3 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin shrink-0"></span>
+                    <span id="mod39-probing-pill-text" class="font-bold text-emerald-200 truncate">Đang xem tạm No-Cookie · Dò luồng phát nền &amp; Cửa sổ nổi...</span>
+                  </div>
+                  <button
+                    type="button"
+                    id="btn-mod39-stop-probing-pill"
+                    class="px-2.5 py-1 rounded-lg bg-amber-500/90 hover:bg-amber-400 text-zinc-950 font-extrabold text-[10.5px] shrink-0 transition cursor-pointer"
+                    title="Dừng dò luồng công cộng và giữ nguyên trình phát YouTube No-Cookie không quảng cáo"
+                  >✕ Dừng dò (Giữ No-Cookie)</button>
                 </div>
                 <!-- Khung Audio-Stage Chế Độ 2 (không tự mở iframe YouTube có bánh răng/CC; chạm khung để Phát / Tạm dừng) -->
                 <div

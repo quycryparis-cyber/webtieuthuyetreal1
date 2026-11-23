@@ -1112,7 +1112,7 @@
         }, true);
       } catch (_eSub) {}
       try {
-        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v108';
+        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v110';
         if (typeof window !== 'undefined' && 'caches' in window && window.caches && typeof window.caches.keys === 'function') {
           window.caches.keys().then(function (keys) {
             for (var i = 0; i < keys.length; i++) {
@@ -1730,6 +1730,9 @@
               <button type="button" id="btn-tab3-copy-output" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow flex items-center gap-1 transition" title="Sao chép toàn bộ nội dung cửa sổ đầu ra vào khay nhớ tạm">
                 <span>📋 Sao chép</span>
               </button>
+              <button type="button" id="btn-tab3-export-output-pdf" class="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-xs shadow flex items-center gap-1 transition" title="Tải toàn bộ nội dung cửa sổ đầu ra của chế độ đang mở thành file PDF chuẩn Word (giữ nguyên bảng & ảnh)">
+                <span>📄 Tải PDF</span>
+              </button>
               <button type="button" id="btn-toggle-tab3-output-extras" data-noir-collapse-target="tab3-output-extra-tools" data-noir-collapse-key="tab3_output_extras" class="noir-collapse-toggle px-2.5 py-1.5 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-300 font-bold text-xs transition" title="Mở rộng / Rút gọn cấu hình Prompt 5 chế độ, Lưu vào Bible & Xóa">
                 <span>⚙️ Thêm</span> <span class="noir-collapse-arrow">▾</span>
               </button>
@@ -1766,7 +1769,20 @@
                   <button type="button" id="btn-tab3-dismiss-new-alert" class="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-[11px]">✕</button>
                 </div>
               </div>
-              <textarea id="s20-quad-output-textarea" class="w-full flex-1 min-h-[42vh] lg:min-h-[260px] p-3 sm:p-4 rounded-2xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightPanel/60 dark:bg-zinc-950/90 novel-editor-textarea select-text focus:outline-none focus:border-emerald-500 resize-y" placeholder="Đầu ra của Trợ lý AI sẽ hiển thị tại đây. Bạn có thể chỉnh sửa trực tiếp hoặc bấm '📥 Chèn nối tiếp' / '🔄 Thay thế' trên thanh công cụ để đưa vào Bản thảo Tab 1 (kèm chế độ đánh dấu màu khác biệt để bạn chấp nhận hoặc từ chối từng đoạn)..."></textarea>
+              <!-- Thanh soạn thảo chuẩn Word (giữ bảng, định dạng, ảnh) riêng cho từng Chế độ 1–4 -->
+              <div id="tab3-rich-output-toolbar" class="flex flex-wrap items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl border border-emerald-500/35 bg-zinc-950/90 text-[11px] shrink-0">
+                <div class="flex flex-wrap items-center gap-1">
+                  <span id="tab3-output-mode-pill" class="px-2 py-0.5 rounded-lg bg-emerald-600/25 border border-emerald-400/50 text-emerald-200 font-extrabold text-[10px]">📄 Đầu ra riêng: Chế độ 1</span>
+                  <button type="button" data-tab3-rich-exec="bold" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white font-black" title="In đậm">B</button>
+                  <button type="button" data-tab3-rich-exec="italic" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white italic font-serif" title="In nghiêng">I</button>
+                  <button type="button" data-tab3-rich-exec="underline" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white underline" title="Gạch chân">U</button>
+                  <button type="button" id="btn-tab3-rich-add-img" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-sky-300 font-bold" title="Chèn ảnh hoặc dán ảnh trực tiếp Ctrl+V">🖼️ + Ảnh</button>
+                  <input type="file" id="input-tab3-rich-img" accept="image/*" class="hidden" />
+                </div>
+                <button type="button" id="btn-tab3-toggle-rich-output" class="px-2 py-0.5 rounded-lg border border-emerald-500/45 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 font-bold text-[10px] transition">📄 Chế độ Word (Bảng + Ảnh)</button>
+              </div>
+              <div id="tab3-rich-output-editor" contenteditable="true" spellcheck="false" data-placeholder="Dán hoặc chỉnh sửa kết quả AI tại đây (hỗ trợ chuẩn Word: giữ trọn Bảng biểu, định dạng, Emoji & Ảnh — mỗi Chế độ 1–4 lưu khung đầu ra riêng biệt)..." class="w-full flex-1 min-h-[42vh] lg:min-h-[260px] max-h-[68vh] overflow-y-auto p-3 sm:p-4 rounded-2xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightPanel/70 dark:bg-zinc-950/90 text-sm leading-relaxed select-text focus:outline-none focus:border-emerald-500 whitespace-pre-wrap break-words [&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-zinc-600 [&_th]:bg-zinc-800/80 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_td]:border [&_td]:border-zinc-700 [&_td]:px-2 [&_td]:py-1 [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2"></div>
+              <textarea id="s20-quad-output-textarea" class="hidden w-full flex-1 min-h-[42vh] lg:min-h-[260px] p-3 sm:p-4 rounded-2xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightPanel/60 dark:bg-zinc-950/90 novel-editor-textarea select-text focus:outline-none focus:border-emerald-500 resize-y" placeholder="Đầu ra của Trợ lý AI sẽ hiển thị tại đây. Bạn có thể chỉnh sửa trực tiếp hoặc bấm '📥 Chèn nối tiếp' / '🔄 Thay thế' trên thanh công cụ để đưa vào Bản thảo Tab 1 (kèm chế độ đánh dấu màu khác biệt để bạn chấp nhận hoặc từ chối từng đoạn)..."></textarea>
             </div>
 
             <!-- =========================================================== -->
@@ -1774,6 +1790,30 @@
             <!-- DIỄN BIẾN SỰ KIỆN THEO THỜI GIAN (TRÁNH MÂU THUẪN CHI TIẾT) -->
             <!-- =========================================================== -->
             <div id="mode5-plot-diagram-studio" class="hidden flex-1 overflow-y-auto overflow-x-hidden min-w-0 p-3 sm:p-4 space-y-4 bg-studioLightBg dark:bg-zinc-950">
+              <!-- KHUNG MÃ SƠ ĐỒ PLAINTEXT ASCII (KHÔNG VỠ DÒNG) + CHUYỂN QUA ẢNH ĐẸP GEMINI -->
+              <div id="tab3-mode5-ascii-card" class="p-4 rounded-2xl border-2 border-cyan-500/55 bg-gradient-to-br from-cyan-950/40 via-zinc-900 to-indigo-950/35 space-y-3 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 class="text-xs sm:text-sm font-black uppercase text-cyan-300 flex items-center gap-1.5">
+                      <span>📐 Khung Dán &amp; Lưu Sơ Đồ Mã ASCII Plaintext (Không Bị Vỡ Khung Như Word)</span>
+                    </h3>
+                    <p class="text-[11px] text-zinc-300 mt-0.5">Dán trực tiếp khối sơ đồ Plaintext ASCII từ NotebookLM hoặc Gemini vào ô bên dưới — giữ nguyên 100% căn lề, mũi tên và khung chữ đơn cách (Monospace).</p>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <button type="button" id="btn-mode5-ascii-to-beautiful-img" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-white font-black text-xs shadow-lg transition">
+                      ✨ Chuyển mã ASCII từ NotebookLM qua ảnh đẹp
+                    </button>
+                    <button type="button" id="btn-mode5-download-ascii-txt" class="px-3 py-1.5 rounded-xl border border-cyan-400/60 bg-cyan-500/15 hover:bg-cyan-500/30 text-cyan-200 font-bold text-xs transition" title="Tải file sơ đồ mã ASCII (.TXT UTF-8 chuẩn không vỡ ký tự để gửi lên Gemini)">
+                      ⬇️ Tải file sơ đồ (.TXT)
+                    </button>
+                    <button type="button" id="btn-mode5-copy-ascii" class="px-2.5 py-1.5 rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition">
+                      📋 Copy ASCII
+                    </button>
+                  </div>
+                </div>
+                <textarea id="textarea-mode5-ascii-diagram" wrap="off" spellcheck="false" rows="12" class="w-full p-3.5 rounded-xl border border-cyan-500/45 bg-zinc-950 text-emerald-200 font-monoCode text-[12px] leading-snug whitespace-pre overflow-x-auto select-text focus:outline-none focus:border-cyan-400 resize-y" placeholder="Dán trực tiếp đoạn sơ đồ mã ASCII Plaintext từ Google NotebookLM / Gemini vào đây...&#10;&#10;┌──────────────────────────┐&#10;│   ARC 1: KHỞI ĐẦU        │&#10;└────────────┬─────────────┘&#10;             ▼&#10;┌──────────────────────────┐&#10;│   HỒI 1: BƯỚC NGOẶT      │&#10;└──────────────────────────┘"></textarea>
+              </div>
+
               <div class="p-4 rounded-2xl border border-emerald-500/40 bg-studioLightPanel dark:bg-zinc-900 space-y-3">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -1875,6 +1915,66 @@
                     <button type="button" id="btn-mode5-copy-report" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-[10px] font-bold text-zinc-300">📋 Chép</button>
                   </div>
                   <div id="mode5-chronicle-report" class="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 p-3 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap select-text">Chưa có dữ liệu biểu đồ. Hãy chọn các chương cần đối chiếu và bấm "🚀 Phân Tích & Vẽ Biểu Đồ Cốt Truyện Ngay" để AI tổng hợp sơ đồ diễn biến sự kiện theo thời gian.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- =========================================================== -->
+            <!-- KHUNG ĐẦU RA ĐẶC BIỆT CỦA CHẾ ĐỘ 6: KHO ẢNH BÌA TRUYỆN AI   -->
+            <!-- =========================================================== -->
+            <div id="tab3-mode6-cover-studio" class="hidden flex-1 overflow-y-auto overflow-x-hidden min-w-0 p-3 sm:p-4 space-y-4 bg-studioLightBg dark:bg-zinc-950 text-xs">
+              <div class="p-4 rounded-2xl border-2 border-violet-500/55 bg-gradient-to-br from-violet-950/45 via-zinc-900 to-indigo-950/35 space-y-3 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 class="text-sm font-black uppercase text-violet-300 flex items-center gap-1.5">
+                      <span>🖼️ Chế Độ 6: Kho Ảnh Bìa Tiểu Thuyết (Dán Ảnh Bìa · Lưu Thư Mục · Gắn Vào Xuất PDF)</span>
+                    </h3>
+                    <p class="text-[11px] text-zinc-300 mt-0.5">Mọi ảnh bạn dán vào sẽ tự động lưu vào thư mục <code class="text-amber-300">06_Anh_Bia_Truyen/</code> trong thư mục công việc để dùng riêng cho từng quyển, từng chương và đổi tên đồng bộ 2 chiều!</p>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <button type="button" id="btn-mode6-upload-cover" class="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-xs shadow transition">📂 Chọn Ảnh Từ Máy</button>
+                    <input type="file" id="input-mode6-cover-file" accept="image/*" multiple class="hidden" />
+                    <button type="button" id="btn-mode6-sync-folder-covers" class="px-3 py-1.5 rounded-xl border border-cyan-500/50 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-200 font-bold text-xs transition">🔄 Đồng Bộ Thư Mục Bìa</button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                  <!-- Khu vực Paste & Xem ảnh bìa đang chọn -->
+                  <div class="lg:col-span-6 space-y-3">
+                    <div id="mode6-cover-paste-zone" tabindex="0" class="relative min-h-[300px] rounded-2xl border-2 border-dashed border-violet-400/70 bg-zinc-950/85 hover:border-emerald-400 focus:border-emerald-400 focus:outline-none p-4 flex flex-col items-center justify-center text-center gap-3 cursor-pointer transition">
+                      <div id="mode6-cover-empty-hint" class="space-y-2 max-w-xs">
+                        <div class="text-3xl">🖼️</div>
+                        <div class="font-black text-sm text-violet-200">Bạn copy paste ảnh bìa truyện vào đây</div>
+                        <div class="text-[11px] text-zinc-400 leading-relaxed">Bấm vào khung này rồi nhấn <kbd class="px-1.5 py-0.5 rounded bg-zinc-800 text-emerald-300 font-monoCode">Ctrl+V</kbd> để dán ảnh bìa vừa tạo ở Gemini, kéo thả ảnh, hoặc bấm chọn ảnh từ máy!</div>
+                      </div>
+                      <img id="img-mode6-active-cover-preview" alt="Ảnh bìa truyện đang chọn" class="hidden max-h-[420px] max-w-full rounded-xl shadow-2xl border border-violet-400/50 object-contain" />
+                    </div>
+
+                    <div id="mode6-active-cover-controls" class="hidden p-3 rounded-xl border border-emerald-500/45 bg-zinc-900/90 space-y-2.5">
+                      <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span id="label-mode6-active-cover-name" class="font-extrabold text-emerald-300 truncate">Chưa chọn ảnh bìa</span>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                          <button type="button" id="btn-mode6-download-png" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] transition">⬇️ Tải PNG Nét</button>
+                          <button type="button" id="btn-mode6-download-jpg" class="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-[11px] transition">⬇️ Tải JPG Nét</button>
+                        </div>
+                      </div>
+                      <label class="flex items-center gap-2 p-2.5 rounded-xl border-2 border-amber-400/65 bg-amber-950/35 text-amber-100 font-extrabold text-xs cursor-pointer select-none">
+                        <input type="checkbox" id="chk-mode6-use-as-pdf-cover" class="accent-amber-400 w-4 h-4 shrink-0" />
+                        <span>📕 Chọn ảnh này làm bìa xuất truyện PDF (đồng bộ 2 chiều với khung Xuất PDF)</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- Danh sách kho ảnh bìa đã lưu (hỗ trợ nhiều bìa cho từng quyển/chương + đổi tên đồng bộ thư mục gốc) -->
+                  <div class="lg:col-span-6 p-3.5 rounded-2xl border border-zinc-800 bg-zinc-950/80 space-y-2.5">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-extrabold uppercase text-amber-300 text-[11px]">📚 Danh Sách Ảnh Bìa Đã Lưu (<span id="mode6-cover-count-badge">0</span>)</span>
+                      <span class="text-[10px] text-zinc-400">Bấm chọn · Đổi tên đồng bộ thư mục</span>
+                    </div>
+                    <div id="mode6-cover-gallery-list" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[440px] overflow-y-auto pr-1">
+                      <div class="col-span-full py-8 text-center text-zinc-500 italic">Chưa có ảnh bìa nào được lưu. Hãy dán ảnh (Ctrl+V) vào khung bên trái!</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2186,7 +2286,7 @@
                 👁️ Xem trước nội dung câu lệnh ▾
               </button>
               <button type="button" id="btn-toggle-tab4-nblm-card" data-noir-collapse-target="tab4-nblm-guide-collapsible-body" data-noir-collapse-key="tab4_nblm_guide_card" class="noir-collapse-toggle px-2.5 py-1 rounded-lg border border-amber-400/60 bg-amber-500/15 hover:bg-amber-500/30 text-amber-200 font-bold text-[10px] transition">
-                <span>Thu gọn / Mở</span> <span class="noir-collapse-arrow">▾</span>
+                <span class="noir-collapse-state-label">Thu gọn</span> <span class="noir-collapse-arrow">▴</span>
               </button>
             </div>
           </div>
@@ -2220,7 +2320,7 @@
             <div class="flex items-center justify-between gap-2 flex-wrap">
               <button type="button" data-noir-collapse-target="tab4-card-template-body" data-noir-collapse-key="tab4_card_template" class="noir-collapse-toggle flex items-center gap-1.5 font-extrabold uppercase text-amber-400 text-left">
                 <span>📐 1. Khung Cấu Trúc Story Bible (Bản Khuôn Mẫu)</span>
-                <span class="px-2 py-0.5 rounded-md border border-amber-500/50 bg-amber-500/15 text-[10px] font-bold text-amber-200 whitespace-nowrap">Thu gọn / Mở <span class="noir-collapse-arrow">▾</span></span>
+                <span class="px-2 py-0.5 rounded-md border border-amber-500/50 bg-amber-500/15 text-[10px] font-bold text-amber-200 whitespace-nowrap"><span class="noir-collapse-state-label">Thu gọn</span> <span class="noir-collapse-arrow">▴</span></span>
               </button>
               <button type="button" id="btn-toggle-bible-template-lock" class="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-[11px] shrink-0">
                 🔒 Chốt Khung Cấu Trúc
@@ -2239,7 +2339,7 @@
             <div class="flex items-center justify-between gap-2 flex-wrap">
               <button type="button" data-noir-collapse-target="tab4-card-rendered-body" data-noir-collapse-key="tab4_card_rendered" class="noir-collapse-toggle flex items-center gap-1.5 font-extrabold uppercase text-emerald-400 text-left">
                 <span>📖 2. Nội Dung Story Bible Chính Thức (Tự Động Tích Hợp Vào Prompt Tổng)</span>
-                <span class="px-2 py-0.5 rounded-md border border-emerald-500/50 bg-emerald-500/15 text-[10px] font-bold text-emerald-200 whitespace-nowrap">Thu gọn / Mở <span class="noir-collapse-arrow">▾</span></span>
+                <span class="px-2 py-0.5 rounded-md border border-emerald-500/50 bg-emerald-500/15 text-[10px] font-bold text-emerald-200 whitespace-nowrap"><span class="noir-collapse-state-label">Thu gọn</span> <span class="noir-collapse-arrow">▴</span></span>
               </button>
               <div class="flex items-center gap-1.5 flex-wrap">
                 <button type="button" id="btn-tab4-split-notebooklm" class="px-2.5 py-1 rounded-lg border border-sky-400/60 bg-sky-500/20 hover:bg-sky-500/35 text-sky-100 font-bold text-[10.5px] shadow-sm transition whitespace-nowrap" title="Copy sẵn câu lệnh khung Story Bible siêu chi tiết & chia đôi màn hình làm việc cùng NotebookLM">
@@ -2336,7 +2436,7 @@
               <button type="button" data-noir-collapse-target="tab4-card-chars-body" data-noir-collapse-key="tab4_card_chars" class="noir-collapse-toggle flex items-center gap-1.5 font-extrabold uppercase text-sm text-emerald-400 text-left flex-wrap">
                 <span>👤 3. Hồ Sơ Nhân Vật Đa Chiều</span>
                 <span id="tab4-chars-count-badge" class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-monoCode text-[10px]">0 NV</span>
-                <span class="px-2 py-0.5 rounded-md border border-emerald-500/50 bg-emerald-500/15 text-[10px] font-bold text-emerald-200 whitespace-nowrap">Thu gọn / Mở <span class="noir-collapse-arrow">▾</span></span>
+                <span class="px-2 py-0.5 rounded-md border border-emerald-500/50 bg-emerald-500/15 text-[10px] font-bold text-emerald-200 whitespace-nowrap"><span class="noir-collapse-state-label">Mở rộng</span> <span class="noir-collapse-arrow">▾</span></span>
               </button>
               <button type="button" id="btn-add-character-profile" class="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shrink-0">
                 + Thêm Nhân Vật
@@ -2353,7 +2453,7 @@
               <button type="button" data-noir-collapse-target="tab4-card-knowledge-body" data-noir-collapse-key="tab4_card_knowledge" class="noir-collapse-toggle flex flex-wrap items-center gap-1.5 font-extrabold uppercase text-sm text-amber-400 text-left">
                 <span>🧠 4. Ma Trận "Ai Biết Gì" (Chống Lộ Bí Mật Sớm)</span>
                 <span id="tab4-knowledge-count-badge" class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-monoCode text-[10px] whitespace-nowrap shrink-0">0 Bí mật</span>
-                <span class="px-2 py-0.5 rounded-md border border-amber-500/50 bg-amber-500/15 text-[10px] font-bold text-amber-200 whitespace-nowrap">Thu gọn / Mở <span class="noir-collapse-arrow">▾</span></span>
+                <span class="px-2 py-0.5 rounded-md border border-amber-500/50 bg-amber-500/15 text-[10px] font-bold text-amber-200 whitespace-nowrap"><span class="noir-collapse-state-label">Mở rộng</span> <span class="noir-collapse-arrow">▾</span></span>
               </button>
               <button type="button" id="btn-add-knowledge-entry" class="px-3 py-1 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shrink-0">
                 + Thêm Bí Mật / Sự Thật
@@ -2370,7 +2470,7 @@
               <button type="button" data-noir-collapse-target="tab4-card-clues-body" data-noir-collapse-key="tab4_card_clues" class="noir-collapse-toggle flex flex-wrap items-center gap-1.5 font-extrabold uppercase text-sm text-indigo-400 text-left">
                 <span>🔫 5. Sổ Cái Phục Bút &amp; Manh Mối (Chekhov's Gun)</span>
                 <span id="tab4-clues-count-badge" class="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-monoCode text-[10px] whitespace-nowrap shrink-0">0 Phục bút</span>
-                <span class="px-2 py-0.5 rounded-md border border-indigo-500/50 bg-indigo-500/15 text-[10px] font-bold text-indigo-200 whitespace-nowrap">Thu gọn / Mở <span class="noir-collapse-arrow">▾</span></span>
+                <span class="px-2 py-0.5 rounded-md border border-indigo-500/50 bg-indigo-500/15 text-[10px] font-bold text-indigo-200 whitespace-nowrap"><span class="noir-collapse-state-label">Mở rộng</span> <span class="noir-collapse-arrow">▾</span></span>
               </button>
               <button type="button" id="btn-add-clue-entry" class="px-3 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shrink-0">
                 + Gieo Phục Bút Mới
@@ -2386,7 +2486,7 @@
             <div class="flex items-center justify-between gap-2 flex-wrap">
               <button type="button" data-noir-collapse-target="tab4-card-cliche-body" data-noir-collapse-key="tab4_card_cliche" class="noir-collapse-toggle flex items-center gap-1.5 font-extrabold uppercase text-sm text-rose-400 text-left flex-wrap">
                 <span>🚫 6. Danh Sách Từ Sáo Rỗng Cấm AI Dùng</span>
-                <span class="px-2 py-0.5 rounded-md border border-rose-500/50 bg-rose-500/15 text-[10px] font-bold text-rose-200 whitespace-nowrap">Thu gọn / Mở <span class="noir-collapse-arrow">▾</span></span>
+                <span class="px-2 py-0.5 rounded-md border border-rose-500/50 bg-rose-500/15 text-[10px] font-bold text-rose-200 whitespace-nowrap"><span class="noir-collapse-state-label">Mở rộng</span> <span class="noir-collapse-arrow">▾</span></span>
               </button>
               <span class="text-[10px] text-zinc-400 shrink-0">Cách nhau bằng dấu phẩy</span>
             </div>
@@ -2826,14 +2926,14 @@
                   ⭐ XEM ĐẦU TIÊN
                 </span>
                 <h3 class="text-sm sm:text-base font-black text-emerald-300 uppercase">
-                  📚 1. Hướng dẫn thao tác trang web và tổng hợp các chức năng trang web
+                  📚 1. Hướng dẫn thao tác và các chức năng trang web, hướng dẫn dùng Gemini, NotebookLM
                 </h3>
               </div>
               <p class="text-[11px] text-emerald-100/85 mt-1">
-                Xem video tương tác chiếu trực tiếp giao diện web thật kèm giọng Neural VI/EN và tra cứu toàn bộ 44 Module chức năng với nút điều hướng 1 chạm.
+                Xem video tương tác chiếu trực tiếp giao diện web thật kèm giọng Neural VI/EN, cẩm nang trực quan A → Z dùng Gemini &amp; Google NotebookLM và tra cứu toàn bộ 45 Module chức năng với nút điều hướng 1 chạm.
               </p>
             </div>
-            <span class="noir-collapse-arrow text-sm font-extrabold text-emerald-300">▾</span>
+            <span class="px-2 py-0.5 rounded-md border border-emerald-400/50 bg-emerald-500/15 text-[10px] font-bold text-emerald-200 whitespace-nowrap shrink-0"><span class="noir-collapse-state-label">Mở rộng</span> <span class="noir-collapse-arrow">▾</span></span>
           </button>
 
           <div id="tab6-acc-4-body" class="hidden pt-3 border-t border-emerald-500/30 space-y-4">
@@ -2849,6 +2949,9 @@
                 <button type="button" id="btn-s6-quick-video" class="hidden">Video</button>
               </div>
             </div>
+
+            <!-- Cẩm nang trực quan A -> Z cách dùng Gemini & Google NotebookLM (đồng bộ 100% với cửa sổ Chia đôi màn hình) -->
+            <div id="tab6-v110-ai-guides-root" class="rounded-2xl border-2 border-amber-500/45 bg-gradient-to-br from-amber-950/30 via-zinc-950/90 to-indigo-950/30 p-3.5 sm:p-4 space-y-3 shadow-xl"></div>
 
             <div id="tab6-mod31-feature-directory-root" class="rounded-xl border border-emerald-500/35 bg-zinc-950/75 p-3 sm:p-4 space-y-3"></div>
           </div>
