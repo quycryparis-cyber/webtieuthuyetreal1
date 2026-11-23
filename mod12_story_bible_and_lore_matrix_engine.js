@@ -1140,61 +1140,26 @@
         });
       }
 
-      // Nạp câu lệnh chuẩn mẫu NotebookLM siêu chi tiết (8 phần chuẩn trục thời gian & Story Bible toàn diện)
+      // Nạp câu lệnh chuẩn mẫu NotebookLM siêu chi tiết (8 phần chuẩn trục thời gian & Story Bible toàn diện + liệt kê chương)
       const nblmPromptEl = document.getElementById('textarea-tab4-notebooklm-prompt');
-      if (nblmPromptEl && !nblmPromptEl.value.trim()) {
-        nblmPromptEl.value = [
-          'Bạn là Biên Tập Viên Cốt Truyện & Chuyên Gia Kiểm Toán Trục Thời Gian Cấp Cao. Hãy đọc toàn bộ tệp PDF / các chương tiểu thuyết tôi tải lên (đúng trình tự từ Arc 1 / Hồi 1 đến chương cuối cùng hiện có) và biên soạn một BẢN STORY BIBLE TOÀN DIỆN & SIÊU CHI TIẾT.',
-          '',
-          'NGUYÊN TẮC TỐI THƯỢNG (BẮT BUỘC TUÂN THỦ):',
-          '- PHẢI PHÂN TÍCH CỰC KỲ CHI TIẾT, DÀI, ĐẦY ĐỦ TỪNG CON SỐ, MỐC GIỜ/PHÚT, TÊN ĐƯỜNG/ĐỊA BÀN, VẬT CHỨNG, LỜI THOẠI THEN CHỐT VÀ DIỄN BIẾN TÂM LÝ.',
-          '- TUYỆT ĐỐI KHÔNG TÓM TẮT SƠ SÀI, KHÔNG GỘP CHUNG CHUNG, KHÔNG LƯỢC BỎ BẤT KỲ MANH MỐI HAY MỐC THỜI GIAN NÀO.',
-          '- Trình bày chuẩn xác theo đúng cấu trúc 8 PHẦN dưới đây:',
-          '',
-          '1. TÓM TẮT TIMELINE HÀNH TRÌNH CHI TIẾT (TRỤC THỜI GIAN TỪNG PHẦN / HỒI / PHÂN CẢNH):',
-          '   - Chia rõ từng Phần (Arc) -> Hồi (Chapter) -> Phân cảnh (X.1, X.2, X.3...).',
-          '   - Ghi rõ MỐC THỜI GIAN CHÍNH XÁC từng ngày/buổi/giờ/phút (ví dụ: 09h42 sáng Thứ Sáu, 16h30 Thứ Sáu, 21h28 Thứ Sáu, 06h12 Thứ Bảy, 22h50...) và thời lượng đếm ngược giữa các sự kiện.',
-          '   - Liệt kê chi tiết từng hành động, nguyên nhân — kết quả, kỹ thuật/nghiệp vụ, con số tiền bạc/vật chứng và bước ngoặt tâm lý.',
-          '',
-          '2. CƠ CHẾ HỆ THỐNG / QUY TẮC THẾ GIỚI & NHIỆM VỤ ĐANG KÍCH HOẠT:',
-          '   - Tên Hệ thống / Luật bất khả xâm phạm của thế giới, giới hạn năng lực, cơ chế cảnh báo.',
-          '   - Trạng thái các Nhiệm vụ đã hoàn thành và Nhiệm vụ đang kích hoạt (thời hạn chót chính xác, yêu cầu kép bắt buộc, phần thưởng, hình phạt thất bại).',
-          '',
-          '3. BẢNG NHÂN VẬT & MẠNG LƯỚI QUAN HỆ (DẠNG BẢNG 4 CỘT):',
-          '   - Cột 1: Nhân vật | Cột 2: Vai trò / Thân phận (tuổi, nghề nghiệp, xuất thân) | Cột 3: Tính cách, Hành vi nổi bật & Quy ước xưng hô | Cột 4: Trạng thái hiện tại (đang ở đâu, làm gì, thương tích/tâm lý ra sao đến cuối hồi mới nhất).',
-          '',
-          '4. TÀI SẢN, VŨ KHÍ DỮ LIỆU, BẰNG CHỨNG PHÁP LÝ & TÌNH TRẠNG THỂ CHẤT HIỆN TẠI:',
-          '   - Tài chính khả dụng và tài chính ngầm cất giấu (ghi rõ từng con số chính xác và từng vị trí cất giấu).',
-          '   - Danh sách từng vật chứng, thiết bị, USB, file/video, giấy tờ y tế/pháp lý đang nắm giữ và nơi sao lưu.',
-          '   - Tình trạng thể chất & thương tích hiện tại của nhân vật chính và đồng minh.',
-          '',
-          '5. SỔ CÁI PHỤC BÚT, MANH MỐI & NHỮNG NGÒI NỔ CẤP BÁCH CHỜ KÍCH NỔ (CHEKHOV\'S GUN):',
-          '   - Liệt kê toàn bộ chi tiết nhỏ, lời hứa, đồ vật, âm mưu đã gieo từ các hồi đầu — đánh dấu rõ [ĐANG TREO CHỜ THU HỒI] hoặc [ĐÃ GIẢI ĐÁP].',
-          '   - Liệt kê các ngòi nổ cấp bách và hạn chót thời gian chờ kích nổ ngay ở hồi tiếp theo.',
-          '',
-          '6. MA TRẬN "AI BIẾT GÌ — AI CHƯA BIẾT" (NHỮNG BÍ MẬT CHƯA TIẾT LỘ / SECRETS KEPT HIDDEN):',
-          '   - Liệt kê từng bí mật cốt lõi trong truyện, chỉ rõ tính đến chương cuối thì AI ĐÃ BIẾT và AI TUYỆT ĐỐI CHƯA BIẾT để chống nhân vật tự dưng biết trước kịch bản.',
-          '',
-          '7. ĐỊA BÀN & ĐỊA ĐIỂM QUAN TRỌNG:',
-          '   - Liệt kê cụ thể từng chiến trường, phòng trọ/căn cứ, cơ sở y tế, cứ điểm đối thủ, hang ổ kẻ thù, địa bàn lưu trữ dữ liệu và mục tiêu tấn công tiếp theo.',
-          '',
-          '8. CHIẾN THUẬT & ĐÒN ĐẤU TRÍ THỰC CHIẾN NỔI BẬT:',
-          '   - Tổng hợp từng chiến thuật/đòn phản kích đặc sắc đã và đang áp dụng (tên chiến thuật + cơ chế thực thi + điểm mù khai thác).'
-        ].join('\n');
+      if (nblmPromptEl) {
+        nblmPromptEl.value = this.buildDynamicNotebookLmStoryBiblePrompt();
       }
 
       const btnCopyNblm = document.getElementById('btn-tab4-copy-notebooklm-prompt');
       if (btnCopyNblm && !btnCopyNblm.dataset.mod12Bound) {
         btnCopyNblm.dataset.mod12Bound = '1';
         btnCopyNblm.addEventListener('click', async () => {
-          const textToCopy = document.getElementById('textarea-tab4-notebooklm-prompt')?.value || '';
+          const freshPrompt = this.buildDynamicNotebookLmStoryBiblePrompt();
+          const promptBox = document.getElementById('textarea-tab4-notebooklm-prompt');
+          if (promptBox) promptBox.value = freshPrompt;
+          const textToCopy = freshPrompt || promptBox?.value || '';
           if (!textToCopy.trim()) return;
           try {
             await navigator.clipboard.writeText(textToCopy);
           } catch (_e) {
-            const ta = document.getElementById('textarea-tab4-notebooklm-prompt');
-            if (ta) {
-              ta.select();
+            if (promptBox) {
+              promptBox.select();
               try { document.execCommand('copy'); } catch (_e2) {}
             }
           }
@@ -1205,7 +1170,7 @@
               'px-2.5 py-0.5 rounded-full border border-amber-400/50 bg-amber-500/20 text-amber-200 font-extrabold text-[10px]';
           }
           this.utils.showToast(
-            '📋 Đã sao chép câu lệnh Story Bible chi tiết! Hãy tải PDF gộp lên NotebookLM rồi dán câu lệnh này nhé.',
+            '📋 Đã sao chép câu lệnh Story Bible chi tiết (kèm danh sách chương & sổ cái)! Hãy dán vào NotebookLM nhé.',
             'success',
             4000
           );
@@ -1245,9 +1210,15 @@
           el.dataset.mod12InputBound = '1';
           el.addEventListener('input', () => {
             this.saveAllBibleData(false);
+            if (el === renEl) {
+              window.NoirStudio?.manuscriptSyncTracker?.markStoryBibleUpdatedNow?.();
+            }
           });
         }
       });
+
+      // Khởi tạo trình soạn thảo Word/Google Docs, File Story Bible PDF/Chọn File & Chia đôi màn hình NotebookLM (v105)
+      this.bindV105RichBibleAndFileControls();
 
       // Gắn sự kiện đồng bộ Gemini Flash cho nút #btn-tab4-sync-bible-entities & sự kiện dán vào ô Box 2
       const btnSyncEntities = document.getElementById('btn-tab4-sync-bible-entities');
@@ -2676,12 +2647,26 @@
               .join('\n')
           : '  (Chưa có phục bút nào)';
 
+      const linkedFileData = this.getLinkedStoryBibleFileIfEnabled();
+      const linkedFileSection =
+        linkedFileData &&
+        linkedFileData.text &&
+        linkedFileData.text.trim() &&
+        linkedFileData.text.trim() !== ren.trim()
+          ? [
+              ``,
+              `[FILE STORY BIBLE ĐANG LIÊN KẾT TỰ ĐỘNG (${linkedFileData.fileName})]:`,
+              linkedFileData.text.trim().slice(0, 28000)
+            ].join('\n')
+          : '';
+
       const rawBlock = [
         `====================================================================`,
         `🏛️ HỒ SƠ STORY BIBLE & LUẬT BẤT KHẢ XÂM PHẠM (ĐÃ LIÊN KẾT TỰ ĐỘNG)`,
         `====================================================================`,
         `[1. NỘI DUNG STORY BIBLE CHÍNH THỨC]:`,
         ren.trim() || tpl.trim() || '(Chưa có nội dung Story Bible)',
+        linkedFileSection,
         ``,
         `[2. HỒ SƠ NHÂN VẬT & GIỌNG ĐIỆU ĐỐI THOẠI]:`,
         charLines,
@@ -2700,6 +2685,538 @@
         .join('\n');
       const i18n = window.NoirStudio?.i18n;
       return i18n?.translatePromptFrame ? i18n.translatePromptFrame(rawBlock) : rawBlock;
+    }
+
+    /**
+     * Xây dựng câu lệnh tạo/cập nhật Story Bible 8 phần siêu chi tiết (bao phủ toàn bộ cấu trúc PDF mẫu),
+     * tự động liệt kê tất cả các chương tác giả đã viết + Hồ sơ nhân vật + Ma trận Ai Biết Gì + Sổ cái phục bút!
+     */
+    buildDynamicNotebookLmStoryBiblePrompt() {
+      const chaps = Array.isArray(window.NoirStudio?.chapterManager?.chapters)
+        ? window.NoirStudio.chapterManager.chapters
+        : [];
+      const chapListText =
+        chaps.length > 0
+          ? chaps
+              .map(
+                (c, i) =>
+                  `   ${i + 1}. ${c.displayTitle || c.title || `Chương ${i + 1}`} (${
+                    c.wordCount || 0
+                  } từ · ${c.status === 'APPROVED' ? 'Đã duyệt' : 'Bản nháp'})`
+              )
+              .join('\n')
+          : '   (Đọc toàn bộ các chương hiện có trong tài liệu tải lên)';
+
+      const clueSummary =
+        this.cluesLedger.length > 0
+          ? this.cluesLedger
+              .map(
+                (cl, i) =>
+                  `   - [${cl.status === 'RESOLVED' ? 'ĐÃ THU HỒI' : 'ĐANG TREO'}] ${cl.title} (${cl.plantedIn || 'Chưa rõ'}) — ${cl.note || ''}`
+              )
+              .join('\n')
+          : '   (Trích xuất đầy đủ mọi phục bút & manh mối mới từ các chương)';
+
+      const knowSummary =
+        this.knowledgeMatrix.length > 0
+          ? this.knowledgeMatrix
+              .map(
+                (k, i) =>
+                  `   - Bí mật "${k.secret}": ĐÃ BIẾT (${k.whoKnows}) | CHƯA BIẾT (${k.whoDoesNotKnow})`
+              )
+              .join('\n')
+          : '   (Trích xuất toàn bộ bí mật chưa tiết lộ và ranh giới nhận thức giữa các nhân vật)';
+
+      return [
+        'Bạn là Biên Tập Viên Cốt Truyện & Chuyên Gia Kiểm Toán Trục Thời Gian Cấp Cao. Hãy đọc thật kỹ toàn bộ tệp PDF / các chương tiểu thuyết tôi tải lên (đúng trình tự từ Arc 1 / Hồi 1 đến chương cuối cùng) và biên soạn một BẢN STORY BIBLE TOÀN DIỆN & SIÊU CHI TIẾT.',
+        '',
+        '📚 DANH SÁCH CÁC CHƯƠNG HIỆN TÁC GIẢ ĐÃ VIẾT (BẮT BUỘC PHỦ ĐỦ 100%, KHÔNG BỎ SÓT CHƯƠNG NÀO):',
+        chapListText,
+        '',
+        'NGUYÊN TẮC TỐI THƯỢNG (BẮT BUỘC TUÂN THỦ):',
+        '- PHẢI CHI TIẾT HÓA CỰC SÂU, DÀI, ĐẦY ĐỦ TỪNG CON SỐ TIỀN BẠC, MỐC GIỜ/PHÚT, TÊN ĐƯỜNG/ĐỊA BÀN, VẬT CHỨNG, THƯƠNG TÍCH, LỜI THOẠI THEN CHỐT VÀ DIỄN BIẾN TÂM LÝ.',
+        '- TUYỆT ĐỐI KHÔNG TÓM TẮT SƠ SÀI, KHÔNG GỘP CHUNG CHUNG, KHÔNG LƯỢC BỎ BẤT KỲ MANH MỐI HAY MỐC THỜI GIAN NÀO.',
+        '- Trình bày rõ ràng có tiêu đề, gạch đầu dòng phân cấp và BẢNG 4 CỘT chuẩn để tôi copy thẳng vào Word / Google Docs / Studio:',
+        '',
+        '1. TÓM TẮT TIMELINE HÀNH TRÌNH CHI TIẾT (THEO TỪNG PHẦN / ARC → HỒI / CHƯƠNG → PHÂN CẢNH):',
+        '   - Chia rõ từng Phần (Arc) -> từng Hồi/Chương -> từng Phân cảnh nhỏ (X.1, X.2, X.3...).',
+        '   - Ghi rõ MỐC THỜI GIAN CHÍNH XÁC từng ngày/buổi/giờ/phút (vd: 09h42 sáng Thứ Sáu, 21h28 Thứ Sáu, 06h12 Thứ Bảy, 22h50...) và đếm ngược giữa các sự kiện.',
+        '   - Ghi rõ diễn biến hành động, kỹ thuật/nghiệp vụ, con số tiền bạc/vật chứng và bước ngoặt tâm lý từng cảnh.',
+        '',
+        '2. CƠ CHẾ HỆ THỐNG / QUY TẮC THẾ GIỚI & NHIỆM VỤ ĐANG KÍCH HOẠT:',
+        '   - Tên Hệ thống / Luật bất khả xâm phạm của thế giới, giới hạn năng lực, cơ chế cảnh báo.',
+        '   - Trạng thái các Nhiệm vụ đã hoàn thành và Nhiệm vụ đang kích hoạt (thời hạn chót chính xác, yêu cầu kép bắt buộc, phần thưởng, hình phạt thất bại).',
+        '',
+        '3. BẢNG NHÂN VẬT & MẠNG LƯỚI QUAN HỆ (DẠNG BẢNG 4 CỘT CHI TIẾT):',
+        '   - Cột 1: Nhân vật | Cột 2: Vai trò / Thân phận (tuổi, nghề nghiệp, quê quán) | Cột 3: Tính cách, Hành vi nổi bật đến hết chương mới nhất & Xưng hô | Cột 4: Trạng thái hiện tại (đang ở đâu, làm gì, thương tích/tâm lý ra sao).',
+        '',
+        '4. TÀI SẢN, QUYỀN LỰC, VŨ KHÍ DỮ LIỆU, BẰNG CHỨNG PHÁP LÝ & TÌNH TRẠNG THỂ CHẤT HIỆN TẠI:',
+        '   - Tài chính khả dụng và tài chính ngầm cất giấu (ghi rõ từng đồng và từng vị trí giấu).',
+        '   - Danh sách từng vật chứng, USB, video, giấy tờ y tế/pháp lý và nơi sao lưu.',
+        '   - Tình trạng thể chất & thương tích hiện tại của nhân vật chính và đồng minh.',
+        '',
+        '5. NHỮNG NGÒI NỔ CẤP BÁCH CHỜ KÍCH NỔ (HỒI TIẾP THEO) & SỔ CÁI PHỤC BÚT (MANH MỐI):',
+        '   - Liệt kê toàn bộ các ngòi nổ cấp bách, âm mưu, kế hoạch đang đếm ngược cho chương kế tiếp.',
+        '   - Cập nhật đầy đủ Sổ cái Phục bút & Manh mối (đánh dấu [ĐANG TREO CHỜ THU HỒI] hoặc [ĐÃ GIẢI ĐÁP]).',
+        '   - Sổ cái phục bút hiện ghi nhận trong Studio:',
+        clueSummary,
+        '',
+        '6. NHỮNG BÍ MẬT CHƯA TIẾT LỘ (SECRETS KEPT HIDDEN) & MA TRẬN "AI BIẾT GÌ":',
+        '   - Liệt kê từng bí mật cốt lõi, chỉ rõ tính đến chương cuối AI ĐÃ BIẾT, AI ĐANG NGHI NGỜ và AI TUYỆT ĐỐI CHƯA BIẾT.',
+        '   - Ma trận hiện ghi nhận trong Studio:',
+        knowSummary,
+        '',
+        '7. ĐỊA BÀN & ĐỊA ĐIỂM QUAN TRỌNG:',
+        '   - Chiến trường, căn cứ, phòng trọ, trạm y tế, trụ sở đối thủ, hang ổ kẻ thù, địa bàn lưu trữ dữ liệu và mục tiêu tiếp theo.',
+        '',
+        '8. CHIẾN THUẬT & ĐÒN ĐẤU TRÍ THỰC CHIẾN NỔI BẬT:',
+        '   - Tổng hợp từng chiến thuật/đòn phản kích đặc sắc đã và đang sử dụng (tên chiến thuật + cơ chế thực thi + điểm mù khai thác).'
+      ].join('\n');
+    }
+
+    isLinkedStoryBibleFileEnabled() {
+      try {
+        return localStorage.getItem('noir_v105_story_bible_file_link_enabled') !== '0';
+      } catch (_e) {
+        return true;
+      }
+    }
+
+    getLinkedStoryBibleFileData() {
+      try {
+        const raw = localStorage.getItem('noir_v105_linked_bible_file_v1');
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.text === 'string' && parsed.text.trim()) {
+          return parsed;
+        }
+      } catch (_e) {}
+      return null;
+    }
+
+    getLinkedStoryBibleFileIfEnabled() {
+      if (!this.isLinkedStoryBibleFileEnabled()) return null;
+      return this.getLinkedStoryBibleFileData();
+    }
+
+    saveLinkedStoryBibleFileData(fileName, textContent) {
+      const payload = {
+        fileName: String(fileName || 'Story_Bible.pdf'),
+        text: String(textContent || '').trim(),
+        updatedAt: Date.now()
+      };
+      try {
+        localStorage.setItem('noir_v105_linked_bible_file_v1', JSON.stringify(payload));
+        localStorage.setItem('noir_v105_story_bible_file_link_enabled', '1');
+      } catch (_e) {}
+      this.refreshLinkedBibleFileBadgeUI();
+      window.NoirStudio?.manuscriptSyncTracker?.markStoryBibleUpdatedNow?.();
+      return payload;
+    }
+
+    refreshLinkedBibleFileBadgeUI() {
+      const badge = document.getElementById('tab4-linked-bible-file-badge');
+      const chkTab4 = document.getElementById('chk-tab4-link-bible-file');
+      const chkCmd = document.getElementById('chk-cmd-link-story-bible-file');
+      const enabled = this.isLinkedStoryBibleFileEnabled();
+      if (chkTab4) chkTab4.checked = enabled;
+      if (chkCmd) chkCmd.checked = enabled;
+      if (!badge) return;
+      const data = this.getLinkedStoryBibleFileData();
+      if (data) {
+        const words = this.utils.countVietnameseWords(data.text);
+        badge.textContent = enabled
+          ? `✅ Đang liên kết: ${data.fileName} (${words} từ)`
+          : `⏸️ Đã tạm tắt liên kết: ${data.fileName}`;
+        badge.className = enabled
+          ? 'px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-200 font-monoCode text-[10px]'
+          : 'px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-700 text-zinc-400 font-monoCode text-[10px]';
+      } else {
+        badge.textContent = 'Chưa chọn file riêng (đang dùng trực tiếp khung Story Bible)';
+      }
+    }
+
+    extractPlainTextFromRichHtml(richEl) {
+      if (!richEl) return '';
+      const clone = richEl.cloneNode(true);
+      // Chuyển bảng HTML thành dạng bảng Markdown rõ cột khi đồng bộ sang văn bản prompt
+      clone.querySelectorAll('table').forEach((tbl) => {
+        const rows = Array.from(tbl.querySelectorAll('tr')).map((tr) =>
+          Array.from(tr.querySelectorAll('th,td'))
+            .map((cell) => String(cell.textContent || '').replace(/\s+/g, ' ').trim())
+            .join(' | ')
+        );
+        const pre = document.createTextNode('\n' + rows.join('\n') + '\n');
+        tbl.replaceWith(pre);
+      });
+      return String(clone.innerText || clone.textContent || '').replace(/\r\n/g, '\n').trim();
+    }
+
+    plainTextToRichHtml(plainText) {
+      const esc = this.utils.escapeHtml.bind(this.utils);
+      return String(plainText || '')
+        .split('\n')
+        .map((line) => {
+          const trimmed = line.trim();
+          if (!trimmed) return '<br>';
+          if (/^(===|###|\d+\.\s+[A-ZÀ-Ỹ])/.test(trimmed)) {
+            return `<div><strong>${esc(line)}</strong></div>`;
+          }
+          return `<div>${esc(line)}</div>`;
+        })
+        .join('');
+    }
+
+    async exportStoryBibleToPdfAndFolder() {
+      const renEl = document.getElementById('textarea-rendered-bible-content');
+      const richEl = document.getElementById('tab4-rich-bible-editor');
+      const plainContent = (renEl?.value || '').trim();
+      const richHtml = (richEl?.innerHTML || '').trim() || this.plainTextToRichHtml(plainContent);
+
+      if (!plainContent && !richHtml) {
+        this.utils.showToast('⚠️ Story Bible hiện đang trống, hãy nhập nội dung trước khi xuất file!', 'warning', 3200);
+        return false;
+      }
+
+      const bookTitle =
+        document.getElementById('export-book-title-input')?.value?.trim() ||
+        localStorage.getItem('noir_s6_book_title') ||
+        'Story Bible Tiểu Thuyết';
+      const esc = this.utils.escapeHtml.bind(this.utils);
+      const safeStamp = new Date().toISOString().slice(0, 10);
+      const pdfDocTitle = `Story_Bible_${safeStamp}`;
+
+      const printableHtml = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>${esc(pdfDocTitle)} — ${esc(bookTitle)}</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    body { font-family: "Times New Roman", "Segoe UI", Georgia, serif; color: #111827; line-height: 1.65; font-size: 12pt; max-width: 820px; margin: 0 auto; padding: 18px; }
+    h1 { font-size: 18pt; border-bottom: 2px solid #059669; padding-bottom: 6px; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10.5pt; }
+    th, td { border: 1px solid #9ca3af; padding: 6px 8px; text-align: left; vertical-align: top; }
+    th { background: #f3f4f6; font-weight: bold; }
+    img { max-width: 100%; height: auto; border-radius: 6px; margin: 8px 0; }
+    .meta { color: #4b5563; font-size: 10pt; margin-bottom: 14px; }
+    @media print { .no-print { display: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="background:#ecfdf5;border:1px solid #10b981;padding:10px 14px;border-radius:10px;margin-bottom:16px;font-family:system-ui,sans-serif;font-size:13px;display:flex;justify-content:space-between;align-items:center;gap:10px;">
+    <span>📄 <strong>Story Bible PDF đã sẵn sàng!</strong> Chọn <strong>"Save as PDF / Lưu dưới dạng PDF"</strong> trong hộp thoại in để tải xuống.</span>
+    <button onclick="window.print()" style="background:#059669;color:#fff;border:0;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;">🖨️ Lưu thành PDF</button>
+  </div>
+  <h1>📖 STORY BIBLE: ${esc(bookTitle)}</h1>
+  <div class="meta">Cập nhật lúc: ${esc(this.utils.formatTimestampVN(Date.now()))}</div>
+  <div>${richHtml}</div>
+  <script>window.onload = function(){ setTimeout(function(){ try { window.print(); } catch(e){} }, 350); };</script>
+</body>
+</html>`;
+
+      // 1) Mở hộp thoại tải PDF tức thì (100% nội bộ trên máy người dùng)
+      const printWin = window.open('', '_blank', 'width=980,height=820');
+      if (printWin && printWin.document) {
+        printWin.document.open();
+        printWin.document.write(printableHtml);
+        printWin.document.close();
+      } else {
+        // Fallback tải file HTML chuẩn mở in PDF
+        const blob = new Blob([printableHtml], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${pdfDocTitle}.html`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      }
+
+      // 2) Tự động copy nội bộ vào thư mục con "Story Bible" cạnh các chương truyện trong thư mục làm việc thật (nếu đã nối ổ cứng)
+      let savedToFolder = false;
+      try {
+        const rootHandle = this.fs?.rootHandle || window.NoirStudio?.fsEngine?.rootHandle;
+        if (rootHandle && typeof rootHandle.getDirectoryHandle === 'function') {
+          const bibleDir = await rootHandle.getDirectoryHandle('Story Bible', { create: true });
+          const htmlHandle = await bibleDir.getFileHandle(`${pdfDocTitle}.html`, { create: true });
+          const w1 = await htmlHandle.createWritable();
+          await w1.write(printableHtml);
+          await w1.close();
+
+          const txtHandle = await bibleDir.getFileHandle(`${pdfDocTitle}.txt`, { create: true });
+          const w2 = await txtHandle.createWritable();
+          await w2.write(plainContent || this.extractPlainTextFromRichHtml(richEl));
+          await w2.close();
+          savedToFolder = true;
+        }
+      } catch (_eFs) {}
+
+      // 3) Ưu tiên tự động liên kết chính file Story Bible vừa xuất làm nguồn mặc định cho Chế độ 1–6
+      this.saveLinkedStoryBibleFileData(
+        `${pdfDocTitle}.pdf`,
+        plainContent || this.extractPlainTextFromRichHtml(richEl)
+      );
+
+      this.utils.showToast(
+        savedToFolder
+          ? `📄 Đã mở tải PDF Story Bible, tự động lưu bản sao vào thư mục "Story Bible/" cạnh các chương & bật liên kết mặc định cho Chế độ 1–6!`
+          : `📄 Đã mở tải PDF Story Bible & bật liên kết mặc định cho Chế độ 1–6! (Nối thư mục ổ cứng để tự chép vào thư mục con "Story Bible/")`,
+        'success',
+        5200
+      );
+      return true;
+    }
+
+    async importStoryBibleFromPickedFile(file) {
+      if (!file) return false;
+      try {
+        let extractedText = '';
+        const lower = String(file.name || '').toLowerCase();
+        const importer = window.NoirStudio?.docImporter;
+        if (lower.endsWith('.pdf') && importer?.extractPdfContent) {
+          const res = await importer.extractPdfContent(file, file.name);
+          extractedText = String(res?.content || res?.text || '').trim();
+        } else if (lower.endsWith('.docx') && importer?.extractDocxContent) {
+          const res = await importer.extractDocxContent(file, file.name);
+          extractedText = String(res?.content || res?.text || '').trim();
+        } else {
+          const rawStr = await file.text();
+          if (lower.endsWith('.html') || lower.endsWith('.htm')) {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = rawStr;
+            extractedText = this.extractPlainTextFromRichHtml(tmp);
+          } else {
+            extractedText = rawStr.trim();
+          }
+        }
+
+        if (!extractedText) {
+          this.utils.showToast('⚠️ Không trích xuất được nội dung văn bản từ tệp Story Bible vừa chọn.', 'warning', 3500);
+          return false;
+        }
+
+        this.saveLinkedStoryBibleFileData(file.name, extractedText);
+
+        // Nếu khung Story Bible chính thức đang ngắn/mặc định, tự điền luôn để tác giả xem và chỉnh sửa trực tiếp
+        const renEl = document.getElementById('textarea-rendered-bible-content');
+        const richEl = document.getElementById('tab4-rich-bible-editor');
+        if (renEl && renEl.value.trim().length < 200) {
+          renEl.value = extractedText;
+          if (richEl) {
+            richEl.innerHTML = this.plainTextToRichHtml(extractedText);
+            try { localStorage.setItem('noir_v105_bible_rich_html_v1', richEl.innerHTML); } catch (_e) {}
+          }
+          this.saveAllBibleData(false);
+        }
+
+        const words = this.utils.countVietnameseWords(extractedText);
+        this.utils.showToast(
+          `✅ Đã chọn & liên kết File Story Bible "${file.name}" (${words} từ) cho toàn bộ Chế độ 1–6!`,
+          'success',
+          4400
+        );
+        return true;
+      } catch (err) {
+        this.utils.showToast(`❌ Lỗi đọc File Story Bible: ${err?.message || err}`, 'error', 4200);
+        return false;
+      }
+    }
+
+    bindV105RichBibleAndFileControls() {
+      const renEl = document.getElementById('textarea-rendered-bible-content');
+      const richEl = document.getElementById('tab4-rich-bible-editor');
+      const btnModeRich = document.getElementById('btn-tab4-bible-mode-rich');
+      const btnModePlain = document.getElementById('btn-tab4-bible-mode-plain');
+      const richToolbar = document.getElementById('tab4-rich-bible-toolbar');
+
+      // 1) Khởi tạo nội dung Rich Editor kiểu Word / Google Docs (giữ trọn bảng, emoji, icon, ảnh)
+      if (richEl && !richEl.dataset.v105RichBound) {
+        richEl.dataset.v105RichBound = '1';
+        const savedRichHtml = localStorage.getItem('noir_v105_bible_rich_html_v1') || '';
+        const savedPlain = renEl?.value || '';
+        if (savedRichHtml && savedRichHtml.trim()) {
+          richEl.innerHTML = savedRichHtml;
+        } else if (savedPlain.trim()) {
+          richEl.innerHTML = this.plainTextToRichHtml(savedPlain);
+        }
+
+        const syncRichToPlainAndSave = () => {
+          const htmlNow = richEl.innerHTML;
+          try {
+            localStorage.setItem('noir_v105_bible_rich_html_v1', htmlNow);
+          } catch (_eQuota) {}
+          if (renEl) {
+            renEl.value = this.extractPlainTextFromRichHtml(richEl);
+          }
+          this.saveAllBibleData(false);
+          window.NoirStudio?.manuscriptSyncTracker?.markStoryBibleUpdatedNow?.();
+        };
+
+        richEl.addEventListener('input', syncRichToPlainAndSave);
+        richEl.addEventListener('paste', () => {
+          setTimeout(() => {
+            syncRichToPlainAndSave();
+            const txt = (renEl?.value || '').trim();
+            if (txt.length >= 60) {
+              this.syncStructuredEntitiesFromOfficialBible({ isAutoPaste: true });
+            }
+          }, 120);
+        });
+
+        const setEditorViewMode = (isRich) => {
+          if (isRich) {
+            if (renEl && !richEl.innerHTML.trim() && renEl.value.trim()) {
+              richEl.innerHTML = this.plainTextToRichHtml(renEl.value);
+            }
+            richEl.classList.remove('hidden');
+            richToolbar?.classList.remove('hidden');
+            renEl?.classList.add('hidden');
+            if (btnModeRich) btnModeRich.className = 'px-2 py-1 rounded-lg bg-emerald-600 text-white font-bold text-[10px] transition';
+            if (btnModePlain) btnModePlain.className = 'px-2 py-1 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white font-bold text-[10px] transition';
+          } else {
+            if (renEl) renEl.value = this.extractPlainTextFromRichHtml(richEl) || renEl.value;
+            richEl.classList.add('hidden');
+            richToolbar?.classList.add('hidden');
+            renEl?.classList.remove('hidden');
+            if (btnModePlain) btnModePlain.className = 'px-2 py-1 rounded-lg bg-emerald-600 text-white font-bold text-[10px] transition';
+            if (btnModeRich) btnModeRich.className = 'px-2 py-1 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white font-bold text-[10px] transition';
+          }
+        };
+
+        btnModeRich?.addEventListener('click', () => setEditorViewMode(true));
+        btnModePlain?.addEventListener('click', () => setEditorViewMode(false));
+
+        document.querySelectorAll('[data-rich-cmd]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const cmd = btn.getAttribute('data-rich-cmd');
+            richEl.focus();
+            try { document.execCommand(cmd, false, null); } catch (_e) {}
+            syncRichToPlainAndSave();
+          });
+        });
+
+        document.getElementById('btn-tab4-rich-insert-table')?.addEventListener('click', () => {
+          richEl.focus();
+          const tableHtml = `
+            <table>
+              <thead>
+                <tr><th>Nhân vật</th><th>Vai trò / Thân phận</th><th>Tính cách &amp; Hành vi</th><th>Trạng thái hiện tại</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Tên nhân vật</td><td>Vai trò</td><td>Đặc điểm nổi bật</td><td>Đang ở đâu / tình trạng</td></tr>
+              </tbody>
+            </table><div><br></div>`;
+          try {
+            document.execCommand('insertHTML', false, tableHtml);
+          } catch (_e) {
+            richEl.insertAdjacentHTML('beforeend', tableHtml);
+          }
+          syncRichToPlainAndSave();
+        });
+
+        const imgBtn = document.getElementById('btn-tab4-rich-insert-img');
+        const imgInput = document.getElementById('input-tab4-rich-insert-img');
+        imgBtn?.addEventListener('click', () => imgInput?.click());
+        imgInput?.addEventListener('change', () => {
+          const f = imgInput.files?.[0];
+          if (!f) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = String(reader.result || '');
+            if (!dataUrl) return;
+            richEl.focus();
+            const imgHtml = `<img src="${dataUrl}" alt="${this.utils.escapeHtml(f.name)}" /><div><br></div>`;
+            try { document.execCommand('insertHTML', false, imgHtml); } catch (_e) { richEl.insertAdjacentHTML('beforeend', imgHtml); }
+            syncRichToPlainAndSave();
+          };
+          reader.readAsDataURL(f);
+          imgInput.value = '';
+        });
+
+        document.getElementById('btn-tab4-rich-copy-html')?.addEventListener('click', async () => {
+          const html = richEl.innerHTML;
+          const plain = this.extractPlainTextFromRichHtml(richEl);
+          try {
+            if (navigator.clipboard?.write && typeof ClipboardItem === 'function') {
+              await navigator.clipboard.write([
+                new ClipboardItem({
+                  'text/html': new Blob([html], { type: 'text/html' }),
+                  'text/plain': new Blob([plain], { type: 'text/plain' })
+                })
+              ]);
+            } else {
+              await navigator.clipboard.writeText(plain);
+            }
+            this.utils.showToast('📋 Đã copy Story Bible giữ nguyên bảng, icon, emoji & định dạng!', 'success', 3200);
+          } catch (_e) {
+            await window.NoirStudio?.geminiSplitBridge?.copyTextReliable?.(plain);
+            this.utils.showToast('📋 Đã sao chép nội dung Story Bible!', 'success', 2600);
+          }
+        });
+      }
+
+      // 2) Các nút File Story Bible (Xuất PDF + Lưu thư mục Story Bible & Chọn File liên kết mặc định bật)
+      const btnExportPdf = document.getElementById('btn-tab4-export-bible-pdf-file');
+      if (btnExportPdf && !btnExportPdf.dataset.v105Bound) {
+        btnExportPdf.dataset.v105Bound = '1';
+        btnExportPdf.addEventListener('click', () => this.exportStoryBibleToPdfAndFolder());
+      }
+
+      const btnPickFile = document.getElementById('btn-tab4-pick-bible-file');
+      const inputPickFile = document.getElementById('input-tab4-pick-bible-file');
+      if (btnPickFile && inputPickFile && !btnPickFile.dataset.v105Bound) {
+        btnPickFile.dataset.v105Bound = '1';
+        btnPickFile.addEventListener('click', () => inputPickFile.click());
+        inputPickFile.addEventListener('change', async () => {
+          const f = inputPickFile.files?.[0];
+          if (f) await this.importStoryBibleFromPickedFile(f);
+          inputPickFile.value = '';
+        });
+      }
+
+      const chkTab4Link = document.getElementById('chk-tab4-link-bible-file');
+      if (chkTab4Link && !chkTab4Link.dataset.v105Bound) {
+        chkTab4Link.dataset.v105Bound = '1';
+        chkTab4Link.addEventListener('change', () => {
+          try {
+            localStorage.setItem('noir_v105_story_bible_file_link_enabled', chkTab4Link.checked ? '1' : '0');
+          } catch (_e) {}
+          this.refreshLinkedBibleFileBadgeUI();
+        });
+      }
+      this.refreshLinkedBibleFileBadgeUI();
+
+      // 3) Nút Chia đôi màn hình với NotebookLM & 2 link gạch chân nhắc cập nhật Story Bible ở Tab 4
+      const launchTab4NotebookLm = async (splitMode) => {
+        const freshPrompt = this.buildDynamicNotebookLmStoryBiblePrompt();
+        const promptBox = document.getElementById('textarea-tab4-notebooklm-prompt');
+        if (promptBox) promptBox.value = freshPrompt;
+        if (splitMode) {
+          window.NoirStudio?.geminiSplitBridge?.triggerSplitScreenForCurrentContext?.(
+            'NOTEBOOKLM',
+            'TAB4_STORY_BIBLE',
+            freshPrompt
+          );
+        } else {
+          await window.NoirStudio?.geminiSplitBridge?.copyTextReliable?.(freshPrompt);
+          this.utils.showToast(
+            '✅ Đã copy sẵn câu lệnh khung Story Bible siêu chi tiết & mở Google NotebookLM!',
+            'success',
+            4000
+          );
+          window.open('https://notebooklm.google.com/', '_blank', 'noopener,noreferrer');
+        }
+      };
+
+      const bindOnce = (id, fn) => {
+        const el = document.getElementById(id);
+        if (el && !el.dataset.v105NblmBound) {
+          el.dataset.v105NblmBound = '1';
+          el.addEventListener('click', fn);
+        }
+      };
+      bindOnce('btn-tab4-split-notebooklm', () => launchTab4NotebookLm(true));
+      bindOnce('btn-tab4-stale-open-nblm', () => launchTab4NotebookLm(false));
+      bindOnce('btn-tab4-stale-split-nblm', () => launchTab4NotebookLm(true));
     }
   }
 

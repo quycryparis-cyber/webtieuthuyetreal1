@@ -1029,7 +1029,7 @@
         }, true);
       } catch (_eSub) {}
       try {
-        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v104';
+        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v105';
         if (typeof window !== 'undefined' && 'caches' in window && window.caches && typeof window.caches.keys === 'function') {
           window.caches.keys().then(function (keys) {
             for (var i = 0; i < keys.length; i++) {
@@ -1428,7 +1428,10 @@
           <h2 class="text-xs font-extrabold uppercase tracking-wider text-emerald-500 flex items-center gap-1.5 whitespace-nowrap shrink-0">
             <span>📂 Danh Sách Chương</span>
           </h2>
-          <div class="flex items-center gap-1.5 shrink-0">
+          <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+            <button type="button" id="btn-tab2-split-gemini" class="px-2 py-1 rounded-lg border border-indigo-500/50 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-200 font-bold text-[10px] transition whitespace-nowrap" title="Copy câu lệnh & chia đôi màn hình làm việc cùng Gemini Web/App">
+              <span>🪟 Chia đôi màn hình với Gemini</span>
+            </button>
             <button type="button" id="btn-toggle-tab2-filters" data-noir-collapse-target="tab2-filter-import-collapsible-body" data-noir-collapse-key="tab2_filter_import" class="noir-collapse-toggle px-2.5 py-1.5 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-300 font-bold text-[11px] transition" title="Mở rộng / Rút gọn bộ lọc chương, nạp DOCX/PDF và sao lưu JSON">
               <span>🎛️ Công cụ &amp; Lọc</span> <span class="noir-collapse-arrow">▾</span>
             </button>
@@ -1538,6 +1541,9 @@
               <button type="button" id="btn-open-fullscreen-ai-command" class="px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs sm:text-sm shadow-lg flex items-center gap-2 transition max-w-full text-left">
                 <span>🎛️ Chọn chế độ chạy mô hình, thông số và nhập câu lệnh</span>
               </button>
+              <button type="button" id="btn-tab3-split-gemini" class="px-2.5 py-1.5 rounded-xl border border-indigo-400/60 bg-indigo-500/20 hover:bg-indigo-500/35 text-indigo-100 font-bold text-[10.5px] shadow-sm transition whitespace-nowrap" title="Tự động tổng hợp, copy câu lệnh & chia đôi màn hình cùng Gemini Web/App (hoặc NotebookLM ở Chế độ 3-5)">
+                <span>🪟 Chia đôi màn hình với Gemini</span>
+              </button>
               <button type="button" id="btn-toggle-tab3-secondary-tools" data-noir-collapse-target="tab3-top-secondary-tools" data-noir-collapse-key="tab3_top_secondary" class="noir-collapse-toggle px-3 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-300 font-bold text-xs flex items-center gap-1.5 transition" title="Mở rộng / Rút gọn mốc chuyển cảnh, chat tự do và kiểm tra ngữ cảnh">
                 <span>🛠️ Tiện ích AI &amp; Mốc cảnh</span> <span class="noir-collapse-arrow">▾</span>
               </button>
@@ -1567,10 +1573,11 @@
               <span class="text-xs font-extrabold uppercase text-emerald-400">📺 Cửa Sổ Đầu Ra:</span>
               <select id="s20-quad-tab-selector" class="w-full sm:w-auto max-w-full min-w-0 px-3 py-1.5 rounded-xl border-2 border-emerald-500/50 bg-studioLightBg dark:bg-zinc-950 font-extrabold text-xs text-emerald-400 focus:outline-none focus:border-emerald-400">
                 <option value="MODE_1_DRAFT">✍️ Chế độ 1: Viết Bản Nháp (3.000 - 4.000+ từ)</option>
-                <option value="MODE_2_BRAINSTORM">🧭 Chế độ 2: Tham Mưu Cốt Truyện & Gỡ Bí</option>
-                <option value="MODE_3_AUDIT">🔍 Chế độ 3: Kiểm Toán Logic & Soi Lỗi Mâu Thuẫn</option>
-                <option value="MODE_4_REVIEW">📊 Chế độ 4: Đánh Giá Độc Giả & Chấm Điểm</option>
-                <option value="MODE_5_DIAGRAM">🎨 Chế độ 5: Vẽ Biểu Đồ Cốt Truyện & Diễn Biến Theo Thời Gian</option>
+                <option value="MODE_2_BRAINSTORM">🧭 Chế độ 2: Tham Mưu Cốt Truyện &amp; Gỡ Bí</option>
+                <option value="MODE_3_AUDIT">🔍 Chế độ 3: Kiểm Toán Logic &amp; Soi Lỗi Mâu Thuẫn</option>
+                <option value="MODE_4_REVIEW">📊 Chế độ 4: Đánh Giá Độc Giả &amp; Chấm Điểm</option>
+                <option value="MODE_5_DIAGRAM">🎨 Chế độ 5: Vẽ Biểu Đồ Cốt Truyện &amp; Diễn Biến Theo Thời Gian</option>
+                <option value="MODE_6_BOOK_COVER">🖼️ Chế độ 6: Tạo Bìa Truyện Bằng AI (Gemini Tạo Ảnh)</option>
               </select>
               <span id="tab3-output-word-badge" class="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 font-monoCode font-bold text-[11px] text-emerald-300">0 từ</span>
             </div>
@@ -1777,8 +1784,41 @@
                 <button type="button" id="btn-tab1-quick-ai-open" class="px-2.5 py-1 rounded-lg border border-indigo-500/40 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 text-[11px] font-bold transition" title="Mở nhanh Trợ lý AI viết tiếp chương">
                   <span>🤖 AI Hỗ Trợ</span>
                 </button>
+                <button type="button" id="btn-tab1-split-gemini" class="px-2 py-1 rounded-lg border border-violet-400/55 bg-violet-500/15 hover:bg-violet-500/30 text-violet-200 text-[10px] font-bold transition whitespace-nowrap" title="Vừa sáng tác vừa chia đôi màn hình tương tác trực tiếp với Gemini Web / App">
+                  <span>🪟 Chia đôi màn hình với Gemini</span>
+                </button>
                 <span id="daily-goal-progress-pill" class="hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-monoCode font-bold text-[10px] cursor-pointer" title="Mục tiêu số từ viết trong ngày (Bấm để đặt mục tiêu)">🎯 0 / 2.000 từ hôm nay</span>
               </div>
+            </div>
+
+            <!-- Quy trình soạn thảo ngắn 4 bước ngay trên Tab 1 (bấm chữ gạch chân vào thẳng đúng chế độ) -->
+            <div id="tab1-four-step-workflow-bar" class="px-2.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-950/25 text-[10.5px] sm:text-[11px] text-zinc-200 leading-relaxed flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span class="font-extrabold text-emerald-300 shrink-0">🧭 Quy trình 4 bước:</span>
+              <span>
+                <strong class="text-amber-300">1.</strong>
+                <button type="button" data-workflow-jump="TAB4_BIBLE" class="underline decoration-2 underline-offset-2 font-bold text-amber-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Cập nhật Story Bible</button>
+                <span class="text-zinc-400">(nếu bạn đã có các chương, nội dung từ trước)</span>
+              </span>
+              <span class="text-zinc-500">→</span>
+              <span>
+                <strong class="text-cyan-300">2.</strong>
+                <button type="button" data-workflow-jump="MODE_2_BRAINSTORM" class="underline decoration-2 underline-offset-2 font-bold text-cyan-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Tham mưu cốt truyện (Chế độ 2)</button>
+              </span>
+              <span class="text-zinc-500">→</span>
+              <span>
+                <strong class="text-emerald-300">3.</strong>
+                <button type="button" data-workflow-jump="MODE_1_DRAFT" class="underline decoration-2 underline-offset-2 font-bold text-emerald-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Viết truyện, chạy prompt tổng hợp (Chế độ 1)</button>
+              </span>
+              <span class="text-zinc-500">→</span>
+              <span>
+                <strong class="text-violet-300">4.</strong>
+                <span>Lặp lại bước 1, 2, 3 hoặc</span>
+                <button type="button" data-workflow-jump="MODE_3_AUDIT" class="underline decoration-2 underline-offset-2 font-bold text-amber-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Kiểm tra logic</button>,
+                <button type="button" data-workflow-jump="MODE_4_REVIEW" class="underline decoration-2 underline-offset-2 font-bold text-pink-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Review lại</button>,
+                <button type="button" data-workflow-jump="MODE_5_DIAGRAM" class="underline decoration-2 underline-offset-2 font-bold text-sky-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Vẽ trục timeline</button>
+                <span>hay là</span>
+                <button type="button" data-workflow-jump="MODE_6_BOOK_COVER" class="underline decoration-2 underline-offset-2 font-bold text-violet-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Tạo bìa</button>.
+              </span>
             </div>
 
             <div id="tab1-collapsible-tools-body" class="hidden flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-studioLightBorder/60 dark:border-zinc-800">
@@ -2037,6 +2077,9 @@
                 <span class="noir-collapse-arrow">▾</span>
               </button>
               <div class="flex items-center gap-1.5 flex-wrap">
+                <button type="button" id="btn-tab4-split-notebooklm" class="px-2.5 py-1 rounded-lg border border-sky-400/60 bg-sky-500/20 hover:bg-sky-500/35 text-sky-100 font-bold text-[10.5px] shadow-sm transition whitespace-nowrap" title="Copy sẵn câu lệnh khung Story Bible siêu chi tiết & chia đôi màn hình làm việc cùng NotebookLM">
+                  <span>🪟 Chia đôi màn hình với NotebookLM</span>
+                </button>
                 <button type="button" id="btn-tab4-sync-bible-entities" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] shadow flex items-center gap-1 transition" title="Dùng mô hình Gemini đã chọn (mặc định Hydrogen 4 / Flash) bóc tách nhân vật, ma trận bí mật và phục bút từ Story Bible">
                   <span>⚡ Đồng Bộ AI Bible</span>
                 </button>
@@ -2049,6 +2092,37 @@
               </div>
             </div>
             <div id="tab4-card-rendered-body" class="space-y-2.5 flex-1 flex flex-col">
+              <!-- Nhắc nhở tự động khi các chương truyện vừa có thay đổi (thêm chương / thêm chữ) -->
+              <div id="tab4-stale-bible-reminder" class="hidden p-2.5 rounded-xl border-2 border-amber-400/70 bg-amber-950/45 text-amber-100 text-[11px] leading-relaxed font-semibold shadow">
+                ⚠️ <strong>Nội dung các chương truyện vừa thay đổi!</strong> Bạn hãy cập nhật story bible của mình nhé, bấm
+                <button type="button" id="btn-tab4-stale-open-nblm" class="inline font-extrabold underline decoration-2 underline-offset-2 text-cyan-300 hover:text-white cursor-pointer bg-transparent border-0 p-0">vào đây</button>
+                để vào notebookLM của bạn hoặc bạn
+                <button type="button" id="btn-tab4-stale-split-nblm" class="inline font-extrabold underline decoration-2 underline-offset-2 text-emerald-300 hover:text-white cursor-pointer bg-transparent border-0 p-0">chia đôi màn hình làm việc</button>
+                luôn (đã tự động copy sẵn câu lệnh khung siêu chi tiết).
+              </div>
+
+              <!-- Quản lý File Story Bible (Xuất PDF + Lưu thư mục Story Bible & Chọn File liên kết mặc định bật cho Chế độ 1-6) -->
+              <div class="p-2.5 rounded-xl border border-indigo-500/35 bg-indigo-950/25 space-y-2">
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <button type="button" id="btn-tab4-export-bible-pdf-file" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[10.5px] shadow transition">
+                    📄 Cập nhật Story Bible bằng file (PDF + Thư mục Story Bible)
+                  </button>
+                  <button type="button" id="btn-tab4-pick-bible-file" class="px-2.5 py-1.5 rounded-lg border border-sky-400/50 bg-sky-500/15 hover:bg-sky-500/25 text-sky-200 font-bold text-[10.5px] transition">
+                    📂 Chọn file Story Bible
+                  </button>
+                  <input type="file" id="input-tab4-pick-bible-file" accept=".pdf,.docx,.txt,.md,.html,.htm" class="hidden" />
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-2 text-[10.5px]">
+                  <label class="inline-flex items-center gap-1.5 text-emerald-200 font-bold cursor-pointer select-none">
+                    <input type="checkbox" id="chk-tab4-link-bible-file" checked class="accent-emerald-500 w-3.5 h-3.5" />
+                    <span>🔗 Liên kết File Story Bible vào toàn bộ Prompt Chế độ 1–6</span>
+                  </label>
+                  <span id="tab4-linked-bible-file-badge" class="px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-700 text-zinc-300 font-monoCode text-[10px]">
+                    Chưa chọn file riêng (đang dùng trực tiếp khung Story Bible)
+                  </span>
+                </div>
+              </div>
+
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 rounded-xl border border-emerald-500/25 bg-zinc-950/60">
                 <div>
                   <label for="tab4-bible-model-select" class="block text-[10px] font-bold uppercase text-emerald-300 mb-1">Mô hình AI đồng bộ Story Bible:</label>
@@ -2065,10 +2139,26 @@
                   </select>
                 </div>
               </div>
-              <p class="text-[11px] text-zinc-400">
-                Được tự động cập nhật khi bạn bấm "✅ Duyệt &amp; Chốt Bản Thảo" hoặc bạn có thể chỉnh sửa trực tiếp tại đây.
-              </p>
-              <textarea id="textarea-rendered-bible-content" rows="10" class="w-full flex-1 p-3 rounded-xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightBg dark:bg-zinc-950 text-xs leading-relaxed select-text focus:outline-none focus:border-emerald-500"></textarea>
+
+              <!-- Thanh chế độ Soạn Thảo Giàu Định Dạng (Word / Google Docs: Bảng, Icon, Emoji, Hình ảnh) -->
+              <div class="flex flex-wrap items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl border border-zinc-700/80 bg-zinc-950/80 text-[10.5px]">
+                <div class="flex flex-wrap items-center gap-1">
+                  <button type="button" id="btn-tab4-bible-mode-rich" class="px-2 py-1 rounded-lg bg-emerald-600 text-white font-bold text-[10px] transition">📝 Chế độ Word / Google Docs (Bảng · Ảnh · Emoji)</button>
+                  <button type="button" id="btn-tab4-bible-mode-plain" class="px-2 py-1 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white font-bold text-[10px] transition">📄 Văn bản thuần</button>
+                </div>
+                <div id="tab4-rich-bible-toolbar" class="flex flex-wrap items-center gap-1">
+                  <button type="button" data-rich-cmd="bold" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white font-black" title="In đậm">B</button>
+                  <button type="button" data-rich-cmd="italic" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white italic font-serif" title="In nghiêng">I</button>
+                  <button type="button" data-rich-cmd="insertUnorderedList" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold" title="Danh sách chấm">• List</button>
+                  <button type="button" id="btn-tab4-rich-insert-table" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-emerald-300 font-bold" title="Chèn bảng 4 cột kiểu Word">⊞ Bảng</button>
+                  <button type="button" id="btn-tab4-rich-insert-img" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-sky-300 font-bold" title="Chèn ảnh vào Story Bible">🖼️ Ảnh</button>
+                  <input type="file" id="input-tab4-rich-insert-img" accept="image/*" class="hidden" />
+                  <button type="button" id="btn-tab4-rich-copy-html" class="px-2 py-0.5 rounded bg-indigo-600/80 hover:bg-indigo-500 text-white font-bold" title="Sao chép giữ nguyên bảng, icon, emoji & định dạng sang Word/Google Docs">📋 Copy giữ định dạng</button>
+                </div>
+              </div>
+
+              <div id="tab4-rich-bible-editor" contenteditable="true" spellcheck="false" class="w-full flex-1 min-h-[260px] max-h-[540px] overflow-y-auto p-3.5 rounded-xl border border-emerald-500/40 bg-studioLightBg dark:bg-zinc-950 text-xs leading-relaxed select-text focus:outline-none focus:border-emerald-400 space-y-1.5 [&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-zinc-600 [&_th]:bg-zinc-800/80 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_td]:border [&_td]:border-zinc-700 [&_td]:px-2 [&_td]:py-1 [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2" placeholder="Dán trực tiếp từ Google Docs / Word / NotebookLM (giữ trọn Bảng, Icon, Emoji & Hình ảnh)..."></div>
+              <textarea id="textarea-rendered-bible-content" rows="10" class="hidden w-full flex-1 p-3 rounded-xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightBg dark:bg-zinc-950 text-xs leading-relaxed select-text focus:outline-none focus:border-emerald-500"></textarea>
             </div>
           </div>
         </div>
@@ -2884,8 +2974,11 @@
             <button type="button" id="btn-cmd-open-bible-drawer" class="px-3 py-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-xs transition">
               🏛️ Xem/Sửa Story Bible
             </button>
+            <button type="button" id="btn-cmd-split-gemini" class="px-2.5 py-1.5 rounded-xl border border-violet-400/60 bg-violet-500/20 hover:bg-violet-500/35 text-violet-100 font-bold text-[10.5px] transition whitespace-nowrap" title="Tổng hợp, copy sẵn câu lệnh & chia đôi màn hình cùng Gemini Web/App (hoặc NotebookLM ở Chế độ 3-5)">
+              🪟 Chia đôi màn hình với Gemini
+            </button>
             <button type="button" id="btn-cmd-open-sysprompt-drawer" class="px-3 py-1.5 rounded-xl border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 font-bold text-xs transition">
-              📜 Khung Prompt Hệ Thống (5 Chế Độ)
+              📜 Khung Prompt Hệ Thống (6 Chế Độ)
             </button>
             <button type="button" id="btn-toggle-cmd-params-drawer" class="px-3 py-1.5 rounded-xl border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-200 font-bold text-xs transition" aria-expanded="false">
               ⚙️ Mở rộng Thông số
@@ -2908,13 +3001,14 @@
         <!-- Hàng thông số cơ bản LUÔN HIỆN kể cả khi thu gọn: Chế độ, Mô hình, Số từ, Mức tư duy -->
         <div id="cmd-params-essential-bar" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3.5 rounded-2xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightBg dark:bg-zinc-950">
           <div class="min-w-0">
-            <label for="select-ai-execution-mode" class="block text-[10px] font-bold uppercase text-emerald-400 mb-1">1. Chế độ chạy AI (1 - 5):</label>
+            <label for="select-ai-execution-mode" class="block text-[10px] font-bold uppercase text-emerald-400 mb-1">1. Chế độ chạy AI (1 - 6):</label>
             <select id="select-ai-execution-mode" class="w-full min-w-0 px-2.5 py-2 rounded-xl border border-studioLightBorder dark:border-zinc-700 bg-studioLightPanel dark:bg-zinc-900 font-extrabold text-emerald-400">
               <option value="MODE_1_DRAFT">✍️ 1. Viết Bản Nháp (3.000-4.000+ từ)</option>
-              <option value="MODE_2_BRAINSTORM">🧭 2. Tham Mưu Cốt Truyện & Gỡ Bí</option>
-              <option value="MODE_3_AUDIT">🔍 3. Kiểm Toán Logic & Soi Mâu Thuẫn</option>
-              <option value="MODE_4_REVIEW">📊 4. Đánh Giá Độc Giả & Chấm Điểm</option>
-              <option value="MODE_5_DIAGRAM">🎨 5. Vẽ Biểu Đồ Cốt Truyện & Thời Gian</option>
+              <option value="MODE_2_BRAINSTORM">🧭 2. Tham Mưu Cốt Truyện &amp; Gỡ Bí</option>
+              <option value="MODE_3_AUDIT">🔍 3. Kiểm Toán Logic &amp; Soi Mâu Thuẫn</option>
+              <option value="MODE_4_REVIEW">📊 4. Đánh Giá Độc Giả &amp; Chấm Điểm</option>
+              <option value="MODE_5_DIAGRAM">🎨 5. Vẽ Biểu Đồ Cốt Truyện &amp; Thời Gian</option>
+              <option value="MODE_6_BOOK_COVER">🖼️ 6. Tạo Bìa Truyện Bằng AI (Gemini Tạo Ảnh)</option>
             </select>
           </div>
 
@@ -2977,6 +3071,10 @@
                 <span id="cmd-scenes-status-pill" class="px-2 py-0.5 rounded-md bg-zinc-900 border border-amber-500/40 text-amber-300 font-monoCode">Mốc chuyển cảnh: 0 mốc</span>
                 <span id="cmd-rag-status-pill" class="px-2 py-0.5 rounded-md bg-zinc-900 border border-indigo-500/40 text-indigo-300 font-monoCode">Chống quên BM25: Sẵn sàng</span>
                 <span id="cmd-mode2-plot-pill" class="hidden px-2 py-0.5 rounded-md bg-zinc-900 border border-amber-400/50 text-amber-200 font-monoCode">Cốt truyện Chế độ 2: Đã liên kết</span>
+                <label class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-zinc-900 border border-sky-500/40 text-sky-200 font-bold text-[10px] cursor-pointer select-none" title="Bật/tắt tự động gắn dữ liệu từ File Story Bible (Tab 4) vào toàn bộ Prompt Chế độ 1–6">
+                  <input type="checkbox" id="chk-cmd-link-story-bible-file" checked class="accent-sky-400 w-3 h-3" />
+                  <span>📄 File Story Bible</span>
+                </label>
               </span>
             </div>
             <div class="flex items-center gap-1.5">
@@ -3021,16 +3119,101 @@
             <div id="cmd-mode2-outline-advisory" class="hidden px-3 py-2 rounded-xl border border-amber-400/50 bg-amber-950/50 text-amber-100 text-[11px] leading-relaxed">
               💡 <strong class="text-amber-300">Mẹo vàng cho Chế độ 2:</strong> Bạn nên liệt kê dàn ý, gợi ý mình mong muốn trước rồi bảo AI chi tiết hóa, vì nếu bạn không có dàn ý sẵn, AI gợi ý sẽ không được tốt, vì mình không biết vì sao nhưng mà AI hay đẩy nhanh mạch truyện lắm.
             </div>
-            <div id="cmd-mode3-prompt-advisory" class="hidden px-3 py-2 rounded-xl border border-amber-400/50 bg-amber-950/50 text-amber-100 text-[11px] leading-relaxed">
-              💡 <strong class="text-amber-300">Gợi ý cho Chế độ 3:</strong> Bạn nên đọc bản thảo trước, rồi có nghi ngờ thì đưa AI review và kiểm tra lại
+            <div id="cmd-mode3-prompt-advisory" class="hidden px-3 py-2.5 rounded-xl border border-amber-400/50 bg-amber-950/50 text-amber-100 text-[11px] leading-relaxed space-y-2">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <strong class="text-amber-300">💡 Gợi ý cho Chế độ 3 (Kiểm Toán Logic Tiểu Thuyết Gia 30 Năm):</strong>
+                <button type="button" id="btn-mode3-split-notebooklm" class="px-2.5 py-1 rounded-lg border border-sky-400/60 bg-sky-500/20 hover:bg-sky-500/35 text-sky-100 font-bold text-[10px] transition">
+                  🪟 Chia đôi màn hình với NotebookLM
+                </button>
+              </div>
+              <div>
+                Bạn nên đọc bản thảo trước, rồi có nghi ngờ thì đưa
+                <a href="https://notebooklm.google.com/" target="_blank" rel="noopener noreferrer" class="underline decoration-2 underline-offset-4 font-extrabold text-cyan-300 hover:text-white px-0.5">Google NotebookLM ↗</a>
+                review và kiểm tra lại, nó là con chi tiết nhất cho mấy tác vụ này.
+              </div>
             </div>
-            <div id="cmd-mode4-prompt-advisory" class="hidden px-3 py-2 rounded-xl border border-amber-400/50 bg-amber-950/50 text-amber-100 text-[11px] leading-relaxed">
-              💡 <strong class="text-amber-300">Gợi ý cho Chế độ 4:</strong> <span>Thường thì mình sẽ để AI là:</span>
-              <button type="button" id="btn-cmd-mode4-copy-critic-prompt" class="inline text-left font-bold text-amber-200 underline decoration-2 underline-offset-4 hover:text-white cursor-pointer bg-transparent border-0 p-0 align-baseline">Bạn là 1 nhà phê bình tiểu thuyết, văn học mạng và chính quy 20 năm kinh nghiệm cho các nhà xuất bản lớn và phân tích cho tôi hướng đi cốt truyện đã tối ưu chưa, có thực sự lôi cuốn độc giả không, có chỗ nào cần cải thiện để giữ chân người đọc và khiến sức mạnh, tốc độ của cốt truyện không bị ảo quá không?</button>
-              <span>Bạn có thể copy câu mình gợi ý bằng cách bấm vào gạch chân 1 phát là xong.</span>
+            <div id="cmd-mode4-prompt-advisory" class="hidden px-3 py-2.5 rounded-xl border border-amber-400/50 bg-amber-950/50 text-amber-100 text-[11px] leading-relaxed space-y-2">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <strong class="text-amber-300">💡 Gợi ý cho Chế độ 4 (Nhà Phê Bình 20 Năm Kinh Nghiệm — Khuyên dùng Google NotebookLM):</strong>
+                <button type="button" id="btn-mode4-split-notebooklm" class="px-2.5 py-1 rounded-lg border border-sky-400/60 bg-sky-500/20 hover:bg-sky-500/35 text-sky-100 font-bold text-[10px] transition">
+                  🪟 Chia đôi màn hình với NotebookLM
+                </button>
+              </div>
+              <div>
+                <span>Thường thì mình sẽ để</span>
+                <a href="https://notebooklm.google.com/" target="_blank" rel="noopener noreferrer" class="underline decoration-2 underline-offset-4 font-extrabold text-cyan-300 hover:text-white px-0.5">Google NotebookLM ↗</a>
+                <span>là:</span>
+                <button type="button" id="btn-cmd-mode4-copy-critic-prompt" class="inline text-left font-bold text-amber-200 underline decoration-2 underline-offset-4 hover:text-white cursor-pointer bg-transparent border-0 p-0 align-baseline">Bạn là 1 nhà phê bình tiểu thuyết, văn học mạng và chính quy 20 năm kinh nghiệm cho các nhà xuất bản lớn và phân tích cho tôi hướng đi cốt truyện đã tối ưu chưa, có thực sự lôi cuốn độc giả không, có chỗ nào cần cải thiện để giữ chân người đọc và khiến sức mạnh, tốc độ của cốt truyện không bị ảo quá không?</button>
+                <span>Bạn có thể copy câu mình gợi ý bằng cách bấm vào gạch chân 1 phát là xong.</span>
+              </div>
             </div>
-            <div id="cmd-mode5-prompt-advisory" class="hidden px-3 py-2 rounded-xl border border-amber-400/50 bg-amber-950/50 text-amber-100 text-[11px] leading-relaxed">
-              💡 <strong class="text-amber-300">Gợi ý cho Chế độ 5:</strong> Đơn giản thì bạn bấm nút chạy prompt, chọn mô hình xịn 1 tí :))
+            <div id="cmd-mode5-prompt-advisory" class="hidden px-3 py-2.5 rounded-xl border border-amber-400/50 bg-amber-950/50 text-amber-100 text-[11px] leading-relaxed space-y-2">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <strong class="text-amber-300">💡 Gợi ý cho Chế độ 5 (Vẽ Sơ Đồ Cốt Truyện, Timeline &amp; Mindmap Trên NotebookLM):</strong>
+                <button type="button" id="btn-mode5-split-notebooklm" class="px-2.5 py-1 rounded-lg border border-sky-400/60 bg-sky-500/20 hover:bg-sky-500/35 text-sky-100 font-bold text-[10px] transition">
+                  🪟 Chia đôi màn hình với NotebookLM
+                </button>
+              </div>
+              <div>
+                Câu lệnh Chế độ 5 đã tự động gắn yêu cầu bắt
+                <a href="https://notebooklm.google.com/" target="_blank" rel="noopener noreferrer" class="underline decoration-2 underline-offset-4 font-extrabold text-cyan-300 hover:text-white px-0.5">Google NotebookLM ↗</a>
+                tạo thêm <strong>Báo cáo trực quan / Mindmap / Sơ đồ Timeline ở thanh Studio bên phải</strong> để bạn xem diễn biến trực quan 100%!
+              </div>
+            </div>
+            <div id="cmd-mode6-book-cover-panel" class="hidden p-3.5 rounded-2xl border-2 border-violet-500/50 bg-violet-950/35 text-zinc-100 text-[11px] space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="font-extrabold text-violet-200 text-xs">
+                  🖼️ Chế Độ 6: Tạo Bìa Truyện Bằng AI (Kết Hợp Story Bible + Phong Cách Chuyên Nghiệp)
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <button type="button" id="btn-mode6-copy-cover-prompt" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10.5px] transition">
+                    📋 Copy Lệnh Tạo Bìa
+                  </button>
+                  <button type="button" id="btn-mode6-split-gemini" class="px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold text-[10.5px] shadow transition">
+                    🪟 Chia đôi màn hình với Gemini
+                  </button>
+                </div>
+              </div>
+              <div class="space-y-1.5">
+                <div class="text-[10.5px] font-bold text-amber-200 uppercase">🎨 Chọn nhanh phong cách vẽ bìa (hoặc chọn "Tự nhập tự do" bên dưới):</div>
+                <div id="mode6-style-chips-container" class="flex flex-wrap gap-1.5">
+                  <button type="button" data-cover-style="ANIME_LN" class="mode6-style-chip px-2.5 py-1 rounded-lg border border-violet-400 bg-violet-600/80 text-white font-bold text-[10.5px] transition">✨ Anime / Light Novel</button>
+                  <button type="button" data-cover-style="CHIBI" class="mode6-style-chip px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-violet-400 font-bold text-[10.5px] transition">🍡 Chibi Dễ Thương</button>
+                  <button type="button" data-cover-style="PHOTOREAL" class="mode6-style-chip px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-violet-400 font-bold text-[10.5px] transition">🎬 Siêu Thực Điện Ảnh</button>
+                  <button type="button" data-cover-style="WEBTOON" class="mode6-style-chip px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-violet-400 font-bold text-[10.5px] transition">📱 Webtoon / Manhwa</button>
+                  <button type="button" data-cover-style="INK_XIANXIA" class="mode6-style-chip px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-violet-400 font-bold text-[10.5px] transition">🏮 Cổ Phong Thủy Mặc</button>
+                  <button type="button" data-cover-style="DARK_NOIR" class="mode6-style-chip px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-violet-400 font-bold text-[10.5px] transition">🕯️ Dark Fantasy / Noir</button>
+                  <button type="button" data-cover-style="CYBERPUNK" class="mode6-style-chip px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-violet-400 font-bold text-[10.5px] transition">🌆 Cyberpunk Neon</button>
+                  <button type="button" data-cover-style="CHILDREN" class="mode6-style-chip px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-violet-400 font-bold text-[10.5px] transition">🧸 Thiếu Nhi Màu Nước</button>
+                  <button type="button" data-cover-style="MINIMALIST" class="mode6-style-chip px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-violet-400 font-bold text-[10.5px] transition">📘 Tối Giản Hiện Đại</button>
+                  <button type="button" data-cover-style="OIL_PAINTING" class="mode6-style-chip px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-violet-400 font-bold text-[10.5px] transition">🎨 Sơn Dầu Cổ Điển</button>
+                  <button type="button" data-cover-style="CUSTOM_FREE" class="mode6-style-chip px-2.5 py-1 rounded-lg border border-amber-500/50 bg-amber-950/40 text-amber-200 hover:border-amber-400 font-bold text-[10.5px] transition">✏️ Tự nhập tự do (không theo khung)</button>
+                </div>
+              </div>
+              <!-- Gợi ý & Màn hình mô phỏng nút Tạo hình ảnh của Gemini -->
+              <div class="p-3 rounded-xl border border-cyan-500/40 bg-[#0b1024] space-y-2">
+                <div class="text-cyan-200 font-bold leading-relaxed">
+                  💡 Muốn vẽ bìa đẹp nhất, bạn hãy bấm vào chức năng <strong class="text-amber-300">Tạo hình ảnh</strong> của Gemini (biểu tượng dấu <strong>+</strong> bên trái thanh Hỏi Gemini), sau đó dán câu lệnh đã copy vào nhé!
+                </div>
+                <div class="rounded-xl bg-[#131830] border border-zinc-700/80 p-2.5 space-y-2 max-w-md mx-auto">
+                  <div class="flex items-center justify-between gap-2 px-3 py-1.5 rounded-full bg-[#1e2235] border border-zinc-600/80 text-zinc-300 text-[11px]">
+                    <div class="flex items-center gap-2">
+                      <span class="w-5 h-5 rounded-full bg-zinc-700 inline-flex items-center justify-center font-black text-white text-xs">+</span>
+                      <span class="text-zinc-400">Hỏi Gemini</span>
+                    </div>
+                    <span class="text-[10px] font-bold text-indigo-300">Neon ▾</span>
+                  </div>
+                  <div class="w-52 rounded-xl bg-[#1f1f24] border border-zinc-700 p-1.5 space-y-1 text-[11px] shadow-xl">
+                    <div class="px-2.5 py-1 rounded-lg text-zinc-400 flex items-center gap-2"><span>📎</span><span>Tải tệp lên</span></div>
+                    <div class="px-2.5 py-1 rounded-lg text-zinc-400 flex items-center gap-2"><span>🔺</span><span>Thêm từ Drive</span></div>
+                    <div class="px-2.5 py-1.5 rounded-lg bg-amber-500/25 border-2 border-amber-400 text-white font-extrabold flex items-center justify-between gap-2 animate-pulse shadow">
+                      <span class="flex items-center gap-2"><span>🖼️</span><span>Tạo hình ảnh</span></span>
+                      <span class="text-[9.5px] px-1.5 py-0.5 rounded bg-amber-400 text-zinc-950 font-black">BẤM ĐÂY</span>
+                    </div>
+                    <div class="px-2.5 py-1 rounded-lg text-zinc-400 flex items-center gap-2"><span>🎬</span><span>Tạo video</span></div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -3129,29 +3312,35 @@
             💡 Lưu ý: Bạn đang chọn dòng <strong>Flash-Lite</strong> (chỉ tối ưu tốc độ siêu nhanh & nháp ngắn). Để viết chương tiểu thuyết chính thức giàu cảm xúc nhất, hãy ưu tiên đổi sang <strong>Gemini 3.8 Flash</strong> hoặc <strong>Pro / Argon</strong> ở ô bên trên nhé!
           </div>
 
-          <!-- Cầu nối viết sâu 20.000+ từ bằng Gemini Argon 4 / Carbon 4 trên Gemini Web -->
+          <!-- Cầu nối Gợi ý mô hình Hydrogen / Neon + Chia đôi màn hình Gemini Web / App -->
           <div id="mod32-argon-bridge-confirm-card" class="p-3.5 rounded-xl border-2 border-indigo-400/55 bg-gradient-to-r from-indigo-950/80 via-slate-900/90 to-purple-950/80 text-[12px] text-zinc-100 leading-relaxed space-y-2 shadow-lg min-w-0 max-w-full break-words overflow-hidden">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <span class="font-extrabold text-indigo-300 uppercase tracking-wide text-[11px]">
-                💎 Viết Sâu 20.000+ Từ Trong 1 Lần Với Gemini Argon 4 / Carbon 4 (Gemini Web / App)
+                💎 Gợi Ý Mô Hình &amp; Chia Đôi Màn Hình Gemini Web / App (hoặc NotebookLM)
               </span>
-              <span id="mod32-confirm-copy-status-pill" class="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/40 text-indigo-200 font-bold text-[10px]">
-                Sẵn sàng copy 1 chạm
+              <span id="mod32-confirm-copy-status-pill" class="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-200 font-bold text-[10px]">
+                ✅ Tự động copy câu lệnh sẵn sàng
               </span>
             </div>
-            <p class="text-zinc-200">
-              <span>Vì một số lí do kỹ thuật mình chưa fix triệt để được luồng gọi Argon 4 / Carbon 4 trực tiếp qua API, cho nên nếu bạn muốn viết thật sâu 20.000+ từ trong 1 lần, hãy</span>
-              <button type="button" id="btn-mod32-confirm-inline-copy-prompt" class="inline font-extrabold underline decoration-2 underline-offset-4 text-emerald-300 hover:text-emerald-200 cursor-pointer px-1" title="Bấm 1 chạm để sao chép toàn bộ Prompt Tổng Hợp đang hiển thị bên dưới">
-                ấn vào đây để copy toàn bộ prompt tổng hợp
-              </button><span>, rồi mở thẳng Gemini Web của bạn (hoặc ứng dụng Gemini nếu bạn có) và</span>
-              <a id="link-mod32-confirm-open-gemini-web" href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" class="inline font-extrabold underline decoration-2 underline-offset-4 text-amber-300 hover:text-amber-200 px-1" title="Mở thẳng trang Gemini Web của bạn trong tab mới">
-                bấm vào đây để tới thẳng Gemini Web chạy Argon 4 ↗
-              </a>!
-            </p>
-            <div class="px-3 py-1.5 rounded-lg border border-amber-400/45 bg-amber-500/15 text-amber-200 font-bold text-[11px] flex flex-wrap items-center justify-between gap-2 min-w-0 max-w-full break-words">
-              <span>⚠️ Lưu ý: Bạn phải nâng cấp lên gói Pro mới dùng được Argon 4, gói Ultra cho Carbon 4 nha.</span>
-              <button type="button" id="btn-mod32-confirm-copy-and-open" class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[11px] shadow transition shrink-0" title="Sao chép toàn bộ Prompt Tổng Hợp và mở ngay Gemini Web trong tab mới">
-                📋 Copy Prompt Tổng &amp; Mở Gemini Web ↗
+            <div class="p-2.5 rounded-lg border border-cyan-400/45 bg-cyan-950/35 text-cyan-100 text-[11.5px] font-semibold leading-relaxed">
+              💡 <strong>Gợi ý về mô hình nên sử dụng:</strong>
+              <span class="text-emerald-300 font-extrabold">Gemini Hydrogen</span> - Tham mưu cốt truyện đơn giản, viết truyện, review đơn giản;
+              <span class="text-amber-300 font-extrabold">Gemini Neon</span> - Tham mưu phức tạp, đánh giá logic phức tạp hoặc viết truyện siêu dài.
+            </div>
+            <div id="confirm-modal-web-model-reminder" class="p-2.5 rounded-lg border border-amber-400/55 bg-amber-500/15 text-amber-100 text-[11.5px] font-extrabold leading-relaxed">
+              🔔 Nếu bạn dùng Gemini Web/App thì nhớ chọn mô hình bạn đang mong muốn: Gemini 4 Hydrogen — Mức tư duy: Trung bình nha!
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" id="btn-mod32-confirm-inline-copy-prompt" class="px-3 py-1.5 rounded-lg border border-emerald-400/60 bg-emerald-600/25 hover:bg-emerald-600/40 text-emerald-100 font-extrabold text-[11px] transition">
+                  📋 Copy Toàn Bộ Câu Lệnh
+                </button>
+                <a id="link-mod32-confirm-open-gemini-web" href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-lg border border-amber-400/50 bg-amber-500/15 hover:bg-amber-500/30 text-amber-200 font-bold text-[11px] transition">
+                  🌐 Mở Gemini Web / App ↗
+                </a>
+              </div>
+              <button type="button" id="btn-mod32-confirm-copy-and-open" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-extrabold text-[11px] shadow-lg transition shrink-0">
+                🪟 Copy &amp; Chia Đôi Màn Hình Ngay ↗
               </button>
             </div>
           </div>

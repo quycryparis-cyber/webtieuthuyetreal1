@@ -1570,8 +1570,22 @@
         return fullList;
       }
 
+      const isGemini4ShowcaseModel = (m) => {
+        const lowId = String(m?.id || '').toLowerCase();
+        return (
+          lowId.includes('gemini-4') ||
+          lowId.includes('hydrogen') ||
+          lowId.includes('neon') ||
+          lowId.includes('argon') ||
+          lowId.includes('carbon')
+        );
+      };
+
       const restricted = cap.restrictedIds instanceof Set ? cap.restrictedIds : new Set();
       let filtered = fullList.filter((m) => {
+        // Luôn giữ lại đủ bộ mô hình Gemini 4 (Hydrogen / Neon / Argon / Carbon) để ghi nhớ
+        // lựa chọn của tác giả và nhắc chọn đúng mô hình khi chia đôi màn hình sang Gemini Web/App
+        if (isGemini4ShowcaseModel(m)) return true;
         if (restricted.has(m.id)) return false;
         if (cap.billingTier === 'free' && this.isPaidOnlyModel(m)) return false;
         return true;
@@ -1579,6 +1593,7 @@
 
       if (cap.billingTier === 'free' && cap.allowedLiveIds instanceof Set && cap.allowedLiveIds.size > 0) {
         const liveMatched = filtered.filter((m) => {
+          if (isGemini4ShowcaseModel(m)) return true;
           if (m.id === DEFAULT_MODEL_FALLBACK_ID) return true;
           if (m.isLiveDiscovered) return cap.allowedLiveIds.has(m.id);
           if (cap.allowedLiveIds.has(m.id) || cap.allowedLiveIds.has(m.apiTarget)) return true;

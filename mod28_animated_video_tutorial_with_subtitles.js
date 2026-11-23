@@ -1319,6 +1319,18 @@
    */
   const SYSTEM_CHANGELOG_V38 = Object.freeze([
     {
+      version: 'v105.0 — Bản Đại Tu Cuối Cùng: 6 Chế Độ AI (Thêm Chế Độ 6 Tạo Bìa), Tự Copy + Chia Đôi Màn Hình Gemini & NotebookLM, Story Bible Giàu Định Dạng Kiểu Word + File PDF & Quy Trình 4 Bước Tab 1',
+      date: '23/11/2026',
+      dateLabel: 'Mới nhất',
+      badgeTone: 'emerald',
+      highlights: [
+        'Tự Động Copy Prompt & Chia Đôi Màn Hình Gemini / NotebookLM (Tab 1, 2, 3, 4): Mọi Chế độ 1–6 tự động copy sẵn câu lệnh tổng hợp, nhắc rõ Mô hình & Mức tư duy mong muốn (Hydrogen / Neon / Argon / Carbon luôn hiện đủ) và mở cửa sổ chia đôi 50/50 với Gemini Web/App (hoặc Google NotebookLM cho Chế độ 3, 4, 5 & Tab 4).',
+        'Cảnh Báo Thông Minh Khi Chương Truyện Thay Đổi: Tự phát hiện sửa/thêm chương để nhắc cập nhật Tham mưu cốt truyện (Chế độ 2) và Story Bible trước khi chạy Chế độ 1/Chế độ 2 (có ô "Không hiện cảnh báo này cho lần sau") và hiện nhắc nhở trực tiếp ngay cạnh Story Bible ở Tab 4.',
+        'Chế Độ 6 Mới — Tạo Bìa Truyện Bằng AI (10+ Phong Cách + Tự Nhập Tự Do): Kết hợp Story Bible & nhân vật để sinh câu lệnh vẽ bìa chuẩn, kèm hình mô phỏng chỉ đúng nút "+ → 🖼️ Tạo hình ảnh" trên Gemini.',
+        'Story Bible Kiểu Word/Google Docs + File Story Bible + Quy Trình 4 Bước Tab 1: Soạn/dán giữ trọn Bảng, Icon, Emoji, Hình ảnh; xuất PDF Story Bible tự lưu bản sao vào thư mục con "Story Bible/" & liên kết tự động cho toàn bộ Chế độ 1–6; thanh quy trình 4 bước gạch chân ngay trên Tab 1 bấm nhảy thẳng tới đúng chế độ!',
+      ],
+    },
+    {
       version: 'v104.0 — Hoàn Thiện 45 Module: Casio fx-570VN+ & Desmos (Mod 45), Desktop YouTube Trực Tiếp (0.25x–4x, Cửa Sổ Nổi, YTSave), Mobile A–B Auto-Jump & AI Nói 6 Ngôn Ngữ (Google Dịch TTS)',
       date: '22/11/2026',
       dateLabel: 'Mới nhất',

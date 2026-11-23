@@ -1435,24 +1435,27 @@
       return `
         <div class="flex flex-wrap items-center justify-between gap-2">
           <span class="font-extrabold text-indigo-300 text-[11px]">
-            💎 Viết Sâu 20.000+ Từ Bằng Gemini Argon 4 / Carbon 4 (Gemini Web / App)
+            💎 Gợi Ý Chọn Mô Hình Gemini Web / App (Chia Đôi Màn Hình &amp; Copy Prompt 1 Chạm)
           </span>
           <span id="${pillId}" class="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/40 text-indigo-200 font-bold text-[10px]">
             Sẵn sàng copy 1 chạm
           </span>
         </div>
+        <div class="p-2.5 rounded-xl border border-cyan-400/40 bg-cyan-950/35 text-cyan-100 text-[11.5px] leading-relaxed font-semibold">
+          💡 <strong>Gợi ý về mô hình nên sử dụng:</strong>
+          <span class="text-emerald-300 font-extrabold">Gemini Hydrogen</span> - Tham mưu cốt truyện đơn giản, viết truyện, review đơn giản;
+          <span class="text-amber-300 font-extrabold">Gemini Neon</span> - Tham mưu phức tạp, đánh giá logic phức tạp hoặc viết truyện siêu dài.
+        </div>
         <p class="text-zinc-200">
-          <span>Vì 1 số lí do mà mình chưa fix bug là chưa dùng được Argon 4 qua API, nên nếu bạn muốn viết sâu 20.000+ từ trong 1 lần hãy</span>
+          <span>Bấm</span>
           <button type="button" id="${copyId}" class="inline font-extrabold underline decoration-2 underline-offset-4 text-emerald-300 hover:text-emerald-200 cursor-pointer px-1">
             ấn vào đây để copy toàn bộ prompt tổng hợp
-          </button><span>, rồi vào thẳng Gemini Web của bạn (hoặc ứng dụng nếu bạn có) và</span>
+          </button><span>rồi</span>
           <a id="${linkId}" href="${MOD32_CONSTANTS.GEMINI_WEB_URL}" target="_blank" rel="noopener noreferrer" class="inline font-extrabold underline decoration-2 underline-offset-4 text-amber-300 hover:text-amber-200 px-1">
-            bấm vào đây để chạy prompt viết tiểu thuyết từ Gemini Argon 4 ↗
-          </a>.
+            mở thẳng Gemini Web / App của bạn ↗
+          </a>
+          <span>(Hoặc dùng nút Chia đôi màn hình bên dưới để vừa viết vừa trò chuyện cùng tài khoản Gemini Plus/Pro/Ultra của chính bạn!).</span>
         </p>
-        <div class="px-3 py-1.5 rounded-lg border border-amber-400/45 bg-amber-500/15 text-amber-200 font-bold text-[11px] min-w-0 max-w-full break-words whitespace-normal">
-          ⚠️ Lưu ý: Qua API Key bạn có thể chọn ngay Gemini 4 Hydrogen (tư duy XHIGH) hoặc Flash/Pro; còn trên Gemini Web cần nâng cấp gói Pro cho Argon 4 và gói Ultra cho Carbon 4 nha.
-        </div>
       `;
     }
 

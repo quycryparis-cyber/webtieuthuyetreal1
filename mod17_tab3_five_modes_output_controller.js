@@ -85,6 +85,16 @@
         'Biểu đồ SVG tương tác và Báo cáo đối chiếu dòng thời gian xuyên chương (Chế độ 5).',
       bibleSectionHeader: 'BIÊN NIÊN SỬ DÒNG THỜI GIAN & SƠ ĐỒ CỐT TRUYỆN (TỪ CHẾ ĐỘ 5)',
       supportsDirectManuscriptTransfer: true
+    },
+    MODE_6_BOOK_COVER: {
+      key: 'MODE_6_BOOK_COVER',
+      shortLabel: '🖼️ Chế độ 6: Tạo Bìa Truyện AI',
+      fullTitle: '🖼️ Chế độ 6: Câu Lệnh & Ý Tưởng Thiết Kế Bìa Truyện Bằng AI (Gemini Tạo Ảnh)',
+      badgeColor: 'purple',
+      placeholder:
+        'Câu lệnh tạo bìa truyện chuyên nghiệp kết hợp Story Bible & phong cách vẽ (Chế độ 6) sẽ hiển thị tại đây. Hãy copy dán vào mục "Tạo hình ảnh" của Gemini Web/App để vẽ bìa sắc nét nhất!',
+      bibleSectionHeader: 'Ý TƯỞNG & PHONG CÁCH BÌA TRUYỆN (TỪ CHẾ ĐỘ 6)',
+      supportsDirectManuscriptTransfer: false
     }
   };
 
@@ -168,7 +178,8 @@
         MODE_2_BRAINSTORM: [],
         MODE_3_AUDIT: [],
         MODE_4_REVIEW: [],
-        MODE_5_DIAGRAM: []
+        MODE_5_DIAGRAM: [],
+        MODE_6_BOOK_COVER: []
       };
       this.loadFromStorage();
     }
@@ -463,7 +474,8 @@
         MODE_2_BRAINSTORM: '',
         MODE_3_AUDIT: '',
         MODE_4_REVIEW: '',
-        MODE_5_DIAGRAM: ''
+        MODE_5_DIAGRAM: '',
+        MODE_6_BOOK_COVER: ''
       };
 
       this.searchQuery = '';

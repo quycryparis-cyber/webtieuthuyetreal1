@@ -204,7 +204,7 @@
     MODE_5_DIAGRAM: {
       code: 'MODE_5_DIAGRAM',
       title: '🎨 Chế độ 5: Vẽ Biểu Đồ Cốt Truyện, Mạng Lưới Nhân Vật & Đối Chiếu Thời Gian (Visual Chronicle)',
-      primaryGoal: 'Trích xuất cấu trúc sự kiện, mạng lưới quan hệ nhân vật và dòng thời gian thành sơ đồ trực quan kèm báo cáo đối chiếu xuyên chương.',
+      primaryGoal: 'Trích xuất cấu trúc sự kiện, mạng lưới quan hệ nhân vật và dòng thời gian thành sơ đồ trực quan kèm báo cáo đối chiếu xuyên chương và Mindmap/Báo cáo hình ảnh trên NotebookLM.',
       recommendedMinTemp: 0.3,
       recommendedMaxTemp: 0.6,
       defaultTargetWords: 2000,
@@ -213,10 +213,87 @@
       requireEpistemicMatrixCheck: true,
       outputStructureGuide: [
         '• Trả về khối dữ liệu JSON chuẩn (nodes, links, contradictions) để dựng biểu đồ SVG tương tác.',
-        '• Tiếp theo là Báo Cáo Biên Niên Sử & Đối Chiếu Dòng Thời Gian chi tiết qua từng chương đã chọn.'
+        '• Tiếp theo là Báo Cáo Biên Niên Sử & Đối Chiếu Dòng Thời Gian chi tiết qua từng chương đã chọn.',
+        '• Nếu chạy trên Google NotebookLM: yêu cầu tạo thêm Mindmap / Sơ đồ trực quan / Báo cáo ảnh ở thanh Studio bên phải.'
+      ]
+    },
+    MODE_6_BOOK_COVER: {
+      code: 'MODE_6_BOOK_COVER',
+      title: '🖼️ Chế độ 6: Tạo Bìa Truyện Bằng AI (Gemini Tạo Hình Ảnh)',
+      primaryGoal: 'Xây dựng câu lệnh thiết kế bìa tiểu thuyết chuyên nghiệp kết hợp chặt chẽ nội dung Story Bible, hình tượng nhân vật, không khí chủ đạo và phong cách nghệ thuật tác giả chọn.',
+      recommendedMinTemp: 0.75,
+      recommendedMaxTemp: 0.95,
+      defaultTargetWords: 600,
+      requireStrictDialogueFormat: false,
+      requireAntiClicheEnforcement: false,
+      requireEpistemicMatrixCheck: false,
+      outputStructureGuide: [
+        '• Mô tả chi tiết bố cục bìa sách (Tỷ lệ dọc 2:3 chuẩn bìa tiểu thuyết, không gian thoáng ở 1/3 trên để đặt Tên Truyện và phía dưới đặt Bút Danh).',
+        '• Bám sát ngoại hình nhân vật chính, trang phục, đạo cụ biểu tượng và bối cảnh chủ đạo từ Story Bible.',
+        '• Chốt bằng câu lệnh trực tiếp sẵn sàng dán vào chức năng "Tạo hình ảnh" của Gemini Web/App.'
       ]
     }
   };
+
+  /**
+   * 10+ Bộ khung phong cách vẽ bìa truyện chuyên nghiệp cho Chế độ 6 (Tạo Bìa Truyện Bằng AI)
+   */
+  const BOOK_COVER_STYLE_PRESETS = Object.freeze({
+    ANIME_LN: {
+      label: '✨ Anime / Light Novel',
+      directive:
+        'Phong cách minh họa bìa Light Novel Nhật Bản cao cấp (Japanese Light Novel Cover Art, Makoto Shinkai / Pixiv Masterpiece lighting), nét vẽ sắc sảo, ánh sáng điện ảnh lung linh, chiều sâu hậu cảnh phong phú, bố cục dọc 2:3 chuẩn xuất bản.'
+    },
+    CHIBI: {
+      label: '🍡 Chibi Dễ Thương',
+      directive:
+        'Phong cách Chibi dễ thương tươi sáng (Cute Chibi Book Cover Illustration), tỷ lệ nhân vật đáng yêu, màu sắc pastel trong trẻo, đường viền sạch mềm mại, biểu cảm sinh động, bố cục bìa truyện hài hòa bắt mắt tỷ lệ 2:3.'
+    },
+    PHOTOREAL: {
+      label: '🎬 Siêu Thực Điện Ảnh',
+      directive:
+        'Phong cách siêu thực điện ảnh như poster phim Hollywood / Netflix (Cinematic Photorealistic Book Cover, 8K Unreal Engine / IMAX film still), ánh sáng volumetric thực tế, kết cấu da/vải/mưa/khói cực kỳ chân thực, tương phản kịch tính tỷ lệ 2:3.'
+    },
+    WEBTOON: {
+      label: '📱 Webtoon / Manhwa',
+      directive:
+        'Phong cách bìa Webtoon / Manhwa Hàn Quốc hiện đại (High-end Korean Manhwa Cover Art), góc máy năng động ấn tượng, hiệu ứng ánh sáng rực rỡ, đường nét gọn sắc, biểu cảm nhân vật cực ngầu tỷ lệ 2:3.'
+    },
+    INK_XIANXIA: {
+      label: '🏮 Cổ Phong Thủy Mặc',
+      directive:
+        'Phong cách Cổ phong Thủy mặc Tiên hiệp / Kiếm hiệp Á Đông (Chinese Xianxia Watercolor & Ink Wash Book Cover), mây khói bảng lảng, y phục bay bổng, gam màu ngọc bích — vàng kim — mực tàu đậm chất thi họa tỷ lệ 2:3.'
+    },
+    DARK_NOIR: {
+      label: '🕯️ Dark Fantasy / Noir',
+      directive:
+        'Phong cách Dark Fantasy / Trinh thám Tâm lý Noir u tối đầy ám ảnh (Atmospheric Gothic Noir Book Cover), ánh sáng chiaroscuro tương phản mạnh giữa bóng tối sâu và vệt sáng đơn sắc, giàu ẩn dụ tâm lý tỷ lệ 2:3.'
+    },
+    CYBERPUNK: {
+      label: '🌆 Cyberpunk Neon',
+      directive:
+        'Phong cách Cyberpunk Đô thị tương lai (Neon Cyberpunk Sci-Fi Book Cover), ánh đèn neon cyan — hồng tím phản chiếu trên mặt đường ướt mưa, kiến trúc tương lai kỳ vĩ, chiều sâu không gian hút mắt tỷ lệ 2:3.'
+    },
+    CHILDREN: {
+      label: '🧸 Thiếu Nhi Màu Nước',
+      directive:
+        'Phong cách tranh minh họa sách thiếu nhi & cổ tích vẽ tay màu nước (Whimsical Children Storybook Watercolor Illustration), nét cọ ấm áp, sắc màu rực rỡ mộng mơ, tạo cảm giác thân thiện ấm lòng tỷ lệ 2:3.'
+    },
+    MINIMALIST: {
+      label: '📘 Tối Giản Hiện Đại',
+      directive:
+        'Phong cách bìa văn học hiện đại tối giản (Minimalist Literary Fiction Book Cover Design), dùng 1–2 hình tượng ẩn dụ đắt giá làm tâm điểm, mảng màu tinh tế sang trọng chuẩn nhà xuất bản lớn tỷ lệ 2:3.'
+    },
+    OIL_PAINTING: {
+      label: '🎨 Sơn Dầu Cổ Điển',
+      directive:
+        'Phong cách tranh sơn dầu cổ điển châu Âu (Classical Fine Art Oil Painting Book Cover), nét cọ giàu chất liệu, ánh sáng cổ điển kiểu Rembrandt / Romanticism, trang trọng và mang chiều sâu sử thi tỷ lệ 2:3.'
+    },
+    CUSTOM_FREE: {
+      label: '✏️ Tự nhập tự do',
+      directive: ''
+    }
+  });
 
   /**
    * Placeholder gợi ý chuyên biệt (chữ xám hướng dẫn) cho từng chế độ 1 -> 5 trong #s18-fullscreen-prompt-textarea
@@ -261,12 +338,21 @@
     ].join('\n'),
 
     MODE_5_DIAGRAM: [
-      '🎨 [CHẾ ĐỘ 5 — SƠ ĐỒ CỐT TRUYỆN & BIÊN NIÊN SỬ THỜI GIAN]',
-      'Nhập phạm vi các chương, tuyến nhân vật hoặc nút thắt bí ẩn bạn muốn AI vẽ thành Sơ đồ SVG và đối chiếu bảng dòng thời gian chi tiết từ Story Bible...',
+      '🎨 [CHẾ ĐỘ 5 — SƠ ĐỒ CỐT TRUYỆN, TIMELINE & MINDMAP TRÊN NOTEBOOKLM]',
+      'Nhập phạm vi các chương, tuyến nhân vật hoặc nút thắt bí ẩn bạn muốn AI vẽ thành Sơ đồ Timeline / Mindmap trực quan (hỗ trợ cả thanh Studio bên phải của NotebookLM)...',
       '',
       'Ví dụ yêu cầu vẽ sơ đồ:',
-      '- Hãy lập sơ đồ dòng thời gian và mối quan hệ nhân quả từ Chương 1 đến Chương 3 cho tuyến điều tra vụ mất tích tại ga tàu.',
+      '- Hãy lập sơ đồ dòng thời gian và mối quan hệ nhân quả từ Chương 1 đến chương mới nhất, đồng thời tạo Mindmap / Báo cáo trực quan ở thanh bên.',
       '- Đánh dấu đỏ những mốc thời gian có nguy cơ xung đột địa điểm hoặc nhân vật lộ bí mật.'
+    ].join('\n'),
+
+    MODE_6_BOOK_COVER: [
+      '🖼️ [CHẾ ĐỘ 6 — TẠO BÌA TRUYỆN BẰNG AI (GEMINI TẠO HÌNH ẢNH)]',
+      'Bạn có thể chọn 1 phong cách bìa có sẵn bên trên HOẶC chọn "Tự nhập tự do" và mô tả thẳng ý tưởng bìa bạn muốn (nhân vật trung tâm, tư thế, khung cảnh, tông màu, tên truyện hiển thị trên bìa)...',
+      '',
+      'Ví dụ mô tả thêm cho bìa truyện:',
+      '- Nhân vật chính đứng dưới cơn mưa đêm thành phố nhìn lên màn hình điện thoại phát sáng ánh xanh lạnh, phía sau là bóng dáng kẻ phản diện mờ ảo trong màn sương.',
+      '- Chừa khoảng thoáng phía trên để đặt tiêu đề tiểu thuyết thật nổi bật.'
     ].join('\n')
   });
 
@@ -1411,12 +1497,28 @@
         MODE_2_BRAINSTORM: 'cmd-mode2-outline-advisory',
         MODE_3_AUDIT: 'cmd-mode3-prompt-advisory',
         MODE_4_REVIEW: 'cmd-mode4-prompt-advisory',
-        MODE_5_DIAGRAM: 'cmd-mode5-prompt-advisory'
+        MODE_5_DIAGRAM: 'cmd-mode5-prompt-advisory',
+        MODE_6_BOOK_COVER: 'cmd-mode6-book-cover-panel'
       };
       Object.entries(advisoryDomByMode).forEach(([k, domId]) => {
         const el = document.getElementById(domId);
         if (el) el.classList.toggle('hidden', k !== modeKey);
       });
+
+      const isNotebookLmMode =
+        modeKey === 'MODE_3_AUDIT' || modeKey === 'MODE_4_REVIEW' || modeKey === 'MODE_5_DIAGRAM';
+      const cmdSplitBtn = document.getElementById('btn-cmd-split-gemini');
+      if (cmdSplitBtn) {
+        cmdSplitBtn.textContent = tr16(
+          isNotebookLmMode ? '🪟 Chia đôi màn hình với NotebookLM' : '🪟 Chia đôi màn hình với Gemini'
+        );
+      }
+      const tab3SplitBtn = document.getElementById('btn-tab3-split-gemini');
+      if (tab3SplitBtn) {
+        tab3SplitBtn.innerHTML = `<span>${esc16(
+          tr16(isNotebookLmMode ? '🪟 Chia đôi màn hình với NotebookLM' : '🪟 Chia đôi màn hình với Gemini')
+        )}</span>`;
+      }
 
       const hasMode2 = this.hasDevelopedMode2Plot();
       const mode2Pill = document.getElementById('cmd-mode2-plot-pill');
@@ -1439,6 +1541,7 @@
 
       const isMode1 = modeKey === 'MODE_1_DRAFT';
       const isMode5 = modeKey === 'MODE_5_DIAGRAM';
+      const isMode6 = modeKey === 'MODE_6_BOOK_COVER';
       const sepBadge = document.getElementById('cmd-mode-separation-badge');
       const mode1Pills = document.getElementById('cmd-mode1-links-pills');
       const sceneMarkerBtn = document.getElementById('btn-cmd-add-scene-marker');
@@ -1448,32 +1551,36 @@
         if (isMode1) {
           sepBadge.textContent = tr16('🔗 Chế độ 1 · Prompt Tổng Hợp đầy đủ Story Bible + Dàn ý Chế độ 2 + Mốc POV');
         } else if (modeKey === 'MODE_2_BRAINSTORM') {
-          sepBadge.textContent = tr16('🧭 Chế độ 2 Độc lập · Kết nối Quy tắc viết + Story Bible → tự đưa dàn ý sang Chế độ 1');
+          sepBadge.textContent = tr16('🧭 Chế độ 2 · Tổng hợp Story Bible + Nhân vật + Ma trận + Phục bút + Từ cấm → Tham mưu cốt truyện');
         } else if (modeKey === 'MODE_3_AUDIT') {
-          sepBadge.textContent = tr16('🔍 Chế độ 3 Độc lập · Kiểm toán Logic & Ma trận Ai Biết Gì (không gộp Prompt viết truyện)');
+          sepBadge.textContent = tr16('🔍 Chế độ 3 · Kiểm toán Logic 30 năm kinh nghiệm (Khuyên dùng NotebookLM)');
         } else if (modeKey === 'MODE_4_REVIEW') {
-          sepBadge.textContent = tr16('📊 Chế độ 4 Độc lập · Hội đồng Độc giả Beta & Gọt văn theo Quy tắc tác giả');
+          sepBadge.textContent = tr16('📊 Chế độ 4 · Nhà Phê Bình 20 năm kinh nghiệm & Beta Reader (Khuyên dùng NotebookLM)');
+        } else if (isMode5) {
+          sepBadge.textContent = tr16('🎨 Chế độ 5 · Sơ đồ Cốt Truyện, Timeline & Báo cáo Mindmap trên NotebookLM');
         } else {
-          sepBadge.textContent = tr16('🎨 Chế độ 5 · Liên kết Story Bible + Vẽ Sơ đồ Cốt Truyện SVG & Biên Niên Sử Thời Gian');
+          sepBadge.textContent = tr16('🖼️ Chế độ 6 · Tạo Bìa Truyện Bằng AI (Bấm "Tạo hình ảnh" trên Gemini Web/App)');
         }
       }
       if (mode1Pills) {
-        mode1Pills.classList.toggle('opacity-50', !isMode1 && !isMode5);
+        mode1Pills.classList.toggle('opacity-60', !isMode1 && !isMode5 && modeKey !== 'MODE_2_BRAINSTORM' && !isMode6);
       }
       if (sceneMarkerBtn) {
-        sceneMarkerBtn.classList.toggle('hidden', !isMode1);
+        sceneMarkerBtn.classList.toggle('hidden', !isMode1 && modeKey !== 'MODE_2_BRAINSTORM');
       }
       if (runBtn) {
         if (isMode1) {
-          runBtn.innerHTML = `<span>${esc16(tr16('🚀 Chạy Prompt Tổng Hợp (Liên Kết Story Bible & Mốc Phân Cảnh)'))}</span>`;
+          runBtn.innerHTML = `<span>${esc16(tr16('🚀 Tổng Hợp, Copy & Chạy Viết Truyện (Chế Độ 1)'))}</span>`;
         } else if (modeKey === 'MODE_2_BRAINSTORM') {
-          runBtn.innerHTML = `<span>${esc16(tr16('🧭 Chạy Tham Mưu Cốt Truyện (Chế Độ 2 Độc Lập)'))}</span>`;
+          runBtn.innerHTML = `<span>${esc16(tr16('🧭 Tổng Hợp, Copy & Tham Mưu Cốt Truyện (Chế Độ 2)'))}</span>`;
         } else if (modeKey === 'MODE_3_AUDIT') {
-          runBtn.innerHTML = `<span>${esc16(tr16('🔍 Chạy Kiểm Toán Logic Ngay (Chế Độ 3 Độc Lập)'))}</span>`;
+          runBtn.innerHTML = `<span>${esc16(tr16('🔍 Tổng Hợp, Copy & Kiểm Toán Logic (Chế Độ 3 · NotebookLM)'))}</span>`;
         } else if (modeKey === 'MODE_4_REVIEW') {
-          runBtn.innerHTML = `<span>${esc16(tr16('📊 Chạy Hội Đồng Độc Giả Beta (Chế Độ 4 Độc Lập)'))}</span>`;
+          runBtn.innerHTML = `<span>${esc16(tr16('📊 Tổng Hợp, Copy & Phê Bình Truyện (Chế Độ 4 · NotebookLM)'))}</span>`;
+        } else if (isMode5) {
+          runBtn.innerHTML = `<span>${esc16(tr16('🎨 Tổng Hợp, Copy & Vẽ Sơ Đồ / Mindmap (Chế Độ 5 · NotebookLM)'))}</span>`;
         } else {
-          runBtn.innerHTML = `<span>${esc16(tr16('🎨 Chạy Vẽ Sơ Đồ Cốt Truyện SVG (Liên Kết Story Bible)'))}</span>`;
+          runBtn.innerHTML = `<span>${esc16(tr16('🖼️ Tổng Hợp, Copy Lệnh Tạo Bìa & Mở Gemini Tạo Ảnh (Chế Độ 6)'))}</span>`;
         }
       }
       this.updateCollapsedParamsSummaryText();
@@ -2097,72 +2204,180 @@
         const recentChapterHint = chapText
           ? chapText.slice(-2600)
           : '(Chương hiện tại đang trống)';
+        const sceneMarkersBlock =
+          this.sceneBuilder?.buildCompiledSceneMarkersBlockForPrompt?.() ||
+          '(Chưa đặt mốc chuyển phân cảnh riêng)';
+        const guardrailsBlock = this.inspector.buildEpistemicAndContinuityGuardrails(
+          this.storyBible,
+          this.sceneBuilder,
+          activeChap,
+          cleanCmd
+        );
         return wrapModePrompt([
-          `=== [CHẾ ĐỘ 2 ĐỘC LẬP: THAM MƯU CỐT TRUYỆN & PHÁT TRIỂN DIỄN BIẾN] ===`,
-          `[QUY TẮC & VAI TRÒ TỪ NGƯỜI DÙNG]:`,
+          `####################################################################`,
+          `🧭 CHẾ ĐỘ 2: THAM MƯU CỐT TRUYỆN & THIẾT KẾ DIỄN BIẾN CHUYÊN SÂU`,
+          `####################################################################`,
+          `[1. KHUNG PROMPT CỐ ĐỊNH & VAI TRÒ THAM MƯU]:`,
           sysInstruction,
           ``,
-          `[STORY BIBLE CHÍNH THỨC CẦN BÁM SÁT & ĐỐI CHIẾU]:`,
+          `[2. TOÀN BỘ STORY BIBLE, HỒ SƠ NHÂN VẬT, MA TRẬN AI BIẾT GÌ, SỔ CÁI PHỤC BÚT & TỪ CẤM]:`,
           bibleBlock,
           ``,
-          `[NGỮ CẢNH ĐOẠN CUỐI BẢN THẢO (${activeChap?.displayTitle || 'Chương hiện tại'})]:`,
+          sceneMarkersBlock,
+          ``,
+          `[3. RÀNG BUỘC LOGIC & NHẬN THỨC NHÂN VẬT]:`,
+          guardrailsBlock || '• Tuyệt đối tôn trọng Ma trận Ai Biết Gì và tính nhất quán nhân vật.',
+          ``,
+          `[4. NGỮ CẢNH ĐOẠN CUỐI BẢN THẢO (${activeChap?.displayTitle || 'Chương hiện tại'})]:`,
           recentChapterHint,
           ``,
-          `[CHƯƠNG ĐANG CHUẨN BỊ / ĐIỂM NHÌN POV GỢI Ý]: ${activeChap?.displayTitle || 'Chương tiếp theo'} · POV: ${pov}`,
+          `[5. CHƯƠNG ĐANG CHUẨN BỊ / ĐIỂM NHÌN POV]: ${activeChap?.displayTitle || 'Chương tiếp theo'} · POV: ${pov}`,
           `[MỤC TIÊU ĐẦU RA]:`,
           ...modeSpec.outputStructureGuide,
+          `- Tuyệt đối triển khai nhịp chậm, giàu căng thẳng tâm lý, không tua nhanh sự kiện hay giải quyết mâu thuẫn hời hợt.`,
           ``,
-          `[DÀN Ý THÔ / Ý TƯỞNG CỦA TÁC GIẢ]:`,
-          cleanCmd || `Hãy phát triển 3 phương án diễn biến chi tiết cho chương tiếp theo khớp với Story Bible bên trên (triển khai chậm rãi, gài phục bút, không tua nhanh sự kiện).`,
+          `[6. DÀN Ý THÔ / Ý TƯỞNG CỦA TÁC GIẢ]:`,
+          cleanCmd || `Hãy phát triển 3 phương án diễn biến chi tiết cho chương tiếp theo khớp 100% Story Bible bên trên (triển khai chậm rãi, gài phục bút tinh tế, không tua nhanh sự kiện).`,
           ``,
-          `Hãy trả lời trực tiếp thành bản tham mưu rõ ràng để tác giả chọn đưa vào Chế độ 1 viết tiểu thuyết.`
+          `🚀 Hãy trả lời thành bản tham mưu rõ ràng từng phân cảnh để tác giả chốt và chuyển thẳng sang Chế độ 1 viết tiểu thuyết.`
         ]);
       }
 
       if (modeKey === 'MODE_3_AUDIT') {
         const excerpt = chapText.length > 14000 ? chapText.slice(-14000) : chapText;
+        const chapterInventory = (this.chapterMgr?.chapters || [])
+          .map((c, idx) => `  - Chương ${idx + 1}: ${c.displayTitle || c.title} (${c.wordCount || 0} từ · ${c.status === 'APPROVED' ? 'Đã duyệt' : 'Nháp'})`)
+          .join('\n');
         return wrapModePrompt([
-          `=== [CHẾ ĐỘ 3 ĐỘC LẬP: KIỂM TOÁN LOGIC & MA TRẬN AI BIẾT GÌ] ===`,
-          `[QUY TẮC KIỂM TOÁN]:`,
+          `####################################################################`,
+          `🔍 CHẾ ĐỘ 3: KIỂM TOÁN LOGIC TOÀN DIỆN (TIỂU THUYẾT GIA 30 NĂM KINH NGHIỆM — KHUYÊN DÙNG GOOGLE NOTEBOOKLM)`,
+          `####################################################################`,
+          `Bạn là một Tiểu Thuyết Gia & Tổng Biên Tập Kiểm Toán Logic 30 năm kinh nghiệm, cực kỳ khắt khe và tinh mắt như một thám tử pháp y văn bản.`,
+          `Nhiệm vụ của bạn là SOI LỖI VÀ BẮT LỖI CỰC KỲ CHI TIẾT toàn bộ bản thảo so với Story Bible và các nguồn chương truyện đã tải lên (không bỏ sót dù chỉ 1 chi tiết nhỏ nhất):`,
+          `1. DÒNG THỜI GIAN & ĐỒNG HỒ: Kiểm tra từng giờ, phút, ngày thứ mấy, khoảng cách di chuyển giữa các địa điểm, thời hạn đếm ngược nhiệm vụ — có mốc nào mâu thuẫn hoặc dịch chuyển phi vật lý không?`,
+          `2. TÀI SẢN, VẬT PHẨM & THỂ CHẤT: Soi chính xác từng con số tiền bạc (cộng/trừ), vật chứng/USB/điện thoại đang ở đâu, thương tích nhân vật (rạn xương, vết khâu, sức bền) có bị tự nhiên biến mất vô lý không?`,
+          `3. MA TRẬN "AI BIẾT GÌ" (EPISTEMIC LEAK): Phát hiện mọi tình huống nhân vật vô tình nói, nghĩ hoặc hành động dựa trên thông tin họ CHƯA ĐƯỢC BIẾT tính đến thời điểm đó.`,
+          `4. TÍNH NHẤT QUÁN TÍNH CÁCH (OOC) & XƯNG HÔ: Kiểm tra nhân vật có hành xử trái tính cách gốc, đổi cách xưng hô đột ngột hoặc phản ứng phi tâm lý không.`,
+          `5. SỔ CÁI PHỤC BÚT & LỖ HỔNG CỐT TRUYỆN: Liệt kê mọi phục bút bị treo quên, chi tiết mâu thuẫn giữa các chương trước và chương sau.`,
+          `6. ĐỀ XUẤT SỬA CỤ THỂ: Với MỖI lỗi phát hiện được, BẮT BUỘC ghi rõ [Mức độ: Nghiêm trọng / Trung bình / Nhỏ] + [Vị trí Chương/Đoạn] + [Phân tích lỗi] + [Cách sửa dứt điểm kèm câu văn mẫu].`,
+          ``,
+          `[QUY TẮC KIỂM TOÁN BỔ SUNG CỦA STUDIO]:`,
           sysInstruction,
+          ``,
+          `[DANH SÁCH CHƯƠNG HIỆN CÓ TRONG STUDIO]:`,
+          chapterInventory || '  (Chương hiện tại)',
           ``,
           `[STORY BIBLE, NHÂN VẬT, MA TRẬN AI BIẾT GÌ & PHỤC BÚT]:`,
           bibleBlock,
           ``,
           `[NỘI DUNG BẢN THẢO ĐANG KIỂM TRA (${activeChap?.displayTitle || 'Chương hiện tại'})]:`,
-          excerpt || '(Bản thảo hiện đang trống — hãy đối chiếu theo yêu cầu bên dưới)',
+          excerpt || '(Bản thảo hiện đang trống — hãy đối chiếu toàn bộ nguồn tài liệu tôi tải lên NotebookLM)',
           ``,
           `[YÊU CẦU KIỂM TOÁN CỤ THỂ CỦA TÁC GIẢ]:`,
-          cleanCmd || `Rà soát toàn bộ mâu thuẫn dòng thời gian, OOC nhân vật và rò rỉ thông tin trong Ma trận Ai Biết Gì.`
+          cleanCmd || `Hãy soi lỗi cực kỳ chi tiết như tiểu thuyết gia 30 năm kinh nghiệm toàn bộ logic dòng thời gian, tiền bạc, thương tích, vật chứng, OOC nhân vật và rò rỉ thông tin trong Ma trận Ai Biết Gì.`
         ]);
       }
 
       if (modeKey === 'MODE_4_REVIEW') {
         const excerpt = chapText.length > 14000 ? chapText.slice(-14000) : chapText;
         return wrapModePrompt([
-          `=== [CHẾ ĐỘ 4 ĐỘC LẬP: HỘI ĐỒNG ĐỘC GIẢ BETA & BIÊN TẬP GỌT VĂN] ===`,
+          `####################################################################`,
+          `📊 CHẾ ĐỘ 4: NHÀ PHÊ BÌNH VĂN HỌC 20 NĂM KINH NGHIỆM & HỘI ĐỒNG ĐỘC GIẢ BETA (KHUYÊN DÙNG GOOGLE NOTEBOOKLM)`,
+          `####################################################################`,
+          `Bạn là 1 nhà phê bình tiểu thuyết, văn học mạng và chính quy 20 năm kinh nghiệm cho các nhà xuất bản lớn. Hãy đọc thật kỹ toàn bộ tài liệu / bản thảo và phân tích thẳng thắn, sắc sảo, không khen xã giao:`,
+          `1. HƯỚNG ĐI CỐT TRUYỆN & ĐỘ LÔI CUỐN: Mạch truyện hiện tại đã tối ưu chưa? Có thực sự giữ chân độc giả từ câu mở đầu đến câu kết chương (cliffhanger / hook) không? Đoạn nào bị chùng nhịp hoặc lê thê?`,
+          `2. TỐC ĐỘ & TỶ LỆ SỨC MẠNH (POWER SCALING / REALISM): Tốc độ phát triển nhân vật, năng lực, tài chính hay âm mưu có bị "ảo quá", buff quá đà hay giải quyết quá dễ dãi không? Chỉ rõ điểm cần tiết chế để tăng tính chân thực.`,
+          `3. CHẤM ĐIỂM 6 TRỤ CỘT VĂN HỌC (Thang 10): Cốt truyện · Tâm lý nhân vật · Nhịp điệu · Hội thoại · Hình ảnh Ngũ quan (Show Don't Tell) · Mức độ chống sáo rỗng AI.`,
+          `4. GÓC NHÌN 3 NHÓM ĐỘC GIẢ KHÓ TÍNH: (a) Độc giả mê đấu trí logic; (b) Độc giả thích chiều sâu tâm lý; (c) Độc giả đọc giải trí nhanh trên điện thoại — họ sẽ khen gì và chê/bỏ truyện ở đúng đoạn nào?`,
+          `5. ĐỀ XUẤT CẢI THIỆN CỤ THỂ: Chỉ ra ít nhất 5 điểm đắt giá nhất cần nâng cấp ngay kèm ví dụ viết lại mẫu theo đúng văn phong tác giả.`,
+          ``,
           `[QUY TẮC BIÊN TẬP & TIÊU CHUẨN VĂN PHONG]:`,
           sysInstruction,
           ``,
+          `[STORY BIBLE & BỐI CẢNH ĐỐI CHIẾU]:`,
+          bibleBlock,
+          ``,
           `[BẢN THẢO / ĐOẠN VĂN CẦN ĐÁNH GIÁ & CHỈNH SỬA (${activeChap?.displayTitle || 'Chương hiện tại'})]:`,
-          excerpt || '(Chưa có chữ trong chương — xem nội dung tác giả dán bên dưới)',
+          excerpt || '(Đánh giá dựa trên toàn bộ nguồn chương truyện tôi tải lên Google NotebookLM)',
           ``,
           `[TRỌNG TÂM ĐÁNH GIÁ / GỌT VĂN TÁC GIẢ YÊU CẦU]:`,
-          cleanCmd || `Đánh giá theo góc nhìn độc giả beta, chấm điểm nhịp điệu và chỉ ra các đoạn sáo rỗng cần sửa theo kỹ thuật Show Don't Tell.`
+          cleanCmd || `Bạn là 1 nhà phê bình tiểu thuyết, văn học mạng và chính quy 20 năm kinh nghiệm cho các nhà xuất bản lớn và phân tích cho tôi hướng đi cốt truyện đã tối ưu chưa, có thực sự lôi cuốn độc giả không, có chỗ nào cần cải thiện để giữ chân người đọc và khiến sức mạnh, tốc độ của cốt truyện không bị ảo quá không?`
+        ]);
+      }
+
+      if (modeKey === 'MODE_6_BOOK_COVER') {
+        const styleKey = this._selectedCoverStyleKey || 'ANIME_LN';
+        const styleObj = BOOK_COVER_STYLE_PRESETS[styleKey] || BOOK_COVER_STYLE_PRESETS.ANIME_LN;
+        const novelTitle =
+          document.getElementById('export-book-title-input')?.value?.trim() ||
+          localStorage.getItem('noir_s6_book_title') ||
+          'Tiểu thuyết của tôi';
+        const authorName =
+          document.getElementById('export-author-name-input')?.value?.trim() ||
+          localStorage.getItem('noir_s6_author_name') ||
+          'Tác giả';
+        const bibleExcerpt = String(bibleBlock || '').slice(0, 6500);
+
+        if (styleKey === 'CUSTOM_FREE' && cleanCmd) {
+          return wrapModePrompt([
+            `🖼️ [CHẾ ĐỘ 6 — TẠO BÌA TRUYỆN TỰ DO BẰNG GEMINI TẠO HÌNH ẢNH]`,
+            `Hãy tạo trực tiếp một bức ảnh bìa tiểu thuyết hoàn chỉnh (tỷ lệ dọc 2:3 chuẩn bìa sách xuất bản, độ sắc nét cao, ánh sáng chuyên nghiệp) theo đúng mô tả sau:`,
+            ``,
+            cleanCmd,
+            ``,
+            `[THÔNG TIN THAM KHẢO TỪ TRUYỆN]:`,
+            `- Tên truyện: ${novelTitle}`,
+            `- Bút danh tác giả: ${authorName}`,
+            `- Bối cảnh & Nhân vật từ Story Bible (tóm gọn để giữ đúng tạo hình):`,
+            bibleExcerpt.slice(0, 2600)
+          ]);
+        }
+
+        return wrapModePrompt([
+          `####################################################################`,
+          `🖼️ CHẾ ĐỘ 6: TẠO BÌA TRUYỆN CHUYÊN NGHIỆP BẰNG AI (DÁN VÀO MỤC "TẠO HÌNH ẢNH" CỦA GEMINI)`,
+          `####################################################################`,
+          `Hãy vẽ trực tiếp một bức ẢNH BÌA TIỂU THUYẾT xuất bản chuyên nghiệp, ấn tượng, chất lượng cực cao dựa trên trọn bộ chủ đề, nhân vật và bối cảnh truyện bên dưới:`,
+          ``,
+          `1. THÔNG TIN BÌA SÁCH:`,
+          `- Tên tác phẩm: "${novelTitle}"`,
+          `- Tên tác giả / Bút danh: "${authorName}"`,
+          `- Tỷ lệ khung hình: Dọc 2:3 (Book Cover Vertical Poster), bố cục chuẩn xuất bản (chừa vùng không gian thoáng/tương phản đẹp ở 1/3 trên cho tiêu đề và lề dưới cho tên tác giả).`,
+          ``,
+          `2. PHONG CÁCH NGHỆ THUẬT ĐÃ CHỌN (${styleObj.label}):`,
+          styleObj.directive || 'Phong cách minh họa bìa tiểu thuyết xuất bản chuyên nghiệp, ánh sáng điện ảnh, giàu cảm xúc.',
+          ``,
+          `3. YÊU CẦU THIẾT KẾ CỤ THỂ CỦA TÁC GIẢ:`,
+          cleanCmd || `Thiết kế cảnh đắt giá nhất thể hiện linh hồn bộ truyện, nhân vật chính có thần thái cuốn hút, đạo cụ biểu tượng nổi bật và bầu không khí giàu kịch tính.`,
+          ``,
+          `4. DỮ LIỆU CỐT TRUYỆN, NHÂN VẬT & BỐI CẢNH TỪ STORY BIBLE (ĐỂ VẼ ĐÚNG CHỦ ĐỀ & TẠO HÌNH):`,
+          bibleExcerpt,
+          ``,
+          `🚀 CHỈ THỊ VẼ ẢNH: Vẽ sắc nét, không méo bàn tay/khuôn mặt, ánh sáng có chiều sâu, màu sắc hài hòa đẳng cấp bìa sách bán chạy. Nếu chèn chữ, chỉ chèn chính xác tên tác phẩm hoặc để sạch không chữ rác (no gibberish text).`
         ]);
       }
 
       const rawMode5 = [
-        `=== [CHẾ ĐỘ 5 ĐỘC LẬP: VẼ SƠ ĐỒ CỐT TRUYỆN & BIÊN NIÊN SỬ LIÊN KẾT STORY BIBLE] ===`,
+        `####################################################################`,
+        `🎨 CHẾ ĐỘ 5: VẼ SƠ ĐỒ CỐT TRUYỆN, TIMELINE & BÁO CÁO MINDMAP TRỰC QUAN (GOOGLE NOTEBOOKLM)`,
+        `####################################################################`,
         `[QUY TẮC & VAI TRÒ HỆ THỐNG]:`,
         sysInstruction,
+        ``,
+        `[YÊU CẦU ĐẶC BIỆT CHO GOOGLE NOTEBOOKLM (BẮT BUỘC THỰC HIỆN)]:`,
+        `- Ngoài phần văn bản phân tích dòng thời gian & sơ đồ cốt truyện ở khung chat, HÃY ĐỒNG THỜI TẠO CẤU TRÚC PHÂN NHÁNH CHUẨN ĐỂ HIỂN THỊ THÀNH BÁO CÁO HÌNH ẢNH / MINDMAP / SƠ ĐỒ TRỰC QUAN Ở THANH STUDIO BÊN PHẢI CỦA NOTEBOOKLM!`,
+        `- Trình bày rõ 3 lớp trực quan:`,
+        `  1. SƠ ĐỒ TRỤC THỜI GIAN HIỆN TẠI (Timeline theo đúng thứ tự Arc → Hồi/Chương → Mốc giờ/ngày → Địa điểm → Bước ngoặt).`,
+        `  2. SƠ ĐỒ MẠNG LƯỚI QUAN HỆ & PHE PHÁI NHÂN VẬT (Ai là đồng minh, ai là kẻ thù, ai đang giấu bí mật với ai).`,
+        `  3. CÂY PHỤC BÚT & NGÒI NỔ HIỆN TẠI (Nhánh [ĐÃ KÍCH NỔ] vs [ĐANG TREO CHỜ BÙNG NỔ] kèm cảnh báo điểm mâu thuẫn logic nếu có).`,
+        `- Đính kèm thêm khối mã sơ đồ Mermaid (flowchart TD / mindmap) để tác giả có thể xem hoặc xuất ảnh trực quan ngay lập tức.`,
         ``,
         `[STORY BIBLE CHÍNH THỨC CẦN LIÊN KẾT & ĐỐI CHIẾU (TAB 4)]:`,
         bibleBlock,
         ``,
         `[YÊU CẦU VẼ SƠ ĐỒ CỐT TRUYỆN CỦA TÁC GIẢ]:`,
-        cleanCmd || `Hãy vẽ biểu đồ diễn biến sự kiện theo trình tự thời gian dựa trên Story Bible (nhân vật, phục bút, bí mật, ma trận Ai Biết Gì) và các chương đã chọn.`
-      ].join('\n\n');
+        cleanCmd || `Hãy vẽ đúng sơ đồ cốt truyện, sơ đồ timeline đang diễn biến ở hiện tại, mạng lưới nhân vật và tạo thêm báo cáo trực quan / mindmap ở thanh bên NotebookLM dựa trên toàn bộ các chương và Story Bible.`
+      ].join('\n');
       const trPrompt = window.NoirNovel?.i18n?.translatePromptFrame;
       return typeof trPrompt === 'function' ? trPrompt(rawMode5) : rawMode5;
     }
@@ -2287,11 +2502,10 @@
       confirmModal?.classList.remove('hidden');
       if (confirmModal) window.NoirNovel?.i18n?.translateElement?.(confirmModal);
 
-      this.utils?.showToast?.(
-        `📜 Đã tổng hợp Prompt cho ${EXECUTION_MODE_SPECIFICATIONS[modeKey]?.title || modeKey}! Bạn có thể Copy Toàn Bộ hoặc bấm Tiếp Tục.`,
-        'info',
-        3600
-      );
+      // Tự động copy câu lệnh tổng hợp vào bộ nhớ tạm + cập nhật nhắc chọn mô hình/tư duy + hỏi chia đôi màn hình
+      window.NoirStudio?.geminiSplitBridge?.autoCopyAndAnnounceCompiledPrompt?.(completePrompt, modeKey, {
+        openFloatingAsk: true
+      });
       return completePrompt;
     }
 
@@ -2426,7 +2640,7 @@
       }
     }
 
-    async runStep1MasterSynthesis(bypassMode2Check = false) {
+    async runStep1MasterSynthesis(bypassMode2Check = false, bypassStaleWarn = false) {
       if (this.isSynthesizing) return;
       this.isSynthesizing = true;
 
@@ -2440,14 +2654,34 @@
           this.geminiRouter?.selectedModelId ||
           'gemini-4-hydrogen';
 
-        // Chế độ 2, 3, 4, 5: mở màn hình kiểm tra Prompt Tổng Hợp riêng biệt (gồm cả khung prompt
-        // hệ thống có sẵn + yêu cầu người dùng + nút Copy Toàn Bộ + link Gemini của bạn + Tiếp tục / Quay lại)
-        // trước khi cho AI thực thi!
+        // Kiểm tra cảnh báo khi nội dung chương truyện vừa thay đổi mà Story Bible / Chế độ 2 chưa cập nhật
+        const syncTracker = window.NoirStudio?.manuscriptSyncTracker;
+        if (!bypassStaleWarn && syncTracker) {
+          if (currentModeKey === 'MODE_1_DRAFT' && syncTracker.shouldWarnMode1Stale()) {
+            this.isSynthesizing = false;
+            syncTracker.openMode1StaleWarningModal(() => {
+              this.runStep1MasterSynthesis(bypassMode2Check, true);
+            });
+            return;
+          }
+          if (currentModeKey === 'MODE_2_BRAINSTORM' && syncTracker.shouldWarnMode2Stale()) {
+            this.isSynthesizing = false;
+            syncTracker.openMode2StaleWarningModal(() => {
+              this.runStep1MasterSynthesis(bypassMode2Check, true);
+            });
+            return;
+          }
+        }
+
+        // Chế độ 2, 3, 4, 5, 6: mở màn hình kiểm tra Prompt Tổng Hợp riêng biệt + tự động copy câu lệnh + gợi ý Chia đôi màn hình Gemini/NotebookLM
         if (currentModeKey !== 'MODE_1_DRAFT') {
           if (resolvedCmd) {
             try {
               localStorage.setItem('noir_v36_last_command_prompt', resolvedCmd);
             } catch (_) {}
+          }
+          if (currentModeKey === 'MODE_2_BRAINSTORM') {
+            syncTracker?.markMode2UpdatedNow?.();
           }
           await this.openStandaloneModePreRunReviewModal(currentModeKey, resolvedCmd, currentModel, {
             origin: 'COMMAND_MODAL'
@@ -2557,11 +2791,10 @@
         confirmModal?.classList.remove('hidden');
         if (confirmModal) window.NoirNovel?.i18n?.translateElement?.(confirmModal);
 
-        this.utils.showToast(
-          '✅ Đã tổng hợp xong Prompt Tổng! Hãy kiểm tra lại mô hình (Khuyên dùng từ Gemini Flash trở lên) rồi bấm chạy chính thức.',
-          'success',
-          4000
-        );
+        // Tự động copy Prompt Tổng Hợp Chế độ 1 + thông báo nhắc chọn mô hình/tư duy + cửa sổ nổi chia đôi màn hình Gemini
+        window.NoirStudio?.geminiSplitBridge?.autoCopyAndAnnounceCompiledPrompt?.(synthesized, 'MODE_1_DRAFT', {
+          openFloatingAsk: true
+        });
       } catch (err) {
         this.utils.hideBlockingLoader();
         this.utils.showToast(
@@ -3244,6 +3477,769 @@
     window.NoirStudio.utils
   );
   window.NoirStudio.promptSynthesizer = promptSynthesizer;
+
+  // ==========================================================================
+  // PHẦN 8 (v105): THEO DÕI THAY ĐỔI CHƯƠNG TRUYỆN + CẢNH BÁO STORY BIBLE / CHẾ ĐỘ 2
+  //                + CẦU NỐI COPY TỰ ĐỘNG & CHIA ĐÔI MÀN HÌNH GEMINI / NOTEBOOKLM
+  //                + QUY TRÌNH 4 BƯỚC TAB 1 + CHẾ ĐỘ 6 TẠO BÌA TRUYỆN
+  // ==========================================================================
+
+  class ManuscriptSyncChangeTracker {
+    constructor(synthEngine) {
+      this.synth = synthEngine;
+      this.KEY_BIBLE_FP = 'noir_v105_bible_synced_fp_v1';
+      this.KEY_MODE2_FP = 'noir_v105_mode2_synced_fp_v1';
+      this.KEY_SKIP_M1 = 'noir_v105_skip_stale_warn_m1_v1';
+      this.KEY_SKIP_M2 = 'noir_v105_skip_stale_warn_m2_v1';
+      this._bound = false;
+    }
+
+    computeChaptersFingerprint() {
+      try {
+        const cm = window.NoirStudio?.chapterManager;
+        const chaps = Array.isArray(cm?.chapters) ? cm.chapters : [];
+        const liveTa = document.getElementById('textarea-chapter-content')?.value;
+        const activeId = cm?.activeChapterId || cm?.getActiveChapter?.()?.id || '';
+        const parts = chaps.map((c) => {
+          const txt = String(c.id === activeId && typeof liveTa === 'string' ? liveTa : c.content || '');
+          return `${c.id}:${(c.title || '').length}:${txt.length}:${txt.slice(0, 32)}:${txt.slice(-32)}`;
+        });
+        return `${chaps.length}#${parts.join('|')}`;
+      } catch (_e) {
+        return '';
+      }
+    }
+
+    hasMeaningfulManuscriptText() {
+      try {
+        const cm = window.NoirStudio?.chapterManager;
+        const chaps = Array.isArray(cm?.chapters) ? cm.chapters : [];
+        const liveLen = String(document.getElementById('textarea-chapter-content')?.value || '').trim().length;
+        if (liveLen >= 20) return true;
+        return chaps.some((c) => String(c?.content || '').trim().length >= 20);
+      } catch (_e) {
+        return false;
+      }
+    }
+
+    markStoryBibleUpdatedNow() {
+      const fp = this.computeChaptersFingerprint();
+      try {
+        if (fp) localStorage.setItem(this.KEY_BIBLE_FP, fp);
+      } catch (_e) {}
+      this.refreshTab4StaleReminder();
+    }
+
+    markMode2UpdatedNow() {
+      const fp = this.computeChaptersFingerprint();
+      try {
+        if (fp) localStorage.setItem(this.KEY_MODE2_FP, fp);
+      } catch (_e) {}
+    }
+
+    isStoryBibleStale() {
+      if (!this.hasMeaningfulManuscriptText()) return false;
+      const curFp = this.computeChaptersFingerprint();
+      if (!curFp) return false;
+      try {
+        const savedFp = localStorage.getItem(this.KEY_BIBLE_FP) || '';
+        return savedFp !== curFp;
+      } catch (_e) {
+        return false;
+      }
+    }
+
+    isMode2Stale() {
+      if (!this.hasMeaningfulManuscriptText()) return false;
+      const curFp = this.computeChaptersFingerprint();
+      if (!curFp) return false;
+      try {
+        const savedFp = localStorage.getItem(this.KEY_MODE2_FP) || '';
+        return savedFp !== curFp;
+      } catch (_e) {
+        return false;
+      }
+    }
+
+    shouldWarnMode1Stale() {
+      try {
+        if (localStorage.getItem(this.KEY_SKIP_M1) === '1') return false;
+      } catch (_e) {}
+      return this.isStoryBibleStale() || this.isMode2Stale();
+    }
+
+    shouldWarnMode2Stale() {
+      try {
+        if (localStorage.getItem(this.KEY_SKIP_M2) === '1') return false;
+      } catch (_e) {}
+      return this.isStoryBibleStale();
+    }
+
+    refreshTab4StaleReminder() {
+      const banner = document.getElementById('tab4-stale-bible-reminder');
+      if (!banner) return;
+      const stale = this.isStoryBibleStale();
+      banner.classList.toggle('hidden', !stale);
+    }
+
+    openMode1StaleWarningModal(onProceed) {
+      if (typeof document === 'undefined' || !document.body) {
+        onProceed?.();
+        return;
+      }
+      document.getElementById('modal-v105-stale-mode1-warn')?.remove();
+      const modal = document.createElement('div');
+      modal.id = 'modal-v105-stale-mode1-warn';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.className =
+        'fixed inset-0 z-[195] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto';
+
+      modal.innerHTML = `
+        <div class="my-auto w-full max-w-lg rounded-2xl border-2 border-amber-400/75 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden text-xs">
+          <div class="px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-amber-950/75 to-rose-950/50 flex items-center justify-between gap-2">
+            <div class="font-extrabold text-sm text-amber-300">⚠️ Phát Hiện Nội Dung Chương Truyện Vừa Thay Đổi</div>
+            <button type="button" id="btn-close-v105-m1-warn" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-rose-600 text-white font-bold">✕</button>
+          </div>
+          <div class="p-4 space-y-3.5">
+            <p class="text-[12.5px] leading-relaxed text-zinc-100">
+              Mình thấy chương truyện bạn viết đã thay đổi nội dung, điều này có thể dẫn tới story bible hoặc mạch truyện đổi, bạn có muốn cập nhật
+              <button type="button" id="btn-v105-warn-jump-mode2" class="inline underline decoration-2 underline-offset-4 font-extrabold text-cyan-300 hover:text-white cursor-pointer bg-transparent border-0 px-0.5">Tham mưu cốt truyện</button>
+              và
+              <button type="button" id="btn-v105-warn-jump-bible" class="inline underline decoration-2 underline-offset-4 font-black text-amber-300 hover:text-amber-100 bg-amber-500/20 border border-amber-400/60 rounded px-1.5 py-0.5 cursor-pointer">Story Bible</button>
+              (Story bible thì cần cập nhật ngay vì bạn có thay đổi trong chương truyện) không?
+            </p>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-zinc-800 bg-zinc-900/80 text-[11px] text-zinc-300 cursor-pointer select-none">
+              <input type="checkbox" id="chk-v105-skip-m1-warn" class="accent-amber-400 w-4 h-4 shrink-0" />
+              <span>Không hiện cảnh báo này cho lần sau</span>
+            </label>
+            <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
+              <button type="button" id="btn-v105-m1-go-bible" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold shadow transition">
+                🏛️ Qua Story Bible Ngay
+              </button>
+              <button type="button" id="btn-v105-m1-go-mode2" class="px-3 py-2 rounded-xl border border-cyan-500/50 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-200 font-bold transition">
+                🧭 Qua Chế Độ 2
+              </button>
+              <button type="button" id="btn-v105-m1-proceed" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow transition">
+                🚀 Vẫn Chạy Prompt
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      window.NoirStudio?.i18n?.translateElement?.(modal);
+
+      const close = () => modal.remove();
+      const saveSkipIfChecked = () => {
+        if (modal.querySelector('#chk-v105-skip-m1-warn')?.checked) {
+          try { localStorage.setItem(this.KEY_SKIP_M1, '1'); } catch (_e) {}
+        }
+      };
+      modal.addEventListener('click', (ev) => { if (ev.target === modal) close(); });
+      modal.querySelector('#btn-close-v105-m1-warn')?.addEventListener('click', close);
+      const goMode2 = () => {
+        close();
+        this.synth.switchToMode2AndFocus();
+      };
+      const goBible = () => {
+        close();
+        document.getElementById('modal-fullscreen-ai-command')?.classList.add('hidden');
+        window.NoirStudio?.navigator?.navigateToScreen?.('SCREEN_4_BIBLE');
+        this.refreshTab4StaleReminder();
+      };
+      modal.querySelector('#btn-v105-warn-jump-mode2')?.addEventListener('click', goMode2);
+      modal.querySelector('#btn-v105-m1-go-mode2')?.addEventListener('click', goMode2);
+      modal.querySelector('#btn-v105-warn-jump-bible')?.addEventListener('click', goBible);
+      modal.querySelector('#btn-v105-m1-go-bible')?.addEventListener('click', goBible);
+      modal.querySelector('#btn-v105-m1-proceed')?.addEventListener('click', () => {
+        saveSkipIfChecked();
+        close();
+        onProceed?.();
+      });
+    }
+
+    openMode2StaleWarningModal(onProceed) {
+      if (typeof document === 'undefined' || !document.body) {
+        onProceed?.();
+        return;
+      }
+      document.getElementById('modal-v105-stale-mode2-warn')?.remove();
+      const modal = document.createElement('div');
+      modal.id = 'modal-v105-stale-mode2-warn';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.className =
+        'fixed inset-0 z-[195] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto';
+
+      modal.innerHTML = `
+        <div class="my-auto w-full max-w-md rounded-2xl border-2 border-amber-400/75 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden text-xs">
+          <div class="px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-amber-950/75 to-zinc-950 flex items-center justify-between gap-2">
+            <div class="font-extrabold text-sm text-amber-300">⚠️ Story Bible Chưa Được Cập Nhật</div>
+            <button type="button" id="btn-close-v105-m2-warn" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-rose-600 text-white font-bold">✕</button>
+          </div>
+          <div class="p-4 space-y-3.5">
+            <p class="text-[12.5px] leading-relaxed text-zinc-100">
+              Bạn chưa cập nhật <strong class="text-amber-300">story bible</strong>, bạn nên cập nhật nó, bạn có muốn cập nhật ngay bây giờ không?
+            </p>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-zinc-800 bg-zinc-900/80 text-[11px] text-zinc-300 cursor-pointer select-none">
+              <input type="checkbox" id="chk-v105-skip-m2-warn" class="accent-amber-400 w-4 h-4 shrink-0" />
+              <span>Không hiện cảnh báo này cho lần sau</span>
+            </label>
+            <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
+              <button type="button" id="btn-v105-m2-go-bible" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold shadow transition">
+                🏛️ Cập Nhật Story Bible Ngay
+              </button>
+              <button type="button" id="btn-v105-m2-proceed" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow transition">
+                🧭 Vẫn Chạy Chế Độ 2
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      window.NoirStudio?.i18n?.translateElement?.(modal);
+
+      const close = () => modal.remove();
+      modal.addEventListener('click', (ev) => { if (ev.target === modal) close(); });
+      modal.querySelector('#btn-close-v105-m2-warn')?.addEventListener('click', close);
+      modal.querySelector('#btn-v105-m2-go-bible')?.addEventListener('click', () => {
+        close();
+        document.getElementById('modal-fullscreen-ai-command')?.classList.add('hidden');
+        window.NoirStudio?.navigator?.navigateToScreen?.('SCREEN_4_BIBLE');
+        this.refreshTab4StaleReminder();
+      });
+      modal.querySelector('#btn-v105-m2-proceed')?.addEventListener('click', () => {
+        if (modal.querySelector('#chk-v105-skip-m2-warn')?.checked) {
+          try { localStorage.setItem(this.KEY_SKIP_M2, '1'); } catch (_e) {}
+        }
+        close();
+        onProceed?.();
+      });
+    }
+
+    init() {
+      if (this._bound || typeof document === 'undefined') return;
+      this._bound = true;
+      // Khởi tạo baseline nếu lần đầu mở và đã có Story Bible sẵn
+      try {
+        if (!localStorage.getItem(this.KEY_BIBLE_FP)) {
+          const bibleLen = String(document.getElementById('textarea-rendered-bible-content')?.value || '').trim().length;
+          if (bibleLen > 80) {
+            localStorage.setItem(this.KEY_BIBLE_FP, this.computeChaptersFingerprint());
+          }
+        }
+      } catch (_e) {}
+
+      const onManuscriptEdited = () => {
+        this.refreshTab4StaleReminder();
+      };
+      document.getElementById('textarea-chapter-content')?.addEventListener('input', onManuscriptEdited);
+      document.getElementById('input-chapter-title')?.addEventListener('input', onManuscriptEdited);
+      window.NoirStudio?.bus?.on?.('chapter:created', onManuscriptEdited);
+      window.NoirStudio?.bus?.on?.('chapter:deleted', onManuscriptEdited);
+      window.NoirStudio?.bus?.on?.('chapter:saved', onManuscriptEdited);
+      window.NoirStudio?.bus?.on?.('screen:changed', () => this.refreshTab4StaleReminder());
+      setTimeout(() => this.refreshTab4StaleReminder(), 600);
+    }
+  }
+
+  class GeminiAndNotebookLmSplitBridge {
+    constructor(synthEngine) {
+      this.synth = synthEngine;
+      this.GEMINI_WEB_URL = 'https://gemini.google.com/app';
+      this.NOTEBOOKLM_WEB_URL = 'https://notebooklm.google.com/';
+      this._bound = false;
+    }
+
+    isMobileDevice() {
+      if (typeof navigator === 'undefined') return false;
+      return /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(String(navigator.userAgent || ''));
+    }
+
+    isAndroidDevice() {
+      if (typeof navigator === 'undefined') return false;
+      return /Android/i.test(String(navigator.userAgent || ''));
+    }
+
+    getThinkingHumanLabel(level) {
+      const map = {
+        MINIMAL: 'Tối thiểu (Nhanh)',
+        LOW: 'Thấp (Nhanh)',
+        MEDIUM: 'Trung bình (Cân bằng)',
+        HIGH: 'Cao (Sâu tâm lý & Logic)',
+        XHIGH: 'Siêu cao · XHIGH (Tối đa Gemini 4)'
+      };
+      return map[String(level || 'MEDIUM').toUpperCase()] || 'Trung bình (Cân bằng)';
+    }
+
+    getSelectedModelAndThinkingInfo() {
+      const selConfirm = document.getElementById('confirm-modal-model-select');
+      const selMain = document.getElementById('select-gemini-model');
+      const activeSel =
+        !document.getElementById('modal-confirm-synthesized-prompt')?.classList.contains('hidden') && selConfirm
+          ? selConfirm
+          : selMain || selConfirm;
+      const modelId = activeSel?.value || window.NoirStudio?.geminiRouter?.selectedModelId || 'gemini-4-hydrogen';
+      const optText = activeSel?.selectedOptions?.[0]?.textContent?.trim() || modelId;
+
+      const thinkConfirm = document.getElementById('confirm-modal-thinking-select');
+      const thinkMain = document.getElementById('select-ai-thinking-level');
+      const thinkVal =
+        (!document.getElementById('modal-confirm-synthesized-prompt')?.classList.contains('hidden') && thinkConfirm?.value) ||
+        thinkMain?.value ||
+        window.NoirStudio?.geminiRouter?.getThinkingLevel?.() ||
+        'MEDIUM';
+      return {
+        modelId,
+        modelLabel: optText,
+        thinkingLevel: thinkVal,
+        thinkingLabel: this.getThinkingHumanLabel(thinkVal)
+      };
+    }
+
+    refreshConfirmModalWebReminder() {
+      const el = document.getElementById('confirm-modal-web-model-reminder');
+      if (!el) return;
+      const info = this.getSelectedModelAndThinkingInfo();
+      const modeKey =
+        this.synth?._pendingModalReviewContext?.modeKey ||
+        document.getElementById('select-ai-execution-mode')?.value ||
+        'MODE_1_DRAFT';
+      const isNotebook = modeKey === 'MODE_3_AUDIT' || modeKey === 'MODE_4_REVIEW' || modeKey === 'MODE_5_DIAGRAM';
+      const tr = (s) => (window.NoirStudio?.i18n?.translateText ? window.NoirStudio.i18n.translateText(String(s || '')) : String(s || ''));
+      if (isNotebook) {
+        el.textContent = tr(
+          `🧠 Chế độ này khuyên dùng Google NotebookLM — câu lệnh đã tự động copy sẵn, bấm Chia Đôi Màn Hình để dán thẳng sang NotebookLM nhé!`
+        );
+      } else {
+        el.textContent = tr(
+          `🔔 Nếu bạn dùng Gemini Web/App thì nhớ chọn mô hình bạn đang mong muốn: ${info.modelLabel} — Mức tư duy: ${info.thinkingLabel} nha!`
+        );
+      }
+    }
+
+    async copyTextReliable(text) {
+      const clean = String(text || '');
+      if (!clean) return false;
+      try {
+        if (navigator?.clipboard?.writeText) {
+          await navigator.clipboard.writeText(clean);
+          return true;
+        }
+      } catch (_eClip) {}
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = clean;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return Boolean(ok);
+      } catch (_eFb) {
+        return false;
+      }
+    }
+
+    launchExternalSplitWindow(serviceType = 'GEMINI', preferNativeAppIntent = false) {
+      const isNotebook = serviceType === 'NOTEBOOKLM';
+      const webUrl = isNotebook ? this.NOTEBOOKLM_WEB_URL : this.GEMINI_WEB_URL;
+
+      if (this.isMobileDevice()) {
+        if (preferNativeAppIntent && !isNotebook && this.isAndroidDevice()) {
+          // Cơ chế tự dò App Gemini trên Android: mở thẳng App Gemini nếu đã cài, tự fallback sang Web nếu chưa cài!
+          const intentUrl =
+            'intent://gemini.google.com/app#Intent;scheme=https;package=com.google.android.apps.bard;S.browser_fallback_url=https%3A%2F%2Fgemini.google.com%2Fapp;end';
+          try {
+            window.location.href = intentUrl;
+            return true;
+          } catch (_eInt) {}
+        }
+        try {
+          window.open(webUrl, '_blank', 'noopener,noreferrer');
+          return true;
+        } catch (_eMob) {
+          return false;
+        }
+      }
+
+      // Desktop: mở popup cửa sổ bên PHẢI màn hình tự động chia 50/50 + cố gắng căn app hiện tại sang nửa TRÁI
+      const availLeft = Number(window.screen?.availLeft) || 0;
+      const availTop = Number(window.screen?.availTop) || 0;
+      const availW = Math.max(960, Number(window.screen?.availWidth) || 1440);
+      const availH = Math.max(640, Number(window.screen?.availHeight) || 900);
+      const halfW = Math.floor(availW / 2);
+      const rightX = availLeft + halfW;
+
+      try {
+        // Nếu đang ở App PWA độc lập trên Desktop, tự co nhẹ cửa sổ hiện tại về nửa trái màn hình
+        const isStandalone = Boolean(
+          window.matchMedia?.('(display-mode: standalone)')?.matches ||
+          window.matchMedia?.('(display-mode: window-controls-overlay)')?.matches
+        );
+        if (isStandalone && typeof window.moveTo === 'function' && typeof window.resizeTo === 'function') {
+          window.moveTo(availLeft, availTop);
+          window.resizeTo(halfW, availH);
+        }
+      } catch (_eResize) {}
+
+      const winName = isNotebook ? 'noir_split_notebooklm_window' : 'noir_split_gemini_window';
+      const features = `popup=yes,resizable=yes,scrollbars=yes,left=${rightX},top=${availTop},width=${halfW},height=${availH}`;
+      const opened = window.open(webUrl, winName, features);
+      if (opened) {
+        try { opened.focus(); } catch (_eF) {}
+        window.NoirStudio?.utils?.showToast?.(
+          isNotebook
+            ? '🪟 Đã mở Google NotebookLM ở nửa phải màn hình! Bạn chỉ cần Ctrl+V dán câu lệnh vừa copy.'
+            : '🪟 Đã mở Gemini ở nửa phải màn hình! (Trên Windows bấm Win + ← để ghim Studio sang nửa trái nếu đang mở trong tab trình duyệt)',
+          'success',
+          5000
+        );
+        return true;
+      }
+      window.open(webUrl, '_blank', 'noopener,noreferrer');
+      return true;
+    }
+
+    async autoCopyAndAnnounceCompiledPrompt(compiledPrompt, modeKey, options = {}) {
+      const copied = await this.copyTextReliable(compiledPrompt);
+      this.refreshConfirmModalWebReminder();
+      const serviceType =
+        modeKey === 'MODE_3_AUDIT' || modeKey === 'MODE_4_REVIEW' || modeKey === 'MODE_5_DIAGRAM'
+          ? 'NOTEBOOKLM'
+          : 'GEMINI';
+      const info = this.getSelectedModelAndThinkingInfo();
+      const pill = document.getElementById('mod32-confirm-copy-status-pill');
+      if (pill && copied) {
+        pill.textContent = '✅ Đã tự động copy câu lệnh vào bộ nhớ tạm';
+      }
+      window.NoirStudio?.utils?.showToast?.(
+        serviceType === 'NOTEBOOKLM'
+          ? '✅ Đã copy câu lệnh thành công! Sẵn sàng dán sang Google NotebookLM.'
+          : `✅ Đã copy câu lệnh thành công! Nếu dùng Gemini Web/App nhớ chọn: ${info.modelLabel} (${info.thinkingLabel}).`,
+        'success',
+        4800
+      );
+      if (options.openFloatingAsk) {
+        this.openSplitScreenLaunchModal({
+          serviceType,
+          compiledPrompt,
+          modeKey,
+          fromButtonExplain: false
+        });
+      }
+    }
+
+    async triggerSplitScreenForCurrentContext(explicitService = null, explicitModeKey = null, explicitPrompt = null) {
+      const modeKey =
+        explicitModeKey ||
+        this.synth?._pendingModalReviewContext?.modeKey ||
+        document.getElementById('select-ai-execution-mode')?.value ||
+        'MODE_1_DRAFT';
+      const serviceType =
+        explicitService ||
+        (modeKey === 'MODE_3_AUDIT' || modeKey === 'MODE_4_REVIEW' || modeKey === 'MODE_5_DIAGRAM'
+          ? 'NOTEBOOKLM'
+          : 'GEMINI');
+
+      let promptText = explicitPrompt;
+      if (!promptText) {
+        if (serviceType === 'NOTEBOOKLM' && explicitModeKey === 'TAB4_STORY_BIBLE') {
+          promptText =
+            window.NoirStudio?.storyBible?.buildDynamicNotebookLmStoryBiblePrompt?.() ||
+            document.getElementById('textarea-tab4-notebooklm-prompt')?.value ||
+            '';
+        } else {
+          const resolvedCmd = this.synth.getResolvedUserCommand();
+          promptText = this.synth.buildSynthesizedPromptForMode(modeKey, resolvedCmd);
+        }
+      }
+
+      if (promptText && promptText.trim()) {
+        await this.copyTextReliable(promptText);
+        window.NoirStudio?.utils?.showToast?.(
+          '✅ Đã tổng hợp và copy sẵn câu lệnh vào bộ nhớ tạm!',
+          'success',
+          3600
+        );
+      }
+
+      this.openSplitScreenLaunchModal({
+        serviceType,
+        compiledPrompt: promptText || '',
+        modeKey,
+        fromButtonExplain: true
+      });
+    }
+
+    openSplitScreenLaunchModal({ serviceType = 'GEMINI', compiledPrompt = '', modeKey = 'MODE_1_DRAFT', fromButtonExplain = false } = {}) {
+      if (typeof document === 'undefined' || !document.body) return;
+      document.getElementById('mod16-split-screen-bridge-modal')?.remove();
+
+      const isNotebook = serviceType === 'NOTEBOOKLM';
+      const isMobile = this.isMobileDevice();
+      const info = this.getSelectedModelAndThinkingInfo();
+      const esc = (s) =>
+        String(s || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+
+      const modal = document.createElement('div');
+      modal.id = 'mod16-split-screen-bridge-modal';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.className =
+        'fixed inset-0 z-[192] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto';
+
+      const targetTitle = isNotebook
+        ? '🪟 Chia Đôi Màn Hình Với Google NotebookLM'
+        : '🪟 Chia Đôi Màn Hình Với Gemini Web / App';
+      const modelReminderHtml = isNotebook
+        ? `<div class="p-3 rounded-xl border border-sky-400/55 bg-sky-950/40 text-sky-100 font-bold leading-relaxed">
+             🧠 <strong>Gợi ý Google NotebookLM:</strong> Câu lệnh chi tiết đã được tự động copy sẵn vào bộ nhớ tạm! Bạn chỉ cần dán (Ctrl+V / Dán) vào Google NotebookLM (kèm file PDF các chương nếu cần đối chiếu toàn truyện).
+           </div>`
+        : `<div class="p-3 rounded-xl border border-amber-400/60 bg-amber-500/15 text-amber-100 font-extrabold leading-relaxed">
+             🔔 Nếu bạn dùng Gemini Web/App thì nhớ chọn mô hình bạn đang mong muốn:
+             <span class="text-emerald-300">${esc(info.modelLabel)}</span> — Mức tư duy: <span class="text-cyan-300">${esc(info.thinkingLabel)}</span> nha!
+           </div>`;
+
+      const mode6TipHtml =
+        modeKey === 'MODE_6_BOOK_COVER'
+          ? `<div class="p-2.5 rounded-xl border border-violet-400/55 bg-violet-950/40 text-violet-100 font-bold leading-relaxed">
+               🖼️ <strong>Mẹo Chế độ 6 (Tạo Bìa):</strong> Khi mở Gemini, hãy bấm dấu <strong>+</strong> ở thanh "Hỏi Gemini" → chọn <strong>🖼️ Tạo hình ảnh</strong> rồi dán câu lệnh đã copy vào để ra bìa đẹp nhất!
+             </div>`
+          : '';
+
+      const explainBoxHtml = `
+        <div class="p-3 rounded-xl border border-indigo-400/45 bg-indigo-950/35 text-zinc-200 leading-relaxed text-[11.5px]">
+          💡 Khi chia đôi màn hình với ${isNotebook ? 'Google NotebookLM' : 'Gemini'}, bạn vừa có thể sáng tác truyện, vừa có thể tương tác với ${isNotebook ? 'NotebookLM Web/App' : 'Gemini Web hoặc App'} của bạn (Hoặc nếu không thì bạn có thể tương tác với Gemini qua Link API của mình, nhưng nó sẽ hơi lỏ hơn vì Gemini qua Link API không phân biệt bạn dùng cái tài khoản nào, Plus, Pro hay Ultra mà là 1 gói Billing riêng. Bạn có thể đưa Gemini nghĩ cốt truyện, sáng tạo thành phẩm,... rồi cóp ngược về app để quản lý chương truyện, vẽ sơ đồ,... nha).
+        </div>
+      `;
+
+      modal.innerHTML = `
+        <div class="my-auto w-full max-w-xl rounded-2xl border-2 border-indigo-400/75 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden text-xs">
+          <div class="px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-indigo-950/80 via-violet-950/60 to-zinc-950 flex items-center justify-between gap-2">
+            <div class="font-extrabold text-sm text-indigo-200">${targetTitle}</div>
+            <button type="button" id="btn-close-split-bridge-modal" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-rose-600 text-white font-bold">✕</button>
+          </div>
+          <div class="p-4 space-y-3">
+            <div class="p-2.5 rounded-xl border border-emerald-500/50 bg-emerald-950/35 text-emerald-100 font-bold flex items-center justify-between gap-2">
+              <span>✅ Đã copy câu lệnh thành công vào bộ nhớ tạm!</span>
+              <button type="button" id="btn-split-bridge-recopy" class="px-2.5 py-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-500 text-white text-[10.5px] font-bold shrink-0">📋 Copy lại</button>
+            </div>
+            ${modelReminderHtml}
+            ${mode6TipHtml}
+            ${explainBoxHtml}
+            <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
+              ${
+                isMobile && !isNotebook && this.isAndroidDevice()
+                  ? `<button type="button" id="btn-split-launch-app-android" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold shadow-lg transition">
+                       📱 Mở Thẳng App Gemini (Tự Dò App) ↗
+                     </button>`
+                  : ''
+              }
+              <button type="button" id="btn-split-launch-main" class="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-extrabold shadow-lg transition">
+                ${
+                  isMobile
+                    ? isNotebook
+                      ? '🌐 Mở Google NotebookLM Ngay ↗'
+                      : '🌐 Mở Gemini Web / App Ngay ↗'
+                    : isNotebook
+                      ? '🪟 Chia Đôi Màn Hình Với NotebookLM Ngay ↗'
+                      : '🪟 Chia Đôi Màn Hình Với Gemini Ngay ↗'
+                }
+              </button>
+              <button type="button" id="btn-split-bridge-dismiss" class="px-3 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-200 font-bold transition">
+                ${fromButtonExplain ? 'Đóng lại' : 'Ở lại (Dùng API Key / Chỉnh tiếp)'}
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+      window.NoirStudio?.i18n?.translateElement?.(modal);
+
+      const close = () => modal.remove();
+      modal.addEventListener('click', (ev) => { if (ev.target === modal) close(); });
+      modal.querySelector('#btn-close-split-bridge-modal')?.addEventListener('click', close);
+      modal.querySelector('#btn-split-bridge-dismiss')?.addEventListener('click', close);
+      modal.querySelector('#btn-split-bridge-recopy')?.addEventListener('click', async () => {
+        if (compiledPrompt) {
+          await this.copyTextReliable(compiledPrompt);
+          window.NoirStudio?.utils?.showToast?.('✅ Đã copy lại câu lệnh thành công!', 'success', 2400);
+        }
+      });
+      modal.querySelector('#btn-split-launch-app-android')?.addEventListener('click', () => {
+        this.launchExternalSplitWindow(serviceType, true);
+        close();
+      });
+      modal.querySelector('#btn-split-launch-main')?.addEventListener('click', () => {
+        this.launchExternalSplitWindow(serviceType, false);
+        close();
+      });
+    }
+
+    jumpToWorkflowTarget(targetKey) {
+      if (targetKey === 'TAB4_BIBLE') {
+        window.NoirStudio?.navigator?.navigateToScreen?.('SCREEN_4_BIBLE');
+        window.NoirStudio?.manuscriptSyncTracker?.refreshTab4StaleReminder?.();
+        return;
+      }
+      window.NoirStudio?.navigator?.navigateToScreen?.('SCREEN_3_AI');
+      const modeSel = document.getElementById('select-ai-execution-mode');
+      if (modeSel && targetKey) {
+        modeSel.value = targetKey;
+        try {
+          localStorage.setItem(this.synth.constants.STORAGE_KEYS.EXECUTION_MODE, targetKey);
+        } catch (_e) {}
+      }
+      window.NoirStudio?.tab3Controller?.switchMode?.(targetKey);
+      this.synth.onExecutionModeChanged(targetKey);
+      document.getElementById('modal-fullscreen-ai-command')?.classList.remove('hidden');
+      this.synth.refreshCommandModeUX(targetKey);
+    }
+
+    init() {
+      if (this._bound || typeof document === 'undefined') return;
+      this._bound = true;
+
+      const bindClick = (id, fn) => {
+        const el = document.getElementById(id);
+        if (el && !el.dataset.v105SplitBound) {
+          el.dataset.v105SplitBound = '1';
+          el.addEventListener('click', fn);
+        }
+      };
+
+      // Các nút Chia đôi màn hình với Gemini ở Tab 1, 2, 3 và Hộp lệnh
+      bindClick('btn-tab1-split-gemini', () => this.triggerSplitScreenForCurrentContext('GEMINI', 'MODE_1_DRAFT'));
+      bindClick('btn-tab2-split-gemini', () => this.triggerSplitScreenForCurrentContext('GEMINI', 'MODE_1_DRAFT'));
+      bindClick('btn-tab3-split-gemini', () => this.triggerSplitScreenForCurrentContext(null, null));
+      bindClick('btn-cmd-split-gemini', () => this.triggerSplitScreenForCurrentContext(null, null));
+
+      // Các nút Chia đôi màn hình với NotebookLM ở Chế độ 3, 4, 5
+      bindClick('btn-mode3-split-notebooklm', () => this.triggerSplitScreenForCurrentContext('NOTEBOOKLM', 'MODE_3_AUDIT'));
+      bindClick('btn-mode4-split-notebooklm', () => this.triggerSplitScreenForCurrentContext('NOTEBOOKLM', 'MODE_4_REVIEW'));
+      bindClick('btn-mode5-split-notebooklm', () => this.triggerSplitScreenForCurrentContext('NOTEBOOKLM', 'MODE_5_DIAGRAM'));
+
+      // Chế độ 6 Tạo Bìa Truyện
+      bindClick('btn-mode6-copy-cover-prompt', async () => {
+        const cmd = this.synth.getResolvedUserCommand();
+        const promptText = this.synth.buildSynthesizedPromptForMode('MODE_6_BOOK_COVER', cmd);
+        await this.copyTextReliable(promptText);
+        window.NoirStudio?.utils?.showToast?.(
+          '✅ Đã copy câu lệnh tạo bìa thành công! Mở Gemini → bấm + → Tạo hình ảnh rồi dán vào nhé!',
+          'success',
+          4200
+        );
+      });
+      bindClick('btn-mode6-split-gemini', () => this.triggerSplitScreenForCurrentContext('GEMINI', 'MODE_6_BOOK_COVER'));
+
+      // Nút Copy & Chia Đôi trong Cửa sổ xác nhận (thay thế hành vi mở tab cũ bằng chia đôi thông minh)
+      const confirmSplitBtn = document.getElementById('btn-mod32-confirm-copy-and-open');
+      if (confirmSplitBtn && !confirmSplitBtn.dataset.v105SplitOverride) {
+        confirmSplitBtn.dataset.v105SplitOverride = '1';
+        confirmSplitBtn.addEventListener(
+          'click',
+          (ev) => {
+            ev.preventDefault();
+            ev.stopImmediatePropagation();
+            const txt =
+              document.getElementById('textarea-synthesized-master-prompt')?.value ||
+              this.synth.lastSynthesizedPrompt ||
+              '';
+            const modeKey =
+              this.synth?._pendingModalReviewContext?.modeKey ||
+              document.getElementById('select-ai-execution-mode')?.value ||
+              'MODE_1_DRAFT';
+            const svc =
+              modeKey === 'MODE_3_AUDIT' || modeKey === 'MODE_4_REVIEW' || modeKey === 'MODE_5_DIAGRAM'
+                ? 'NOTEBOOKLM'
+                : 'GEMINI';
+            this.triggerSplitScreenForCurrentContext(svc, modeKey, txt);
+          },
+          true
+        );
+      }
+
+      // Cập nhật live dòng nhắc chọn mô hình + mức tư duy khi người dùng đổi dropdown
+      ['confirm-modal-model-select', 'confirm-modal-thinking-select', 'select-gemini-model', 'select-ai-thinking-level'].forEach(
+        (id) => {
+          document.getElementById(id)?.addEventListener('change', () => this.refreshConfirmModalWebReminder());
+        }
+      );
+
+      // Gắn sự kiện chọn phong cách bìa Chế độ 6
+      document.querySelectorAll('.mode6-style-chip').forEach((chip) => {
+        if (chip.dataset.v105ChipBound) return;
+        chip.dataset.v105ChipBound = '1';
+        chip.addEventListener('click', () => {
+          const styleKey = chip.getAttribute('data-cover-style') || 'ANIME_LN';
+          this.synth._selectedCoverStyleKey = styleKey;
+          document.querySelectorAll('.mode6-style-chip').forEach((c) => {
+            const active = c.getAttribute('data-cover-style') === styleKey;
+            c.className = active
+              ? 'mode6-style-chip px-2.5 py-1 rounded-lg border border-violet-400 bg-violet-600/85 text-white font-extrabold text-[10.5px] shadow transition'
+              : 'mode6-style-chip px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-violet-400 font-bold text-[10.5px] transition';
+          });
+          const label = BOOK_COVER_STYLE_PRESETS[styleKey]?.label || styleKey;
+          window.NoirStudio?.utils?.showToast?.(
+            styleKey === 'CUSTOM_FREE'
+              ? '✏️ Đã chọn tự nhập câu lệnh bìa tự do — bạn hãy mô tả thẳng ý tưởng vào khung bên dưới nhé!'
+              : `🎨 Đã chọn phong cách bìa: ${label}`,
+            'info',
+            2600
+          );
+        });
+      });
+
+      // Quy trình 4 bước ngắn ở Tab 1 (mọi chữ gạch chân đều nhảy thẳng tới đúng chế độ)
+      document.querySelectorAll('[data-workflow-jump]').forEach((btn) => {
+        if (btn.dataset.v105WfBound) return;
+        btn.dataset.v105WfBound = '1';
+        btn.addEventListener('click', () => {
+          const target = btn.getAttribute('data-workflow-jump');
+          if (target) this.jumpToWorkflowTarget(target);
+        });
+      });
+
+      // Đồng bộ 2 chiều checkbox liên kết File Story Bible giữa Tab 3 Command Modal & Tab 4
+      const cmdFileChk = document.getElementById('chk-cmd-link-story-bible-file');
+      if (cmdFileChk && !cmdFileChk.dataset.v105FileSyncBound) {
+        cmdFileChk.dataset.v105FileSyncBound = '1';
+        const savedEnabled = localStorage.getItem('noir_v105_story_bible_file_link_enabled') !== '0';
+        cmdFileChk.checked = savedEnabled;
+        cmdFileChk.addEventListener('change', () => {
+          localStorage.setItem('noir_v105_story_bible_file_link_enabled', cmdFileChk.checked ? '1' : '0');
+          const tab4Chk = document.getElementById('chk-tab4-link-bible-file');
+          if (tab4Chk) tab4Chk.checked = cmdFileChk.checked;
+        });
+      }
+    }
+  }
+
+  const manuscriptSyncTracker = new ManuscriptSyncChangeTracker(promptSynthesizer);
+  const geminiSplitBridge = new GeminiAndNotebookLmSplitBridge(promptSynthesizer);
+  window.NoirStudio.manuscriptSyncTracker = manuscriptSyncTracker;
+  window.NoirStudio.geminiSplitBridge = geminiSplitBridge;
+
+  const bootV105SplitAndTrackers = () => {
+    try {
+      manuscriptSyncTracker.init();
+      geminiSplitBridge.init();
+    } catch (_eBoot) {}
+  };
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootV105SplitAndTrackers);
+    } else {
+      setTimeout(bootV105SplitAndTrackers, 60);
+    }
+  }
 
   const refreshMod16I18n = () => {
     try {
