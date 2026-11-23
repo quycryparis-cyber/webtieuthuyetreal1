@@ -1865,6 +1865,9 @@
 
     async syncAllManuscriptsToLocalFolder() {
       const res = await this.synchronizer.executeFullSixFolderSync();
+      try {
+        await this.NS.chapterManager?.syncHierarchyFolderStructureToDisk?.();
+      } catch (_eHier) {}
       if (res.synced) {
         const c = res.counts;
         this.utils.showToast(

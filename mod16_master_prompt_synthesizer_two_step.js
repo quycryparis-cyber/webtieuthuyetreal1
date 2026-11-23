@@ -1063,34 +1063,48 @@
       const confirmModelSelect = document.getElementById('confirm-modal-model-select');
       const synthTextarea = document.getElementById('textarea-synthesized-master-prompt');
 
-      // 1. Khôi phục câu lệnh đã lưu từ localStorage / lịch sử lệnh / chương hiện tại
-      const savedPrompt =
-        localStorage.getItem('noir_v36_last_command_prompt') ||
-        this.commandHistory.getLatestSavedCommand() ||
-        '';
+      // 1. Khôi phục câu lệnh RIÊNG BIỆT theo đúng Chế độ đang chọn (tuyệt đối không dùng chung giữa 6 chế độ)
+      const initialModeKey = modeSelect?.value || 'MODE_1_DRAFT';
+      const perModeKey = `noir_v106_cmd_draft_${initialModeKey}`;
+      let savedPrompt = '';
+      try {
+        savedPrompt = localStorage.getItem(perModeKey) || '';
+        // Chỉ di trú 1 lần duy nhất từ bản cũ sang Chế độ 1 nếu Chế độ 1 chưa có draft mới
+        if (!savedPrompt && initialModeKey === 'MODE_1_DRAFT' && localStorage.getItem('noir_v106_migrated_m1_v1') !== '1') {
+          const legacy = localStorage.getItem('noir_v36_last_command_prompt') || '';
+          if (legacy) {
+            savedPrompt = legacy;
+            localStorage.setItem(perModeKey, legacy);
+          }
+          localStorage.setItem('noir_v106_migrated_m1_v1', '1');
+        }
+      } catch (_eInitP) {}
       if (promptBox && !promptBox.value && savedPrompt) {
         promptBox.value = savedPrompt;
       }
 
       this.updatePromptCounterUI(promptBox?.value || '');
 
-      // 2. Đồng bộ 2 chiều theo thời gian thực khi tác giả gõ vào #s18-fullscreen-prompt-textarea
+      // 2. Đồng bộ 2 chiều theo đúng Chế độ đang chọn (6 chế độ hoàn toàn độc lập)
       if (promptBox && !promptBox.dataset.noirMod16Bound) {
         promptBox.dataset.noirMod16Bound = '1';
         const syncHandler = () => {
           const val = promptBox.value;
+          const activeMode = document.getElementById('select-ai-execution-mode')?.value || 'MODE_1_DRAFT';
           try {
-            localStorage.setItem('noir_v36_last_command_prompt', val);
+            localStorage.setItem(`noir_v106_cmd_draft_${activeMode}`, val);
           } catch (_) {}
 
-          const legacyBeats = document.getElementById('textarea-chapter-beats');
-          if (legacyBeats && legacyBeats.value !== val) {
-            legacyBeats.value = val;
-          }
-
-          const active = this.chapterMgr?.getActiveChapter?.();
-          if (active) {
-            active.beats = val;
+          // Chỉ đồng bộ với beats của chương khi đang ở Chế độ 1
+          if (activeMode === 'MODE_1_DRAFT') {
+            const legacyBeats = document.getElementById('textarea-chapter-beats');
+            if (legacyBeats && legacyBeats.value !== val) {
+              legacyBeats.value = val;
+            }
+            const active = this.chapterMgr?.getActiveChapter?.();
+            if (active) {
+              active.beats = val;
+            }
           }
 
           this.updatePromptCounterUI(val);
@@ -1101,19 +1115,26 @@
         promptBox.addEventListener('paste', () => setTimeout(syncHandler, 20));
       }
 
-      // 3. Đồng bộ ngược nếu tác giả nhập vào #textarea-chapter-beats hoặc #mode5-prompt-input
+      // 3. Đồng bộ ngược nếu tác giả nhập vào #textarea-chapter-beats (chỉ cho Chế độ 1)
       const legacyBeats = document.getElementById('textarea-chapter-beats');
       if (legacyBeats && !legacyBeats.dataset.noirMod16Bound) {
         legacyBeats.dataset.noirMod16Bound = '1';
         legacyBeats.addEventListener('input', () => {
           const val = legacyBeats.value;
-          if (promptBox && promptBox.value !== val) {
-            promptBox.value = val;
-          }
           try {
-            localStorage.setItem('noir_v36_last_command_prompt', val);
+            localStorage.setItem('noir_v106_cmd_draft_MODE_1_DRAFT', val);
           } catch (_) {}
-          this.updatePromptCounterUI(val);
+          const activeMode = document.getElementById('select-ai-execution-mode')?.value || 'MODE_1_DRAFT';
+          if (activeMode === 'MODE_1_DRAFT') {
+            if (promptBox && promptBox.value !== val) {
+              promptBox.value = val;
+            }
+            const richEl = document.getElementById('s18-rich-prompt-editor');
+            if (richEl && window.NoirStudio?.v106CommandSuite?.richModeActive) {
+              richEl.innerText = val;
+            }
+            this.updatePromptCounterUI(val);
+          }
         });
       }
 
@@ -1157,15 +1178,24 @@
           targetWordInput.value = savedTargetWords;
         }
         targetWordInput.addEventListener('input', () => {
-          const rawVal = Number(targetWordInput.value);
+          let rawVal = Number(targetWordInput.value);
+          if (rawVal > 40000) {
+            rawVal = 40000;
+            targetWordInput.value = '40000';
+            this.utils?.showToast?.('⚠️ Giới hạn tối đa là 40.000 từ mỗi lần chạy Prompt!', 'warning', 2400);
+          }
           if (rawVal >= 300) {
             try {
-              localStorage.setItem(this.constants.STORAGE_KEYS.TARGET_WORDS, String(Math.min(40000, rawVal)));
+              localStorage.setItem(this.constants.STORAGE_KEYS.TARGET_WORDS, String(rawVal));
             } catch (_) {}
           }
         });
         targetWordInput.addEventListener('change', () => {
-          const cleanWords = Math.max(300, Math.min(40000, Number(targetWordInput.value) || 3500));
+          const rawVal = Number(targetWordInput.value) || 3500;
+          if (rawVal > 40000) {
+            this.utils?.showToast?.('⚠️ Giới hạn tối đa là 40.000 từ mỗi lần chạy Prompt!', 'warning', 2400);
+          }
+          const cleanWords = Math.max(300, Math.min(40000, rawVal));
           targetWordInput.value = String(cleanWords);
           try {
             localStorage.setItem(this.constants.STORAGE_KEYS.TARGET_WORDS, String(cleanWords));
@@ -4883,37 +4913,113 @@
 
     openStoryBibleFullViewerModal() {
       document.getElementById('modal-v106-story-bible-viewer')?.remove();
-      const fullBible =
-        window.NoirStudio?.storyBible?.buildCompiledBibleBlockForPrompt?.() ||
-        document.getElementById('textarea-rendered-bible-content')?.value ||
-        '(Chưa có nội dung Story Bible)';
+      const sb = window.NoirStudio?.storyBible;
+      const tab4Plain = document.getElementById('textarea-rendered-bible-content');
+      const tab4Rich = document.getElementById('tab4-rich-bible-editor');
+      const rawBibleText = String(tab4Plain?.value || '').trim();
+      const richHtml = String(tab4Rich?.innerHTML || '').trim();
+      const linkedFile = sb?.getLinkedStoryBibleFileData?.();
+      const chars = Array.isArray(sb?.characters) ? sb.characters : [];
+      const knows = Array.isArray(sb?.knowledgeMatrix) ? sb.knowledgeMatrix : [];
+      const clues = Array.isArray(sb?.cluesLedger) ? sb.cluesLedger : [];
+
+      const charsHtml =
+        chars.length > 0
+          ? chars
+              .map(
+                (c, i) =>
+                  `<div class="p-2 rounded-lg border border-zinc-800 bg-zinc-900/80"><div class="font-bold text-emerald-300">${i + 1}. ${this.escapeHtml(c.name)} <span class="text-zinc-400 font-normal">(${this.escapeHtml(c.role || 'Nhân vật')})</span></div><div class="text-[11px] text-zinc-300 mt-0.5">${this.escapeHtml(c.traits || '')}</div></div>`
+              )
+              .join('')
+          : '<div class="text-zinc-500 italic">Chưa có hồ sơ nhân vật riêng.</div>';
+
+      const knowsHtml =
+        knows.length > 0
+          ? knows
+              .map(
+                (k, i) =>
+                  `<div class="p-2 rounded-lg border border-zinc-800 bg-zinc-900/80"><div class="font-bold text-amber-300">${i + 1}. ${this.escapeHtml(k.secret)}</div><div class="text-[11px] text-emerald-300">Đã biết: ${this.escapeHtml(k.whoKnows)}</div><div class="text-[11px] text-rose-300">Chưa biết: ${this.escapeHtml(k.whoDoesNotKnow)}</div></div>`
+              )
+              .join('')
+          : '<div class="text-zinc-500 italic">Chưa có mục Ma trận Ai Biết Gì.</div>';
+
+      const cluesHtml =
+        clues.length > 0
+          ? clues
+              .map(
+                (cl, i) =>
+                  `<div class="p-2 rounded-lg border border-zinc-800 bg-zinc-900/80"><span class="font-bold ${cl.status === 'RESOLVED' ? 'text-emerald-300' : 'text-indigo-300'}">[${cl.status === 'RESOLVED' ? 'Đã thu hồi' : 'Đang gieo'}]</span> ${this.escapeHtml(cl.title)} — <span class="text-zinc-400">${this.escapeHtml(cl.note || '')}</span></div>`
+              )
+              .join('')
+          : '<div class="text-zinc-500 italic">Chưa có phục bút nào.</div>';
+
       const modal = document.createElement('div');
       modal.id = 'modal-v106-story-bible-viewer';
       modal.setAttribute('role', 'dialog');
       modal.setAttribute('aria-modal', 'true');
       modal.style.zIndex = '2147483100';
-      modal.className = 'fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-5 overflow-y-auto';
+      modal.className = 'fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto';
       modal.innerHTML = `
-        <div class="my-auto w-full max-w-4xl max-h-[90dvh] rounded-2xl border-2 border-amber-400/75 bg-zinc-950 text-zinc-100 shadow-2xl flex flex-col overflow-hidden text-xs">
-          <div class="px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-amber-950/75 to-zinc-900 flex items-center justify-between gap-2 shrink-0">
+        <div class="my-auto w-full max-w-5xl max-h-[92dvh] rounded-2xl border-2 border-amber-400/75 bg-zinc-950 text-zinc-100 shadow-2xl flex flex-col overflow-hidden text-xs">
+          <div class="px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-amber-950/75 to-zinc-900 flex flex-wrap items-center justify-between gap-2 shrink-0">
             <div>
-              <div class="font-extrabold text-sm text-amber-300">📄 TOÀN VĂN FILE STORY BIBLE ĐANG LIÊN KẾT (NGUYÊN VĂN 100%, KHÔNG CẮT XÉN)</div>
-              <div class="text-[11px] text-amber-100/80">Tổng độ dài: ${fullBible.length.toLocaleString('vi-VN')} ký tự</div>
+              <div class="font-extrabold text-sm text-amber-300">🏛️ CỬA SỔ NỔI TOÀN BỘ STORY BIBLE (CHỈNH SỬA TRỰC TIẾP NHƯ TAB 4)</div>
+              <div class="text-[11px] text-amber-100/80">
+                ${linkedFile?.fileName ? `📄 File đang liên kết: <strong>${this.escapeHtml(linkedFile.fileName)}</strong> (${(linkedFile.text || '').length.toLocaleString('vi-VN')} ký tự) · ` : ''}Nội dung khung Story Bible: ${rawBibleText.length.toLocaleString('vi-VN')} ký tự (giữ nguyên 100%, không cắt xén)
+              </div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-              <button type="button" id="btn-v106-bible-goto-tab4" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold transition">✏️ Mở Tab 4 Chỉnh Sửa</button>
+              <button type="button" id="btn-v106-bible-save-inline" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow transition">💾 Lưu Story Bible</button>
+              <button type="button" id="btn-v106-bible-goto-tab4" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold transition">🏛️ Qua Tab 4 Đầy Đủ</button>
               <button type="button" id="btn-v106-bible-close" class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-rose-600 text-white font-bold">✕ Đóng</button>
             </div>
           </div>
-          <div class="p-4 overflow-y-auto flex-1">
-            <pre class="whitespace-pre-wrap break-words font-monoCode text-[12px] leading-relaxed text-zinc-100 select-text bg-zinc-900/70 p-3.5 rounded-xl border border-zinc-800">${this.escapeHtml(fullBible)}</pre>
+          <div class="p-4 overflow-y-auto flex-1 space-y-4">
+            <div class="space-y-1.5">
+              <div class="font-extrabold text-emerald-300 uppercase text-[11px]">📖 2. Nội Dung Story Bible Chính Thức (Có thể sửa &amp; dán trực tiếp tại đây):</div>
+              <textarea id="textarea-v106-floating-bible-edit" rows="14" class="w-full p-3.5 rounded-xl border border-emerald-500/45 bg-zinc-900/90 text-xs leading-relaxed text-zinc-100 font-monoCode select-text focus:outline-none focus:border-emerald-400 resize-y">${this.escapeHtml(rawBibleText)}</textarea>
+            </div>
+            ${
+              linkedFile?.text
+                ? `<div class="space-y-1.5"><div class="font-extrabold text-sky-300 uppercase text-[11px]">📄 Nội Dung File Story Bible Đang Liên Kết (${this.escapeHtml(linkedFile.fileName)}):</div><pre class="max-h-60 overflow-y-auto whitespace-pre-wrap break-words font-monoCode text-[11.5px] leading-relaxed text-zinc-200 select-text bg-zinc-900/80 p-3 rounded-xl border border-sky-500/35">${this.escapeHtml(linkedFile.text)}</pre></div>`
+                : ''
+            }
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="p-3 rounded-xl border border-emerald-500/30 bg-zinc-900/50 space-y-2">
+                <div class="font-extrabold text-emerald-300 text-[11px] uppercase">👤 Hồ Sơ Nhân Vật (${chars.length})</div>
+                <div class="space-y-1.5 max-h-48 overflow-y-auto">${charsHtml}</div>
+              </div>
+              <div class="p-3 rounded-xl border border-amber-500/30 bg-zinc-900/50 space-y-2">
+                <div class="font-extrabold text-amber-300 text-[11px] uppercase">🧠 Ma Trận Ai Biết Gì (${knows.length})</div>
+                <div class="space-y-1.5 max-h-48 overflow-y-auto">${knowsHtml}</div>
+              </div>
+              <div class="p-3 rounded-xl border border-indigo-500/30 bg-zinc-900/50 space-y-2">
+                <div class="font-extrabold text-indigo-300 text-[11px] uppercase">🔫 Sổ Cái Phục Bút (${clues.length})</div>
+                <div class="space-y-1.5 max-h-48 overflow-y-auto">${cluesHtml}</div>
+              </div>
+            </div>
           </div>
         </div>
       `;
       document.body.appendChild(modal);
+      const saveInlineBible = () => {
+        const edited = modal.querySelector('#textarea-v106-floating-bible-edit')?.value || '';
+        if (tab4Plain) {
+          tab4Plain.value = edited;
+          tab4Plain.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (tab4Rich && !richHtml.includes('<table') && !richHtml.includes('<img')) {
+          tab4Rich.innerText = edited;
+        }
+        sb?.saveAllBibleData?.(false);
+        this.refreshHeroTopLinksUI();
+        window.NoirStudio?.utils?.showToast?.('✅ Đã lưu thay đổi Story Bible ngay tại cửa sổ nổi!', 'success', 2400);
+      };
       modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.remove(); });
       modal.querySelector('#btn-v106-bible-close')?.addEventListener('click', () => modal.remove());
+      modal.querySelector('#btn-v106-bible-save-inline')?.addEventListener('click', saveInlineBible);
       modal.querySelector('#btn-v106-bible-goto-tab4')?.addEventListener('click', () => {
+        saveInlineBible();
         modal.remove();
         document.getElementById('modal-fullscreen-ai-command')?.classList.add('hidden');
         window.NoirStudio?.navigator?.navigateToScreen?.('SCREEN_4_BIBLE');
@@ -5315,21 +5421,44 @@
         });
       }
 
-      // 2 nút lớn trên cùng: FILE STORY BIBLE & THAM MƯU CỐT TRUYỆN
+      // 2 nút lớn trên cùng: FILE STORY BIBLE & THAM MƯU CỐT TRUYỆN (tick chỉ bật/tắt, bấm thân nút mở cửa sổ nổi!)
       document.getElementById('btn-cmd-hero-story-bible-viewer')?.addEventListener('click', () => {
         this.openStoryBibleFullViewerModal();
       });
       document.getElementById('btn-cmd-hero-plot-selector')?.addEventListener('click', () => {
         this.openDualPlotBrainstormingModal();
       });
+      document.getElementById('cmd-mode2-plot-pill')?.addEventListener('click', () => {
+        this.openDualPlotBrainstormingModal();
+      });
+      bibleChk?.addEventListener('click', (ev) => ev.stopPropagation());
       bibleChk?.addEventListener('change', () => {
         this.refreshHeroTopLinksUI();
       });
       if (plotChk) {
         plotChk.checked = localStorage.getItem(this.PLOT_MASTER_KEY) !== '0';
+        plotChk.addEventListener('click', (ev) => ev.stopPropagation());
         plotChk.addEventListener('change', () => {
           try { localStorage.setItem(this.PLOT_MASTER_KEY, plotChk.checked ? '1' : '0'); } catch (_e) {}
           this.refreshHeroTopLinksUI();
+        });
+      }
+
+      // Nút Thu gọn / Mở rộng khung màu vàng chọn mô hình trong Cửa sổ Xác Nhận Prompt (áp dụng mọi Chế độ 1–6)
+      const yellowToggleBtn = document.getElementById('btn-toggle-confirm-yellow-panel');
+      const yellowPanelBody = document.getElementById('confirm-yellow-model-panel-body');
+      if (yellowToggleBtn && yellowPanelBody) {
+        const setYellowCollapsed = (collapsed) => {
+          yellowPanelBody.classList.toggle('hidden', Boolean(collapsed));
+          yellowToggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+          yellowToggleBtn.textContent = collapsed ? '▼ Mở rộng khung chọn mô hình' : '▲ Thu gọn khung này';
+          try { localStorage.setItem('noir_v107_confirm_yellow_collapsed', collapsed ? '1' : '0'); } catch (_e) {}
+        };
+        try {
+          if (localStorage.getItem('noir_v107_confirm_yellow_collapsed') === '1') setYellowCollapsed(true);
+        } catch (_e) {}
+        yellowToggleBtn.addEventListener('click', () => {
+          setYellowCollapsed(!yellowPanelBody.classList.contains('hidden'));
         });
       }
 

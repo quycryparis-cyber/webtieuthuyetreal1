@@ -1022,10 +1022,27 @@
           seenIds.add(id);
           const durSec = Number(item.lengthSeconds) || 0;
           const isLive = Boolean(item.liveNow);
+          const rawViews = Number(item.viewCount);
+          const viewsText = Number.isFinite(rawViews) && rawViews >= 0
+            ? (rawViews >= 1e9 ? `${(rawViews / 1e9).toFixed(1).replace(/\.0$/, '')}B`
+              : rawViews >= 1e6 ? `${(rawViews / 1e6).toFixed(1).replace(/\.0$/, '')}M`
+              : rawViews >= 1e3 ? `${(rawViews / 1e3).toFixed(1).replace(/\.0$/, '')}K`
+              : String(rawViews))
+            : String(item.viewCountText || '').trim();
+          let uploadDateShort = '';
+          const pubSec = Number(item.published);
+          if (Number.isFinite(pubSec) && pubSec > 946684800) {
+            const d = new Date(pubSec * 1000);
+            uploadDateShort = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+          } else if (item.publishedText) {
+            uploadDateShort = String(item.publishedText).trim();
+          }
           normalized.push({
             videoId: id,
             title: String(item.title || `Video (${id})`),
             author: String(item.author || 'YouTube'),
+            viewsText,
+            uploadDateShort,
             isLive,
             duration: isLive ? '🔴 LIVE' : durSec > 0 ? formatSecondsToClock(durSec) : '',
             durationSec: !isLive && durSec > 0 ? durSec : 0,
@@ -1049,10 +1066,37 @@
           const durNum = Number(item.duration);
           const isLive = durNum === -1 || Boolean(item.livestream) || Boolean(item.liveNow);
           const durationLabel = isLive ? '🔴 LIVE' : durNum > 0 ? formatSecondsToClock(durNum) : '';
+          const rawViews = Number(item.views);
+          const viewsText = Number.isFinite(rawViews) && rawViews >= 0
+            ? (rawViews >= 1e9 ? `${(rawViews / 1e9).toFixed(1).replace(/\.0$/, '')}B`
+              : rawViews >= 1e6 ? `${(rawViews / 1e6).toFixed(1).replace(/\.0$/, '')}M`
+              : rawViews >= 1e3 ? `${(rawViews / 1e3).toFixed(1).replace(/\.0$/, '')}K`
+              : String(rawViews))
+            : '';
+          let uploadDateShort = '';
+          const upMs = Number(item.uploaded);
+          if (Number.isFinite(upMs) && upMs > 946684800000) {
+            const d = new Date(upMs);
+            uploadDateShort = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+          } else if (item.uploadedDate) {
+            const rawRel = String(item.uploadedDate).trim();
+            const mRel = rawRel.match(/(\d+)\s*(year|month|week|day|hour|minute)/i);
+            if (mRel) {
+              const qty = Number(mRel[1]) || 0;
+              const unit = mRel[2].toLowerCase();
+              const msMap = { minute: 60e3, hour: 3600e3, day: 86400e3, week: 604800e3, month: 2592000e3, year: 31536000e3 };
+              const est = new Date(Date.now() - qty * (msMap[unit] || 0));
+              uploadDateShort = `${String(est.getDate()).padStart(2, '0')}/${String(est.getMonth() + 1).padStart(2, '0')}/${est.getFullYear()}`;
+            } else {
+              uploadDateShort = rawRel;
+            }
+          }
           normalized.push({
             videoId: id,
             title: String(item.title || `Video (${id})`),
             author: String(item.uploaderName || 'YouTube'),
+            viewsText,
+            uploadDateShort,
             isLive,
             duration: durationLabel,
             durationSec: !isLive && durNum > 0 ? durNum : 0,
@@ -4641,22 +4685,86 @@
       });
     }
 
-    restoreDesktopIframeAfterFloatingClose(resumeAtSec = null, shouldResume = true) {
-      if (!this._desktopFloatingPublicStreamActive && !this._desktopFloatingIframePaused) return;
-      const video = this.playerCtrl?.activeVideo;
-      let sec = Number.isFinite(resumeAtSec) ? Math.max(0, Math.floor(resumeAtSec)) : null;
+    hardStopAllExtraYoutubeAudioEngines() {
+      // Hủy mọi vòng lặp tìm nguồn công cộng đang chạy nền (chặn tuyệt đối audio phát trễ sau khi đóng!)
+      this._desktopFloatingLoopToken = (this._desktopFloatingLoopToken || 0) + 1;
+      this._desktopFloatingSearching = false;
+      this.stopAutoReconnectLoop?.({ silent: true });
 
-      if (NS.nativePlayer?.isActive?.()) {
+      // Tắt & xóa hẳn nguồn thẻ video/audio của NativePlayer
+      if (NS.nativePlayer) {
         try {
-          if (sec === null && NS.nativePlayer.videoEl && Number.isFinite(NS.nativePlayer.videoEl.currentTime)) {
-            sec = Math.max(0, Math.floor(NS.nativePlayer.videoEl.currentTime));
-          }
-          if (document.pictureInPictureElement === NS.nativePlayer.videoEl) {
+          if (document.pictureInPictureElement && NS.nativePlayer.videoEl && document.pictureInPictureElement === NS.nativePlayer.videoEl) {
             document.exitPictureInPicture?.().catch(() => {});
+          }
+        } catch (_ePipExit) {}
+        try {
+          if (NS.nativePlayer.videoEl) {
+            NS.nativePlayer.videoEl.pause();
+            NS.nativePlayer.videoEl.muted = true;
+            NS.nativePlayer.videoEl.removeAttribute('src');
+            NS.nativePlayer.videoEl.load();
+          }
+          if (NS.nativePlayer.companionAudioEl) {
+            NS.nativePlayer.companionAudioEl.pause();
+            NS.nativePlayer.companionAudioEl.muted = true;
+            NS.nativePlayer.companionAudioEl.removeAttribute('src');
+            NS.nativePlayer.companionAudioEl.load();
           }
           NS.nativePlayer.deactivate?.();
         } catch (_eDeact) {}
       }
+
+      // Tắt mọi luồng audio ngoại bộ nếu đang nối qua Tab 3/Mod21
+      try {
+        if (NS.audioStudio?.currentTrackMeta?.isExternalStream) {
+          NS.audioStudio.stopExternalAudio?.();
+        }
+      } catch (_eMod21) {}
+
+      // Xóa mọi iframe trong cửa sổ nổi (gán about:blank TRƯỚC khi đóng để Chromium hủy ngay luồng âm thanh!)
+      try {
+        if (this._docPipWindow && !this._docPipWindow.closed) {
+          this._docPipWindow.document?.querySelectorAll?.('iframe').forEach((f) => {
+            try { f.src = 'about:blank'; } catch (_eF) {}
+          });
+          this._docPipWindow.document?.querySelectorAll?.('video,audio').forEach((m) => {
+            try { m.pause(); m.muted = true; m.removeAttribute('src'); m.load(); } catch (_eM) {}
+          });
+          this._docPipWindow.close();
+        }
+      } catch (_ePipWin) {}
+      this._docPipWindow = null;
+
+      const floatEl = document.getElementById('mod39-desktop-floating-win');
+      if (floatEl) {
+        try {
+          floatEl.querySelectorAll('iframe').forEach((f) => {
+            try { f.src = 'about:blank'; } catch (_eF) {}
+          });
+          floatEl.querySelectorAll('video,audio').forEach((m) => {
+            try { m.pause(); m.muted = true; m.removeAttribute('src'); m.load(); } catch (_eM) {}
+          });
+          floatEl.remove();
+        } catch (_eRm) {}
+      }
+    }
+
+    restoreDesktopIframeAfterFloatingClose(resumeAtSec = null, shouldResume = true) {
+      const wasActive = Boolean(
+        this._desktopFloatingPublicStreamActive ||
+        this._desktopFloatingIframePaused ||
+        this._desktopFloatingSearching
+      );
+      const video = this.playerCtrl?.activeVideo;
+      let sec = Number.isFinite(resumeAtSec) ? Math.max(0, Math.floor(resumeAtSec)) : null;
+
+      if (sec === null && NS.nativePlayer?.videoEl && Number.isFinite(NS.nativePlayer.videoEl.currentTime) && NS.nativePlayer.videoEl.currentTime > 0) {
+        sec = Math.max(0, Math.floor(NS.nativePlayer.videoEl.currentTime));
+      }
+
+      // Tắt TRIỆT ĐỂ mọi nguồn phát phụ trước khi khôi phục iframe gốc (KHÔNG BAO GIỜ còn nhạc chạy nền ma!)
+      this.hardStopAllExtraYoutubeAudioEngines();
 
       this._desktopFloatingPublicStreamActive = false;
       this._desktopFloatingIframePaused = false;
@@ -4666,27 +4774,36 @@
         this.playerCtrl.activeEngine = 'IFRAME';
       }
 
-      // Khôi phục lại youtube-nocookie.com tại đúng giây hiện tại (tuyệt đối không chạy song song 2 nguồn!)
-      if (video && (video.videoId || video.playlistId)) {
+      if (wasActive && video && (video.videoId || video.playlistId)) {
         const targetSec = sec !== null ? sec : Math.max(0, Math.floor(Number(this.playerCtrl?.bridge?.lastKnownTime) || 0));
         const iframe = document.getElementById('mod39-youtube-iframe');
         const parser = NS.youtubeStudio?.parser;
-        if (iframe && parser && (!iframe.src || iframe.src === 'about:blank')) {
-          iframe.src = parser.buildPrivacyEmbedUrl({
-            videoId: video.videoId,
-            playlistId: video.playlistId,
-            startSeconds: targetSec,
-            autoplay: Boolean(shouldResume),
-            loop: !video.isLive && Boolean(this.playerCtrl?.prefs?.repeatMode),
-            muted: Boolean(this.playerCtrl?.prefs?.muted),
-            controls: true,
-            forBackground: false
-          });
-        } else {
-          try {
-            if (targetSec > 0) this.playerCtrl?.bridge?.dispatchPlayerCommand?.('seekTo', [targetSec, true]);
-            if (shouldResume) this.playerCtrl?.bridge?.dispatchPlayerCommand?.('playVideo', []);
-          } catch (_eRes) {}
+        if (iframe && parser) {
+          // Đồng bộ lại đúng mốc giây và trạng thái mute/play của khung video chính
+          if (!iframe.src || iframe.src === 'about:blank') {
+            iframe.src = parser.buildPrivacyEmbedUrl({
+              videoId: video.videoId,
+              playlistId: video.playlistId,
+              startSeconds: targetSec,
+              autoplay: Boolean(shouldResume),
+              loop: !video.isLive && Boolean(this.playerCtrl?.prefs?.repeatMode),
+              muted: Boolean(this.playerCtrl?.prefs?.muted),
+              controls: true,
+              forBackground: false
+            });
+          } else {
+            try {
+              if (!this.playerCtrl?.prefs?.muted) {
+                this.playerCtrl?.bridge?.dispatchPlayerCommand?.('unMute', []);
+              }
+              if (targetSec > 0) this.playerCtrl?.bridge?.dispatchPlayerCommand?.('seekTo', [targetSec, true]);
+              if (shouldResume) {
+                this.playerCtrl?.bridge?.dispatchPlayerCommand?.('playVideo', []);
+              } else {
+                this.playerCtrl?.bridge?.dispatchPlayerCommand?.('pauseVideo', []);
+              }
+            } catch (_eRes) {}
+          }
         }
         this.nudgeDesktopIframeCompositorRepaint();
       }
@@ -4695,31 +4812,16 @@
     }
 
     closeDesktopFloatingWindow() {
-      let closedAny = false;
-      try {
-        if (this._docPipWindow && !this._docPipWindow.closed) {
-          this._docPipWindow.close();
-          closedAny = true;
-        }
-      } catch (_ePip) {}
-      this._docPipWindow = null;
-
-      const floatEl = document.getElementById('mod39-desktop-floating-win');
-      if (floatEl) {
-        try {
-          floatEl.remove();
-          closedAny = true;
-        } catch (_eRm) {}
-      }
-      if (this._desktopFloatingPublicStreamActive || this._desktopFloatingIframePaused) {
-        this.restoreDesktopIframeAfterFloatingClose(null, true);
-        closedAny = true;
-      }
-      if (closedAny) {
-        this.syncStatusUi();
-        this.playerCtrl.emitUiSync?.();
-      }
-      return closedAny;
+      const hadAnything = Boolean(
+        this._desktopFloatingPublicStreamActive ||
+        this._desktopFloatingIframePaused ||
+        this._desktopFloatingSearching ||
+        (this._docPipWindow && !this._docPipWindow.closed) ||
+        document.getElementById('mod39-desktop-floating-win') ||
+        NS.nativePlayer?.isInSystemPiP
+      );
+      this.restoreDesktopIframeAfterFloatingClose(null, true);
+      return hadAnything;
     }
 
     async openDesktopFloatingWindow() {
@@ -4729,59 +4831,142 @@
         return { ok: false, reason: 'no-video' };
       }
 
-      if (this.isFloatingWindowOpen() || this._desktopFloatingPublicStreamActive) {
+      if (this.isFloatingWindowOpen() || this._desktopFloatingPublicStreamActive || this._desktopFloatingSearching) {
         this.closeDesktopFloatingWindow();
-        safeNotify('🖼️ Đã đóng Cửa sổ nổi và trả phát lại về YouTube gốc!', 'info', 2200);
+        safeNotify('🖼️ Đã tắt Cửa sổ nổi & tắt hẳn nguồn phụ — đồng bộ về khung YouTube chính!', 'info', 2400);
         return { ok: true, closed: true };
       }
 
       const snap = this.playerCtrl?.bridge?.getCurrentPlaybackSnapshot?.() || {};
       const startSec = Math.max(0, Math.floor(Number(snap.currentTime) || Number(video.startSeconds) || 0));
 
-      // 1) Tắt & tạm dừng hoàn toàn iframe youtube-nocookie.com TRƯỚC khi mở nguồn Cửa sổ nổi (tuyệt đối không chạy song song 2 nguồn!)
+      // 1) Tắt & tắt tiếng hoàn toàn iframe youtube-nocookie.com TRƯỚC khi mở Cửa sổ nổi (tránh phát trùng tiếng!)
       this._desktopFloatingIframePaused = true;
       try {
+        this.playerCtrl?.bridge?.dispatchPlayerCommand?.('pauseVideo', []);
+        this.playerCtrl?.bridge?.dispatchPlayerCommand?.('mute', []);
         this._silenceForegroundIframeForNativeTakeover?.();
         this.playerCtrl?.pause?.();
       } catch (_ePause) {}
 
-      // 2) Trên Desktop: chỉ lúc bấm "🖼️ Cửa sổ nổi" mới tìm nguồn phát công cộng để bật PiP Video có hình thật của hệ điều hành!
+      // 2) Trên Desktop: LIÊN TỤC tự động tìm nguồn phát công cộng (Piped / Invidious) cho đến khi lấy được video thật (hoặc người dùng bấm tắt Cửa sổ nổi)!
       if (isDesktopDirectYoutubeEnv() && video.videoId && !video.isLive) {
-        safeNotify('🖼️ Đang tìm nguồn phát công cộng để mở Cửa sổ nổi Video (tự tắt nguồn gốc tránh trùng tiếng)...', 'info', 2800);
-        try {
-          const upgraded = await this.upgradeActiveVideoToNativePlayer(video, {
-            autoplay: true,
-            startTime: startSec,
-            preferVideo: true
-          });
-          if (upgraded && NS.nativePlayer?.isActive?.() && NS.nativePlayer.videoEl) {
-            this._desktopFloatingPublicStreamActive = true;
-            this._silenceForegroundIframeForNativeTakeover?.();
-            const vidEl = NS.nativePlayer.videoEl;
-            const onLeavePip = () => {
-              vidEl.removeEventListener('leavepictureinpicture', onLeavePip);
-              const curSec = Number.isFinite(vidEl.currentTime) ? Math.floor(vidEl.currentTime) : startSec;
-              const wasPlaying = !vidEl.paused;
-              this.restoreDesktopIframeAfterFloatingClose(curSec, wasPlaying);
-              safeNotify('🔄 Đã tắt nguồn công cộng và chuyển mượt về YouTube gốc!', 'info', 2400);
-            };
-            vidEl.addEventListener('leavepictureinpicture', onLeavePip, { once: true });
+        const myToken = (this._desktopFloatingLoopToken || 0) + 1;
+        this._desktopFloatingLoopToken = myToken;
+        this._desktopFloatingSearching = true;
+        this.syncStatusUi();
+        this.playerCtrl?.emitUiSync?.();
 
-            const pipRes = await NS.nativePlayer.enterSystemPictureInPicture?.();
-            if (pipRes && pipRes.ok !== false && document.pictureInPictureElement === vidEl) {
-              this.syncStatusUi();
-              this.playerCtrl?.emitUiSync?.();
-              safeNotify('🖼️ Đã bật Cửa sổ nổi Video thật! Khi đóng cửa sổ nổi sẽ tự trả về YouTube gốc.', 'success', 3000);
-              return { ok: true, mode: 'desktop-native-video-pip' };
+        let attempt = 0;
+        while (this._desktopFloatingLoopToken === myToken && String(this.playerCtrl?.activeVideo?.videoId || '') === String(video.videoId)) {
+          attempt += 1;
+          safeNotify(
+            `🔎 [Lần ${attempt}] Đang tìm nguồn công cộng (Piped / Invidious) để bật Cửa sổ nổi Desktop... (Bấm lại nút 🖼️ Cửa sổ nổi để hủy)`,
+            'info',
+            2600
+          );
+
+          try {
+            const upgraded = await this.upgradeActiveVideoToNativePlayer(video, {
+              autoplay: true,
+              startTime: startSec,
+              preferVideo: true,
+              forceRefresh: attempt > 1
+            });
+
+            // Kiểm tra lại token ngay lập tức: nếu người dùng đã bấm TẮT trong lúc đang dò -> hủy thẳng không cho phát nhạc nền ma!
+            if (this._desktopFloatingLoopToken !== myToken) {
+              this.hardStopAllExtraYoutubeAudioEngines();
+              return { ok: false, cancelled: true };
             }
-            // Nếu trình duyệt không cho gọi OS Video PiP trực tiếp -> tắt native stream trước khi mở Document PiP / Floating Window
-            vidEl.removeEventListener('leavepictureinpicture', onLeavePip);
-            NS.nativePlayer.deactivate?.();
-            this._desktopFloatingPublicStreamActive = false;
-          }
-        } catch (_eDeskStream) {
-          this._desktopFloatingPublicStreamActive = false;
+
+            if (upgraded && NS.nativePlayer?.isActive?.() && NS.nativePlayer.videoEl) {
+              this._desktopFloatingSearching = false;
+              this._desktopFloatingPublicStreamActive = true;
+              // Tắt lại iframe chính lần nữa để bảo đảm đồng bộ duy nhất 1 nguồn âm thanh
+              try {
+                this.playerCtrl?.bridge?.dispatchPlayerCommand?.('pauseVideo', []);
+                this.playerCtrl?.bridge?.dispatchPlayerCommand?.('mute', []);
+                this._silenceForegroundIframeForNativeTakeover?.();
+              } catch (_eSil) {}
+
+              const vidEl = NS.nativePlayer.videoEl;
+              const onLeavePip = () => {
+                vidEl.removeEventListener('leavepictureinpicture', onLeavePip);
+                const curSec = Number.isFinite(vidEl.currentTime) ? Math.floor(vidEl.currentTime) : startSec;
+                const wasPlaying = !vidEl.paused;
+                this.restoreDesktopIframeAfterFloatingClose(curSec, wasPlaying);
+                safeNotify('🔄 Đã tắt Cửa sổ nổi & trả âm thanh/hình về đúng khung YouTube chính!', 'info', 2500);
+              };
+              vidEl.addEventListener('leavepictureinpicture', onLeavePip, { once: true });
+
+              const pipRes = await NS.nativePlayer.enterSystemPictureInPicture?.();
+              if (this._desktopFloatingLoopToken !== myToken) {
+                vidEl.removeEventListener('leavepictureinpicture', onLeavePip);
+                this.hardStopAllExtraYoutubeAudioEngines();
+                return { ok: false, cancelled: true };
+              }
+              if (pipRes && pipRes.ok !== false && document.pictureInPictureElement === vidEl) {
+                this.syncStatusUi();
+                this.playerCtrl?.emitUiSync?.();
+                safeNotify('🖼️ Đã bật Cửa sổ nổi Video thật từ nguồn công cộng! Khi đóng sẽ tự đồng bộ về khung gốc.', 'success', 3200);
+                return { ok: true, mode: 'desktop-native-video-pip' };
+              }
+
+              // Nếu user gesture đã hết hạn do tìm nguồn lâu -> hiện khung nổi gọn trong app với nút 1 chạm bật OS Video PiP ngay lập tức!
+              vidEl.removeEventListener('leavepictureinpicture', onLeavePip);
+              if (typeof document !== 'undefined' && document.body) {
+                document.getElementById('mod39-desktop-floating-win')?.remove();
+                const win = document.createElement('div');
+                win.id = 'mod39-desktop-floating-win';
+                win.className =
+                  'fixed bottom-4 right-4 z-[175] w-[360px] sm:w-[420px] rounded-2xl overflow-hidden border-2 border-violet-500/80 bg-zinc-950 shadow-2xl';
+                const safeTitle = String(video.title || 'Video YouTube')
+                  .replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;');
+                win.innerHTML = `
+                  <div id="mod39-floating-drag-bar" class="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-900 border-b border-zinc-800 cursor-move select-none text-xs">
+                    <span class="font-extrabold text-violet-200 truncate flex-1">🖼️ ${safeTitle}</span>
+                    <button type="button" id="btn-mod39-promote-os-pip" class="px-2 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[10.5px] transition">↗ Bật PiP OS</button>
+                    <button type="button" id="btn-mod39-close-floating-win" class="px-2 py-0.5 rounded-lg bg-zinc-800 hover:bg-rose-600 text-zinc-100 font-extrabold transition">✕</button>
+                  </div>
+                  <div id="mod39-floating-video-slot" class="relative w-full aspect-video bg-black"></div>
+                `;
+                document.body.appendChild(win);
+                const slot = win.querySelector('#mod39-floating-video-slot');
+                if (slot) {
+                  vidEl.controls = true;
+                  vidEl.style.width = '100%';
+                  vidEl.style.height = '100%';
+                  slot.appendChild(vidEl);
+                  vidEl.play().catch(() => {});
+                }
+                win.querySelector('#btn-mod39-promote-os-pip')?.addEventListener('click', async () => {
+                  vidEl.addEventListener('leavepictureinpicture', onLeavePip, { once: true });
+                  const r2 = await NS.nativePlayer.enterSystemPictureInPicture?.();
+                  if (r2 && r2.ok !== false && document.pictureInPictureElement === vidEl) {
+                    win.classList.add('hidden');
+                  }
+                });
+                win.querySelector('#btn-mod39-close-floating-win')?.addEventListener('click', () => {
+                  this.closeDesktopFloatingWindow();
+                });
+                this.syncStatusUi();
+                this.playerCtrl?.emitUiSync?.();
+                safeNotify('🖼️ Đã mở Cửa sổ nổi từ nguồn công cộng! Bấm "↗ Bật PiP OS" để nổi ra ngoài trình duyệt.', 'success', 3400);
+                return { ok: true, mode: 'desktop-native-floating' };
+              }
+            }
+          } catch (_eDeskLoop) {}
+
+          // Đợi 2.6 giây rồi tự thử lại nguồn Piped / Invidious khác (ngừng ngay nếu người dùng bấm tắt)
+          await new Promise((resolve) => setTimeout(resolve, 2600));
         }
+
+        this._desktopFloatingSearching = false;
+        this.syncStatusUi();
+        return { ok: false, cancelled: true };
       }
 
       const parser = NS.youtubeStudio?.parser;
@@ -9172,6 +9357,14 @@
               <div class="p-2.5 space-y-1">
                 <div class="text-xs font-extrabold text-zinc-100 line-clamp-2 leading-snug group-hover:text-rose-200">${escapeHtml(v.title)}</div>
                 <div class="text-[11px] text-zinc-400 truncate">${escapeHtml(v.author || 'YouTube')}</div>
+                ${
+                  v.viewsText || v.uploadDateShort
+                    ? `<div class="flex flex-wrap items-center gap-2 text-[10px] text-zinc-400 font-semibold pt-0.5">
+                        ${v.viewsText ? `<span class="inline-flex items-center gap-0.5 text-zinc-300">👁️ ${escapeHtml(v.viewsText)}</span>` : ''}
+                        ${v.uploadDateShort ? `<span class="inline-flex items-center gap-0.5 text-zinc-400">📅 ${escapeHtml(v.uploadDateShort)}</span>` : ''}
+                      </div>`
+                    : ''
+                }
               </div>
             </div>
             <div class="px-2.5 pb-2.5 flex items-center justify-between gap-1.5">

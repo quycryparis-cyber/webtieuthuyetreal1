@@ -1340,49 +1340,21 @@
       );
 
       try {
-        // Bước 1: Hoàn tất AI Diff đang mở (nếu có) & lưu mốc Time-Machine an toàn
+        // Bước 1: Hoàn tất AI Diff đang mở (nếu có) & lưu mốc Time-Machine an toàn tức thì (KHÔNG gọi AI API!)
         this.readinessChecker.autoSettleActiveAiDiffIfRequested();
         await this.syncBridge.capturePreApprovalSafetySnapshot(selectedChapters);
 
-        // Bước 2: Gom TOÀN BỘ chuỗi chương đã duyệt + đang chọn theo đúng thứ tự từ Chương 1 đến hiện tại
-        // để Story Bible luôn được cập nhật đầy đủ từ Chương 1 tới chương mới nhất (không bỏ sót chương trước/sau)
-        const allChapsOrdered = this.checklistRenderer.getAllChaptersSafe();
-        const selectedSet = new Set(selectedChapters.map((c) => c.id));
-        const cumulativeChapters = allChapsOrdered.filter(
-          (ch) => ch && (ch.status === 'APPROVED' || selectedSet.has(ch.id))
-        );
-        const targetChapters =
-          cumulativeChapters.length > 0 ? cumulativeChapters : selectedChapters;
-
-        const bibleEngine = NS.storyBible || null;
-        const knownNames = (bibleEngine?.characters || []).map((c) => c.name);
-        const offlineResults = targetChapters.map((ch) =>
-          this.localExtractor.analyzeChapterOffline(ch, knownNames)
-        );
-
-        // Bước 3: Nếu có Gemini API Key -> trích xuất sâu liên hoàn từ Chương 1 đến chương mới nhất
-        const aiResult = await this.aiExtractor.extractUsingGeminiIfAvailable(
-          targetChapters,
-          bibleEngine
-        );
-
-        // Bước 4: Hòa trộn vào Story Bible Tab 4 (bao phủ toàn bộ targetChapters từ Chương 1)
-        const bibleStats = this.bibleMerger.mergeExtractionResults(
-          bibleEngine,
-          targetChapters,
-          aiResult,
-          offlineResults
-        );
-
-        // Bước 5: Chuyển trạng thái APPROVED cho các chương & đồng bộ RAG + Ổ cứng
+        // Bước 2: Chuyển trạng thái APPROVED cho các chương & đồng bộ RAG + Ổ cứng tức thì
         await this.syncBridge.promoteChaptersToApproved(selectedChapters);
         const allChapters = this.checklistRenderer.getAllChaptersSafe();
         const syncInfo = await this.syncBridge.syncRagAndLocalFolders(
           allChapters,
           selectedChapters
         );
+        const bibleStats = { addedChars: 0, addedClues: 0, updatedSummary: false };
+        const aiResult = { usedAI: false, usedEndpoint: '' };
 
-        // Bước 6: Ghi nhật ký & phát sự kiện hoàn tất trên Event Bus
+        // Bước 3: Ghi nhật ký & phát sự kiện hoàn tất trên Event Bus
         const totalWordsApproved = selectedChapters.reduce(
           (sum, ch) => sum + utils.countVietnameseWords(ch.content || ''),
           0
@@ -1391,8 +1363,8 @@
           chapterIds: selectedChapters.map((c) => c.id),
           chapterTitles: selectedChapters.map((c) => c.displayTitle || c.title),
           totalWordsApproved,
-          engineMode: aiResult?.usedAI ? 'GEMINI_AI_STRUCTURED' : 'LOCAL_NLP_0_TOKEN',
-          usedEndpoint: aiResult?.usedEndpoint || '',
+          engineMode: 'INSTANT_LOCAL_APPROVAL',
+          usedEndpoint: '',
           bibleStats
         });
 
@@ -1414,16 +1386,14 @@
         utils.hideBlockingLoader();
         this.closeApprovalModal();
 
-        const summaryMsg = this.reporter.buildCompletionSummaryMessage(
-          selectedChapters,
-          bibleStats,
-          syncInfo,
-          aiResult
+        utils.showToast(
+          `✅ Đã duyệt & chốt ${selectedChapters.length} chương tức thì (${totalWordsApproved.toLocaleString('vi-VN')} từ)!`,
+          'success',
+          4000
         );
-        utils.showToast(summaryMsg, 'success', 4800);
 
         this.openPostApprovalBibleConfirmModal(selectedChapters, {
-          alreadyExtractedWithAI: Boolean(aiResult?.usedAI)
+          alreadyExtractedWithAI: false
         });
 
         return {
@@ -1431,7 +1401,7 @@
           approvedCount: selectedChapters.length,
           bibleStats,
           syncInfo,
-          usedAI: Boolean(aiResult?.usedAI)
+          usedAI: false
         };
       } catch (err) {
         utils.hideBlockingLoader();
@@ -1655,25 +1625,38 @@
         () => this.runCumulativeBibleUpdateFromCh1ToLatest(),
         'mod19_post_approve_run'
       );
+      const jumpToTab4Section2AndFlash3s = () => {
+        this.closePostApprovalBibleConfirmModal();
+        NS.navigator?.navigateToScreen?.('SCREEN_4_BIBLE');
+        setTimeout(() => {
+          // Tự động mở rộng Mục 2 nếu đang bị thu gọn
+          const body2 = document.getElementById('tab4-card-rendered-body');
+          if (body2) body2.classList.remove('hidden');
+          const sec2 = document.getElementById('tab4-story-bible-section-2') || body2;
+          if (sec2) {
+            try {
+              sec2.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } catch (_) {
+              sec2.scrollIntoView();
+            }
+            sec2.classList.remove('noir-sec2-flash-3s');
+            void sec2.offsetWidth;
+            sec2.classList.add('noir-sec2-flash-3s');
+            setTimeout(() => sec2.classList.remove('noir-sec2-flash-3s'), 3100);
+          }
+        }, 140);
+      };
+
+      bindOnce(
+        'btn-post-approve-jump-bible-sec2',
+        'click',
+        jumpToTab4Section2AndFlash3s,
+        'mod19_post_approve_jump_sec2'
+      );
       bindOnce(
         'btn-post-approve-goto-tab4',
         'click',
-        () => {
-          this.closePostApprovalBibleConfirmModal();
-          NS.navigator?.navigateToScreen?.('SCREEN_4_BIBLE');
-          setTimeout(() => {
-            const card = document.getElementById('tab4-notebooklm-guide-card');
-            if (card) {
-              try {
-                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              } catch (_) {
-                card.scrollIntoView();
-              }
-              card.classList.add('noir-feature-spotlight');
-              setTimeout(() => card.classList.remove('noir-feature-spotlight'), 4200);
-            }
-          }, 120);
-        },
+        jumpToTab4Section2AndFlash3s,
         'mod19_post_approve_tab4'
       );
     }

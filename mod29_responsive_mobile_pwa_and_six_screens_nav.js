@@ -3894,6 +3894,26 @@
         document.getElementById('btn-open-fullscreen-ai-command')?.click();
       });
 
+      // Thu gọn / mở rộng nhóm nút chức năng bàn viết truyện Tab 1
+      const deskActionsBtn = document.getElementById('btn-toggle-tab1-desk-actions');
+      const deskActionsGroup = document.getElementById('tab1-desk-actions-collapsible-group');
+      if (deskActionsBtn && deskActionsGroup) {
+        const setDeskCollapsed = (collapsed) => {
+          deskActionsGroup.classList.toggle('hidden', Boolean(collapsed));
+          deskActionsBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+          deskActionsBtn.innerHTML = collapsed
+            ? '<span>🧰 Mở rộng chức năng bàn viết truyện</span>'
+            : '<span>▲ Thu gọn chức năng bàn viết truyện</span>';
+          try { localStorage.setItem('noir_v107_tab1_desk_actions_collapsed', collapsed ? '1' : '0'); } catch (_e) {}
+        };
+        try {
+          if (localStorage.getItem('noir_v107_tab1_desk_actions_collapsed') === '1') setDeskCollapsed(true);
+        } catch (_e) {}
+        deskActionsBtn.addEventListener('click', () => {
+          setDeskCollapsed(!deskActionsGroup.classList.contains('hidden'));
+        });
+      }
+
       // Thu gọn / mở rộng thanh Quy trình 4 bước tại Tab 1 (Mặc định MỞ RỘNG, bấm thu gọn từ dưới lên)
       const wfBar = document.getElementById('tab1-four-step-workflow-bar');
       const wfCollapseBtn = document.getElementById('btn-tab1-collapse-workflow');
@@ -3906,13 +3926,26 @@
       wfCollapseBtn?.addEventListener('click', () => setWfCollapsed(true));
       wfExpandBtn?.addEventListener('click', () => setWfCollapsed(false));
 
-      // Đồng bộ 2 chiều ô Số từ Chế độ 1 (tối đa 40.000) trong thanh Viết Tập Trung với #input-target-word-count
+      // Đồng bộ 2 chiều ô Số từ Chế độ 1 (giới hạn CỨNG tối đa 40.000) trong thanh Viết Tập Trung với #input-target-word-count
       const focusWordInput = document.getElementById('input-focus-target-word-count');
       const mainWordInput = document.getElementById('input-target-word-count');
       if (focusWordInput && mainWordInput) {
         focusWordInput.value = mainWordInput.value || '3500';
         focusWordInput.addEventListener('input', () => {
+          let raw = Number(focusWordInput.value);
+          if (raw > 40000) {
+            raw = 40000;
+            focusWordInput.value = '40000';
+            NS.utils?.showToast?.('⚠️ Giới hạn tối đa là 40.000 từ mỗi lần chạy Prompt!', 'warning', 2400);
+          }
+          if (raw >= 300) {
+            mainWordInput.value = String(raw);
+            mainWordInput.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+        focusWordInput.addEventListener('change', () => {
           const clamped = Math.max(300, Math.min(40000, Number(focusWordInput.value) || 3500));
+          focusWordInput.value = String(clamped);
           mainWordInput.value = String(clamped);
           mainWordInput.dispatchEvent(new Event('change', { bubbles: true }));
         });

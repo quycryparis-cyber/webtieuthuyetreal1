@@ -2167,22 +2167,76 @@
       return true;
     }
 
+    openInAppRenameModal({ title, subtitle, initialValue, onConfirm }) {
+      if (typeof document === 'undefined' || !document.body) return;
+      document.getElementById('modal-mod08-inline-rename')?.remove();
+      const esc = (s) => this.utils.escapeHtml(String(s || ''));
+      const modal = document.createElement('div');
+      modal.id = 'modal-mod08-inline-rename';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.style.zIndex = '2147483200';
+      modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5';
+      modal.innerHTML = `
+        <div class="w-full max-w-md rounded-2xl border-2 border-emerald-500/65 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden text-xs">
+          <div class="px-4 py-3 border-b border-zinc-800 bg-emerald-950/60 flex items-center justify-between gap-2">
+            <div class="font-extrabold text-sm text-emerald-300">${esc(title)}</div>
+            <button type="button" id="btn-mod08-rename-close" class="px-2 py-0.5 rounded-lg bg-zinc-800 hover:bg-rose-600 text-white font-bold">✕</button>
+          </div>
+          <div class="p-4 space-y-3">
+            <p class="text-[11.5px] text-zinc-300 leading-relaxed">${esc(subtitle)}</p>
+            <input id="input-mod08-rename-value" type="text" value="${esc(initialValue)}" class="w-full px-3 py-2.5 rounded-xl border-2 border-emerald-500/50 bg-zinc-900 text-sm font-bold text-white focus:outline-none focus:border-emerald-400 select-text" />
+            <div class="flex items-center justify-end gap-2 pt-1">
+              <button type="button" id="btn-mod08-rename-cancel" class="px-3.5 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-200 font-bold">Hủy</button>
+              <button type="button" id="btn-mod08-rename-save" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow">✅ Lưu Tên &amp; Đồng Bộ File</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      const inp = modal.querySelector('#input-mod08-rename-value');
+      setTimeout(() => {
+        inp?.focus();
+        try { inp?.select(); } catch (_e) {}
+      }, 20);
+      const close = () => modal.remove();
+      const submit = () => {
+        const val = String(inp?.value || '').trim();
+        close();
+        if (val && val !== String(initialValue || '').trim()) {
+          onConfirm?.(val);
+        }
+      };
+      modal.addEventListener('click', (ev) => { if (ev.target === modal) close(); });
+      modal.querySelector('#btn-mod08-rename-close')?.addEventListener('click', close);
+      modal.querySelector('#btn-mod08-rename-cancel')?.addEventListener('click', close);
+      modal.querySelector('#btn-mod08-rename-save')?.addEventListener('click', submit);
+      inp?.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') { ev.preventDefault(); submit(); }
+        if (ev.key === 'Escape') { ev.preventDefault(); close(); }
+      });
+    }
+
     promptInlineRenameChapter(chapterId) {
       const chap = this.chapters.find((c) => c.id === chapterId);
       if (!chap) return;
       const current = chap.displayTitle || chap.title || '';
-      const next = window.prompt('✏️ Nhập tên mới cho chương / cảnh này (tự đồng bộ tên file trên máy):', current);
-      if (next !== null && next.trim() && next.trim() !== current.trim()) {
-        this.renameChapter(chapterId, next.trim());
-      }
+      this.openInAppRenameModal({
+        title: '✏️ Đổi Tên Chương / Cảnh',
+        subtitle: 'Tên mới sẽ được cập nhật ngay trên giao diện và đồng bộ thẳng với tên file trong thư mục công việc trên máy tính.',
+        initialValue: current,
+        onConfirm: (nextVal) => this.renameChapter(chapterId, nextVal)
+      });
     }
 
     promptInlineRenameGroup(level, oldGroupName) {
       const levelVi = level === 'volume' ? 'Quyển' : level === 'chapter' ? 'Chương' : 'Cảnh';
-      const next = window.prompt(`✏️ Nhập tên mới cho ${levelVi} "${oldGroupName}" (tự đồng bộ tên thư mục):`, oldGroupName);
-      if (next !== null && next.trim() && next.trim() !== oldGroupName.trim()) {
-        this.renameHierarchyGroup(level, oldGroupName, next.trim());
-      }
+      this.openInAppRenameModal({
+        title: `✏️ Đổi Tên ${levelVi}`,
+        subtitle: `Tên mới cho ${levelVi} "${oldGroupName}" sẽ tự động đồng bộ lại tên thư mục tương ứng trên ổ cứng.`,
+        initialValue: oldGroupName,
+        onConfirm: (nextVal) => this.renameHierarchyGroup(level, oldGroupName, nextVal)
+      });
     }
 
     async deleteChapter(chapterId) {

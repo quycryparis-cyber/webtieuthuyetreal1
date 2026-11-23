@@ -1479,7 +1479,7 @@
       const toolbar = document.createElement('div');
       toolbar.id = 'mod12-genre-presets-bar';
       toolbar.className =
-        'p-3.5 rounded-2xl border border-emerald-500/30 bg-studioLightPanel dark:bg-zinc-900/90 flex flex-wrap items-center justify-between gap-2 text-xs';
+        'p-3.5 rounded-2xl border border-emerald-500/30 bg-studioLightPanel dark:bg-zinc-900/90 space-y-2.5 text-xs';
 
       const presetOptionsHtml = Object.values(STORY_BIBLE_GENRE_PRESETS)
         .map(
@@ -1498,29 +1498,36 @@
       ).join('');
 
       toolbar.innerHTML = `
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="font-extrabold uppercase text-emerald-400 text-[11px]">📚 Mẫu Thể Loại Story Bible:</span>
-          <select id="mod12-select-genre-preset" class="px-2.5 py-1.5 rounded-xl border border-emerald-500/40 bg-studioLightBg dark:bg-zinc-950 font-bold text-xs text-emerald-300">
-            ${presetOptionsHtml}
-          </select>
-          <button type="button" id="btn-mod12-apply-genre-preset" class="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/40 text-emerald-300 font-bold text-[11px] transition">
-            ✨ Nạp Khung Mẫu Này
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="font-extrabold uppercase text-emerald-400 text-[11px]">📚 Mẫu Thể Loại Story Bible &amp; Hình Mẫu Nhân Vật</span>
+          <button type="button" id="btn-toggle-mod12-genre-bar" class="px-2.5 py-1 rounded-lg border border-emerald-500/50 bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-200 font-bold text-[10.5px] transition">
+            ▲ Thu gọn
           </button>
         </div>
+        <div id="mod12-genre-presets-body" class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="mod12-select-genre-preset" class="px-2.5 py-1.5 rounded-xl border border-emerald-500/40 bg-studioLightBg dark:bg-zinc-950 font-bold text-xs text-emerald-300">
+              ${presetOptionsHtml}
+            </select>
+            <button type="button" id="btn-mod12-apply-genre-preset" class="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/40 text-emerald-300 font-bold text-[11px] transition">
+              ✨ Nạp Khung Mẫu Này
+            </button>
+          </div>
 
-        <div class="flex flex-wrap items-center gap-2">
-          <select id="mod12-select-char-archetype" class="px-2.5 py-1.5 rounded-xl border border-amber-500/40 bg-studioLightBg dark:bg-zinc-950 font-semibold text-xs text-amber-300">
-            ${archetypeOptionsHtml}
-          </select>
-          <button type="button" id="btn-mod12-add-archetype-char" class="px-3 py-1.5 rounded-xl bg-amber-600/20 hover:bg-amber-600/35 border border-amber-500/40 text-amber-300 font-bold text-[11px] transition">
-            👤 + Thêm Từ Hình Mẫu
-          </button>
-          <button type="button" id="btn-mod12-scan-manuscript-chars" class="px-3 py-1.5 rounded-xl border border-indigo-500/40 bg-indigo-500/15 hover:bg-indigo-500/30 text-indigo-300 font-bold text-[11px] transition" title="Tự động quét các tên nhân vật trong câu thoại của chương đang mở để thêm vào Hồ sơ">
-            🔍 Quét Nhân Vật Từ Bản Thảo
-          </button>
-          <button type="button" id="btn-mod12-audit-knowledge-leaks" class="px-3 py-1.5 rounded-xl border border-rose-500/40 bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 font-bold text-[11px] transition" title="Kiểm tra xem chương đang mở có vô tình để lộ bí mật hoặc lệch xưng hô không">
-            🛡️ Kiểm Toán Lộ Bí Mật & Xưng Hô
-          </button>
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="mod12-select-char-archetype" class="px-2.5 py-1.5 rounded-xl border border-amber-500/40 bg-studioLightBg dark:bg-zinc-950 font-semibold text-xs text-amber-300">
+              ${archetypeOptionsHtml}
+            </select>
+            <button type="button" id="btn-mod12-add-archetype-char" class="px-3 py-1.5 rounded-xl bg-amber-600/20 hover:bg-amber-600/35 border border-amber-500/40 text-amber-300 font-bold text-[11px] transition">
+              👤 + Thêm Từ Hình Mẫu
+            </button>
+            <button type="button" id="btn-mod12-scan-manuscript-chars" class="px-3 py-1.5 rounded-xl border border-indigo-500/40 bg-indigo-500/15 hover:bg-indigo-500/30 text-indigo-300 font-bold text-[11px] transition" title="Tự động quét các tên nhân vật trong câu thoại của chương đang mở để thêm vào Hồ sơ">
+              🔍 Quét Nhân Vật Từ Bản Thảo
+            </button>
+            <button type="button" id="btn-mod12-audit-knowledge-leaks" class="px-3 py-1.5 rounded-xl border border-rose-500/40 bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 font-bold text-[11px] transition" title="Kiểm tra xem chương đang mở có vô tình để lộ bí mật hoặc lệch xưng hô không">
+              🛡️ Kiểm Toán Lộ Bí Mật & Xưng Hô
+            </button>
+          </div>
         </div>
       `;
 
@@ -1530,6 +1537,22 @@
         bibleMainView.insertBefore(toolbar, firstChild.nextSibling);
       } else {
         bibleMainView.prepend(toolbar);
+      }
+
+      const genreBody = document.getElementById('mod12-genre-presets-body');
+      const genreToggleBtn = document.getElementById('btn-toggle-mod12-genre-bar');
+      if (genreBody && genreToggleBtn) {
+        const applyGenreCollapsed = (collapsed) => {
+          genreBody.classList.toggle('hidden', Boolean(collapsed));
+          genreToggleBtn.textContent = collapsed ? '▼ Mở rộng' : '▲ Thu gọn';
+          try { localStorage.setItem('noir_v107_tab4_genre_bar_collapsed', collapsed ? '1' : '0'); } catch (_e) {}
+        };
+        try {
+          if (localStorage.getItem('noir_v107_tab4_genre_bar_collapsed') === '1') applyGenreCollapsed(true);
+        } catch (_e) {}
+        genreToggleBtn.addEventListener('click', () => {
+          applyGenreCollapsed(!genreBody.classList.contains('hidden'));
+        });
       }
 
       document

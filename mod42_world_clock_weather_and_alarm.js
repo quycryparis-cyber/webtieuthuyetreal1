@@ -2532,9 +2532,6 @@
             ${alarmsListHtml}
           </div>
         </div>
-
-        <!-- Module 43: Thời tiết Real-Time tại vị trí & Màn hình mô phỏng 6 khung giờ × 28 WMO -->
-        <div id="mod43-inline-weather-mount" class="mt-4"></div>
       </div>
     `;
   }
