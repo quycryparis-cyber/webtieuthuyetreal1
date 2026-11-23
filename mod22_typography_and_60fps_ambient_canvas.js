@@ -818,6 +818,18 @@
       const loop = (now) => {
         if (!this.isRunning) return;
 
+        // Tối ưu hiệu năng: khi tab ẩn hoặc không có hạt nền nào đang bật -> ngủ đông nhẹ, không đốt GPU/CPU 60FPS!
+        const hasParticles = Boolean(
+          (this.particles && this.particles.length > 0) ||
+          (this.meteors && this.meteors.length > 0)
+        );
+        if (document.hidden || !hasParticles || (this.canvas && this.canvas.offsetParent === null)) {
+          this._idleSleepTimer = setTimeout(() => {
+            if (this.isRunning) this.rafId = requestAnimationFrame(loop);
+          }, 800);
+          return;
+        }
+
         this.frameCount++;
         if (now - this.lastFpsCheckTime >= 1000) {
           this.measuredFps = Math.min(60, Math.round((this.frameCount * 1000) / (now - this.lastFpsCheckTime)));
@@ -838,6 +850,10 @@
 
     pauseLoop() {
       this.isRunning = false;
+      if (this._idleSleepTimer) {
+        clearTimeout(this._idleSleepTimer);
+        this._idleSleepTimer = null;
+      }
       if (this.rafId) {
         cancelAnimationFrame(this.rafId);
         this.rafId = null;

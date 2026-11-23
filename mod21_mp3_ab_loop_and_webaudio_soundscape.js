@@ -4741,25 +4741,22 @@
     }
 
     startHighPrecisionABLoopMonitor() {
-      if (this.abMonitorRafId) cancelAnimationFrame(this.abMonitorRafId);
+      if (this.abMonitorRafId) {
+        cancelAnimationFrame(this.abMonitorRafId);
+        this.abMonitorRafId = null;
+      }
       if (this.abBackgroundTimer) clearInterval(this.abBackgroundTimer);
 
       const checkAB = () => {
-        if (this.abLoopEnabled || this.loopMode === 'LOOP_AB') {
-          const audioEl = document.getElementById('s8-native-audio-bar');
-          if (audioEl && !audioEl.paused) {
-            this.enforceABLoopConstraint(audioEl);
-          }
+        if (!this.abLoopEnabled && this.loopMode !== 'LOOP_AB') return;
+        const audioEl = document.getElementById('s8-native-audio-bar');
+        if (audioEl && !audioEl.paused) {
+          this.enforceABLoopConstraint(audioEl);
         }
       };
 
-      const tick = () => {
-        checkAB();
-        this.abMonitorRafId = requestAnimationFrame(tick);
-      };
-      this.abMonitorRafId = requestAnimationFrame(tick);
-      // Dự phòng interval 250ms khi điện thoại khóa màn hình làm RAF tạm dừng
-      this.abBackgroundTimer = setInterval(checkAB, 250);
+      // Dùng 1 bộ hẹn giờ nhẹ 180ms (tự bỏ qua ngay khi không bật Lặp A-B -> tiết kiệm 60FPS CPU cho toàn app!)
+      this.abBackgroundTimer = setInterval(checkAB, 180);
     }
 
     /**
@@ -5141,7 +5138,27 @@
           tab5Section &&
           !tab5Section.classList.contains('hidden');
 
+        if (!isVisible) {
+          // Khi không ở Tab 5 hoặc tab đang ẩn -> ngủ đông 700ms thay vì chạy 60FPS gây lag toàn app!
+          this.visualizerIdleTimer = setTimeout(() => {
+            this.visualizerRafId = requestAnimationFrame(renderFrame);
+          }, 700);
+          return;
+        }
+
         if (isVisible) {
+          const audioElCheck = document.getElementById('s8-native-audio-bar');
+          const hasAnyAudioPlaying = Boolean(
+            (audioElCheck && !audioElCheck.paused) ||
+            (this.soundscapeGraph && this.soundscapeGraph.isRunning)
+          );
+          if (!hasAnyAudioPlaying && this._visualizerStaticDrawnOnce) {
+            this.visualizerIdleTimer = setTimeout(() => {
+              this.visualizerRafId = requestAnimationFrame(renderFrame);
+            }, 600);
+            return;
+          }
+          this._visualizerStaticDrawnOnce = !hasAnyAudioPlaying;
           const ctx2d = canvas.getContext('2d');
           const w = canvas.width;
           const h = canvas.height;

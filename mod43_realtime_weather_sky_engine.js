@@ -2343,10 +2343,19 @@
       this.running = true;
       const tick = () => {
         if (!this.running) return;
-        // Dừng vẽ hạt thời tiết khi tab đang ẩn để nhường 100% GPU/CPU cho giải mã video & âm thanh
-        if (typeof document === 'undefined' || !document.hidden) {
-          this.renderFrame();
+        const canvasHidden = Boolean(
+          (typeof document !== 'undefined' && document.hidden) ||
+          !this.canvas ||
+          this.canvas.offsetParent === null
+        );
+        // Khi tab ẩn hoặc khung canvas thời tiết đang tắt -> ngủ đông 850ms để giải phóng 100% GPU/CPU
+        if (canvasHidden) {
+          this._sleepTimer = setTimeout(() => {
+            if (this.running) this.animFrameId = requestAnimationFrame(tick);
+          }, 850);
+          return;
         }
+        this.renderFrame();
         this.animFrameId = requestAnimationFrame(tick);
       };
       this.animFrameId = requestAnimationFrame(tick);
@@ -2354,6 +2363,10 @@
 
     stop() {
       this.running = false;
+      if (this._sleepTimer) {
+        clearTimeout(this._sleepTimer);
+        this._sleepTimer = null;
+      }
       if (this.animFrameId) {
         cancelAnimationFrame(this.animFrameId);
         this.animFrameId = null;

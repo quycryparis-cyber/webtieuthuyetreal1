@@ -261,21 +261,40 @@
     }
 
     isElementActuallyVisible(el) {
-      if (!el || !el.isConnected) return false;
+      if (document.hidden || !el || !el.isConnected) return false;
       if (el.offsetParent === null) return false;
-      const rect = el.getBoundingClientRect();
-      return rect.height > 10 && rect.width > 10;
+      return el.clientHeight > 10 && el.clientWidth > 10;
     }
 
     startLoop() {
       if (this.rafId !== null || typeof requestAnimationFrame !== 'function') return;
       this.lastFrameTime = 0;
       const tick = (now) => {
-        this.rafId = requestAnimationFrame(tick);
-        if (!this.isPlaying || this.isHoverPaused) {
-          this.lastFrameTime = now;
+        if (!this.isPlaying) {
+          this.rafId = null;
           return;
         }
+        if (document.hidden || this.isHoverPaused) {
+          this.lastFrameTime = 0;
+          this._idleTimer = setTimeout(() => {
+            if (this.isPlaying) this.rafId = requestAnimationFrame(tick);
+          }, 700);
+          return;
+        }
+        let anyVisible = false;
+        this.registeredViewports.forEach((el) => {
+          if (this.isElementActuallyVisible(el)) anyVisible = true;
+        });
+        if (!anyVisible) {
+          // Không ở Tab 6 / không mở cửa sổ Credits -> ngủ đông 900ms, tuyệt đối KHÔNG ép layout 60FPS trên Tab viết truyện!
+          this.lastFrameTime = 0;
+          this._idleTimer = setTimeout(() => {
+            if (this.isPlaying) this.rafId = requestAnimationFrame(tick);
+          }, 900);
+          return;
+        }
+
+        this.rafId = requestAnimationFrame(tick);
         if (!this.lastFrameTime) {
           this.lastFrameTime = now;
           return;
@@ -309,6 +328,10 @@
     }
 
     stopLoop() {
+      if (this._idleTimer) {
+        clearTimeout(this._idleTimer);
+        this._idleTimer = null;
+      }
       if (this.rafId !== null && typeof cancelAnimationFrame === 'function') {
         cancelAnimationFrame(this.rafId);
         this.rafId = null;
@@ -320,6 +343,8 @@
       this.lastFrameTime = 0;
       if (this.isPlaying && this.rafId === null) {
         this.startLoop();
+      } else if (!this.isPlaying) {
+        this.stopLoop();
       }
       return this.isPlaying;
     }

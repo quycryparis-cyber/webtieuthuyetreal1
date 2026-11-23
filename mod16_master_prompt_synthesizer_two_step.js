@@ -2053,12 +2053,24 @@
           activeChap?.displayTitle || 'Chương hiện tại'
         }" bám sát tuyệt đối 2 tệp đính kèm (File Story Bible + File Tham mưu cốt truyện) một cách chậm rãi, sâu tâm lý, giàu ngũ quan và lôi cuốn nhất.`;
 
+      const tempNum = Number(temp);
+      const safeTempNum = Number.isFinite(tempNum) ? tempNum : 0.85;
+      const tempLevelDesc =
+        safeTempNum <= 0.4
+          ? 'Rất chặt chẽ (bám sát dàn ý, ít biến tấu)'
+          : safeTempNum <= 0.7
+            ? 'Cân bằng (tự nhiên, hài hòa)'
+            : safeTempNum <= 1.0
+              ? 'Cao (bay bổng, giàu hình ảnh & liên tưởng văn học nhưng vẫn giữ chặt logic)'
+              : 'Rất cao (rất phá cách, táo bạo & đột phá ý tưởng)';
+      const tempSpecText = `${safeTempNum.toFixed(2)} / 1.50 — ${tempLevelDesc}. (Thang đo Độ bay bổng: 0.00–0.40 chặt chẽ | 0.41–0.70 cân bằng | 0.71–1.00 bay bổng, giàu chất văn | >1.00 rất phá cách).`;
+
       const techSpecLines = [
         `- Chương đang viết    : ${activeChap?.displayTitle || 'Chương 1'}`,
         `- Chế độ thực thi     : ${modeSpec.title} (${modeKey})`,
         `- Độ dài mục tiêu     : Khoảng ${targetWords.toLocaleString('vi-VN')} từ (Triển khai kỹ lưỡng, không tua nhanh sự kiện)`,
         `- Điểm nhìn (POV)     : ${pov}`,
-        `- Độ bay bổng (Temp)  : ${temp}`,
+        `- Độ bay bổng (Temp)  : ${tempSpecText}`,
         `- Định dạng hội thoại : Bắt buộc dùng "- Câu thoại (Tên nhân vật)"`,
         `- Cấu trúc đầu ra     :`,
         ...modeSpec.outputStructureGuide.map((line) => `  ${line}`)
@@ -2088,14 +2100,22 @@
         ? `\n=== [ĐOẠN CUỐI CHƯƠNG HIỆN TẠI ĐỂ NỐI MẠCH] ===\n...${tailShort}\n`
         : '';
 
+      const priorityRuleBlock = [
+        `=== [NGUYÊN TẮC ƯU TIÊN — BẮT BUỘC GHI NHỚ] ===`,
+        `• Câu lệnh / yêu cầu cụ thể do TÁC GIẢ nhập bên dưới là ƯU TIÊN SỐ 1 (mục tiêu trực tiếp cần thực hiện).`,
+        `• Toàn bộ khung quy tắc, Story Bible và tài liệu đính kèm là NỀN TẢNG BỔ TRỢ chặt chẽ (KHÔNG tách rời khỏi câu lệnh tác giả): luôn hòa quyện yêu cầu của tác giả với bối cảnh, nhân vật và logic sẵn có; nếu có khác biệt nhỏ về hướng viết, ưu tiên theo ý tác giả nhưng vẫn giữ mạch truyện liền lạc.`
+      ].join('\n');
+
       const rawPrompt = [
         `🌟 PROMPT VIẾT TIỂU THUYẾT CHÍNH THỨC — CHẾ ĐỘ 1 (SÚC TÍCH ≤ 10.000 KÝ TỰ)`,
+        ``,
+        priorityRuleBlock,
         ``,
         `📎 TÀI LIỆU ĐÍNH KÈM (TÁC GIẢ TẢI KÈM 2 FILE LÊN GEMINI CÙNG CÂU LỆNH NÀY):`,
         `  1. 📄 FILE 1 — STORY BIBLE (PDF): Đọc kỹ 100% Hồ sơ nhân vật, Dòng thời gian, Tài sản/Thương tích, Sổ cái phục bút và Ma trận "Ai Biết Gì" (TUYỆT ĐỐI không để lộ bí mật cho nhân vật chưa biết, không lệch mốc giờ/tiền bạc/OOC).`,
         `  2. 🧭 FILE 2 — THAM MƯU CỐT TRUYỆN (PDF): Bám sát toàn bộ diễn biến & dàn ý đã chốt trong file này, triển khai nhịp chậm rãi, giàu căng thẳng tâm lý và chiều sâu ngũ quan (KHÔNG tua nhanh hay rút gọn sự kiện).`,
         ``,
-        `=== [VAI TRÒ & QUY TẮC VĂN HỌC CỐT LÕI] ===`,
+        `=== [VAI TRÒ & QUY TẮC VĂN HỌC CỐT LÕI (BỔ TRỢ CHO YÊU CẦU TÁC GIẢ)] ===`,
         sysTrimmed,
         ``,
         `=== [THÔNG SỐ KỸ THUẬT] ===`,
@@ -2104,12 +2124,12 @@
         antiClicheSection,
         tailSection,
         `********************************************************************`,
-        `⭐ YÊU CẦU / CÂU LỆNH CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN THỰC THI CAO NHẤT) ⭐`,
+        `⭐ YÊU CẦU / CÂU LỆNH CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN SỐ 1 — HÒA QUYỆN CÙNG KHUNG BỔ TRỢ) ⭐`,
         `********************************************************************`,
         resolvedCommandText,
         `********************************************************************`,
         ``,
-        `🚀 BẮT ĐẦU: Đọc kỹ 2 file đính kèm (Story Bible + Tham mưu cốt truyện) rồi viết thẳng bản thảo chương truyện đạt chất lượng văn học cao nhất!`
+        `🚀 BẮT ĐẦU: Lấy yêu cầu cá nhân của tác giả làm trọng tâm số 1, kết hợp chặt chẽ cùng 2 file đính kèm (Story Bible + Tham mưu cốt truyện) và khung quy tắc bổ trợ để viết thẳng bản thảo chương truyện đạt chất lượng văn học cao nhất!`
       ].join('\n').replace(/\n{3,}/g, '\n\n');
       const trPrompt = window.NoirNovel?.i18n?.translatePromptFrame;
       return typeof trPrompt === 'function' ? trPrompt(rawPrompt) : rawPrompt;
@@ -2282,6 +2302,12 @@
         'Ngôi thứ 3 giới hạn (Theo sát nhân vật chính)';
       const cleanCmd = String(userCommand || '').trim();
 
+      const priorityRuleLine = [
+        `=== [NGUYÊN TẮC ƯU TIÊN — BẮT BUỘC GHI NHỚ] ===`,
+        `• Yêu cầu / câu lệnh cụ thể do TÁC GIẢ nhập ở cuối Prompt là ƯU TIÊN SỐ 1 (mục tiêu trực tiếp cần thực hiện).`,
+        `• Toàn bộ khung hướng dẫn, Story Bible và tài liệu đính kèm là NỀN TẢNG BỔ TRỢ chặt chẽ (KHÔNG tách rời khỏi câu lệnh tác giả): luôn hòa quyện yêu cầu của tác giả với bối cảnh/nhân vật/logic sẵn có; nếu có điểm khác biệt nhỏ, ưu tiên theo ý tác giả nhưng vẫn giữ mạch truyện thống nhất.`
+      ].join('\n');
+
       const wrapModePrompt = (lines) => {
         const raw = (Array.isArray(lines) ? lines : [lines]).join('\n');
         const trPrompt = window.NoirNovel?.i18n?.translatePromptFrame;
@@ -2303,9 +2329,11 @@
         return wrapModePrompt([
           `🧭 CHẾ ĐỘ 2: THAM MƯU CỐT TRUYỆN & THIẾT KẾ DIỄN BIẾN CHUYÊN SÂU (SÚC TÍCH ≤ 10.000 KÝ TỰ)`,
           ``,
+          priorityRuleLine,
+          ``,
           `📎 TÀI LIỆU ĐÍNH KÈM: Tác giả sẽ tải kèm FILE PDF STORY BIBLE lên Gemini cùng câu lệnh này. AI BẮT BUỘC đối chiếu 100% File PDF Story Bible đính kèm (Hồ sơ nhân vật, Dòng thời gian, Tài sản/Thương tích, Sổ cái phục bút và Ma trận "Ai Biết Gì") — TUYỆT ĐỐI không lệch logic và không làm lộ bí mật cho nhân vật chưa biết!`,
           ``,
-          `[1. VAI TRÒ & KHUNG THAM MƯU CỐT LÕI]:`,
+          `[1. VAI TRÒ & KHUNG THAM MƯU BỔ TRỢ]:`,
           sysTrimmed,
           ``,
           `[2. CHƯƠNG ĐANG CHUẨN BỊ & TIÊU CHUẨN ĐẦU RA]:`,
@@ -2315,12 +2343,12 @@
           sceneSection,
           tailSection,
           `********************************************************************`,
-          `⭐ YÊU CẦU / DÀN Ý CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN THỰC THI CAO NHẤT) ⭐`,
+          `⭐ YÊU CẦU / DÀN Ý CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN SỐ 1 — HÒA QUYỆN CÙNG KHUNG BỔ TRỢ) ⭐`,
           `********************************************************************`,
           cleanCmd || `Hãy đọc kỹ File PDF Story Bible tôi đính kèm và phát triển 3 phương án diễn biến chi tiết theo từng phân cảnh cho chương tiếp theo (chậm rãi, gài phục bút tinh tế, không tua nhanh sự kiện).`,
           `********************************************************************`,
           ``,
-          `🚀 Hãy trình bày bản tham mưu rõ ràng từng phân cảnh (có thể dùng bảng biểu) để tôi chốt và đưa sang Chế độ 1 viết tiểu thuyết.`
+          `🚀 Hãy lấy yêu cầu tác giả làm trọng tâm số 1 kết hợp cùng khung bổ trợ & Story Bible, trình bày bản tham mưu rõ ràng từng phân cảnh (có thể dùng bảng biểu) để tôi chốt và đưa sang Chế độ 1 viết tiểu thuyết.`
         ].join('\n').replace(/\n{3,}/g, '\n\n'));
       }
 
@@ -2332,7 +2360,9 @@
           `🔍 CHẾ ĐỘ 3: KIỂM TOÁN LOGIC & SOI MÂU THUẪN TOÀN DIỆN (KHUYÊN DÙNG GOOGLE NOTEBOOKLM)`,
           `(Bám sát tuyệt đối bản Story Bible bạn đã tổng hợp ở phần trên và toàn bộ các chương truyện tôi đã tải lên làm nguồn — KHÔNG bỏ sót dù chỉ 1 chi tiết nhỏ).`,
           ``,
-          `Bạn là một Tiểu Thuyết Gia & Tổng Biên Tập Kiểm Toán Logic 30 năm kinh nghiệm, soi lỗi sắc bén như thám tử pháp y văn bản:`,
+          priorityRuleLine,
+          ``,
+          `[KHUNG KIỂM TOÁN BỔ TRỢ] — Bạn là một Tiểu Thuyết Gia & Tổng Biên Tập Kiểm Toán Logic 30 năm kinh nghiệm, soi lỗi sắc bén như thám tử pháp y văn bản:`,
           `1. DÒNG THỜI GIAN & ĐỒNG HỒ: Soi từng giờ, phút, ngày thứ mấy, khoảng cách di chuyển và đếm ngược nhiệm vụ — chỉ rõ mọi mốc mâu thuẫn hoặc dịch chuyển phi vật lý.`,
           `2. TÀI SẢN, VẬT PHẨM & THỂ CHẤT: Kiểm từng con số tiền bạc (thu/chi/số dư), vị trí vật chứng/thiết bị/tài liệu, tình trạng thương tích nhân vật (có bị tự nhiên biến mất vô lý không?).`,
           `3. MA TRẬN "AI BIẾT GÌ" (RÒ RỈ NHẬN THỨC): Phát hiện mọi chỗ nhân vật vô tình nói, nghĩ hoặc hành động dựa trên thông tin họ CHƯA ĐƯỢC BIẾT tại thời điểm đó.`,
@@ -2343,7 +2373,7 @@
           `[DANH SÁCH CHƯƠNG HIỆN CÓ]:`,
           chapterInventory || '  (Đối chiếu toàn bộ chương đã tải lên NotebookLM)',
           ``,
-          `⭐ YÊU CẦU KIỂM TOÁN CÁ NHÂN CỦA NGƯỜI DÙNG:`,
+          `⭐ YÊU CẦU KIỂM TOÁN CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN SỐ 1 — HÒA QUYỆN CÙNG KHUNG BỔ TRỢ):`,
           cleanCmd || `Hãy soi lỗi cực kỳ chi tiết toàn bộ logic dòng thời gian, tiền bạc, thương tích, vật chứng, OOC nhân vật và rò rỉ thông tin trong Ma trận Ai Biết Gì trên toàn bộ các chương tôi đã tải lên.`
         ]);
       }
@@ -2353,14 +2383,16 @@
           `📊 CHẾ ĐỘ 4: NHÀ PHÊ BÌNH VĂN HỌC CÔNG TÂM & HỘI ĐỒNG ĐỘC GIẢ BETA (KHUYÊN DÙNG GOOGLE NOTEBOOKLM)`,
           `(Bám sát tuyệt đối bản Story Bible bạn đã tổng hợp ở phần trên và toàn bộ các chương truyện tôi đã tải lên làm nguồn).`,
           ``,
-          `Bạn là 1 Nhà Phê Bình Tiểu Thuyết, Văn Học Mạng & Chính Quy 20 năm kinh nghiệm cho các nhà xuất bản lớn. Hãy đọc thật kỹ toàn bộ các chương truyện đã tải lên và đánh giá thật công tâm, thẳng thắn, sắc sảo, không khen xã giao:`,
+          priorityRuleLine,
+          ``,
+          `[KHUNG PHÊ BÌNH BỔ TRỢ] — Bạn là 1 Nhà Phê Bình Tiểu Thuyết, Văn Học Mạng & Chính Quy 20 năm kinh nghiệm cho các nhà xuất bản lớn. Hãy đọc thật kỹ toàn bộ các chương truyện đã tải lên và đánh giá thật công tâm, thẳng thắn, sắc sảo, không khen xã giao:`,
           `1. HƯỚNG ĐI CỐT TRUYỆN & ĐỘ LÔI CUỐN: Mạch truyện hiện tại đã tối ưu chưa? Có thực sự giữ chân độc giả từ mở đầu đến kết chương (hook / cliffhanger) không? Đoạn nào bị chùng nhịp, dài dòng hoặc vội vàng?`,
           `2. TỐC ĐỘ & TÍNH CHÂN THỰC / SỨC MẠNH: Tốc độ phát triển nhân vật, năng lực, tài chính hay âm mưu có bị "ảo quá", buff quá đà hay giải quyết quá dễ dãi không? Chỉ rõ chỗ cần tiết chế để thuyết phục hơn.`,
           `3. CHẤM ĐIỂM 6 TRỤ CỘT VĂN HỌC (Thang 10): Cốt truyện · Tâm lý nhân vật · Nhịp điệu · Hội thoại · Hình ảnh Ngũ quan (Show Don't Tell) · Tự nhiên & chống sáo rỗng AI.`,
           `4. GÓC NHÌN 3 NHÓM ĐỘC GIẢ KHÓ TÍNH: (a) Độc giả mê đấu trí logic; (b) Độc giả thích chiều sâu tâm lý; (c) Độc giả đọc giải trí nhanh trên điện thoại — họ sẽ khen gì và dễ bỏ truyện ở đúng điểm nào?`,
           `5. ĐỀ XUẤT CẢI THIỆN ĐẮT GIÁ NHẤT: Chỉ ra 5 điểm cần nâng cấp ngay kèm ví dụ viết lại ngắn theo đúng văn phong tác giả.`,
           ``,
-          `⭐ YÊU CẦU PHÊ BÌNH CÁ NHÂN CỦA NGƯỜI DÙNG:`,
+          `⭐ YÊU CẦU PHÊ BÌNH CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN SỐ 1 — HÒA QUYỆN CÙNG KHUNG BỔ TRỢ):`,
           cleanCmd || `Hãy phân tích công tâm xem hướng đi cốt truyện đã tối ưu chưa, có thực sự lôi cuốn độc giả không, chỗ nào cần cải thiện để giữ chân người đọc và khiến nhịp truyện cùng sức mạnh nhân vật không bị ảo quá.`
         ]);
       }
@@ -2381,9 +2413,12 @@
           return wrapModePrompt([
             `🖼️ CHẾ ĐỘ 6 — TẠO BÌA TRUYỆN TỰ DO (DÁN VÀO MỤC "TẠO HÌNH ẢNH" CỦA GEMINI)`,
             `(Bám sát Story Bible và bối cảnh các chương truyện đã tải lên/tổng hợp ở phần trên).`,
+            ``,
+            priorityRuleLine,
+            ``,
             `- Tên truyện: "${novelTitle}" · Bút danh: "${authorName}" · Tỷ lệ dọc 2:3 chuẩn bìa sách xuất bản.`,
             ``,
-            `⭐ YÊU CẦU THIẾT KẾ BÌA CỦA NGƯỜI DÙNG:`,
+            `⭐ YÊU CẦU THIẾT KẾ BÌA CỦA NGƯỜI DÙNG (ƯU TIÊN SỐ 1 — HÒA QUYỆN CÙNG BỐI CẢNH BỔ TRỢ):`,
             cleanCmd
           ]);
         }
@@ -2392,14 +2427,16 @@
           `🖼️ CHẾ ĐỘ 6: TẠO BÌA TRUYỆN CHUYÊN NGHIỆP BẰNG AI (DÁN VÀO MỤC "TẠO HÌNH ẢNH" CỦA GEMINI)`,
           `(Bám sát Story Bible bạn đã tổng hợp ở phần trên và các chương truyện đã tải lên để vẽ đúng tạo hình nhân vật, bối cảnh & không khí truyện).`,
           ``,
-          `1. THÔNG TIN BÌA SÁCH:`,
+          priorityRuleLine,
+          ``,
+          `1. THÔNG TIN BÌA SÁCH (BỔ TRỢ):`,
           `- Tên tác phẩm: "${novelTitle}" | Bút danh: "${authorName}"`,
           `- Tỷ lệ dọc 2:3 (Book Cover Vertical Poster), bố cục chuẩn xuất bản (chừa vùng thoáng/tương phản đẹp cho tiêu đề & tên tác giả).`,
           ``,
           `2. PHONG CÁCH NGHỆ THUẬT (${styleObj.label}):`,
           styleObj.directive || 'Phong cách minh họa bìa tiểu thuyết xuất bản chuyên nghiệp, ánh sáng điện ảnh, giàu cảm xúc.',
           ``,
-          `⭐ YÊU CẦU THIẾT KẾ BÌA CÁ NHÂN CỦA NGƯỜI DÙNG:`,
+          `⭐ YÊU CẦU THIẾT KẾ BÌA CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN SỐ 1 — HÒA QUYỆN CÙNG KHUNG BỔ TRỢ):`,
           cleanCmd || `Thiết kế cảnh đắt giá nhất thể hiện linh hồn bộ truyện, nhân vật chính có thần thái cuốn hút, đạo cụ biểu tượng nổi bật và bầu không khí giàu kịch tính.`,
           ``,
           `🚀 CHỈ THỊ VẼ ẢNH: Vẽ sắc nét, không méo bàn tay/khuôn mặt, ánh sáng có chiều sâu, không sinh chữ lỗi (no gibberish text).`
@@ -2410,7 +2447,9 @@
         `🎨 CHẾ ĐỘ 5: VẼ SƠ ĐỒ CỐT TRUYỆN, TIMELINE & MẠNG LƯỚI NHÂN VẬT DẠNG PLAINTEXT MÃ ASCII (TÁCH RIÊNG 3 KHUNG COPYABLE)`,
         `(Bám sát tuyệt đối bản Story Bible bạn đã tổng hợp ở phần trên và toàn bộ các chương truyện tôi đã tải lên làm nguồn).`,
         ``,
-        `YÊU CẦU ĐỊNH DẠNG BẮT BUỘC — PHẢI TÁCH THÀNH ĐÚNG 3 KHỐI MÃ RIÊNG BIỆT (MỖI KHỐI LÀ 1 CODE BLOCK \`\`\`text ... \`\`\` ĐỘC LẬP ĐỂ TÔI BẤM COPY TỪNG KHUNG DỄ DÀNG KHÔNG BỊ GỘP CHUNG):`,
+        priorityRuleLine,
+        ``,
+        `[KHUNG ĐỊNH DẠNG BỔ TRỢ] — PHẢI TÁCH THÀNH ĐÚNG 3 KHỐI MÃ RIÊNG BIỆT (MỖI KHỐI LÀ 1 CODE BLOCK \`\`\`text ... \`\`\` ĐỘC LẬP ĐỂ TÔI BẤM COPY TỪNG KHUNG DỄ DÀNG KHÔNG BỊ GỘP CHUNG):`,
         `- Dùng ký tự kẻ khung Unicode sắc nét (┌ ─ ┐ │ └ ┘ ├ ┤ ┬ ┴ ┼ ──▶ ▼ ◄── ═══), căn lề thẳng hàng tuyệt đối, mũi tên rõ hướng, KHÔNG bị lệch dòng.`,
         ``,
         `📦 KHUNG COPY 1 (Code block \`\`\`text ... \`\`\` riêng): SƠ ĐỒ 1 — TRỤC THỜI GIAN & DIỄN BIẾN SỰ KIỆN (TIMELINE)`,
@@ -2424,7 +2463,7 @@
         ``,
         `💡 GỢI Ý STUDIO NOTEBOOKLM: Sau 3 khung mã trên, hãy thêm 3 dòng ngắn gợi ý tôi bấm nút nào ở cột Studio bên phải (Bản đồ tư duy / Báo cáo / Bản đồ họa thông tin) để xem sơ đồ trực quan đẹp nhất.`,
         ``,
-        `⭐ YÊU CẦU VẼ SƠ ĐỒ CÁ NHÂN CỦA NGƯỜI DÙNG:`,
+        `⭐ YÊU CẦU VẼ SƠ ĐỒ CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN SỐ 1 — HÒA QUYỆN CÙNG KHUNG BỔ TRỢ):`,
         cleanCmd || `Hãy xuất thành ĐÚNG 3 KHỐI MÃ Plaintext ASCII riêng biệt (3 code block copy độc lập: Timeline, Mạng lưới nhân vật, Phục bút & Ngòi nổ) thật sắc nét, thẳng hàng để tôi copy từng khung vào Studio.`
       ].join('\n');
       const trPrompt = window.NoirNovel?.i18n?.translatePromptFrame;
@@ -3994,15 +4033,24 @@
       this._splitSessionState = this._splitSessionState || {};
       const state = this._splitSessionState[serviceKey] || { opened: false, lastConfirmAt: 0 };
 
-      // 1) Singleton trực tiếp: nếu trình duyệt còn giữ handle cửa sổ chia đôi đang mở -> focus thẳng qua cửa sổ đó, TUYỆT ĐỐI KHÔNG mở cửa sổ thứ 2!
+      // 1) Nếu trình duyệt còn giữ handle cửa sổ chia đôi đang mở -> đưa thẳng lên trước màn hình & căn lại nửa phải!
       const existingWin = isNotebook ? this._activeNotebookLmWin : this._activeGeminiWin;
       if (existingWin && !existingWin.closed) {
         try {
+          try {
+            existingWin.moveTo(rightX, availTop);
+            existingWin.resizeTo(halfW, availH);
+          } catch (_eMove) {}
           existingWin.focus();
+          // Gọi kèm window.open('', winName) để ép Chromium Desktop/Windows kích hoạt foreground cửa sổ đã mở mà KHÔNG reload cuộc trò chuyện!
+          try {
+            const raised = window.open('', winName);
+            raised?.focus?.();
+          } catch (_eRaise) {}
           window.NoirStudio?.utils?.showToast?.(
             isNotebook
-              ? '✨ Cửa sổ Google NotebookLM đang mở sẵn — Đã đưa cửa sổ đó lên trước (bấm Ctrl+V để dán câu lệnh)!'
-              : '✨ Cửa sổ Gemini đang mở sẵn — Đã đưa cửa sổ đó lên trước (bấm Ctrl+V để dán câu lệnh)!',
+              ? '✨ Đã đưa cửa sổ Google NotebookLM đang mở lên trước màn hình (nhấn Ctrl+V để dán câu lệnh)!'
+              : '✨ Đã đưa cửa sổ Gemini đang mở lên trước màn hình (nhấn Ctrl+V để dán câu lệnh)!',
             'success',
             3800
           );
@@ -4010,37 +4058,24 @@
         } catch (_eFocus) {}
       }
 
-      // 2) Chống nhân đôi cửa sổ khi Google bật COOP (Cross-Origin-Opener-Policy làm existingWin.closed bị mất kết nối dù cửa sổ cũ vẫn đang mở):
-      //    Nếu phiên này đã mở 1 cửa sổ chia đôi rồi -> lần bấm đầu chỉ thử focus & nhắc chuyển sang cửa sổ đang mở;
-      //    chỉ khi người dùng bấm lại lần 2 trong vòng 6 giây (tức là đã chủ động tắt cửa sổ cũ) mới mở cửa sổ mới!
-      const nowMs = Date.now();
-      if (state.opened && nowMs - (state.lastConfirmAt || 0) > 6000) {
-        state.lastConfirmAt = nowMs;
-        this._splitSessionState[serviceKey] = state;
-        try { existingWin?.focus?.(); } catch (_eTryFocus) {}
-        window.NoirStudio?.utils?.showToast?.(
-          isNotebook
-            ? '🪟 Cửa sổ NotebookLM chia đôi đã được mở sẵn! Hãy bấm sang cửa sổ đó và nhấn Ctrl+V. (Nếu bạn đã tắt cửa sổ cũ, bấm lại nút này 1 lần nữa để mở mới)'
-            : '🪟 Cửa sổ Gemini chia đôi đã được mở sẵn! Hãy bấm sang cửa sổ đó và nhấn Ctrl+V. (Nếu bạn đã tắt cửa sổ cũ, bấm lại nút này 1 lần nữa để mở mới)',
-          'info',
-          5200
-        );
-        return true;
-      }
-
+      // 2) Khi cửa sổ cũ đã bị đóng hoặc bị chính sách COOP của Google tách kết nối handle ->
+      //    LUÔN gọi window.open(webUrl, winName, features) + focus() để cửa sổ Gemini/NotebookLM HIỆN LÊN NGAY TRƯỚC MÀN HÌNH Desktop!
       const features = `popup=yes,resizable=yes,scrollbars=yes,left=${rightX},top=${availTop},width=${halfW},height=${availH}`;
       const opened = window.open(webUrl, winName, features);
       if (opened) {
         if (isNotebook) this._activeNotebookLmWin = opened;
         else this._activeGeminiWin = opened;
-        this._splitSessionState[serviceKey] = { opened: true, lastConfirmAt: 0 };
-        try { opened.focus(); } catch (_eF) {}
+        this._splitSessionState[serviceKey] = { opened: true, lastConfirmAt: Date.now() };
+        try {
+          opened.focus();
+          setTimeout(() => { try { opened.focus(); } catch (_eF2) {} }, 120);
+        } catch (_eF) {}
         window.NoirStudio?.utils?.showToast?.(
           isNotebook
-            ? '🪟 Đã mở Google NotebookLM ở nửa phải màn hình! Bạn chỉ cần Ctrl+V dán câu lệnh vừa copy.'
-            : '🪟 Đã mở Gemini ở nửa phải màn hình! (Trên Windows bấm Win + ← để ghim Studio sang nửa trái nếu đang mở trong tab trình duyệt)',
+            ? '🪟 Đã đưa Google NotebookLM hiện lên nửa phải màn hình! Bạn chỉ cần Ctrl+V dán câu lệnh vừa copy.'
+            : '🪟 Đã đưa Gemini hiện lên nửa phải màn hình! (Nếu Studio đang mở trong tab trình duyệt, nhấn Win + ← để ghim Studio sang nửa trái)',
           'success',
-          5000
+          4600
         );
         return true;
       }

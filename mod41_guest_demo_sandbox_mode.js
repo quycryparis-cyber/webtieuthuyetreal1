@@ -1739,7 +1739,7 @@
         modeSelEl.addEventListener('change', () => {
           if (!this.owner.isActive() || this.owner.sandbox.internalBypassDepth > 0) return;
           const nextPreset = this.getDefaultPresetForMode(modeSelEl.value || 'MODE_1_DRAFT');
-          if (nextPreset) {
+          if (nextPreset && nextPreset.modeKey === modeSelEl.value) {
             this.selectPresetAndPreview(nextPreset.id, false);
           }
         });
@@ -1990,7 +1990,7 @@
         modeSelEl.addEventListener('change', () => {
           if (!this.owner.isActive() || this.owner.sandbox.internalBypassDepth > 0) return;
           const nextPreset = this.getDefaultPresetForMode(modeSelEl.value || 'MODE_1_DRAFT');
-          if (nextPreset) {
+          if (nextPreset && nextPreset.modeKey === modeSelEl.value) {
             this.selectPresetAndPreview(nextPreset.id, false);
           }
         });

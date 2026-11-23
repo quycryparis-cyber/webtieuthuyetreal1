@@ -2849,7 +2849,7 @@
         });
         setInterval(() => {
           runSilentAutoDiskSync();
-        }, 8500);
+        }, 25000);
       }
 
       // Đồng bộ đổi tên tiêu đề chương tại Tab 1 xuống tên file khi blur
