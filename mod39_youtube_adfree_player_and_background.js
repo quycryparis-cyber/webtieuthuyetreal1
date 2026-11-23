@@ -2058,9 +2058,32 @@
       }
     }
 
-    dispatchPlayerCommand(funcName, args = []) {
+    dispatchPlayerCommand(funcName, args = [], options = {}) {
       this.telemetry.commandsDispatched += 1;
       this.telemetry.lastCommand = funcName;
+
+      // Khi Cửa sổ nổi Desktop (Document PiP / Floating Frame) đang mở -> điều hướng MỌI lệnh điều khiển
+      // (Play/Pause, Tua, Lặp, Lặp A-B, Tốc độ 0.25x-4x, Âm lượng/Tắt tiếng) thẳng sang Cửa sổ nổi!
+      if (!options.forceMainIframe && this._pipSyncChannel && this._activePipSyncSid) {
+        const bgCtrl = NS.youtubeStudio?.mobileBgAudio;
+        const pipStillOpen = Boolean(
+          (bgCtrl?._docPipWindow && !bgCtrl._docPipWindow.closed) ||
+          (typeof document !== 'undefined' && document.getElementById('mod39-desktop-floating-win'))
+        );
+        if (pipStillOpen) {
+          try {
+            this._pipSyncChannel.postMessage({
+              type: 'cmd',
+              sid: this._activePipSyncSid,
+              func: funcName,
+              args: Array.isArray(args) ? args : []
+            });
+            return { ok: true, via: 'DESKTOP_PIP_CHANNEL', result: null };
+          } catch (_ePipCmd) {}
+        } else {
+          this._activePipSyncSid = '';
+        }
+      }
 
       // Chỉ tin cậy hoàn toàn instance YT.Player khi chính API này đã xác nhận onReady (đã gắn đúng host nocookie).
       // Nếu YT.Player chưa sẵn sàng (hoặc đang dùng kênh postMessage id=1 / file://), luôn gửi kèm postMessage('*').
@@ -2087,6 +2110,44 @@
       }
 
       return { ok: false, via: 'NONE', result: null };
+    }
+
+    ensurePipSyncChannelAttached() {
+      if (this._pipSyncChannel || typeof BroadcastChannel !== 'function') return this._pipSyncChannel;
+      try {
+        const ch = new BroadcastChannel('noir_mod39_pip_sync_v1');
+        ch.onmessage = (ev) => {
+          const msg = ev && ev.data;
+          if (!msg || typeof msg !== 'object') return;
+          if (msg.sid && this._activePipSyncSid && msg.sid !== this._activePipSyncSid) return;
+          if (msg.type === 'sync' && msg.info && typeof msg.info === 'object') {
+            const info = msg.info;
+            if (typeof info.currentTime === 'number' && Number.isFinite(info.currentTime)) {
+              this.lastKnownTime = info.currentTime;
+              this._lastMessageTimeAtMs = Date.now();
+              this._lastPipReportedTimeSec = info.currentTime;
+            }
+            if (typeof info.duration === 'number' && info.duration > 0) {
+              this.lastKnownDuration = info.duration;
+              this.emit('onDurationDetected', info.duration);
+            }
+            if (typeof info.playbackRate === 'number' && info.playbackRate > 0) {
+              if (info.playbackRate !== this.lastKnownPlaybackRate) {
+                this.lastKnownPlaybackRate = info.playbackRate;
+                this.emit('onPlaybackRateChange', info.playbackRate);
+              }
+            }
+            if (typeof info.playerState === 'number') {
+              this.lastKnownState = info.playerState;
+              this._lastMessageStateAtMs = Date.now();
+              this._lastPipReportedState = info.playerState;
+              this.emit('onStateChange', info.playerState);
+            }
+          }
+        };
+        this._pipSyncChannel = ch;
+      } catch (_eCh) {}
+      return this._pipSyncChannel;
     }
 
     extractAndApplyLiveSignal(info = null, ytPlayerObj = null) {
@@ -2978,7 +3039,7 @@
       const hasEmbeddedVideo = Boolean(
         curSrc && curSrc !== 'about:blank' && curSrc.indexOf('youtube') !== -1 && idMatchesCurSrc
       );
-      if (!hasEmbeddedVideo) {
+      if (!hasEmbeddedVideo || (!this.playerCtrl.prefs?.muted && /[?&]mute=1(?:&|$)/i.test(curSrc))) {
         this._iframeMutedVisualCompanion = false;
         this._silencedIframeForBgAudio = false;
         this.playerCtrl.bridge._mountedMutedOverride = null;
@@ -2991,30 +3052,31 @@
           this.playerCtrl.prefs,
           { autoplay: Boolean(autoplay) }
         );
-      } else if (
-        this._silencedIframeForBgAudio ||
-        this._iframeMutedVisualCompanion ||
-        this.playerCtrl.bridge._mountedMutedOverride === true
-      ) {
+      } else {
         this._silencedIframeForBgAudio = false;
         this._iframeMutedVisualCompanion = false;
         this.playerCtrl.bridge._mountedMutedOverride = null;
         const targetSec = Number.isFinite(resumeSec) ? Math.max(0, Number(resumeSec)) : null;
+        const applyAudioAndPlay = () => {
+          if (this.playerCtrl.prefs?.muted) {
+            this.playerCtrl.bridge.dispatchPlayerCommand('mute', [], { forceMainIframe: true });
+          } else {
+            this.playerCtrl.bridge.dispatchPlayerCommand('unMute', [], { forceMainIframe: true });
+            const vol = Math.max(0, Math.min(100, Number(this.playerCtrl.prefs?.volume ?? 85)));
+            this.playerCtrl.bridge.dispatchPlayerCommand('setVolume', [vol], { forceMainIframe: true });
+          }
+          if (autoplay) {
+            this.playerCtrl.bridge.dispatchPlayerCommand('playVideo', [], { forceMainIframe: true });
+          } else {
+            this.playerCtrl.bridge.dispatchPlayerCommand('pauseVideo', [], { forceMainIframe: true });
+          }
+        };
         if (targetSec !== null && targetSec > 0) {
-          this.playerCtrl.bridge.dispatchPlayerCommand('seekTo', [targetSec, true]);
+          this.playerCtrl.bridge.dispatchPlayerCommand('seekTo', [targetSec, true], { forceMainIframe: true });
         }
-        if (this.playerCtrl.prefs?.muted) {
-          this.playerCtrl.bridge.dispatchPlayerCommand('mute', []);
-        } else {
-          this.playerCtrl.bridge.dispatchPlayerCommand('unMute', []);
-          const vol = Math.max(0, Math.min(100, Number(this.playerCtrl.prefs?.volume ?? 85)));
-          this.playerCtrl.bridge.dispatchPlayerCommand('setVolume', [vol]);
-        }
-        if (autoplay) {
-          this.playerCtrl.bridge.dispatchPlayerCommand('playVideo', []);
-        } else {
-          this.playerCtrl.bridge.dispatchPlayerCommand('pauseVideo', []);
-        }
+        applyAudioAndPlay();
+        setTimeout(applyAudioAndPlay, 220);
+        setTimeout(applyAudioAndPlay, 550);
       }
     }
 
@@ -3202,7 +3264,8 @@
         const alreadyMountedSame = Boolean(
           activeVid?.videoId &&
             curIfrSrc.indexOf('youtube') !== -1 &&
-            curIfrSrc.indexOf(activeVid.videoId) !== -1
+            curIfrSrc.indexOf(activeVid.videoId) !== -1 &&
+            (ctrl.prefs?.muted || !/[?&]mute=1(?:&|$)/i.test(curIfrSrc))
         );
         if (activeVid && !alreadyMountedSame) {
           ctrl.bridge.mountEmbedUrlIntoIframe(
@@ -3210,6 +3273,18 @@
             ctrl.prefs,
             { autoplay: true }
           );
+        } else if (activeVid) {
+          const forceUnmuteAndPlay = () => {
+            if (!ctrl.prefs?.muted) {
+              const vol = Math.max(0, Math.min(100, Number(ctrl.prefs?.volume ?? 85)));
+              ctrl.bridge.dispatchPlayerCommand('unMute', [], { forceMainIframe: true });
+              ctrl.bridge.dispatchPlayerCommand('setVolume', [vol], { forceMainIframe: true });
+            }
+            ctrl.bridge.dispatchPlayerCommand('playVideo', [], { forceMainIframe: true });
+          };
+          forceUnmuteAndPlay();
+          setTimeout(forceUnmuteAndPlay, 220);
+          setTimeout(forceUnmuteAndPlay, 550);
         }
       }
 
@@ -4960,8 +5035,28 @@
       const video = this.playerCtrl?.activeVideo;
       let sec = Number.isFinite(resumeAtSec) ? Math.max(0, Math.floor(resumeAtSec)) : null;
 
+      if (sec === null && Number.isFinite(this.playerCtrl?.bridge?._lastPipReportedTimeSec) && this.playerCtrl.bridge._lastPipReportedTimeSec > 0) {
+        sec = Math.max(0, Math.floor(this.playerCtrl.bridge._lastPipReportedTimeSec));
+      }
       if (sec === null && NS.nativePlayer?.videoEl && Number.isFinite(NS.nativePlayer.videoEl.currentTime) && NS.nativePlayer.videoEl.currentTime > 0) {
         sec = Math.max(0, Math.floor(NS.nativePlayer.videoEl.currentTime));
+      }
+      const pipWasPaused =
+        this.playerCtrl?.bridge?._lastPipReportedState === MOD39_CONSTANTS.YT_PLAYER_STATES.PAUSED;
+
+      if (this.playerCtrl?.bridge) {
+        if (this.playerCtrl.bridge._pipSyncChannel && this.playerCtrl.bridge._activePipSyncSid) {
+          try {
+            this.playerCtrl.bridge._pipSyncChannel.postMessage({
+              type: 'close',
+              sid: this.playerCtrl.bridge._activePipSyncSid
+            });
+          } catch (_eBcClose) {}
+        }
+        this.playerCtrl.bridge._activePipSyncSid = '';
+        this.playerCtrl.bridge._lastPipReportedTimeSec = null;
+        this.playerCtrl.bridge._lastPipReportedState = null;
+        this.playerCtrl.bridge._mountedMutedOverride = null;
       }
 
       // Tắt TRIỆT ĐỂ mọi nguồn phát phụ trước khi khôi phục iframe gốc (KHÔNG BAO GIỜ còn nhạc chạy nền ma!)
@@ -4977,7 +5072,10 @@
 
       if (wasActive && video && (video.videoId || video.playlistId)) {
         const targetSec = sec !== null ? sec : Math.max(0, Math.floor(Number(this._preFloatingStartSec) || Number(this.playerCtrl?.bridge?.lastKnownTime) || 0));
-        const shouldPlayBack = typeof shouldResume === 'boolean' ? shouldResume : Boolean(this._preFloatingWasPlaying);
+        const shouldPlayBack =
+          typeof shouldResume === 'boolean'
+            ? shouldResume && !pipWasPaused
+            : Boolean(this._preFloatingWasPlaying) && !pipWasPaused;
         const iframeStage = document.getElementById('mod39-iframe-stage-container') || document.getElementById('mod39-iframe-wrapper');
         if (iframeStage) {
           iframeStage.classList.remove('hidden');
@@ -4992,7 +5090,9 @@
           iframe.style.display = '';
           iframe.style.visibility = 'visible';
           iframe.style.opacity = '1';
-          const needsReload = !iframe.src || iframe.src === 'about:blank' || !/youtube(?:-nocookie)?\.com\/embed\//i.test(iframe.src);
+          const curSrc = String(iframe.src || '');
+          const hasMutedQuery = !this.playerCtrl?.prefs?.muted && /[?&]mute=1(?:&|$)/i.test(curSrc);
+          const needsReload = !curSrc || curSrc === 'about:blank' || !/youtube(?:-nocookie)?\.com\/embed\//i.test(curSrc) || hasMutedQuery;
           if (needsReload) {
             iframe.src = parser.buildPrivacyEmbedUrl({
               videoId: video.videoId,
@@ -5005,17 +5105,32 @@
               forBackground: false
             });
           } else {
+            const restoreMainCmds = () => {
+              try {
+                if (!this.playerCtrl?.prefs?.muted) {
+                  const vol = Math.max(0, Math.min(100, Number(this.playerCtrl?.prefs?.volume ?? 85)));
+                  this.playerCtrl?.bridge?.dispatchPlayerCommand?.('unMute', [], { forceMainIframe: true });
+                  this.playerCtrl?.bridge?.dispatchPlayerCommand?.('setVolume', [vol], { forceMainIframe: true });
+                }
+                const rate = Number(this.playerCtrl?.prefs?.speed) || 1;
+                if (Math.abs(rate - 1) > 0.01) {
+                  this.playerCtrl?.bridge?.dispatchPlayerCommand?.('setPlaybackRate', [rate], { forceMainIframe: true });
+                }
+                if (shouldPlayBack) {
+                  this.playerCtrl?.bridge?.dispatchPlayerCommand?.('playVideo', [], { forceMainIframe: true });
+                } else {
+                  this.playerCtrl?.bridge?.dispatchPlayerCommand?.('pauseVideo', [], { forceMainIframe: true });
+                }
+              } catch (_eRes) {}
+            };
             try {
-              if (!this.playerCtrl?.prefs?.muted) {
-                this.playerCtrl?.bridge?.dispatchPlayerCommand?.('unMute', []);
+              if (targetSec > 0) {
+                this.playerCtrl?.bridge?.dispatchPlayerCommand?.('seekTo', [targetSec, true], { forceMainIframe: true });
               }
-              if (targetSec > 0) this.playerCtrl?.bridge?.dispatchPlayerCommand?.('seekTo', [targetSec, true]);
-              if (shouldPlayBack) {
-                this.playerCtrl?.bridge?.dispatchPlayerCommand?.('playVideo', []);
-              } else {
-                this.playerCtrl?.bridge?.dispatchPlayerCommand?.('pauseVideo', []);
-              }
-            } catch (_eRes) {}
+            } catch (_eSeek) {}
+            restoreMainCmds();
+            setTimeout(restoreMainCmds, 200);
+            setTimeout(restoreMainCmds, 520);
           }
         }
         this.nudgeDesktopIframeCompositorRepaint();
@@ -5057,10 +5172,16 @@
 
       // 1) Tạm dừng & tắt tiếng iframe youtube-nocookie.com TRƯỚC khi mở Cửa sổ nổi (KHÔNG xóa src hay phá khung gốc để đóng là trả lại nguyên vẹn!)
       this._desktopFloatingIframePaused = true;
+      const pipSid = `pip_${Date.now()}_${Math.floor(Math.random() * 9999)}`;
+      if (this.playerCtrl?.bridge) {
+        this.playerCtrl.bridge.ensurePipSyncChannelAttached?.();
+        this.playerCtrl.bridge._activePipSyncSid = '';
+        this.playerCtrl.bridge._lastPipReportedTimeSec = startSec;
+        this.playerCtrl.bridge._lastPipReportedState = MOD39_CONSTANTS.YT_PLAYER_STATES.PLAYING;
+      }
       try {
-        this.playerCtrl?.bridge?.dispatchPlayerCommand?.('pauseVideo', []);
-        this.playerCtrl?.bridge?.dispatchPlayerCommand?.('mute', []);
-        this.playerCtrl?.pause?.();
+        this.playerCtrl?.bridge?.dispatchPlayerCommand?.('pauseVideo', [], { forceMainIframe: true });
+        this.playerCtrl?.bridge?.dispatchPlayerCommand?.('mute', [], { forceMainIframe: true });
       } catch (_ePause) {}
 
       const parser = NS.youtubeStudio?.parser;
@@ -5077,7 +5198,7 @@
           })
         : `https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.videoId || '')}?autoplay=1&start=${startSec}&rel=0`;
 
-      // Xây dựng cầu nối same-origin yt_pip_frame.html có đầy đủ HTTP Referer (FIX TRIỆT ĐỂ YouTube Error 153 trong Document PiP!)
+      // Xây dựng cầu nối same-origin yt_pip_frame.html có đầy đủ HTTP Referer + BroadcastChannel đồng bộ 2 chiều (Tua/Dừng/Lặp A-B/Tốc độ/Âm lượng!)
       let pipBridgeUrl = embedUrl;
       const isHttpOrigin = typeof window !== 'undefined' && /^https?:/i.test(window.location?.protocol || '');
       if (isHttpOrigin) {
@@ -5089,12 +5210,15 @@
           bridgeObj.searchParams.set('autoplay', '1');
           bridgeObj.searchParams.set('loop', !video.isLive && Boolean(this.playerCtrl?.prefs?.repeatMode) ? '1' : '0');
           bridgeObj.searchParams.set('mute', Boolean(this.playerCtrl?.prefs?.muted) ? '1' : '0');
+          bridgeObj.searchParams.set('rate', String(Number(this.playerCtrl?.prefs?.speed) || 1));
+          bridgeObj.searchParams.set('vol', String(Math.max(0, Math.min(100, Number(this.playerCtrl?.prefs?.volume ?? 85)))));
+          bridgeObj.searchParams.set('sid', pipSid);
           pipBridgeUrl = bridgeObj.toString();
         } catch (_eUrl) {}
       }
 
       // 2) Ưu tiên #1 trên Desktop (Chrome / Edge / Brave / Desktop PWA qua HTTPS/HTTP):
-      //    Document Picture-in-Picture nạp qua cầu nối same-origin yt_pip_frame.html (gửi chuẩn Referer -> KHÔNG BAO GIỜ dính Error 153!)
+      //    Document Picture-in-Picture nạp qua cầu nối same-origin yt_pip_frame.html (gửi chuẩn Referer + đồng bộ 2 chiều toàn bộ nút điều khiển!)
       if (
         isDesktopDirectYoutubeEnv() &&
         isHttpOrigin &&
@@ -5108,6 +5232,9 @@
             height: 304
           });
           this._docPipWindow = pipWin;
+          if (this.playerCtrl?.bridge) {
+            this.playerCtrl.bridge._activePipSyncSid = pipSid;
+          }
           const doc = pipWin.document;
           doc.title = `${video.title || 'YouTube'} — Cửa sổ nổi`;
           doc.body.style.cssText =
@@ -5211,9 +5338,12 @@
             <button type="button" id="btn-mod39-close-floating-win" class="px-2 py-0.5 rounded-lg bg-zinc-800 hover:bg-rose-600 text-zinc-100 font-extrabold transition">✕</button>
           </div>
           <div class="relative w-full aspect-video bg-black">
-            <iframe src="${embedUrl}" class="w-full h-full border-0" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+            <iframe src="${pipBridgeUrl}" class="w-full h-full border-0" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
           </div>
         `;
+        if (this.playerCtrl?.bridge) {
+          this.playerCtrl.bridge._activePipSyncSid = pipSid;
+        }
         document.body.appendChild(win);
 
         // Kéo thả mượt mà quanh màn hình

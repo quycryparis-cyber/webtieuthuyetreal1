@@ -1743,20 +1743,33 @@
       ).join('');
 
       toolbar.innerHTML = `
-        <div class="flex flex-wrap items-center gap-1.5 flex-1 min-w-[240px]">
-          <span class="font-bold text-zinc-400 shrink-0">✨ Mẫu lệnh văn học:</span>
-          <select id="mod16-select-command-preset" class="bg-zinc-950 border border-zinc-700/80 rounded-lg px-2.5 py-1 text-[11px] text-zinc-200 font-semibold focus:border-emerald-500 focus:outline-none max-w-full sm:max-w-[330px]">
-            <option value="">-- Chọn mẫu chỉ thị sáng tác chuyên sâu --</option>
-            ${presetOptionsHtml}
-          </select>
-          <button id="mod16-btn-insert-preset" type="button" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-bold transition">
-            ➕ Chèn vào ô lệnh
-          </button>
+        <div class="w-full flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-1.5 flex-1 min-w-[220px]">
+            <span class="font-bold text-zinc-400 shrink-0">✨ Mẫu lệnh văn học:</span>
+            <select id="mod16-select-command-preset" class="bg-zinc-950 border border-zinc-700/80 rounded-lg px-2.5 py-1 text-[11px] text-zinc-200 font-semibold focus:border-emerald-500 focus:outline-none max-w-full sm:max-w-[330px]">
+              <option value="">-- Chọn mẫu chỉ thị sáng tác chuyên sâu --</option>
+              ${presetOptionsHtml}
+            </select>
+            <button id="mod16-btn-insert-preset" type="button" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-bold transition">
+              ➕ Chèn vào ô lệnh
+            </button>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button id="mod16-btn-restore-last-cmd" type="button" title="Khôi phục câu lệnh vừa dùng gần nhất" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold transition">
+              ↺ Khôi phục lệnh gần nhất
+            </button>
+          </div>
         </div>
-        <div class="flex items-center gap-1.5">
-          <button id="mod16-btn-restore-last-cmd" type="button" title="Khôi phục câu lệnh vừa dùng gần nhất" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold transition">
-            ↺ Khôi phục lệnh gần nhất
-          </button>
+        <!-- Khung Prompt riêng biệt cho từng Mẫu lệnh văn học đang chọn (cho phép xem, chỉnh sửa & lưu riêng từng mẫu!) -->
+        <div id="mod16-preset-dedicated-prompt-wrap" class="hidden w-full mt-2 p-2.5 rounded-xl border border-emerald-500/40 bg-zinc-950/90 space-y-1.5">
+          <div class="flex flex-wrap items-center justify-between gap-1.5">
+            <span id="mod16-preset-dedicated-title" class="text-[10.5px] font-extrabold text-emerald-300">📜 Khung Prompt riêng của mẫu lệnh:</span>
+            <div class="flex items-center gap-1.5">
+              <button type="button" id="mod16-btn-reset-preset-frame" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-[10px]">↺ Mặc định</button>
+              <button type="button" id="mod16-btn-close-preset-frame" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-rose-600 text-zinc-300 hover:text-white font-bold text-[10px]">✕ Ẩn khung</button>
+            </div>
+          </div>
+          <textarea id="mod16-preset-dedicated-prompt-box" rows="4" spellcheck="false" class="w-full p-2.5 rounded-lg border border-zinc-700 bg-zinc-900/95 text-[11.5px] text-zinc-100 leading-relaxed focus:outline-none focus:border-emerald-400 resize-y" placeholder="Nội dung khung prompt riêng của mẫu lệnh văn học này (tự động lưu riêng cho từng mẫu)..."></textarea>
         </div>
       `;
 
@@ -1766,6 +1779,60 @@
       const selectEl = document.getElementById('mod16-select-command-preset');
       const btnInsert = document.getElementById('mod16-btn-insert-preset');
       const btnRestore = document.getElementById('mod16-btn-restore-last-cmd');
+      const wrapFrame = document.getElementById('mod16-preset-dedicated-prompt-wrap');
+      const titleFrame = document.getElementById('mod16-preset-dedicated-title');
+      const boxFrame = document.getElementById('mod16-preset-dedicated-prompt-box');
+      const btnResetFrame = document.getElementById('mod16-btn-reset-preset-frame');
+      const btnCloseFrame = document.getElementById('mod16-btn-close-preset-frame');
+
+      const loadDedicatedPresetFrame = (presetId) => {
+        const preset = LITERARY_COMMAND_PRESETS.find((p) => p.id === presetId);
+        if (!preset || !wrapFrame || !boxFrame) {
+          wrapFrame?.classList.add('hidden');
+          return;
+        }
+        let customVal = '';
+        try {
+          customVal = localStorage.getItem(`noir_v112_literary_preset_${preset.id}`) || '';
+        } catch (_eLs) {}
+        if (titleFrame) {
+          titleFrame.textContent = `📜 Khung Prompt riêng: ${preset.label}`;
+        }
+        boxFrame.value = customVal.trim() ? customVal : preset.templateText;
+        wrapFrame.classList.remove('hidden');
+      };
+
+      if (selectEl) {
+        selectEl.addEventListener('change', () => {
+          loadDedicatedPresetFrame(selectEl.value);
+        });
+      }
+
+      if (boxFrame && selectEl) {
+        boxFrame.addEventListener('input', () => {
+          const pid = selectEl.value;
+          if (!pid) return;
+          try {
+            localStorage.setItem(`noir_v112_literary_preset_${pid}`, boxFrame.value);
+          } catch (_eLs) {}
+        });
+      }
+
+      if (btnResetFrame && selectEl && boxFrame) {
+        btnResetFrame.addEventListener('click', () => {
+          const preset = LITERARY_COMMAND_PRESETS.find((p) => p.id === selectEl.value);
+          if (!preset) return;
+          boxFrame.value = preset.templateText;
+          try {
+            localStorage.removeItem(`noir_v112_literary_preset_${preset.id}`);
+          } catch (_eLs) {}
+          this.utils.showToast(`↺ Đã khôi phục khung Prompt mặc định cho "${preset.label}"!`, 'info', 2200);
+        });
+      }
+
+      if (btnCloseFrame && wrapFrame) {
+        btnCloseFrame.addEventListener('click', () => wrapFrame.classList.add('hidden'));
+      }
 
       if (btnInsert && selectEl) {
         btnInsert.addEventListener('click', () => {
@@ -1789,24 +1856,47 @@
     }
 
     /**
-     * Chèn mẫu câu lệnh văn học vào ô nhập câu lệnh hiện tại và đồng bộ ngay lập tức
+     * Chèn mẫu câu lệnh văn học từ khung riêng của nó vào ô nhập câu lệnh hiện tại (đồng bộ cả Word Editor & Textarea!)
      */
     applyCommandPreset(presetId, appendMode = true) {
       const preset = LITERARY_COMMAND_PRESETS.find((p) => p.id === presetId);
       if (!preset) return;
 
-      const promptBox = document.getElementById('s18-fullscreen-prompt-textarea');
-      if (!promptBox) return;
+      let customFrameText = '';
+      try {
+        customFrameText = localStorage.getItem(`noir_v112_literary_preset_${preset.id}`) || '';
+      } catch (_eLs) {}
+      const boxFrame = document.getElementById('mod16-preset-dedicated-prompt-box');
+      const finalPresetText =
+        (boxFrame && !document.getElementById('mod16-preset-dedicated-prompt-wrap')?.classList.contains('hidden') && boxFrame.value.trim()) ||
+        customFrameText.trim() ||
+        preset.templateText;
 
-      const currentVal = promptBox.value.trim();
+      const promptBox =
+        document.getElementById('textarea-ai-user-command') ||
+        document.getElementById('s18-fullscreen-prompt-textarea');
+      const richBox = document.getElementById('rich-ai-user-command');
+      const legacyBox = document.getElementById('s18-fullscreen-prompt-textarea');
+
+      const currentVal = (promptBox?.value || richBox?.innerText || '').trim();
       const nextVal =
         appendMode && currentVal
-          ? `${currentVal}\n\n${preset.templateText}`
-          : preset.templateText;
+          ? `${currentVal}\n\n${finalPresetText}`
+          : finalPresetText;
 
-      promptBox.value = nextVal;
-      promptBox.dispatchEvent(new Event('input', { bubbles: true }));
-      this.utils.showToast(`✨ Đã chèn mẫu lệnh: "${preset.label}"`, 'success', 2400);
+      if (promptBox) {
+        promptBox.value = nextVal;
+        promptBox.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (legacyBox && legacyBox !== promptBox) {
+        legacyBox.value = nextVal;
+        legacyBox.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (richBox) {
+        richBox.innerHTML = this.utils.escapeHtml(nextVal).replace(/\r\n|\r|\n/g, '<br>');
+        richBox.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      this.utils.showToast(`✨ Đã chèn mẫu lệnh riêng: "${preset.label}"`, 'success', 2400);
     }
 
     /**
@@ -1927,8 +2017,13 @@
         'Ngôi thứ 3 giới hạn (Theo sát nhân vật chính)';
       const temp = document.getElementById('slider-ai-temperature')?.value || '0.85';
 
-      const sysInstruction =
+      const rawSysInstruction =
         this.sysPrompts?.getPromptForMode?.(modeKey) || modeSpec.primaryGoal;
+      const targetWordsFmt = targetWords.toLocaleString('vi-VN');
+      const sysInstruction = String(rawSysInstruction || '')
+        .replace(/\{\{TARGET_WORDS\}\}/g, targetWordsFmt)
+        .replace(/\(thường từ 3\.000 đến 4\.000\+ từ\)/gi, `(mục tiêu khoảng ${targetWordsFmt} từ theo thiết lập của tác giả)`)
+        .replace(/từ 3\.000 đến 4\.000\+ từ/gi, `khoảng ${targetWordsFmt} từ`);
       const sceneMarkersBlock =
         this.sceneBuilder?.buildCompiledSceneMarkersBlockForPrompt?.() ||
         '';
@@ -2312,19 +2407,25 @@
       }
 
       const rawMode5 = [
-        `🎨 CHẾ ĐỘ 5: VẼ SƠ ĐỒ CỐT TRUYỆN, TIMELINE & MẠNG LƯỚI NHÂN VẬT DẠNG PLAINTEXT MÃ ASCII CHUẨN ĐẸP`,
+        `🎨 CHẾ ĐỘ 5: VẼ SƠ ĐỒ CỐT TRUYỆN, TIMELINE & MẠNG LƯỚI NHÂN VẬT DẠNG PLAINTEXT MÃ ASCII (TÁCH RIÊNG 3 KHUNG COPYABLE)`,
         `(Bám sát tuyệt đối bản Story Bible bạn đã tổng hợp ở phần trên và toàn bộ các chương truyện tôi đã tải lên làm nguồn).`,
         ``,
-        `YÊU CẦU ĐỊNH DẠNG BẮT BUỘC (ĐỂ TÔI COPY THẲNG KHÔNG BỊ VỠ KHUNG):`,
-        `- Hãy vẽ toàn bộ sơ đồ đặt bên trong 1 khối mã Plaintext (code block \`\`\`text ... \`\`\`) dùng ký tự kẻ khung Unicode sắc nét (┌ ─ ┐ │ └ ┘ ├ ┤ ┬ ┴ ┼ ──▶ ▼ ◄── ═══), căn lề thẳng hàng tuyệt đối, mũi tên chỉ hướng rõ ràng, khoảng trắng thoáng dễ nhìn, KHÔNG bị lệch dòng.`,
-        `- Nếu dùng Google NotebookLM: hãy vừa vẽ khối sơ đồ Plaintext ASCII thật đẹp rõ mũi tên trong khung chat, vừa gợi ý cấu trúc để tạo Bản đồ tư duy / Báo cáo trực quan ở thanh Studio bên phải.`,
-        `- Bao gồm 3 sơ đồ nối tiếp rõ ràng:`,
-        `  1. SƠ ĐỒ TRỤC THỜI GIAN (TIMELINE): Arc → Hồi/Chương → Mốc giờ/ngày → Địa điểm → Bước ngoặt chính (có mũi tên ──▶ và ▼ mạch lạc).`,
-        `  2. SƠ ĐỒ MẠNG LƯỚI NHÂN VẬT & PHE PHÁI: Ai là đồng minh (<══>), đối thủ (──✖──), ai đang giấu bí mật gì với ai.`,
-        `  3. CÂY PHỤC BÚT & NGÒI NỔ: Phân tách [ĐÃ KÍCH NỔ] vs [ĐANG TREO CHỜ BÙNG NỔ] (kèm đánh dấu [!] nếu có điểm lệch logic).`,
+        `YÊU CẦU ĐỊNH DẠNG BẮT BUỘC — PHẢI TÁCH THÀNH ĐÚNG 3 KHỐI MÃ RIÊNG BIỆT (MỖI KHỐI LÀ 1 CODE BLOCK \`\`\`text ... \`\`\` ĐỘC LẬP ĐỂ TÔI BẤM COPY TỪNG KHUNG DỄ DÀNG KHÔNG BỊ GỘP CHUNG):`,
+        `- Dùng ký tự kẻ khung Unicode sắc nét (┌ ─ ┐ │ └ ┘ ├ ┤ ┬ ┴ ┼ ──▶ ▼ ◄── ═══), căn lề thẳng hàng tuyệt đối, mũi tên rõ hướng, KHÔNG bị lệch dòng.`,
+        ``,
+        `📦 KHUNG COPY 1 (Code block \`\`\`text ... \`\`\` riêng): SƠ ĐỒ 1 — TRỤC THỜI GIAN & DIỄN BIẾN SỰ KIỆN (TIMELINE)`,
+        `  • Arc → Hồi/Chương → Mốc giờ/ngày → Địa điểm → Bước ngoặt chính (kèm mũi tên ──▶ và ▼ mạch lạc).`,
+        ``,
+        `📦 KHUNG COPY 2 (Code block \`\`\`text ... \`\`\` riêng): SƠ ĐỒ 2 — MẠNG LƯỚI NHÂN VẬT, PHE PHÁI & XUNG ĐỘT`,
+        `  • Đồng minh (<══>), đối thủ (──✖──), thế lực ngầm và ai đang giấu bí mật gì với ai.`,
+        ``,
+        `📦 KHUNG COPY 3 (Code block \`\`\`text ... \`\`\` riêng): SƠ ĐỒ 3 — CÂY PHỤC BÚT, NGÒI NỔ & CẢNH BÁO MÂU THUẪN LOGIC`,
+        `  • Tách rõ [ĐÃ KÍCH NỔ] vs [ĐANG TREO CHỜ BÙNG NỔ], thời hạn đếm ngược và đánh dấu [!] nếu phát hiện điểm lệch logic.`,
+        ``,
+        `💡 GỢI Ý STUDIO NOTEBOOKLM: Sau 3 khung mã trên, hãy thêm 3 dòng ngắn gợi ý tôi bấm nút nào ở cột Studio bên phải (Bản đồ tư duy / Báo cáo / Bản đồ họa thông tin) để xem sơ đồ trực quan đẹp nhất.`,
         ``,
         `⭐ YÊU CẦU VẼ SƠ ĐỒ CÁ NHÂN CỦA NGƯỜI DÙNG:`,
-        cleanCmd || `Hãy vẽ sơ đồ cốt truyện, trục timeline hiện tại, mạng lưới nhân vật và cây phục bút dạng Plaintext mã ASCII sắc nét, mũi tên rõ ràng dễ nhìn để tôi copy trực tiếp vào Studio.`
+        cleanCmd || `Hãy xuất thành ĐÚNG 3 KHỐI MÃ Plaintext ASCII riêng biệt (3 code block copy độc lập: Timeline, Mạng lưới nhân vật, Phục bút & Ngòi nổ) thật sắc nét, thẳng hàng để tôi copy từng khung vào Studio.`
       ].join('\n');
       const trPrompt = window.NoirNovel?.i18n?.translatePromptFrame;
       return typeof trPrompt === 'function' ? trPrompt(rawMode5) : rawMode5;
@@ -3889,20 +3990,42 @@
       } catch (_eResize) {}
 
       const winName = isNotebook ? 'noir_split_notebooklm_window' : 'noir_split_gemini_window';
-      // Singleton: tối đa 1 cửa sổ Gemini + 1 cửa sổ NotebookLM bật cùng lúc — nếu cửa sổ đó đang mở sẵn thì điều hướng & focus thẳng qua nó, KHÔNG tạo cửa sổ thứ 2!
+      const serviceKey = isNotebook ? 'NOTEBOOKLM' : 'GEMINI';
+      this._splitSessionState = this._splitSessionState || {};
+      const state = this._splitSessionState[serviceKey] || { opened: false, lastConfirmAt: 0 };
+
+      // 1) Singleton trực tiếp: nếu trình duyệt còn giữ handle cửa sổ chia đôi đang mở -> focus thẳng qua cửa sổ đó, TUYỆT ĐỐI KHÔNG mở cửa sổ thứ 2!
       const existingWin = isNotebook ? this._activeNotebookLmWin : this._activeGeminiWin;
       if (existingWin && !existingWin.closed) {
         try {
           existingWin.focus();
           window.NoirStudio?.utils?.showToast?.(
             isNotebook
-              ? '✨ Cửa sổ Google NotebookLM đang mở sẵn — Đã chuyển thẳng qua cửa sổ đó (bấm Ctrl+V để dán câu lệnh)!'
-              : '✨ Cửa sổ Gemini đang mở sẵn — Đã chuyển thẳng qua cửa sổ đó (bấm Ctrl+V để dán câu lệnh)!',
+              ? '✨ Cửa sổ Google NotebookLM đang mở sẵn — Đã đưa cửa sổ đó lên trước (bấm Ctrl+V để dán câu lệnh)!'
+              : '✨ Cửa sổ Gemini đang mở sẵn — Đã đưa cửa sổ đó lên trước (bấm Ctrl+V để dán câu lệnh)!',
             'success',
-            3600
+            3800
           );
           return true;
         } catch (_eFocus) {}
+      }
+
+      // 2) Chống nhân đôi cửa sổ khi Google bật COOP (Cross-Origin-Opener-Policy làm existingWin.closed bị mất kết nối dù cửa sổ cũ vẫn đang mở):
+      //    Nếu phiên này đã mở 1 cửa sổ chia đôi rồi -> lần bấm đầu chỉ thử focus & nhắc chuyển sang cửa sổ đang mở;
+      //    chỉ khi người dùng bấm lại lần 2 trong vòng 6 giây (tức là đã chủ động tắt cửa sổ cũ) mới mở cửa sổ mới!
+      const nowMs = Date.now();
+      if (state.opened && nowMs - (state.lastConfirmAt || 0) > 6000) {
+        state.lastConfirmAt = nowMs;
+        this._splitSessionState[serviceKey] = state;
+        try { existingWin?.focus?.(); } catch (_eTryFocus) {}
+        window.NoirStudio?.utils?.showToast?.(
+          isNotebook
+            ? '🪟 Cửa sổ NotebookLM chia đôi đã được mở sẵn! Hãy bấm sang cửa sổ đó và nhấn Ctrl+V. (Nếu bạn đã tắt cửa sổ cũ, bấm lại nút này 1 lần nữa để mở mới)'
+            : '🪟 Cửa sổ Gemini chia đôi đã được mở sẵn! Hãy bấm sang cửa sổ đó và nhấn Ctrl+V. (Nếu bạn đã tắt cửa sổ cũ, bấm lại nút này 1 lần nữa để mở mới)',
+          'info',
+          5200
+        );
+        return true;
       }
 
       const features = `popup=yes,resizable=yes,scrollbars=yes,left=${rightX},top=${availTop},width=${halfW},height=${availH}`;
@@ -3910,6 +4033,7 @@
       if (opened) {
         if (isNotebook) this._activeNotebookLmWin = opened;
         else this._activeGeminiWin = opened;
+        this._splitSessionState[serviceKey] = { opened: true, lastConfirmAt: 0 };
         try { opened.focus(); } catch (_eF) {}
         window.NoirStudio?.utils?.showToast?.(
           isNotebook
@@ -4053,9 +4177,24 @@
             <button type="button" id="btn-close-split-bridge-modal" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-rose-600 text-white font-bold">✕</button>
           </div>
           <div class="p-4 space-y-3 max-h-[82vh] overflow-y-auto">
-            <div class="p-2.5 rounded-xl border border-emerald-500/50 bg-emerald-950/35 text-emerald-100 font-bold flex items-center justify-between gap-2">
-              <span>✅ Đã copy câu lệnh thành công vào bộ nhớ tạm!</span>
-              <button type="button" id="btn-split-bridge-recopy" class="px-2.5 py-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-500 text-white text-[10.5px] font-bold shrink-0">📋 Copy lại</button>
+            <div class="p-2.5 rounded-xl border border-emerald-500/50 bg-emerald-950/35 text-emerald-100 font-bold space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <span>✅ Đã copy câu lệnh thành công vào bộ nhớ tạm!</span>
+                <button type="button" id="btn-split-bridge-recopy" class="px-2.5 py-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-500 text-white text-[10.5px] font-bold shrink-0">📋 Copy lại</button>
+              </div>
+              <div class="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-emerald-500/30">
+                <span class="text-[10.5px] text-emerald-200/90 font-semibold">📎 Tải nhanh file đính kèm để gửi lên ${isNotebook ? 'NotebookLM' : 'Gemini'}:</span>
+                <button type="button" id="btn-split-dl-story-bible-pdf" class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-[10.5px] shadow transition cursor-pointer">
+                  📄 Tải Story Bible (.PDF)
+                </button>
+                ${
+                  modeKey === 'MODE_1_DRAFT'
+                    ? `<button type="button" id="btn-split-dl-plot-txt" class="px-2.5 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-black text-[10.5px] shadow transition cursor-pointer">
+                         📝 Tải File Tham Mưu / Chương (.TXT)
+                       </button>`
+                    : ''
+                }
+              </div>
             </div>
             ${modelReminderHtml}
             ${mode6TipHtml}
@@ -4101,6 +4240,56 @@
           await this.copyTextReliable(compiledPrompt);
           window.NoirStudio?.utils?.showToast?.('✅ Đã copy lại câu lệnh thành công!', 'success', 2400);
         }
+      });
+      modal.querySelector('#btn-split-dl-story-bible-pdf')?.addEventListener('click', () => {
+        const suite = window.NoirStudio?.v106CommandSuite;
+        const richBible = document.getElementById('tab4-rich-bible-editor');
+        const plainBible = document.getElementById('textarea-rendered-bible-content');
+        const htmlNow = richBible?.innerHTML?.trim() || '';
+        const plainNow = (plainBible?.value || richBible?.innerText || '').trim();
+        if (!htmlNow && !plainNow) {
+          window.NoirStudio?.utils?.showToast?.('⚠️ Nội dung Story Bible ở Tab 4 đang trống!', 'warning', 3200);
+          return;
+        }
+        if (suite?.exportRichHtmlToPdfDocument) {
+          suite.exportRichHtmlToPdfDocument(
+            'STORY BIBLE CHÍNH THỨC',
+            htmlNow || suite.escapeHtml(plainNow),
+            plainNow,
+            'Story_Bible'
+          );
+        } else {
+          document.getElementById('btn-tab4-export-bible-pdf-file')?.click();
+        }
+      });
+      modal.querySelector('#btn-split-dl-plot-txt')?.addEventListener('click', () => {
+        const plotText = String(this.synth?.getCompiledMode1PlotOutlineForPrompt?.() || '').trim();
+        let finalText = plotText;
+        let filePrefix = 'Tham_Muu_Cot_Truyen';
+        if (!finalText) {
+          const allChaps = window.NoirStudio?.chapterManager?.chapters || [];
+          finalText = allChaps
+            .map((c, idx) => `=== ${c.displayTitle || c.title || `Chương ${idx + 1}`} ===\n${c.content || ''}`)
+            .join('\n\n')
+            .trim();
+          filePrefix = 'Toan_Bo_Chuong_Truyen';
+        }
+        if (!finalText) {
+          window.NoirStudio?.utils?.showToast?.('⚠️ Chưa có nội dung Tham mưu cốt truyện hoặc chương để tải .TXT!', 'warning', 3200);
+          return;
+        }
+        const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const blob = new Blob(['\uFEFF' + finalText], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${filePrefix}_${stamp}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (_) {}
+        }, 600);
+        window.NoirStudio?.utils?.showToast?.(`📝 Đã tải file ${filePrefix}_${stamp}.txt thành công!`, 'success', 3000);
       });
       modal.querySelector('#btn-split-launch-app-android')?.addEventListener('click', () => {
         this.launchExternalSplitWindow(serviceType, true);
@@ -5449,16 +5638,17 @@
         }
       });
 
-      // Cập nhật nút Phóng to ô nhập áp dụng cho cả Rich Editor lẫn Textarea
+      // Nút Phóng to ô nhập lệnh: mở cửa sổ nổi sạch đẹp chỉ gồm ô nhập lệnh + thanh Word tối giản + nút Đóng (áp dụng cho TẤT CẢ Chế độ 1–6)
       const expandBtn = document.getElementById('btn-toggle-prompt-box-expand');
-      if (expandBtn) {
+      if (expandBtn && !expandBtn.dataset.v111ExpandModalBound) {
+        expandBtn.dataset.v111ExpandModalBound = '1';
         expandBtn.removeAttribute('onclick');
-        expandBtn.addEventListener('click', () => {
-          const target = this.richModeActive ? richEl : plainEl;
-          if (!target) return;
-          const big = target.classList.toggle('min-h-[68vh]');
-          target.classList.toggle('min-h-[42vh]', !big);
-          expandBtn.textContent = big ? '⤡ Thu gọn ô nhập' : '⤢ Phóng to ô nhập';
+        expandBtn.textContent = '⤢ Phóng to ô nhập';
+        expandBtn.classList.add('noir-v111-expand-glow');
+        expandBtn.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          this.openExpandedCommandFocusModal();
         });
       }
 
@@ -5529,6 +5719,198 @@
       this.bindAutoCopyOnAllExternalAiLinks();
       this.refreshHeroTopLinksUI();
     }
+
+    /**
+     * Cửa sổ nổi phóng to ô nhập lệnh sạch đẹp (chỉ gồm ô nhập + thanh Word tối giản B/I/U/Bảng/Ảnh + nút Đóng)
+     * Áp dụng đồng bộ 2 chiều tức thì cho MỌI Chế độ 1–6.
+     */
+    openExpandedCommandFocusModal() {
+      document.getElementById('modal-v111-expanded-cmd-editor')?.remove();
+
+      const modeKey = this.getActiveModeKey();
+      const modeNameMap = {
+        MODE_1_DRAFT: 'Chế độ 1: Viết Truyện',
+        MODE_2_BRAINSTORM: 'Chế độ 2: Tham Mưu Cốt Truyện',
+        MODE_3_AUDIT: 'Chế độ 3: Kiểm Toán Logic',
+        MODE_4_REVIEW: 'Chế độ 4: Đánh Giá & Phê Bình',
+        MODE_5_DIAGRAM: 'Chế độ 5: Vẽ Sơ Đồ ASCII',
+        MODE_6_BOOK_COVER: 'Chế độ 6: Tạo Bìa Truyện'
+      };
+      const modeTitle = modeNameMap[modeKey] || modeKey;
+      const srcRich = document.getElementById('rich-ai-user-command');
+      const srcPlain = document.getElementById('textarea-ai-user-command');
+      let modalRichMode = Boolean(this.richModeActive);
+
+      const modal = document.createElement('div');
+      modal.id = 'modal-v111-expanded-cmd-editor';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.className =
+        'fixed inset-0 z-[210] bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4';
+
+      modal.innerHTML = `
+        <div class="w-full max-w-5xl h-[92vh] rounded-2xl border-2 border-emerald-400/75 bg-zinc-950 text-zinc-100 shadow-2xl flex flex-col overflow-hidden">
+          <div class="px-4 py-2.5 border-b border-zinc-800 bg-zinc-900/95 flex flex-wrap items-center justify-between gap-2 shrink-0">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-200 font-black text-xs truncate">
+                ✍️ Phóng To Ô Nhập Lệnh — ${this.escapeHtml(modeTitle)}
+              </span>
+              <span id="v111-expand-char-count" class="text-[11px] font-mono text-zinc-400">0 ký tự</span>
+            </div>
+            <button type="button" id="btn-close-v111-expanded-cmd" class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow transition cursor-pointer">
+              ✕ Đóng
+            </button>
+          </div>
+
+          <div class="px-3 py-2 border-b border-zinc-800 bg-zinc-950 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button type="button" data-v111-exp-cmd="bold" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-black" title="In đậm">B</button>
+              <button type="button" data-v111-exp-cmd="italic" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white italic font-serif" title="In nghiêng">I</button>
+              <button type="button" data-v111-exp-cmd="underline" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white underline" title="Gạch chân">U</button>
+              <button type="button" id="btn-v111-exp-table" class="px-2.5 py-1 rounded-lg bg-sky-900/60 hover:bg-sky-800 border border-sky-500/40 text-sky-200 font-bold" title="Chèn bảng chuẩn Word">⊞ + Bảng</button>
+              <button type="button" id="btn-v111-exp-img" class="px-2.5 py-1 rounded-lg bg-violet-900/60 hover:bg-violet-800 border border-violet-500/40 text-violet-200 font-bold" title="Chèn ảnh hoặc dán Ctrl+V">🖼️ + Ảnh</button>
+              <input type="file" id="input-v111-exp-img" accept="image/*" class="hidden" />
+            </div>
+            <button type="button" id="btn-v111-exp-toggle-word" class="px-3 py-1 rounded-lg border border-emerald-500/50 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 font-bold text-[11px] transition">
+              ${modalRichMode ? '📄 Chế độ Word (Bảng + Ảnh)' : '📝 Chế độ Văn bản thuần'}
+            </button>
+          </div>
+
+          <div class="flex-1 min-h-0 p-3 sm:p-4 flex flex-col">
+            <div id="v111-exp-rich-editor" contenteditable="true" spellcheck="false" class="${
+              modalRichMode ? '' : 'hidden'
+            } flex-1 w-full overflow-y-auto p-4 rounded-xl border border-emerald-500/45 bg-zinc-900/80 text-sm sm:text-base leading-relaxed text-zinc-100 select-text focus:outline-none focus:border-emerald-400 whitespace-pre-wrap break-words [&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-zinc-600 [&_th]:bg-zinc-800/80 [&_th]:px-2 [&_th]:py-1 [&_td]:border [&_td]:border-zinc-700 [&_td]:px-2 [&_td]:py-1 [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2"></div>
+            <textarea id="v111-exp-plain-editor" spellcheck="false" class="${
+              modalRichMode ? 'hidden' : ''
+            } flex-1 w-full p-4 rounded-xl border border-emerald-500/45 bg-zinc-900/80 text-sm sm:text-base leading-relaxed text-zinc-100 select-text focus:outline-none focus:border-emerald-400 resize-none" placeholder="Nhập câu lệnh, dàn ý phân cảnh hoặc yêu cầu cụ thể cho AI tại đây..."></textarea>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      const expRich = modal.querySelector('#v111-exp-rich-editor');
+      const expPlain = modal.querySelector('#v111-exp-plain-editor');
+      const charBadge = modal.querySelector('#v111-expand-char-count');
+      const wordToggle = modal.querySelector('#btn-v111-exp-toggle-word');
+      const imgBtn = modal.querySelector('#btn-v111-exp-img');
+      const imgInp = modal.querySelector('#input-v111-exp-img');
+      const tableBtn = modal.querySelector('#btn-v111-exp-table');
+
+      if (expRich && srcRich) expRich.innerHTML = srcRich.innerHTML;
+      if (expPlain && srcPlain) expPlain.value = srcPlain.value || (srcRich?.innerText || '');
+
+      const syncBackToMain = () => {
+        const curPlain = modalRichMode ? expRich?.innerText || '' : expPlain?.value || '';
+        const curHtml = modalRichMode
+          ? expRich?.innerHTML || ''
+          : this.escapeHtml(curPlain).replace(/\r\n|\r|\n/g, '<br>');
+        if (srcRich) srcRich.innerHTML = curHtml;
+        if (srcPlain) {
+          srcPlain.value = curPlain;
+          srcPlain.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        try {
+          localStorage.setItem(`noir_v106_cmd_plain_${modeKey}`, curPlain);
+          localStorage.setItem(`noir_v106_cmd_html_${modeKey}`, curHtml);
+        } catch (_eLs) {}
+        if (charBadge) charBadge.textContent = `${curPlain.length.toLocaleString('vi-VN')} ký tự`;
+      };
+
+      syncBackToMain();
+      expRich?.addEventListener('input', syncBackToMain);
+      expPlain?.addEventListener('input', syncBackToMain);
+
+      expRich?.addEventListener('paste', (ev) => {
+        const items = ev.clipboardData?.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i]?.type?.startsWith('image/')) {
+            const f = items[i].getAsFile();
+            if (!f) continue;
+            ev.preventDefault();
+            const reader = new FileReader();
+            reader.onload = () => {
+              const html = `<p><img src="${reader.result}" style="max-width:100%;border-radius:10px;margin:8px 0;" /></p>`;
+              try { document.execCommand('insertHTML', false, html); } catch (_) { expRich.innerHTML += html; }
+              syncBackToMain();
+            };
+            reader.readAsDataURL(f);
+            return;
+          }
+        }
+      });
+
+      modal.querySelectorAll('[data-v111-exp-cmd]').forEach((b) => {
+        b.addEventListener('click', () => {
+          if (!modalRichMode) wordToggle?.click();
+          expRich?.focus();
+          try { document.execCommand(b.getAttribute('data-v111-exp-cmd'), false, null); } catch (_) {}
+          syncBackToMain();
+        });
+      });
+
+      tableBtn?.addEventListener('click', () => {
+        if (!modalRichMode) wordToggle?.click();
+        expRich?.focus();
+        const tbl =
+          '<table style="width:100%;border-collapse:collapse;margin:8px 0;"><thead><tr><th>Mục</th><th>Chi tiết</th><th>Ghi chú</th></tr></thead><tbody><tr><td>Cảnh 1</td><td>...</td><td>...</td></tr></tbody></table><p><br></p>';
+        try { document.execCommand('insertHTML', false, tbl); } catch (_) { expRich.innerHTML += tbl; }
+        syncBackToMain();
+      });
+
+      imgBtn?.addEventListener('click', () => imgInp?.click());
+      imgInp?.addEventListener('change', () => {
+        const f = imgInp.files && imgInp.files[0];
+        imgInp.value = '';
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (!modalRichMode) wordToggle?.click();
+          expRich?.focus();
+          const html = `<p><img src="${reader.result}" style="max-width:100%;border-radius:10px;margin:8px 0;" /></p>`;
+          try { document.execCommand('insertHTML', false, html); } catch (_) { expRich.innerHTML += html; }
+          syncBackToMain();
+        };
+        reader.readAsDataURL(f);
+      });
+
+      wordToggle?.addEventListener('click', () => {
+        modalRichMode = !modalRichMode;
+        if (modalRichMode) {
+          if (expRich && expPlain) {
+            expRich.innerHTML = this.escapeHtml(expPlain.value || '').replace(/\r\n|\r|\n/g, '<br>');
+          }
+          expRich?.classList.remove('hidden');
+          expPlain?.classList.add('hidden');
+          wordToggle.textContent = '📄 Chế độ Word (Bảng + Ảnh)';
+        } else {
+          if (expRich && expPlain) expPlain.value = expRich.innerText || '';
+          expRich?.classList.add('hidden');
+          expPlain?.classList.remove('hidden');
+          wordToggle.textContent = '📝 Chế độ Văn bản thuần';
+        }
+        syncBackToMain();
+      });
+
+      const closeModal = () => {
+        syncBackToMain();
+        document.removeEventListener('keydown', onEsc);
+        modal.remove();
+      };
+      const onEsc = (e) => {
+        if (e.key === 'Escape') closeModal();
+      };
+      document.addEventListener('keydown', onEsc);
+      modal.querySelector('#btn-close-v111-expanded-cmd')?.addEventListener('click', closeModal);
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+      });
+
+      setTimeout(() => {
+        (modalRichMode ? expRich : expPlain)?.focus();
+      }, 40);
+    }
   }
 
   // ============================================================================
@@ -5564,6 +5946,19 @@
         .noir-v110-blink-6s {
           animation: noirV110GuideBlink6s 1s ease-in-out 6;
         }
+        @keyframes noirV111ExpandGlow {
+          0%, 100% {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.35);
+            border-color: rgba(52, 211, 153, 0.75);
+          }
+          50% {
+            box-shadow: 0 0 14px 2px rgba(16, 185, 129, 0.78);
+            border-color: rgba(110, 231, 183, 1);
+          }
+        }
+        .noir-v111-expand-glow {
+          animation: noirV111ExpandGlow 1.6s ease-in-out infinite;
+        }
       `;
       document.head.appendChild(st);
       this._styleInjected = true;
@@ -5573,95 +5968,138 @@
       const isCoverMode = modeKey === 'MODE_6_BOOK_COVER';
       return `
         <div class="space-y-3 text-[11.5px] leading-relaxed text-zinc-200">
-          <!-- Bước 1: Mở thẳng Gemini & giao diện chính -->
-          <div class="p-3 rounded-xl border border-indigo-500/40 bg-zinc-900/90 space-y-2.5">
+          <!-- BƯỚC 1: Mở trang chủ Gemini -->
+          <div class="p-3 rounded-xl border border-indigo-500/45 bg-zinc-900/90 space-y-2">
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <div class="font-black text-amber-300">Bước 1: Mở thẳng giao diện chính Gemini &amp; chọn mô hình</div>
+              <div class="font-black text-amber-300">Bước 1: Mở thẳng trang chủ Gemini Web / App</div>
               <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[11px] shadow transition">
                 🚀 Mở thẳng Gemini (gemini.google.com) ↗
               </a>
             </div>
-            <p class="text-[11px] text-zinc-300">Bấm nút xanh bên phải (hoặc nút Chia đôi màn hình) để vào thẳng màn hình chính của Gemini. Ở góc phải thanh chat, chọn mô hình phù hợp (<strong class="text-emerald-300">Pro / Flash / Neon</strong>).</p>
-            <!-- Mockup giao diện chính Gemini -->
-            <div class="rounded-xl border border-zinc-700/80 bg-[#131314] p-3 space-y-2.5 font-sans shadow-inner">
-              <div class="flex items-center justify-between text-[11px] text-zinc-400">
-                <span class="font-bold text-zinc-200 flex items-center gap-1.5"><span class="text-sky-400">✦</span> Gemini</span>
-                <span class="px-2 py-0.5 rounded-full bg-zinc-800 border border-zinc-700 text-[10px] text-zinc-300">Tài khoản Google của bạn</span>
-              </div>
-              <div class="text-center py-1">
-                <div class="text-sm font-bold bg-gradient-to-r from-sky-400 via-indigo-300 to-rose-300 bg-clip-text text-transparent">Xin chào, hôm nay chúng ta viết chương nào?</div>
-              </div>
+            <p class="text-[11px] text-zinc-300">Bấm nút xanh ở góc phải (hoặc nút <strong>Chia Đôi Màn Hình Với Gemini Ngay</strong> bên dưới) để mở giao diện chính của Gemini bằng tài khoản Google của bạn.</p>
+          </div>
+
+          <!-- BƯỚC 2: Bấm chọn mô hình -->
+          <div class="p-3 rounded-xl border border-amber-500/40 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-amber-300">Bước 2: Bấm góc phải thanh "Hỏi Gemini" để chọn Mô hình</div>
+            <p class="text-[11px] text-zinc-300">Chọn đúng mô hình bạn mong muốn (ví dụ <strong>Pro / Flash / Neon</strong>) ngay tại góc phải thanh nhập lệnh.</p>
+            <div class="rounded-xl border border-zinc-700/80 bg-[#131314] p-3 font-sans">
               <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-full border border-zinc-700 bg-[#1e1f20]">
                 <div class="flex items-center gap-2 text-zinc-400">
                   <span class="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-600 flex items-center justify-center text-white font-black text-sm">+</span>
                   <span class="text-xs">Hỏi Gemini</span>
                 </div>
                 <div class="flex items-center gap-1.5">
-                  <span class="px-2 py-0.5 rounded-lg border-2 border-amber-400 bg-amber-500/20 text-amber-200 font-extrabold text-[10.5px]">Pro / Neon ▾</span>
-                  <span class="px-1.5 py-0.5 rounded bg-amber-400 text-zinc-950 font-black text-[9px]">CHỌN MÔ HÌNH</span>
+                  <span class="px-2.5 py-0.5 rounded-lg border-2 border-amber-400 bg-amber-500/20 text-amber-100 font-extrabold text-[10.5px]">Neon / Pro ▾</span>
+                  <span class="px-1.5 py-0.5 rounded bg-amber-400 text-zinc-950 font-black text-[9px]">BẤM ĐÂY</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Bước 2: Bấm dấu + để tải tệp PDF Story Bible / Tham mưu / File .TXT ASCII -->
-          <div class="p-3 rounded-xl border border-emerald-500/40 bg-zinc-900/90 space-y-2.5">
-            <div class="font-black text-emerald-300">Bước 2: Bấm dấu (+) bên trái thanh "Hỏi Gemini" → Tải tệp PDF lên</div>
+          <!-- BƯỚC 3: Bấm dấu + -->
+          <div class="p-3 rounded-xl border border-emerald-500/40 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-emerald-300">Bước 3: Bấm biểu tượng dấu (+) bên trái thanh "Hỏi Gemini"</div>
+            <div class="rounded-xl border border-zinc-700/80 bg-[#131314] p-3 font-sans">
+              <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-full border border-zinc-700 bg-[#1e1f20]">
+                <div class="flex items-center gap-2">
+                  <span class="w-7 h-7 rounded-full border-2 border-amber-400 bg-amber-400 text-zinc-950 flex items-center justify-center font-black text-base shadow">+</span>
+                  <span class="px-1.5 py-0.5 rounded bg-amber-400 text-zinc-950 font-black text-[9px]">BẤM DẤU +</span>
+                  <span class="text-xs text-zinc-400">Hỏi Gemini</span>
+                </div>
+                <span class="text-xs text-indigo-300 font-bold">Neon ▾</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BƯỚC 4: Bấm "Tải tệp lên" -->
+          <div class="p-3 rounded-xl border border-emerald-500/45 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-emerald-300">Bước 4: Trong menu hiện ra, bấm vào mục "📎 Tải tệp lên"</div>
+            <div class="rounded-xl border border-zinc-700/80 bg-[#0d1122] p-3 flex justify-center font-sans">
+              <div class="w-64 rounded-2xl border border-zinc-700 bg-[#1e1f20] p-2 space-y-1 shadow-xl">
+                <div class="flex items-center justify-between px-2.5 py-2 rounded-xl border-2 border-amber-400 bg-amber-500/20">
+                  <span class="font-extrabold text-amber-100 text-xs">📎 Tải tệp lên</span>
+                  <span class="px-2 py-0.5 rounded-md bg-amber-400 text-zinc-950 font-black text-[9.5px]">BẤM ĐÂY</span>
+                </div>
+                <div class="px-2.5 py-1.5 rounded-lg text-zinc-400 text-xs">▲ Thêm từ Drive</div>
+                <div class="px-2.5 py-1.5 rounded-lg text-zinc-400 text-xs">🖼️ Tạo hình ảnh</div>
+                <div class="px-2.5 py-1.5 rounded-lg text-zinc-500 text-xs">🎬 Tạo video</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BƯỚC 5: Chọn tệp trong cửa sổ hệ thống -->
+          <div class="p-3 rounded-xl border border-sky-500/45 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-sky-300">Bước 5: Chọn đúng file vừa tải ở cửa sổ máy tính/điện thoại → bấm "Open / Mở"</div>
             <p class="text-[11px] text-zinc-300">
-              • <strong>Chế độ 2 (Tham mưu):</strong> Up <strong>1 file PDF Story Bible</strong>.<br/>
-              • <strong>Chế độ 1 (Viết truyện):</strong> Up <strong>2 file PDF</strong> (<em>Story Bible</em> + <em>Tham mưu cốt truyện</em>).<br/>
-              • <strong>Chế độ 5 (Chuyển mã ASCII → Ảnh đẹp):</strong> Up <strong>1 file <code>.TXT</code></strong> mã sơ đồ ASCII.
+              • <strong>Chế độ 1 (Viết truyện):</strong> Chọn <strong>2 file</strong> (<code>Story_Bible.pdf</code> + <code>Tham_Muu_Cot_Truyen.txt</code>).<br/>
+              • <strong>Chế độ 2–6:</strong> Chọn <strong>1 file</strong> (<code>Story_Bible.pdf</code>).<br/>
+              • <strong>Chuyển sơ đồ ASCII sang ảnh đẹp:</strong> Chọn file <code>.TXT</code> mã sơ đồ ASCII.
             </p>
-            <!-- Mockup menu dấu + của Gemini giống thật -->
-            <div class="rounded-xl border border-zinc-700/80 bg-[#0d1122] p-3 flex flex-col items-center">
-              <div class="w-full max-w-md space-y-2">
-                <div class="flex items-center justify-between px-3 py-2 rounded-full border border-zinc-600 bg-[#1e1f20]">
-                  <div class="flex items-center gap-2">
-                    <span class="w-6 h-6 rounded-full bg-amber-400 text-zinc-950 flex items-center justify-center font-black text-sm shadow">+</span>
-                    <span class="text-xs text-zinc-400">Hỏi Gemini</span>
-                  </div>
-                  <span class="text-xs font-bold text-indigo-300">Neon ▾</span>
-                </div>
-                <div class="w-64 rounded-2xl border border-zinc-700 bg-[#1e1f20] p-2 space-y-1 shadow-xl">
-                  <div class="flex items-center justify-between px-2.5 py-2 rounded-xl border-2 border-amber-400 bg-amber-500/15">
-                    <span class="font-extrabold text-amber-100 text-xs">📎 Tải tệp lên</span>
-                    <span class="px-2 py-0.5 rounded-md bg-amber-400 text-zinc-950 font-black text-[9.5px]">BẤM ĐÂY</span>
-                  </div>
-                  <div class="px-2.5 py-1.5 rounded-lg text-zinc-400 text-xs">▲ Thêm từ Drive</div>
-                  <div class="flex items-center justify-between px-2.5 py-1.5 rounded-xl ${
-                    isCoverMode ? 'border-2 border-violet-400 bg-violet-500/20 text-violet-100 font-extrabold' : 'text-zinc-300'
-                  } text-xs">
-                    <span>🖼️ Tạo hình ảnh</span>
-                    ${isCoverMode ? '<span class="px-1.5 py-0.5 rounded bg-violet-400 text-zinc-950 font-black text-[9px]">DÙNG CHO BÌA</span>' : '<span class="text-[9.5px] text-zinc-500">(Chế độ 6 / Vẽ ảnh)</span>'}
-                  </div>
-                  <div class="px-2.5 py-1.5 rounded-lg text-zinc-500 text-xs">🎬 Tạo video</div>
-                </div>
+            <div class="rounded-xl border border-zinc-700 bg-[#181a20] p-2.5 space-y-1.5 font-sans text-[11px]">
+              <div class="flex items-center justify-between text-zinc-400 border-b border-zinc-700 pb-1">
+                <span>📂 Thư mục Downloads (Tải xuống)</span>
+                <span class="text-[10px]">Chọn 1 hoặc nhiều tệp</span>
+              </div>
+              <div class="px-2 py-1.5 rounded-lg bg-sky-500/20 border border-sky-400/60 text-sky-100 font-bold flex items-center justify-between">
+                <span>📄 Story_Bible.pdf</span>
+                <span class="text-[10px] text-emerald-300">✓ Đã chọn</span>
+              </div>
+              <div class="px-2 py-1.5 rounded-lg bg-cyan-500/15 border border-cyan-400/50 text-cyan-100 font-bold flex items-center justify-between">
+                <span>📝 Tham_Muu_Cot_Truyen.txt</span>
+                <span class="text-[10px] text-emerald-300">✓ (Chế độ 1)</span>
+              </div>
+              <div class="flex justify-end pt-1">
+                <span class="px-3 py-1 rounded-lg bg-amber-400 text-zinc-950 font-black text-[10.5px]">Open / Mở (BẤM ĐÂY)</span>
               </div>
             </div>
           </div>
 
-          <!-- Bước 3: Dán câu lệnh đã copy & bấm Gửi -->
-          <div class="p-3 rounded-xl border border-violet-500/40 bg-zinc-900/90 space-y-2.5">
-            <div class="font-black text-violet-300">Bước 3: Dán câu lệnh đã copy (Ctrl+V / Dán) &amp; bấm Gửi (➤)</div>
-            <p class="text-[11px] text-zinc-300">Câu lệnh tổng hợp đã được web tự động copy sẵn. Bạn chỉ cần nhấn <kbd class="px-1.5 py-0.5 rounded bg-zinc-800 text-emerald-300 font-mono">Ctrl+V</kbd> (hoặc chạm giữ → Dán trên điện thoại) rồi bấm nút Gửi.</p>
-            <div class="rounded-xl border border-zinc-700/80 bg-[#1e1f20] p-3 space-y-2">
+          <!-- BƯỚC 6: Riêng Chế độ 6 (Tạo hình ảnh) -->
+          <div class="p-3 rounded-xl border ${isCoverMode ? 'border-violet-400 bg-violet-950/35' : 'border-violet-500/35 bg-zinc-900/90'} space-y-2">
+            <div class="font-black text-violet-300">Bước 6 (Khi vẽ Bìa Chế độ 6 hoặc vẽ ảnh Sơ đồ): Bấm dấu (+) → bấm "🖼️ Tạo hình ảnh"</div>
+            <div class="rounded-xl border border-zinc-700/80 bg-[#0d1122] p-3 flex justify-center font-sans">
+              <div class="w-64 rounded-2xl border border-zinc-700 bg-[#1e1f20] p-2 space-y-1 shadow-xl">
+                <div class="px-2.5 py-1.5 rounded-lg text-zinc-400 text-xs">📎 Tải tệp lên</div>
+                <div class="px-2.5 py-1.5 rounded-lg text-zinc-400 text-xs">▲ Thêm từ Drive</div>
+                <div class="flex items-center justify-between px-2.5 py-2 rounded-xl border-2 border-amber-400 bg-amber-500/20">
+                  <span class="font-extrabold text-amber-100 text-xs">🖼️ Tạo hình ảnh</span>
+                  <span class="px-2 py-0.5 rounded-md bg-amber-400 text-zinc-950 font-black text-[9.5px]">BẤM ĐÂY</span>
+                </div>
+                <div class="px-2.5 py-1.5 rounded-lg text-zinc-500 text-xs">🎬 Tạo video</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BƯỚC 7: Dán câu lệnh đã copy -->
+          <div class="p-3 rounded-xl border border-indigo-500/40 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-indigo-300">Bước 7: Bấm vào ô "Hỏi Gemini" → Nhấn Ctrl+V (hoặc chạm giữ → Dán)</div>
+            <div class="rounded-xl border border-zinc-700 bg-[#1e1f20] p-3 space-y-2">
               <div class="flex flex-wrap gap-1.5">
-                <span class="px-2 py-1 rounded-lg bg-rose-500/15 border border-rose-400/45 text-rose-200 text-[10.5px] font-bold">📄 Story_Bible.pdf</span>
-                <span class="px-2 py-1 rounded-lg bg-cyan-500/15 border border-cyan-400/45 text-cyan-200 text-[10.5px] font-bold">📄 Tham_Muu_Cot_Truyen.pdf</span>
+                <span class="px-2 py-0.5 rounded-md bg-rose-500/20 border border-rose-400/45 text-rose-200 text-[10px] font-bold">📄 Story_Bible.pdf</span>
+                <span class="px-2 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-400/45 text-cyan-200 text-[10px] font-bold">📝 Tham_Muu_Cot_Truyen.txt</span>
               </div>
-              <div class="flex items-end justify-between gap-2 pt-1 border-t border-zinc-700/60">
-                <div class="text-[11px] text-emerald-200 italic truncate">✍️ [Đã dán câu lệnh tổng hợp tối ưu &lt; 10.000 ký tự...]</div>
-                <span class="px-2.5 py-1 rounded-full bg-indigo-500 text-white font-black text-xs shrink-0 shadow">➤ Gửi</span>
+              <div class="px-2.5 py-2 rounded-lg border-2 border-emerald-400/65 bg-emerald-950/30 text-emerald-200 text-[11px] font-bold">
+                📋 [Ctrl+V] Đã dán trọn câu lệnh tổng hợp tối ưu!
               </div>
             </div>
           </div>
 
-          <!-- Bước 4: Copy kết quả về Web -->
-          <div class="p-3 rounded-xl border border-cyan-500/40 bg-zinc-900/90 space-y-1.5">
-            <div class="font-black text-cyan-300">Bước 4: Chép kết quả ngược về Web Viết Tiểu Thuyết Của Bi</div>
+          <!-- BƯỚC 8: Bấm nút gửi -->
+          <div class="p-3 rounded-xl border border-emerald-500/40 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-emerald-300">Bước 8: Bấm nút mũi tên Gửi (➤) bên phải để Gemini thực thi</div>
+            <div class="flex items-center justify-end gap-2 rounded-xl border border-zinc-700 bg-[#1e1f20] px-3 py-2">
+              <span class="text-[11px] text-zinc-400 flex-1 truncate">✍️ Prompt đã sẵn sàng...</span>
+              <span class="px-3 py-1 rounded-full border-2 border-amber-400 bg-indigo-600 text-white font-black text-xs shadow">➤ Gửi (BẤM ĐÂY)</span>
+            </div>
+          </div>
+
+          <!-- BƯỚC 9: Copy kết quả về Web -->
+          <div class="p-3 rounded-xl border border-cyan-500/45 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-cyan-300">Bước 9: Bấm biểu tượng Sao chép (❐) dưới câu trả lời → dán ngược về Web</div>
             <p class="text-[11px] text-zinc-300">
-              • Bấm biểu tượng <strong>📋 Sao chép</strong> ở cuối câu trả lời Gemini → dán vào <strong>Cửa sổ đầu ra Tab 3</strong> (hỗ trợ chuẩn Word giữ nguyên bảng biểu &amp; ảnh, có nút tải PDF) hoặc bấm <strong>Chèn nối tiếp / Thay thế</strong> đưa thẳng vào bản thảo.<br/>
-              • Riêng <strong>Ảnh Bìa (Chế độ 6)</strong>: Chuột phải <em>Sao chép hình ảnh</em> (hoặc tải ảnh) → dán <code>Ctrl+V</code> vào Kho Bìa Chế độ 6 để tự động lưu thư mục &amp; gắn vào xuất sách PDF!
+              • <strong>Văn bản / Bảng biểu (Chế độ 1–4):</strong> Bấm nút <strong>❐ Sao chép</strong> dưới câu trả lời Gemini → dán vào <strong>Cửa sổ đầu ra Tab 3</strong> (giữ trọn bảng biểu &amp; định dạng chuẩn Word).<br/>
+              • <strong>Ảnh Bìa (Chế độ 6):</strong> Chuột phải vào ảnh → <em>Sao chép hình ảnh</em> → sang Tab 3 Chế độ 6 bấm <code>Ctrl+V</code> để tự lưu vào Kho Bìa &amp; gắn vào xuất sách PDF!
             </p>
           </div>
         </div>
@@ -5671,95 +6109,166 @@
     buildNotebookLmGuideStepsHtml() {
       return `
         <div class="space-y-3 text-[11.5px] leading-relaxed text-zinc-200">
-          <!-- Bước 1: Mở thẳng Google NotebookLM & Tạo Sổ mới -->
-          <div class="p-3 rounded-xl border border-sky-500/45 bg-zinc-900/90 space-y-2.5">
+          <!-- BƯỚC 1: Mở thẳng trang chủ Google NotebookLM (Gemini Notebook) -->
+          <div class="p-3 rounded-xl border border-sky-500/45 bg-zinc-900/90 space-y-2">
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <div class="font-black text-amber-300">Bước 1: Mở thẳng Google NotebookLM &amp; bấm "+ Tạo mới"</div>
+              <div class="font-black text-amber-300">Bước 1: Mở thẳng trang chủ Google NotebookLM (Gemini Notebook)</div>
               <a href="https://notebooklm.google.com/" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-[11px] shadow transition">
                 🚀 Mở thẳng NotebookLM (notebooklm.google.com) ↗
               </a>
             </div>
-            <p class="text-[11px] text-zinc-300">Bấm link xanh bên phải để mở trang chủ Google NotebookLM, sau đó bấm nút <strong class="text-amber-200">+ Tạo mới (Create new)</strong> để mở một Sổ tay riêng cho bộ tiểu thuyết của bạn.</p>
-            <!-- Mockup màn hình chính NotebookLM -->
+            <p class="text-[11px] text-zinc-300">Bấm nút xanh bên phải (hoặc nút <strong>Chia Đôi Màn Hình Với NotebookLM Ngay</strong> bên dưới) để mở màn hình chính của <strong>Gemini Notebook / NotebookLM</strong>.</p>
+          </div>
+
+          <!-- BƯỚC 2: Bấm nút "+ Sổ ghi chú mới" (chuẩn ảnh chụp màn hình thật!) -->
+          <div class="p-3 rounded-xl border border-amber-500/45 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-amber-300">Bước 2: Ở trang chủ, bấm nút xanh "+ Sổ ghi chú mới" (hoặc mở sổ truyện cũ của bạn)</div>
             <div class="rounded-xl border border-zinc-700/80 bg-[#17191e] p-3 space-y-2.5 font-sans">
-              <div class="flex items-center justify-between">
-                <span class="font-extrabold text-zinc-100 text-xs flex items-center gap-1.5">📓 NotebookLM</span>
-                <span class="px-2.5 py-1 rounded-full border-2 border-amber-400 bg-amber-500/20 text-amber-100 font-black text-[10.5px] flex items-center gap-1.5 shadow">
-                  <span>+ Tạo mới</span>
+              <div class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2 text-[11px]">
+                <div class="flex items-center gap-2 font-extrabold text-zinc-100">
+                  <span class="text-sky-400">◠</span> <span>Gemini Notebook</span>
+                  <span class="px-2 py-0.5 rounded-full bg-zinc-800 text-[9.5px] text-zinc-300">Tất cả</span>
+                  <span class="text-[9.5px] text-zinc-400">Sổ ghi chú của tôi</span>
+                </div>
+                <span class="px-2 py-0.5 rounded bg-zinc-800 text-[9.5px] text-zinc-300">PRO</span>
+              </div>
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-bold text-zinc-200">Sổ ghi chú gần đây</span>
+                <span class="px-3 py-1.5 rounded-full border-2 border-amber-400 bg-blue-600 text-white font-black text-[10.5px] flex items-center gap-1.5 shadow-lg">
+                  <span>+ Sổ ghi chú mới</span>
                   <span class="px-1.5 py-0.5 rounded bg-amber-400 text-zinc-950 text-[9px]">BẤM ĐÂY</span>
                 </span>
               </div>
-              <div class="grid grid-cols-2 gap-2">
-                <div class="p-2.5 rounded-xl border border-dashed border-sky-400/60 bg-sky-950/25 text-center text-[10.5px] text-sky-200 font-bold">
-                  ➕ Tạo sổ ghi chú tiểu thuyết mới
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px]">
+                <div class="p-2 rounded-xl bg-zinc-900 border border-zinc-700">
+                  <div class="font-bold text-zinc-100">📕 LIGHT NOVEL</div>
+                  <div class="text-zinc-400 text-[9px]">3 nguồn · Mở lại sổ cũ</div>
                 </div>
-                <div class="p-2.5 rounded-xl border border-zinc-700 bg-zinc-900/80 text-[10.5px]">
-                  <div class="font-bold text-zinc-200 truncate">📘 Sổ tay Truyện của tôi</div>
-                  <div class="text-[9.5px] text-zinc-400 mt-0.5">3 nguồn · Story Bible</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Bước 2: Up file nguồn (Sources) bên trái -->
-          <div class="p-3 rounded-xl border border-emerald-500/45 bg-zinc-900/90 space-y-2.5">
-            <div class="font-black text-emerald-300">Bước 2: Tải file chương truyện (.TXT / .PDF) vào cột "Nguồn (Sources)" bên trái</div>
-            <p class="text-[11px] text-zinc-300">Bấm <strong>+ Thêm nguồn</strong> ở cột trái → chọn <strong>📤 Tải tệp lên</strong> để nạp file gộp toàn bộ chương (tải ở Tab 4) và/hoặc file PDF Story Bible. NotebookLM đọc chính xác hàng trăm chương mà <strong>không bao giờ quên chi tiết</strong>!</p>
-            <!-- Mockup giao diện 3 cột NotebookLM thật -->
-            <div class="rounded-xl border border-zinc-700/80 bg-[#17191e] p-2.5 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10.5px]">
-              <!-- Cột 1: Nguồn -->
-              <div class="p-2 rounded-lg border-2 border-amber-400 bg-zinc-950/90 space-y-1.5">
-                <div class="flex items-center justify-between font-bold text-amber-200">
-                  <span>📂 Nguồn (Sources)</span>
-                  <span class="px-1 py-0.5 rounded bg-amber-400 text-zinc-950 font-black text-[8.5px]">BƯỚC 2</span>
-                </div>
-                <div class="px-2 py-1.5 rounded-lg bg-emerald-600/25 border border-emerald-400/60 text-emerald-200 font-extrabold text-center">
-                  + Thêm nguồn (Upload PDF/TXT)
-                </div>
-                <div class="space-y-1 text-[10px] text-zinc-300">
-                  <div class="px-1.5 py-1 rounded bg-zinc-900 flex items-center gap-1">☑️ 📄 Toan_Bo_Chuong.txt</div>
-                  <div class="px-1.5 py-1 rounded bg-zinc-900 flex items-center gap-1">☑️ 📄 Story_Bible.pdf</div>
-                </div>
-              </div>
-              <!-- Cột 2: Trò chuyện -->
-              <div class="p-2 rounded-lg border border-sky-500/50 bg-zinc-950/80 space-y-1.5">
-                <div class="font-bold text-sky-300">💬 Trò chuyện (Chat)</div>
-                <div class="p-1.5 rounded bg-zinc-900 text-[9.5px] text-zinc-300">
-                  Dán <code>Ctrl+V</code> câu lệnh đã copy → Bấm <strong>➤</strong> để cập nhật Story Bible / vẽ mã sơ đồ ASCII!
-                </div>
-                <div class="px-2 py-1 rounded-lg border border-amber-400/70 bg-amber-500/15 text-amber-200 font-bold text-[9.5px] text-center">
-                  📌 Lưu vào ghi chú (Save to note)
-                </div>
-              </div>
-              <!-- Cột 3: Studio -->
-              <div class="p-2 rounded-lg border border-violet-500/55 bg-zinc-950/80 space-y-1.5">
-                <div class="font-bold text-violet-300">✨ Studio (Cột Phải)</div>
-                <div class="grid grid-cols-1 gap-1 text-[9.5px]">
-                  <div class="px-1.5 py-1 rounded bg-violet-500/20 border border-violet-400/50 text-violet-100 font-bold">🗺️ Bản đồ tư duy (Mind Map)</div>
-                  <div class="px-1.5 py-1 rounded bg-cyan-500/20 border border-cyan-400/50 text-cyan-100 font-bold">📊 Báo cáo &amp; Hình ảnh / Slide</div>
-                  <div class="px-1.5 py-1 rounded bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 font-bold">📝 Ghi chú đã lưu (+ Thêm ghi chú)</div>
+                <div class="p-2 rounded-xl bg-zinc-900/60 border border-zinc-800 text-zinc-400">
+                  <div class="font-bold text-zinc-300">📘 Sổ ghi chú mới</div>
+                  <div class="text-[9px]">0 nguồn</div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Bước 3: Chat, Tạo Ghi Chú & Xem Báo Cáo Hình Ảnh / Mind Map trong Studio -->
-          <div class="p-3 rounded-xl border border-violet-500/45 bg-zinc-900/90 space-y-2">
-            <div class="font-black text-violet-300">Bước 3: Tạo Ghi Chú, Bản Đồ Tư Duy (Mind Map) &amp; Xem Báo Cáo Hình Ảnh ở cột Studio</div>
-            <ul class="list-disc pl-4 space-y-1 text-[11px] text-zinc-300">
-              <li><strong>Dán câu lệnh vào cột Trò chuyện (giữa):</strong> Nhấn <code>Ctrl+V</code> → gửi đi. Ngay dưới câu trả lời hay, bấm <strong>📌 Lưu vào ghi chú (Save to note)</strong> để chốt lại thành ghi chú bên cột Studio (không bị trôi mất khi tải lại trang!).</li>
-              <li><strong>Bản đồ tư duy (Mind Map):</strong> Ở cột <strong>Studio bên phải</strong>, bấm <strong>🗺️ Bản đồ tư duy</strong> để NotebookLM tự động vẽ sơ đồ cây tương tác (bấm vào từng nhánh để xem chi tiết nhân vật, mâu thuẫn &amp; sự kiện).</li>
-              <li><strong>Báo cáo &amp; Tổng quan hình ảnh / Slide / Audio:</strong> Cũng tại cột <strong>Studio</strong>, bấm <strong>📊 Báo cáo (Reports)</strong> hoặc <strong>🎨 Tổng quan hình ảnh / Slide</strong> để xem tóm tắt trực quan toàn bộ thế giới truyện.</li>
-            </ul>
+          <!-- BƯỚC 3: Bấm "+ Thêm nguồn" ở cột trái "Nguồn" -->
+          <div class="p-3 rounded-xl border border-emerald-500/45 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-emerald-300">Bước 3: Vào trong sổ, nhìn cột trái "Nguồn" → bấm nút "+ Thêm nguồn"</div>
+            <div class="rounded-xl border border-zinc-700/80 bg-[#17191e] p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-2 font-sans text-[10.5px]">
+              <div class="sm:col-span-5 p-2.5 rounded-xl bg-[#1f2128] border border-zinc-700 space-y-2">
+                <div class="font-bold text-zinc-200">Nguồn</div>
+                <div class="flex items-center gap-1.5">
+                  <span class="flex-1 px-2.5 py-1.5 rounded-full border-2 border-amber-400 bg-amber-500/20 text-amber-100 font-black text-center shadow">+ Thêm nguồn · BẤM ĐÂY</span>
+                  <span class="px-2 py-1.5 rounded-full bg-zinc-800 text-zinc-300 text-[10px]">+ Tạo ghi chú</span>
+                </div>
+                <div class="text-[9.5px] text-zinc-400 pt-1 border-t border-zinc-800">Danh sách file nguồn (tick ☑️ để AI đọc)</div>
+              </div>
+              <div class="sm:col-span-4 p-2.5 rounded-xl bg-[#1a1c22] border border-zinc-800 text-zinc-400 flex flex-col justify-between">
+                <div class="text-[10px]">💬 Khung Trò chuyện (giữa)</div>
+                <div class="px-2 py-1 rounded-lg bg-zinc-900 text-[9.5px] text-zinc-500">Đặt câu hỏi hoặc tạo nội dung...</div>
+              </div>
+              <div class="sm:col-span-3 p-2.5 rounded-xl bg-[#1f2128] border border-zinc-800 text-zinc-400">
+                <div class="font-bold text-zinc-300 text-[10px]">Studio (phải)</div>
+                <div class="text-[9px] mt-1">Bản đồ tư duy · Báo cáo · Bản trình bày...</div>
+              </div>
+            </div>
           </div>
 
-          <!-- Bước 4: Đưa kết quả về Web -->
-          <div class="p-3 rounded-xl border border-amber-500/40 bg-zinc-900/90 space-y-1.5">
-            <div class="font-black text-amber-300">Bước 4: Đưa kết quả từ NotebookLM về Web Viết Tiểu Thuyết Của Bi</div>
-            <p class="text-[11px] text-zinc-300">
-              • <strong>Cập nhật Story Bible:</strong> Copy câu trả lời từ NotebookLM → dán vào <strong>Tab 4 Mục 2</strong> (giữ chuẩn Word, tự động bóc tách Hồ sơ nhân vật, Ma trận bí mật &amp; Phục bút).<br/>
-              • <strong>Chuyển sơ đồ ASCII sang ảnh đẹp:</strong> Copy đoạn sơ đồ mã ASCII → dán vào <strong>Tab 3 Chế độ 5</strong> → bấm nút <strong>✨ Chuyển mã ASCII từ NotebookLM qua ảnh đẹp</strong> để tải file <code>.TXT</code> và gửi sang Gemini vẽ infographic sắc nét!
-            </p>
+          <!-- BƯỚC 4: Bấm "Tải tệp lên" trong popup Thêm nguồn (y hệt ảnh chụp thật!) -->
+          <div class="p-3 rounded-xl border border-emerald-500/50 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-emerald-300">Bước 4: Cửa sổ thêm nguồn hiện ra → bấm vào nút "⬆️ Tải tệp lên"</div>
+            <div class="rounded-xl border border-zinc-600 bg-[#1e2026] p-3 space-y-2.5 font-sans shadow-xl">
+              <div class="text-center text-xs font-bold text-zinc-200">Tạo bản Tổng quan bằng video và âm thanh từ <span class="text-sky-400">tài liệu của bạn</span></div>
+              <div class="flex flex-wrap items-center justify-center gap-1.5 text-[10.5px]">
+                <span class="px-3 py-1.5 rounded-full border-2 border-amber-400 bg-amber-500/20 text-amber-100 font-black shadow">⬆️ Tải tệp lên · BẤM ĐÂY</span>
+                <span class="px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-300">🔗 Trang web</span>
+                <span class="px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-300">▶️ Play Sách</span>
+                <span class="px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-300">▲ Drive</span>
+                <span class="px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-300">📋 Văn bản đã sao chép</span>
+              </div>
+              <div class="p-3 rounded-xl border border-dashed border-zinc-600 bg-zinc-950/60 text-center text-[10px] text-zinc-400">
+                ⬆️ Hoặc kéo và thả tệp (.pdf, .txt, .docx, hình ảnh) trực tiếp vào khung này
+              </div>
+            </div>
+          </div>
+
+          <!-- BƯỚC 5: Chọn tệp trong máy tính/điện thoại -->
+          <div class="p-3 rounded-xl border border-sky-500/45 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-sky-300">Bước 5: Chọn file .TXT / .PDF (Toàn bộ chương &amp; Story Bible) → bấm "Open / Mở"</div>
+            <p class="text-[11px] text-zinc-300">Chọn file gộp các chương (<code>.txt</code>) hoặc <code>Story_Bible.pdf</code> từ máy rồi bấm <strong>Open / Mở</strong>. Khi tải lên xong, đảm bảo ô <strong>☑️ Chọn tất cả</strong> ở cột trái <strong>Nguồn</strong> đã được tick!</p>
+          </div>
+
+          <!-- BƯỚC 6: Bấm vào ô chat giữa & Dán Ctrl+V -->
+          <div class="p-3 rounded-xl border border-indigo-500/45 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-indigo-300">Bước 6: Bấm vào ô "Đặt câu hỏi hoặc tạo nội dung" ở cuối cột giữa → Nhấn Ctrl+V (Dán)</div>
+            <div class="rounded-xl border border-zinc-700 bg-[#17191e] p-2.5 font-sans">
+              <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-full border-2 border-emerald-400/75 bg-[#23252d]">
+                <span class="text-xs text-emerald-200 font-bold truncate">📋 [Ctrl+V] Đặt câu hỏi hoặc tạo nội dung (đã dán câu lệnh)...</span>
+                <span class="text-[10px] text-zinc-400 shrink-0">4 nguồn</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BƯỚC 7: Bấm nút mũi tên gửi ↑ -->
+          <div class="p-3 rounded-xl border border-indigo-500/45 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-indigo-300">Bước 7: Bấm nút mũi tên tròn (↑) góc phải ô chat → chờ AI trả lời xong</div>
+            <div class="rounded-xl border border-zinc-700 bg-[#17191e] p-2.5 font-sans flex items-center justify-between gap-2">
+              <span class="text-[11px] text-zinc-300">Ô chat đã có đầy đủ câu lệnh...</span>
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border-2 border-amber-400 bg-zinc-800 text-amber-200 font-black text-xs">↑ <span class="px-1.5 py-0.5 rounded bg-amber-400 text-zinc-950 text-[9px]">BẤM GỬI</span></span>
+            </div>
+          </div>
+
+          <!-- BƯỚC 8: Cách copy Plaintext / Mã ASCII chuẩn không vỡ khung -->
+          <div class="p-3 rounded-xl border border-cyan-500/50 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-cyan-300">Bước 8: Cách Copy Plaintext / Mã sơ đồ ASCII chuẩn 100% không bị lệch dòng</div>
+            <p class="text-[11px] text-zinc-300">Với Chế độ 5 (3 khung sơ đồ tách riêng), hãy bấm <strong>biểu tượng Copy (❐)</strong> ngay góc trên khung mã đen (hoặc bấm biểu tượng <strong>❐ Copy</strong> ngay dưới câu trả lời, cạnh nút <em>Lưu vào ghi chú</em>) — TUYỆT ĐỐI không bôi đen tay để tránh mất dấu cách căn lề!</p>
+            <div class="rounded-xl border border-zinc-700 bg-[#121318] p-2.5 space-y-2 font-sans">
+              <div class="rounded-lg border border-zinc-700 bg-black p-2 font-mono text-[10px] text-emerald-300 relative">
+                <div class="flex items-center justify-between border-b border-zinc-800 pb-1 mb-1">
+                  <span class="text-zinc-400">text (Khung 1: Timeline ASCII)</span>
+                  <span class="px-2 py-0.5 rounded border border-amber-400 bg-amber-500/20 text-amber-200 font-sans font-black text-[9.5px]">❐ Copy mã · BẤM ĐÂY</span>
+                </div>
+                <div>[NGÒI NỔ 1] ──▶ Mốc 08:00 ──▶ Đột kích</div>
+              </div>
+              <div class="flex items-center gap-2 text-[10.5px] pt-1">
+                <span class="px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-200 font-bold">📌 Lưu vào ghi chú</span>
+                <span class="px-2.5 py-1 rounded-full border-2 border-amber-400 bg-amber-500/20 text-amber-100 font-black">❐ Copy toàn văn · BẤM ĐÂY</span>
+                <span class="text-zinc-500">👍 👎</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BƯỚC 9: Bấm "Lưu vào ghi chú" -->
+          <div class="p-3 rounded-xl border border-amber-500/45 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-amber-300">Bước 9: Bấm "📌 Lưu vào ghi chú" ngay dưới câu trả lời để lưu vĩnh viễn</div>
+            <p class="text-[11px] text-zinc-300">NotebookLM không tự lưu lịch sử chat khi tải lại trang. Bấm <strong>📌 Lưu vào ghi chú</strong> ngay dưới câu trả lời hay để lưu lại thành thẻ ghi chú cố định (hoặc bấm <strong>+ Tạo ghi chú</strong> ở cột trái để tự viết ghi chú mới).</p>
+            <div class="flex items-center gap-2 rounded-xl border border-zinc-700 bg-[#17191e] p-2.5 font-sans text-[10.5px]">
+              <span class="px-3 py-1 rounded-full border-2 border-amber-400 bg-amber-500/20 text-amber-100 font-black shadow">📌 Lưu vào ghi chú · BẤM ĐÂY</span>
+              <span class="text-zinc-400">❐ 👍 👎</span>
+            </div>
+          </div>
+
+          <!-- BƯỚC 10: Cột Studio bên phải (đúng 8 nút thật như ảnh chụp!) -->
+          <div class="p-3 rounded-xl border border-violet-500/50 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-violet-300">Bước 10: Cột "Studio" bên phải — Xem Bản đồ tư duy, Báo cáo &amp; Bản đồ họa thông tin</div>
+            <p class="text-[11px] text-zinc-300">Nhìn sang cột <strong>Studio</strong> bên phải màn hình NotebookLM: bấm <strong>Bản đồ tư duy</strong> để xem sơ đồ nhánh tương tác, hoặc bấm <strong>Báo cáo (Mới!)</strong> / <strong>Bản đồ họa thông tin</strong> / <strong>Bản trình bày</strong> để tạo báo cáo hình ảnh trực quan từ toàn bộ chương truyện!</p>
+            <div class="rounded-xl border border-zinc-700 bg-[#17191e] p-3 space-y-2 font-sans text-[10.5px]">
+              <div class="font-bold text-zinc-200">Studio</div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <div class="px-2.5 py-2 rounded-xl bg-[#232630] border border-zinc-700 text-sky-200 font-bold">🎙️ Tổng quan bằng âm thanh</div>
+                <div class="px-2.5 py-2 rounded-xl bg-[#232630] border border-zinc-700 text-pink-200 font-bold">🖥️ Bản trình bày</div>
+                <div class="px-2.5 py-2 rounded-xl bg-[#232630] border border-zinc-700 text-emerald-200 font-bold">🎬 Tổng quan bằng video</div>
+                <div class="px-2.5 py-2 rounded-xl border-2 border-amber-400 bg-violet-600/25 text-violet-100 font-black shadow">🧬 Bản đồ tư duy · BẤM</div>
+                <div class="px-2.5 py-2 rounded-xl border-2 border-amber-400 bg-rose-600/20 text-rose-100 font-black shadow">📊 Báo cáo <span class="px-1 rounded bg-zinc-800 text-[9px]">Mới!</span></div>
+                <div class="px-2.5 py-2 rounded-xl bg-[#232630] border border-zinc-700 text-amber-200 font-bold">🃏 Thẻ ghi nhớ</div>
+                <div class="px-2.5 py-2 rounded-xl bg-[#232630] border border-zinc-700 text-cyan-200 font-bold">📝 Bài kiểm tra</div>
+                <div class="px-2.5 py-2 rounded-xl border-2 border-amber-400 bg-amber-500/20 text-amber-100 font-black shadow">📈 Bản đồ họa thông tin</div>
+              </div>
+              <div class="text-[10px] text-zinc-400 pt-1 border-t border-zinc-800">
+                💡 Sau khi xong: Copy <strong>Story Bible</strong> dán vào <strong>Tab 4 Mục 2</strong>; hoặc Copy từng khung mã <strong>ASCII</strong> dán vào <strong>Tab 3 Chế độ 5</strong> (tạo nhiều khung theo tên) rồi bấm <em>✨ Chuyển mã ASCII qua ảnh đẹp</em>!
+              </div>
+            </div>
           </div>
         </div>
       `;
@@ -5824,60 +6333,231 @@
       });
     }
 
-    mountTab6Guides() {
-      if (typeof document === 'undefined') return;
-      const root = document.getElementById('tab6-v110-ai-guides-root');
-      if (!root) return;
-      this.ensureStyles();
-      root.innerHTML = `
-        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-amber-500/30">
-          <div>
-            <div class="text-sm font-black text-amber-300 flex items-center gap-1.5">
-              <span>🧭 Cẩm Nang Trực Quan A → Z: Dùng Gemini &amp; Google NotebookLM</span>
+    buildGoogleDriveOAuthGuideStepsHtml() {
+      const curOrigin =
+        typeof window !== 'undefined' && /^https?:/i.test(window.location?.origin || '')
+          ? window.location.origin
+          : 'https://quycryparis-cyber.github.io';
+      return `
+        <div class="space-y-3 text-[11.5px] leading-relaxed text-zinc-200">
+          <!-- BƯỚC 1: Mở Google Cloud Console & đăng nhập (kèm lưu ý xác minh CAPTCHA) -->
+          <div class="p-3 rounded-xl border border-teal-500/45 bg-zinc-900/90 space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="font-black text-amber-300">Bước 1: Mở Google Cloud Console &amp; đăng nhập tài khoản Google của bạn</div>
+              <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-extrabold text-[11px] shadow transition">
+                🚀 Mở Google Cloud Console ↗
+              </a>
             </div>
-            <p class="text-[11px] text-zinc-300 mt-0.5">Ảnh minh họa giống hệt giao diện thật: cách mở trang chủ, up file PDF/TXT, dán câu lệnh, tạo ghi chú, xem Mind Map &amp; Báo cáo hình ảnh.</p>
+            <p class="text-[11px] text-zinc-300">Đăng nhập đúng Gmail chứa Google Drive bạn muốn đồng bộ. Nếu lần đầu mở Google Cloud có hiện điều khoản dịch vụ hoặc màn hình xác minh bảo mật / CAPTCHA (<em>"Tôi không phải người máy"</em>), hãy tích chọn <strong>Agree / Đồng ý</strong> và hoàn tất xác minh để vào trang chủ.</p>
+            <div class="rounded-xl border border-zinc-700 bg-[#1a1d24] p-2.5 flex flex-wrap items-center justify-between gap-2 text-[10.5px]">
+              <div class="flex items-center gap-2">
+                <span class="w-5 h-5 rounded border-2 border-emerald-400 bg-emerald-500/20 flex items-center justify-center text-emerald-300 font-black">✓</span>
+                <span class="font-bold text-zinc-200">Tích "I agree to Terms of Service" / Xác minh bảo mật Google (nếu hiện)</span>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-blue-600 text-white font-bold text-[10px]">AGREE AND CONTINUE</span>
+            </div>
           </div>
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <button type="button" id="btn-tab6-guide-tab-gemini" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-extrabold text-xs shadow transition">
-              ✨ Hướng dẫn Gemini (A → Z)
-            </button>
-            <button type="button" id="btn-tab6-guide-tab-notebooklm" class="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition">
-              📓 Hướng dẫn NotebookLM (A → Z)
-            </button>
+
+          <!-- BƯỚC 2: Tạo Project mới -->
+          <div class="p-3 rounded-xl border border-sky-500/45 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-sky-300">Bước 2: Bấm ô Chọn dự án góc trên trái → bấm "New Project" → đặt tên → bấm "Create"</div>
+            <div class="rounded-xl border border-zinc-700 bg-[#1b1f27] p-3 space-y-2 font-sans text-[10.5px]">
+              <div class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-700 pb-2">
+                <span class="font-extrabold text-zinc-200">☁️ Google Cloud</span>
+                <span class="px-2.5 py-1 rounded-lg border-2 border-amber-400 bg-amber-500/20 text-amber-100 font-black">▾ Select a project → New Project (BẤM ĐÂY)</span>
+              </div>
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="text-zinc-300">Project name: <code class="px-1.5 py-0.5 rounded bg-zinc-950 text-emerald-300">Web Tieu Thuyet Cua Bi</code></span>
+                <span class="px-3 py-1 rounded-lg bg-blue-600 text-white font-black">CREATE</span>
+              </div>
+            </div>
           </div>
-        </div>
-        <div id="tab6-guide-pane-gemini" class="pt-3">
-          ${this.buildGeminiGuideStepsHtml('MODE_6_BOOK_COVER')}
-        </div>
-        <div id="tab6-guide-pane-notebooklm" class="hidden pt-3">
-          ${this.buildNotebookLmGuideStepsHtml()}
+
+          <!-- BƯỚC 3: Bật Google Drive API -->
+          <div class="p-3 rounded-xl border border-emerald-500/45 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-emerald-300">Bước 3: Bật "Google Drive API" trong thư viện API</div>
+            <p class="text-[11px] text-zinc-300">Mở menu <strong>☰</strong> góc trên trái → <strong>APIs &amp; Services</strong> → <strong>Library</strong> → gõ tìm <code>Google Drive API</code> → bấm vào kết quả <strong>Google Drive API</strong> → bấm nút xanh <strong>ENABLE (Bật)</strong>.</p>
+            <div class="rounded-xl border border-zinc-700 bg-[#1b1f27] p-2.5 flex flex-wrap items-center justify-between gap-2 text-[10.5px]">
+              <span class="font-bold text-zinc-100">📁 Google Drive API <span class="text-zinc-400 font-normal">(Google Enterprise API)</span></span>
+              <span class="px-3 py-1 rounded-lg border-2 border-amber-400 bg-blue-600 text-white font-black">ENABLE (BẤM ĐÂY)</span>
+            </div>
+          </div>
+
+          <!-- BƯỚC 4: OAuth Consent Screen (External) -->
+          <div class="p-3 rounded-xl border border-indigo-500/45 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-indigo-300">Bước 4: Vào "OAuth consent screen" → chọn "External" → bấm "Create"</div>
+            <p class="text-[11px] text-zinc-300">Ở menu trái: <strong>APIs &amp; Services</strong> → <strong>OAuth consent screen</strong> (hoặc mục <strong>Google Auth Platform → Get Started</strong>). Chọn đối tượng là <strong>External (Bên ngoài)</strong> rồi bấm <strong>Create / Next</strong>.</p>
+          </div>
+
+          <!-- BƯỚC 5: Điền App Name & Email -->
+          <div class="p-3 rounded-xl border border-indigo-500/40 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-indigo-300">Bước 5: Điền tên ứng dụng &amp; Gmail liên hệ → bấm "Save and Continue"</div>
+            <div class="rounded-xl border border-zinc-700 bg-[#1b1f27] p-2.5 space-y-1 text-[10.5px]">
+              <div>• <strong>App name:</strong> <code class="text-emerald-300">Web Viet Tieu Thuyet Cua Bi</code></div>
+              <div>• <strong>User support email:</strong> chọn Gmail của bạn</div>
+              <div>• <strong>Developer contact information:</strong> nhập lại Gmail của bạn → bấm <strong>Save and Continue</strong> (ở bước Scopes bỏ qua, bấm Save and Continue tiếp).</div>
+            </div>
+          </div>
+
+          <!-- BƯỚC 6: Thêm Test Users (QUAN TRỌNG NHẤT!) -->
+          <div class="p-3 rounded-xl border-2 border-amber-400/70 bg-amber-950/30 space-y-2">
+            <div class="font-black text-amber-300">Bước 6 (QUAN TRỌNG NHẤT): Thêm Gmail của bạn vào mục "Test users / Audience"</div>
+            <p class="text-[11px] text-amber-100">Nếu bỏ qua bước này, Google sẽ báo lỗi <em>403 Access Blocked</em>! Bấm <strong>+ ADD USERS</strong> → gõ chính địa chỉ Gmail của bạn → bấm <strong>ADD</strong> → <strong>SAVE AND CONTINUE</strong>.</p>
+            <div class="rounded-xl border border-amber-500/50 bg-zinc-950/90 p-2.5 flex flex-wrap items-center justify-between gap-2 text-[10.5px]">
+              <span class="text-zinc-200">Audience / Test users: <code class="text-amber-300">emailcuaban@gmail.com</code></span>
+              <span class="px-2.5 py-1 rounded-lg bg-amber-400 text-zinc-950 font-black">+ ADD USERS (BẤM ĐÂY)</span>
+            </div>
+          </div>
+
+          <!-- BƯỚC 7: Tạo OAuth Client ID -->
+          <div class="p-3 rounded-xl border border-violet-500/45 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-violet-300">Bước 7: Vào "Credentials" (hoặc "Clients") → bấm "+ CREATE CREDENTIALS" → chọn "OAuth client ID"</div>
+            <div class="rounded-xl border border-zinc-700 bg-[#1b1f27] p-2.5 flex flex-wrap items-center justify-between gap-2 text-[10.5px]">
+              <span class="font-bold text-zinc-200">🔑 Credentials / Clients</span>
+              <span class="px-2.5 py-1 rounded-lg border-2 border-amber-400 bg-violet-600 text-white font-black">+ CREATE CREDENTIALS → OAuth client ID</span>
+            </div>
+          </div>
+
+          <!-- BƯỚC 8: Chọn Web Application & dán Authorized JavaScript origins -->
+          <div class="p-3 rounded-xl border border-cyan-500/50 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-cyan-300">Bước 8: Chọn "Web application" &amp; dán URL trang web vào "Authorized JavaScript origins"</div>
+            <p class="text-[11px] text-zinc-300">1) <strong>Application type:</strong> chọn <strong>Web application</strong>.<br/>2) Kéo xuống mục <strong>Authorized JavaScript origins</strong> → bấm <strong>+ ADD URI</strong> → dán chính xác địa chỉ web bên dưới (không có dấu <code>/</code> ở cuối):</p>
+            <div class="rounded-xl border border-cyan-400/60 bg-zinc-950 p-2.5 flex flex-wrap items-center justify-between gap-2">
+              <code class="text-emerald-300 font-mono text-xs break-all">${curOrigin}</code>
+              <button type="button" data-v112-copy-origin="${curOrigin}" class="px-2.5 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-black text-[10.5px] shrink-0 transition cursor-pointer">
+                📋 Copy URL này
+              </button>
+            </div>
+          </div>
+
+          <!-- BƯỚC 9: Bấm CREATE & Copy Client ID -->
+          <div class="p-3 rounded-xl border border-emerald-500/50 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-emerald-300">Bước 9: Bấm "CREATE" → Copy chuỗi "Your Client ID" (đuôi .apps.googleusercontent.com)</div>
+            <div class="rounded-xl border border-zinc-700 bg-[#1b1f27] p-2.5 flex flex-wrap items-center justify-between gap-2 text-[10.5px]">
+              <span class="font-mono text-emerald-300 truncate">1234567890-abcdefg.apps.googleusercontent.com</span>
+              <span class="px-2.5 py-1 rounded-lg bg-amber-400 text-zinc-950 font-black shrink-0">📋 Copy Client ID</span>
+            </div>
+          </div>
+
+          <!-- BƯỚC 10: Dán vào Web & vượt cảnh báo "Google hasn't verified this app" -->
+          <div class="p-3 rounded-xl border border-rose-500/45 bg-zinc-900/90 space-y-2">
+            <div class="font-black text-rose-300">Bước 10: Dán Client ID vào Web → bấm Kết nối Drive → Vượt màn hình cảnh báo Google (Rất bình thường!)</div>
+            <p class="text-[11px] text-zinc-300">
+              • Dán Client ID vừa copy vào ô <strong>Google OAuth Client ID</strong> ở khung Đồng bộ Google Drive của Web → bấm <strong>☁️ Kết nối Google Drive</strong>.<br/>
+              • Cửa sổ đăng nhập Google sẽ hiện bảng <em>"Google hasn't verified this app / Google chưa xác minh ứng dụng này"</em> (do đây là Client ID cá nhân bạn tự tạo, hoàn toàn an toàn 100%!).<br/>
+              • Hãy bấm chữ nhỏ góc dưới trái <strong>Advanced (Nâng cao)</strong> → bấm <strong>Go to Web Tieu Thuyet Cua Bi (unsafe)</strong> → tích chọn quyền Google Drive → bấm <strong>Continue (Tiếp tục)</strong> là xong!
+            </p>
+            <div class="rounded-xl border border-rose-400/50 bg-[#1f1b1d] p-2.5 space-y-1.5 text-[10.5px]">
+              <div class="font-bold text-rose-200">⚠️ Google hasn't verified this app</div>
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2 py-0.5 rounded border border-amber-400 bg-amber-500/20 text-amber-200 font-black">1. Bấm "Advanced (Nâng cao)"</span>
+                <span class="text-zinc-500">→</span>
+                <span class="px-2 py-0.5 rounded border border-emerald-400 bg-emerald-500/20 text-emerald-200 font-black">2. Bấm "Go to ... (unsafe)"</span>
+                <span class="text-zinc-500">→</span>
+                <span class="px-2 py-0.5 rounded bg-blue-600 text-white font-black">3. Tích quyền &amp; Continue</span>
+              </div>
+            </div>
+          </div>
         </div>
       `;
+    }
 
-      const btnG = document.getElementById('btn-tab6-guide-tab-gemini');
-      const btnN = document.getElementById('btn-tab6-guide-tab-notebooklm');
-      const paneG = document.getElementById('tab6-guide-pane-gemini');
-      const paneN = document.getElementById('tab6-guide-pane-notebooklm');
-
-      const setActive = (which) => {
-        const isG = which === 'GEMINI';
-        paneG?.classList.toggle('hidden', !isG);
-        paneN?.classList.toggle('hidden', isG);
-        if (btnG) {
-          btnG.className = isG
-            ? 'px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-extrabold text-xs shadow transition'
-            : 'px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition';
-        }
-        if (btnN) {
-          btnN.className = !isG
-            ? 'px-3 py-1.5 rounded-xl bg-sky-600 text-white font-extrabold text-xs shadow transition'
-            : 'px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition';
-        }
+    mountTab6Guides() {
+      if (typeof document === 'undefined') return;
+      this.ensureStyles();
+      const bindOriginCopyBtns = (container) => {
+        container?.querySelectorAll('[data-v112-copy-origin]').forEach((btn) => {
+          if (btn.dataset.v112Bound === '1') return;
+          btn.dataset.v112Bound = '1';
+          btn.addEventListener('click', async () => {
+            const val = btn.getAttribute('data-v112-copy-origin') || '';
+            try {
+              await navigator.clipboard.writeText(val);
+              window.NoirStudio?.utils?.showToast?.(`📋 Đã copy URL "${val}" để dán vào Authorized JavaScript origins!`, 'success', 3200);
+            } catch (_) {}
+          });
+        });
       };
 
-      btnG?.addEventListener('click', () => setActive('GEMINI'));
-      btnN?.addEventListener('click', () => setActive('NOTEBOOKLM'));
-      window.NoirStudio?.i18n?.translateElement?.(root);
+      // 1) Mount 3-tab guide inside Tab 6 Section 1 (Gemini + NotebookLM + Google Drive OAuth)
+      const root = document.getElementById('tab6-v110-ai-guides-root');
+      if (root) {
+        root.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-amber-500/30">
+            <div>
+              <div class="text-sm font-black text-amber-300 flex items-center gap-1.5">
+                <span>🧭 Cẩm Nang Trực Quan A → Z: Dùng Gemini, Google NotebookLM &amp; Liên Kết Google Drive</span>
+              </div>
+              <p class="text-[11px] text-zinc-300 mt-0.5">Ảnh minh họa từng click giống hệt giao diện thật: dùng Gemini, Google NotebookLM và lấy OAuth Client ID kết nối thư mục Google Drive.</p>
+            </div>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <button type="button" id="btn-tab6-guide-tab-gemini" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-extrabold text-xs shadow transition">
+                ✨ Hướng dẫn Gemini (A → Z)
+              </button>
+              <button type="button" id="btn-tab6-guide-tab-notebooklm" class="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition">
+                📓 Hướng dẫn NotebookLM (A → Z)
+              </button>
+              <button type="button" id="btn-tab6-guide-tab-gdrive" class="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition">
+                ☁️ Liên kết Google Drive &amp; OAuth (A → Z)
+              </button>
+            </div>
+          </div>
+          <div id="tab6-guide-pane-gemini" class="pt-3">
+            ${this.buildGeminiGuideStepsHtml('MODE_6_BOOK_COVER')}
+          </div>
+          <div id="tab6-guide-pane-notebooklm" class="hidden pt-3">
+            ${this.buildNotebookLmGuideStepsHtml()}
+          </div>
+          <div id="tab6-guide-pane-gdrive" class="hidden pt-3">
+            ${this.buildGoogleDriveOAuthGuideStepsHtml()}
+          </div>
+        `;
+
+        const btnG = document.getElementById('btn-tab6-guide-tab-gemini');
+        const btnN = document.getElementById('btn-tab6-guide-tab-notebooklm');
+        const btnD = document.getElementById('btn-tab6-guide-tab-gdrive');
+        const paneG = document.getElementById('tab6-guide-pane-gemini');
+        const paneN = document.getElementById('tab6-guide-pane-notebooklm');
+        const paneD = document.getElementById('tab6-guide-pane-gdrive');
+
+        const setActive = (which) => {
+          paneG?.classList.toggle('hidden', which !== 'GEMINI');
+          paneN?.classList.toggle('hidden', which !== 'NOTEBOOKLM');
+          paneD?.classList.toggle('hidden', which !== 'GDRIVE');
+          const offCls = 'px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition';
+          if (btnG) btnG.className = which === 'GEMINI' ? 'px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-extrabold text-xs shadow transition' : offCls;
+          if (btnN) btnN.className = which === 'NOTEBOOKLM' ? 'px-3 py-1.5 rounded-xl bg-sky-600 text-white font-extrabold text-xs shadow transition' : offCls;
+          if (btnD) btnD.className = which === 'GDRIVE' ? 'px-3 py-1.5 rounded-xl bg-teal-600 text-white font-extrabold text-xs shadow transition' : offCls;
+        };
+
+        btnG?.addEventListener('click', () => setActive('GEMINI'));
+        btnN?.addEventListener('click', () => setActive('NOTEBOOKLM'));
+        btnD?.addEventListener('click', () => setActive('GDRIVE'));
+        bindOriginCopyBtns(root);
+        window.NoirStudio?.i18n?.translateElement?.(root);
+      }
+
+      // 2) Mount collapsible blinking Google Drive + OAuth A->Z guide right inside the Drive Sync modal!
+      const driveSlot = document.getElementById('mod37-v112-gdrive-guide-slot');
+      if (driveSlot) {
+        const uid = 'v112-gdrive-modal-guide-body';
+        driveSlot.innerHTML = `
+          <div class="rounded-xl border border-amber-400/60 bg-zinc-950/90 overflow-hidden">
+            <button type="button" data-v110-guide-toggle="${uid}" aria-expanded="false" class="noir-v110-blink-6s w-full px-3.5 py-2.5 flex items-center justify-between gap-2 text-left border border-amber-400/70 rounded-xl bg-amber-950/40 hover:bg-amber-900/50 text-amber-100 font-extrabold text-xs transition cursor-pointer">
+              <span class="min-w-0 flex-1">☁️ Hướng dẫn chi tiết từ A → Z: Lấy Google OAuth Client ID &amp; Liên kết Thư mục Google Drive</span>
+              <span class="shrink-0 px-2 py-0.5 rounded-md bg-amber-400/20 border border-amber-300/60 text-amber-200 text-[10.5px] font-black whitespace-nowrap">
+                <span data-v110-guide-state="${uid}">Mở rộng</span> <span data-v110-guide-arrow="${uid}">▾</span>
+              </span>
+            </button>
+            <div id="${uid}" class="hidden p-3 border-t border-amber-500/30 bg-zinc-950/95">
+              ${this.buildGoogleDriveOAuthGuideStepsHtml()}
+            </div>
+          </div>
+        `;
+        this.bindCollapsibleSplitGuideEvents(driveSlot);
+        bindOriginCopyBtns(driveSlot);
+        window.NoirStudio?.i18n?.translateElement?.(driveSlot);
+      }
     }
   }
 

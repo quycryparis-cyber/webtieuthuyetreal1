@@ -4653,6 +4653,20 @@
     "📓 Hướng dẫn NotebookLM (A → Z)": "📓 NotebookLM ガイド (A → Z)",
     "🚀 Mở thẳng Gemini (gemini.google.com) ↗": "🚀 Gemini を直接開く (gemini.google.com) ↗",
     "🚀 Mở thẳng NotebookLM (notebooklm.google.com) ↗": "🚀 NotebookLM を直接開く (notebooklm.google.com) ↗",
+    "➕ Tạo khung mới": "➕ 新しい枠を作成",
+    "✏️ Đặt tên khung": "✏️ 枠の名前を変更",
+    "🗑️ Xóa khung": "🗑️ 枠を削除",
+    "📄 Tải Story Bible (.PDF)": "📄 Story Bible をダウンロード (.PDF)",
+    "📝 Tải File Tham Mưu / Chương (.TXT)": "📝 プロット案 / 章をダウンロード (.TXT)",
+    "⤢ Phóng to ô nhập": "⤢ 入力欄を拡大",
+    "Thu gọn tất cả": "すべて折りたたむ",
+    "Mở rộng tất cả": "すべて展開",
+    "☁️ Liên kết Google Drive & OAuth (A → Z)": "☁️ Google Drive & OAuth 連携ガイド (A → Z)",
+    "📂 Chọn ảnh từ máy": "📂 端末から画像を選択",
+    "📋 Dán ảnh (Ctrl+V)": "📋 画像を貼り付け (Ctrl+V)",
+    "🔄 Xem Sơ Đồ SVG": "🔄 SVG図を表示",
+    "🖼️ Xem Ảnh Sơ Đồ Đã Lưu": "🖼️ 保存済み図解画像を表示",
+    "🎛️ Chọn Chế Độ (1–6) · Mô Hình Gemini · Số Từ Đầu Ra · Mức Tư Duy": "🎛️ モード (1–6) · Geminiモデル · 出力語数 · 思考深度",
   });
 
   const promptExact = Object.freeze({

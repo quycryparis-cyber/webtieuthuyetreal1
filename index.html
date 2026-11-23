@@ -1112,7 +1112,7 @@
         }, true);
       } catch (_eSub) {}
       try {
-        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v110';
+        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v112';
         if (typeof window !== 'undefined' && 'caches' in window && window.caches && typeof window.caches.keys === 'function') {
           window.caches.keys().then(function (keys) {
             for (var i = 0; i < keys.length; i++) {
@@ -1551,11 +1551,11 @@
     <!-- =================================================================== -->
     <aside id="left-sidebar-pane" class="hidden w-full lg:w-96 xl:w-[420px] min-h-0 border-r border-studioLightBorder dark:border-noirBorder bg-studioLightPanel/95 dark:bg-noirPanel/95 flex flex-col shrink-0 overflow-hidden">
       <div class="px-3 py-2.5 border-b border-studioLightBorder dark:border-noirBorder space-y-2 shrink-0">
-        <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center justify-between gap-2 min-w-0 max-w-full">
           <h2 class="text-xs font-extrabold uppercase tracking-wider text-emerald-500 flex items-center gap-1.5 whitespace-nowrap shrink-0">
             <span>📂 Danh Sách Chương</span>
           </h2>
-          <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+          <div class="w-full sm:w-auto max-w-full min-w-0 flex items-center gap-1.5 flex-wrap justify-start sm:justify-end">
             <button type="button" id="btn-tab2-collapse-sidebar" class="px-2 py-1 rounded-lg border border-amber-500/50 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-bold text-[10px] transition whitespace-nowrap" title="Thu gọn danh sách chương sang bên trái cho rộng màn hình">
               <span>◀ Thu gọn</span>
             </button>
@@ -1565,10 +1565,10 @@
             <button type="button" id="btn-tab2-split-gemini" class="px-2 py-1 rounded-lg border border-indigo-500/50 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-200 font-bold text-[10px] transition whitespace-nowrap" title="Copy câu lệnh & chia đôi màn hình làm việc cùng Gemini Web/App">
               <span>🪟 Chia đôi màn hình với Gemini</span>
             </button>
-            <button type="button" id="btn-toggle-tab2-filters" data-noir-collapse-target="tab2-filter-import-collapsible-body" data-noir-collapse-key="tab2_filter_import" class="noir-collapse-toggle px-2.5 py-1.5 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-300 font-bold text-[11px] transition" title="Mở rộng / Rút gọn bộ lọc chương, nạp DOCX/PDF và sao lưu JSON">
+            <button type="button" id="btn-toggle-tab2-filters" data-noir-collapse-target="tab2-filter-import-collapsible-body" data-noir-collapse-key="tab2_filter_import" class="noir-collapse-toggle px-2.5 py-1 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-300 font-bold text-[10.5px] transition whitespace-nowrap" title="Mở rộng / Rút gọn bộ lọc chương, nạp DOCX/PDF và sao lưu JSON">
               <span>🎛️ Công cụ &amp; Lọc</span> <span class="noir-collapse-arrow">▾</span>
             </button>
-            <button type="button" id="btn-new-draft-chapter" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow flex items-center gap-1 transition">
+            <button type="button" id="btn-new-draft-chapter" class="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow flex items-center gap-1 transition whitespace-nowrap">
               <span>+ Chương mới</span>
             </button>
           </div>
@@ -1632,15 +1632,15 @@
       <!-- ================================================================= -->
       <div id="s18-minimal-chapter-header-bar" class="px-2.5 sm:px-3 lg:px-5 py-1.5 sm:py-2 border-b border-studioLightBorder dark:border-noirBorder bg-studioLightPanel/90 dark:bg-noirPanel/90 flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 shrink-0 min-w-0">
         <!-- Bên trái: Nút Duyệt & Chốt Bản Thảo + Tạo Chương Mới + Chọn chương nhanh + Tiêu đề chương đồng bộ 2 chiều -->
-        <div class="flex-1 min-w-[205px] max-w-full flex flex-wrap items-center gap-2">
+        <div class="w-full sm:flex-1 min-w-0 max-w-full flex flex-wrap items-center gap-1.5 sm:gap-2">
           <button type="button" id="btn-approve-chapter" class="max-w-full px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-lg shadow-emerald-950/50 flex items-center gap-1.5 transition whitespace-normal sm:whitespace-nowrap text-left" title="Duyệt chương này hoặc nhiều chương và tự động cập nhật hồ sơ Story Bible">
             <span>✅ Duyệt &amp; Chốt Bản Thảo</span>
           </button>
           <button type="button" id="btn-tab1-quick-new-chapter" class="max-w-full px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/45 text-emerald-300 font-extrabold text-xs shadow-sm flex items-center gap-1.5 transition whitespace-normal sm:whitespace-nowrap text-left" title="Tạo ngay một chương mới và bắt đầu viết">
             <span>➕ Tạo Chương Mới</span>
           </button>
-          <select id="quick-chapter-switcher" class="max-w-[165px] sm:max-w-[205px] px-2.5 py-1.5 rounded-xl border border-emerald-500/40 bg-studioLightBg dark:bg-zinc-950 font-bold text-xs text-emerald-500 focus:outline-none focus:border-emerald-400 shrink-0 min-w-0" title="Chuyển nhanh giữa các chương"></select>
-          <input id="input-chapter-title" type="text" value="Chương 1: Khởi Đầu Trong Mưa Đêm" placeholder="Nhập tên chương..." class="w-full sm:w-auto min-w-[150px] flex-1 sm:basis-[160px] px-3 py-1.5 rounded-xl border border-transparent hover:border-studioLightBorder dark:hover:border-zinc-700 focus:border-emerald-500 bg-transparent focus:bg-studioLightBg dark:focus:bg-zinc-950 font-extrabold text-sm sm:text-base focus:outline-none transition select-text" />
+          <select id="quick-chapter-switcher" class="max-w-full sm:max-w-[205px] px-2.5 py-1.5 rounded-xl border border-emerald-500/40 bg-studioLightBg dark:bg-zinc-950 font-bold text-xs text-emerald-500 focus:outline-none focus:border-emerald-400 shrink-0 min-w-0" title="Chuyển nhanh giữa các chương"></select>
+          <input id="input-chapter-title" type="text" value="Chương 1: Khởi Đầu Trong Mưa Đêm" placeholder="Nhập tên chương..." class="w-full basis-full sm:basis-[180px] sm:flex-1 min-w-0 max-w-full px-2.5 sm:px-3 py-1.5 rounded-xl border border-transparent hover:border-studioLightBorder dark:hover:border-zinc-700 focus:border-emerald-500 bg-transparent focus:bg-studioLightBg dark:focus:bg-zinc-950 font-extrabold text-sm sm:text-base focus:outline-none transition select-text" />
           <span id="active-chapter-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0 whitespace-nowrap cursor-pointer">
             📝 Bản Nháp
           </span>
@@ -1811,6 +1811,25 @@
                     </button>
                   </div>
                 </div>
+                <!-- Thanh quản lý nhiều khung sơ đồ ASCII (Tạo khung mới · Xem khung cũ · Đặt tên khung · Xóa khung) -->
+                <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl border border-cyan-500/35 bg-zinc-950/85">
+                  <div class="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
+                    <span class="text-[11px] font-extrabold text-cyan-300 shrink-0">📂 Khung sơ đồ:</span>
+                    <select id="select-mode5-ascii-slot" class="flex-1 min-w-[160px] max-w-xs px-2.5 py-1.5 rounded-lg border border-cyan-500/50 bg-zinc-900 text-xs font-bold text-emerald-200 focus:outline-none focus:border-cyan-400"></select>
+                    <span id="badge-mode5-ascii-slot-count" class="px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-400/40 text-cyan-200 font-monoCode text-[10px] font-bold">1 khung</span>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <button type="button" id="btn-mode5-new-ascii-slot" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] shadow transition">
+                      ➕ Tạo khung mới
+                    </button>
+                    <button type="button" id="btn-mode5-rename-ascii-slot" class="px-2.5 py-1 rounded-lg border border-amber-400/60 bg-amber-500/15 hover:bg-amber-500/30 text-amber-200 font-bold text-[11px] transition">
+                      ✏️ Đặt tên khung
+                    </button>
+                    <button type="button" id="btn-mode5-delete-ascii-slot" class="px-2 py-1 rounded-lg border border-rose-500/45 bg-rose-500/10 hover:bg-rose-600 text-rose-200 hover:text-white font-bold text-[11px] transition" title="Xóa khung sơ đồ đang chọn">
+                      🗑️ Xóa khung
+                    </button>
+                  </div>
+                </div>
                 <textarea id="textarea-mode5-ascii-diagram" wrap="off" spellcheck="false" rows="12" class="w-full p-3.5 rounded-xl border border-cyan-500/45 bg-zinc-950 text-emerald-200 font-monoCode text-[12px] leading-snug whitespace-pre overflow-x-auto select-text focus:outline-none focus:border-cyan-400 resize-y" placeholder="Dán trực tiếp đoạn sơ đồ mã ASCII Plaintext từ Google NotebookLM / Gemini vào đây...&#10;&#10;┌──────────────────────────┐&#10;│   ARC 1: KHỞI ĐẦU        │&#10;└────────────┬─────────────┘&#10;             ▼&#10;┌──────────────────────────┐&#10;│   HỒI 1: BƯỚC NGOẶT      │&#10;└──────────────────────────┘"></textarea>
               </div>
 
@@ -1899,13 +1918,27 @@
 
               <!-- Khung hiển thị Hình ảnh Biểu đồ trực quan (SVG/Canvas) + Bảng theo dõi dòng thời gian -->
               <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <!-- Khung vẽ đồ họa trực quan -->
-                <div class="lg:col-span-7 p-4 rounded-2xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightPanel dark:bg-zinc-900 flex flex-col min-h-[380px]">
-                  <div class="flex items-center justify-between mb-2">
-                    <span class="text-xs font-extrabold uppercase text-emerald-400">🖼️ Bản Đồ Trực Quan & Sơ Đồ Mối Quan Hệ / Thời Gian</span>
-                    <span id="mode5-visual-status" class="text-[11px] text-zinc-400">Sẵn sàng vẽ sơ đồ</span>
+                <!-- Khung vẽ đồ họa trực quan + Dán/Tải ảnh Sơ đồ từ Gemini/NotebookLM -->
+                <div class="lg:col-span-7 p-4 rounded-2xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightPanel dark:bg-zinc-900 flex flex-col min-h-[380px] space-y-2">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <span class="text-xs font-extrabold uppercase text-emerald-400">🖼️ Bản Đồ Trực Quan &amp; Sơ Đồ Mối Quan Hệ / Thời Gian</span>
+                    <span id="mode5-visual-status" class="text-[11px] text-zinc-400">Sẵn sàng vẽ sơ đồ hoặc dán ảnh</span>
                   </div>
-                  <div id="mode5-svg-canvas-Stage" class="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 p-3 overflow-auto flex items-center justify-center min-h-[320px] select-text"></div>
+                  <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+                    <button type="button" id="btn-mode5-upload-visual-img" class="px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-extrabold shadow transition">📂 Chọn ảnh từ máy</button>
+                    <input type="file" id="input-mode5-visual-img" accept="image/*" class="hidden" />
+                    <button type="button" id="btn-mode5-paste-visual-img" class="px-2.5 py-1 rounded-lg border border-cyan-400/60 bg-cyan-500/15 hover:bg-cyan-500/30 text-cyan-200 font-bold transition" title="Bấm vào khung rồi nhấn Ctrl+V để dán ảnh sơ đồ vừa tạo ở Gemini / NotebookLM">📋 Dán ảnh (Ctrl+V)</button>
+                    <button type="button" id="btn-mode5-toggle-svg-or-img" class="hidden px-2.5 py-1 rounded-lg border border-emerald-400/60 bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-200 font-bold transition">🔄 Xem Sơ Đồ SVG</button>
+                    <button type="button" id="btn-mode5-download-visual-img" class="hidden px-2.5 py-1 rounded-lg border border-amber-400/60 bg-amber-500/15 hover:bg-amber-500/30 text-amber-200 font-bold transition">⬇️ Tải ảnh</button>
+                    <button type="button" id="btn-mode5-clear-visual-img" class="hidden px-2 py-1 rounded-lg border border-rose-500/50 bg-rose-500/10 hover:bg-rose-600 text-rose-200 hover:text-white font-bold transition">🗑️ Xóa ảnh</button>
+                  </div>
+                  <div id="mode5-visual-drop-host" tabindex="0" class="relative flex-1 rounded-xl border border-zinc-800 hover:border-cyan-500/60 focus:border-cyan-400 focus:outline-none bg-zinc-950 overflow-auto flex flex-col min-h-[320px]">
+                    <div id="mode5-svg-canvas-Stage" class="flex-1 p-3 overflow-auto flex items-center justify-center min-h-[300px] select-text"></div>
+                    <div id="mode5-custom-visual-img-stage" class="hidden flex-1 p-3 flex flex-col items-center justify-center gap-2 min-h-[300px]">
+                      <img id="img-mode5-custom-visual" alt="Ảnh Bản đồ trực quan / Sơ đồ cốt truyện" class="max-w-full max-h-[540px] rounded-xl border border-cyan-400/50 shadow-2xl object-contain" />
+                      <span class="text-[10.5px] text-zinc-400">💡 Ảnh sơ đồ đã lưu cục bộ trên máy (hỗ trợ kéo thả hoặc Ctrl+V để thay ảnh mới)</span>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Bảng theo dõi diễn biến sự kiện theo thời gian & cảnh báo mâu thuẫn -->
@@ -3295,8 +3328,15 @@
           </div>
         </div>
 
-        <!-- Hàng thông số cơ bản LUÔN HIỆN kể cả khi thu gọn: Chế độ, Mô hình, Số từ, Mức tư duy -->
-        <div id="cmd-params-essential-bar" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3.5 rounded-2xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightBg dark:bg-zinc-950">
+        <!-- Hàng thông số cơ bản (CÓ NÚT THU GỌN / MỞ RỘNG): Chế độ, Mô hình, Số từ, Mức tư duy -->
+        <div class="rounded-2xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightBg dark:bg-zinc-950 overflow-hidden">
+          <div class="px-3.5 py-2 border-b border-zinc-800/80 flex flex-wrap items-center justify-between gap-2 bg-zinc-900/60">
+            <span class="text-[11px] font-extrabold text-emerald-300">🎛️ Chọn Chế Độ (1–6) · Mô Hình Gemini · Số Từ Đầu Ra · Mức Tư Duy</span>
+            <button type="button" id="btn-toggle-cmd-essential-bar" data-noir-collapse-target="cmd-params-essential-bar" data-noir-collapse-key="cmd_essential_4box" class="noir-collapse-toggle px-2.5 py-1 rounded-lg border border-emerald-500/50 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 font-bold text-[10.5px] transition">
+              <span class="noir-collapse-state-label">Thu gọn</span> <span class="noir-collapse-arrow">▴</span>
+            </button>
+          </div>
+          <div id="cmd-params-essential-bar" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3.5">
           <div class="min-w-0">
             <label for="select-ai-execution-mode" class="block text-[10px] font-bold uppercase text-emerald-400 mb-1">1. Chế độ chạy AI (1 - 6):</label>
             <select id="select-ai-execution-mode" class="w-full min-w-0 px-2.5 py-2 rounded-xl border border-studioLightBorder dark:border-zinc-700 bg-studioLightPanel dark:bg-zinc-900 font-extrabold text-emerald-400">
@@ -3328,6 +3368,7 @@
               <option value="HIGH">🧠 Cao (Sâu tâm lý &amp; Soi logic kỹ)</option>
               <option value="XHIGH">🔬 Siêu cao · XHIGH (Tối đa tư duy Gemini 4)</option>
             </select>
+          </div>
           </div>
         </div>
 
@@ -4227,6 +4268,9 @@
         <div id="mod37-sync-devices-callout" class="p-4 rounded-2xl border-2 border-teal-400/65 bg-gradient-to-r from-teal-950/75 via-emerald-950/55 to-cyan-950/55 text-xs sm:text-sm text-teal-50 leading-relaxed font-semibold shadow-lg">
           💡 Chức năng này để giúp bạn đồng bộ trạng thái trang web và mọi công việc qua thiết bị khác thông qua tải file về máy sau đó bạn tự lấy máy khác tải về gói dữ liệu hoặc bạn kết nối tự động qua Google Drive với các bước hướng dẫn bên dưới.
         </div>
+
+        <!-- Hướng dẫn trực quan từng bước A -> Z lấy Google OAuth Client ID & kết nối Google Drive -->
+        <div id="mod37-v112-gdrive-guide-slot" class="space-y-2"></div>
 
         <div id="tab6-workspace-export-root" class="space-y-3"></div>
 

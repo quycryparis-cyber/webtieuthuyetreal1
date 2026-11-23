@@ -2620,18 +2620,25 @@
     // ------------------------------------------------------------------------
     // B. CHẾ ĐỘ 5: KHUNG DÁN & CHUYỂN MÃ ASCII QUA ẢNH ĐẸP GEMINI
     // ------------------------------------------------------------------------
-    _downloadAsciiTxtFile(asciiContent) {
+    _downloadAsciiTxtFile(asciiContent, slotName = '') {
       const content = String(asciiContent || '').trim();
       if (!content) {
         this._toast('⚠️ Bạn hãy dán mã sơ đồ ASCII vào khung trước khi tải file nhé!', 'warning');
         return false;
       }
       const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const cleanSlot = String(slotName || '')
+        .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 48);
+      const fileBase = cleanSlot || `So_Do_Cot_Truyen_ASCII_${stamp}`;
       const blob = new Blob(['\uFEFF' + content], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `So_Do_Cot_Truyen_ASCII_${stamp}.txt`;
+      a.download = `${fileBase}.txt`;
       document.body.appendChild(a);
       a.click();
       setTimeout(() => {
@@ -2640,7 +2647,7 @@
           URL.revokeObjectURL(url);
         } catch (_) {}
       }, 600);
-      this._toast('⬇️ Đã tải file sơ đồ (.TXT UTF-8 chuẩn không vỡ ký tự ASCII)!', 'success', 3200);
+      this._toast(`⬇️ Đã tải file "${fileBase}.txt" (UTF-8 chuẩn không vỡ ký tự ASCII)!`, 'success', 3200);
       return true;
     }
 
@@ -2716,11 +2723,117 @@
         } catch (_) {}
       });
       modal.querySelector('#btn-v109-modal-open-gemini')?.addEventListener('click', () => {
-        if (window.NoirStudio?.promptSynth?.openGeminiWebOrApp) {
+        if (window.NoirStudio?.geminiSplitBridge?.launchExternalSplitWindow) {
+          window.NoirStudio.geminiSplitBridge.launchExternalSplitWindow('GEMINI', false);
+        } else if (window.NoirStudio?.promptSynth?.openGeminiWebOrApp) {
           window.NoirStudio.promptSynth.openGeminiWebOrApp(true);
         } else {
-          window.open('https://gemini.google.com/app', '_blank', 'noopener');
+          window.open('https://gemini.google.com/app', 'noir_split_gemini_window');
         }
+      });
+    }
+
+    _loadAsciiSlots() {
+      const SLOTS_KEY = 'noir_v111_mode5_ascii_slots_v1';
+      try {
+        const raw = localStorage.getItem(SLOTS_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (_) {}
+      const legacy = this._safeGetLS(this.ASCII_STORAGE_KEY) || '';
+      return [
+        {
+          id: 'ascii_slot_1',
+          name: 'Khung 1: Sơ đồ Timeline & Cốt truyện',
+          content: legacy,
+          updatedAt: Date.now()
+        }
+      ];
+    }
+
+    _saveAsciiSlots() {
+      this._safeSetLS('noir_v111_mode5_ascii_slots_v1', JSON.stringify(this.asciiSlots || []));
+      this._safeSetLS('noir_v111_mode5_ascii_active_id_v1', this.activeAsciiSlotId || '');
+      const active = this._getActiveAsciiSlot();
+      if (active) this._safeSetLS(this.ASCII_STORAGE_KEY, active.content || '');
+    }
+
+    _getActiveAsciiSlot() {
+      if (!Array.isArray(this.asciiSlots) || !this.asciiSlots.length) {
+        this.asciiSlots = this._loadAsciiSlots();
+      }
+      return (
+        this.asciiSlots.find((s) => s.id === this.activeAsciiSlotId) || this.asciiSlots[0]
+      );
+    }
+
+    _renderAsciiSlotSelector() {
+      const sel = document.getElementById('select-mode5-ascii-slot');
+      const badge = document.getElementById('badge-mode5-ascii-slot-count');
+      const box = document.getElementById('textarea-mode5-ascii-diagram');
+      const active = this._getActiveAsciiSlot();
+      if (active) this.activeAsciiSlotId = active.id;
+
+      if (badge) {
+        badge.textContent = `${this.asciiSlots.length} khung`;
+      }
+      if (sel) {
+        sel.innerHTML = this.asciiSlots
+          .map(
+            (s, idx) =>
+              `<option value="${this._escapeHtml(s.id)}" ${
+                s.id === this.activeAsciiSlotId ? 'selected' : ''
+              }>${idx + 1}. ${this._escapeHtml(s.name)}</option>`
+          )
+          .join('');
+      }
+      if (box && active && box.value !== (active.content || '')) {
+        box.value = active.content || '';
+      }
+    }
+
+    _openRenameAsciiSlotModal(slot) {
+      if (!slot) return;
+      document.getElementById('modal-v111-rename-ascii-slot')?.remove();
+      const modal = document.createElement('div');
+      modal.id = 'modal-v111-rename-ascii-slot';
+      modal.className =
+        'fixed inset-0 z-[10070] bg-black/70 backdrop-blur-sm flex items-center justify-center p-3';
+      modal.innerHTML = `
+        <div class="w-full max-w-sm rounded-2xl border-2 border-cyan-400/70 bg-zinc-950 text-zinc-100 p-4 space-y-3 shadow-2xl">
+          <div class="text-sm font-black text-cyan-300">✏️ Đặt Tên Khung Sơ Đồ ASCII</div>
+          <input type="text" id="input-v111-rename-ascii-slot" value="${this._escapeHtml(
+            slot.name
+          )}" class="w-full px-3 py-2 rounded-xl border border-zinc-700 bg-zinc-900 text-sm text-white focus:outline-none focus:border-cyan-400" placeholder="Ví dụ: Khung 2 - Mạng lưới nhân vật Arc 2" />
+          <div class="flex justify-end gap-2">
+            <button type="button" id="btn-v111-rename-ascii-cancel" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold">Hủy</button>
+            <button type="button" id="btn-v111-rename-ascii-save" class="px-3.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-extrabold">Lưu Tên Khung</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      const inp = modal.querySelector('#input-v111-rename-ascii-slot');
+      inp?.focus();
+      inp?.select();
+      const close = () => modal.remove();
+      const commit = () => {
+        const nextName = (inp?.value || '').trim();
+        if (!nextName) return;
+        slot.name = nextName;
+        slot.updatedAt = Date.now();
+        this._saveAsciiSlots();
+        this._renderAsciiSlotSelector();
+        this._toast(`✅ Đã đổi tên khung thành "${nextName}"!`, 'success', 2400);
+        close();
+      };
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+      });
+      modal.querySelector('#btn-v111-rename-ascii-cancel')?.addEventListener('click', close);
+      modal.querySelector('#btn-v111-rename-ascii-save')?.addEventListener('click', commit);
+      inp?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') commit();
+        if (e.key === 'Escape') close();
       });
     }
 
@@ -2729,13 +2842,87 @@
       const btnImg = document.getElementById('btn-mode5-ascii-to-beautiful-img');
       const btnDl = document.getElementById('btn-mode5-download-ascii-txt');
       const btnCopy = document.getElementById('btn-mode5-copy-ascii');
+      const selSlot = document.getElementById('select-mode5-ascii-slot');
+      const btnNewSlot = document.getElementById('btn-mode5-new-ascii-slot');
+      const btnRenameSlot = document.getElementById('btn-mode5-rename-ascii-slot');
+      const btnDeleteSlot = document.getElementById('btn-mode5-delete-ascii-slot');
+
+      this.asciiSlots = this._loadAsciiSlots();
+      this.activeAsciiSlotId =
+        this._safeGetLS('noir_v111_mode5_ascii_active_id_v1') || this.asciiSlots[0].id;
+      this._renderAsciiSlotSelector();
 
       if (box && !box.dataset.v109Bound) {
         box.dataset.v109Bound = '1';
-        const saved = this._safeGetLS(this.ASCII_STORAGE_KEY);
-        if (saved) box.value = saved;
         box.addEventListener('input', () => {
-          this._safeSetLS(this.ASCII_STORAGE_KEY, box.value);
+          const active = this._getActiveAsciiSlot();
+          if (active) {
+            active.content = box.value;
+            active.updatedAt = Date.now();
+            this._saveAsciiSlots();
+          }
+        });
+      }
+
+      if (selSlot && !selSlot.dataset.v111Bound) {
+        selSlot.dataset.v111Bound = '1';
+        selSlot.addEventListener('change', () => {
+          this.activeAsciiSlotId = selSlot.value;
+          this._saveAsciiSlots();
+          this._renderAsciiSlotSelector();
+        });
+      }
+
+      if (btnNewSlot && !btnNewSlot.dataset.v111Bound) {
+        btnNewSlot.dataset.v111Bound = '1';
+        btnNewSlot.addEventListener('click', () => {
+          const nextNum = this.asciiSlots.length + 1;
+          const defaultTitles = [
+            'Sơ đồ Timeline & Cốt truyện',
+            'Mạng lưới Nhân vật & Phe phái',
+            'Cây Phục bút & Ngòi nổ'
+          ];
+          const labelSuffix = defaultTitles[(nextNum - 1) % defaultTitles.length];
+          const newSlot = {
+            id: `ascii_slot_${Date.now()}_${Math.floor(Math.random() * 999)}`,
+            name: `Khung ${nextNum}: ${labelSuffix}`,
+            content: '',
+            updatedAt: Date.now()
+          };
+          this.asciiSlots.push(newSlot);
+          this.activeAsciiSlotId = newSlot.id;
+          this._saveAsciiSlots();
+          this._renderAsciiSlotSelector();
+          box?.focus();
+          this._toast(`➕ Đã tạo "${newSlot.name}"! Bạn có thể bấm "✏️ Đặt tên khung" để đổi tên tùy ý.`, 'success', 2800);
+        });
+      }
+
+      if (btnRenameSlot && !btnRenameSlot.dataset.v111Bound) {
+        btnRenameSlot.dataset.v111Bound = '1';
+        btnRenameSlot.addEventListener('click', () => {
+          this._openRenameAsciiSlotModal(this._getActiveAsciiSlot());
+        });
+      }
+
+      if (btnDeleteSlot && !btnDeleteSlot.dataset.v111Bound) {
+        btnDeleteSlot.dataset.v111Bound = '1';
+        btnDeleteSlot.addEventListener('click', () => {
+          if (this.asciiSlots.length <= 1) {
+            const only = this.asciiSlots[0];
+            only.content = '';
+            only.updatedAt = Date.now();
+            this._saveAsciiSlots();
+            this._renderAsciiSlotSelector();
+            this._toast('🧹 Đã xóa trắng nội dung khung sơ đồ hiện tại!', 'info', 2200);
+            return;
+          }
+          const active = this._getActiveAsciiSlot();
+          this.asciiSlots = this.asciiSlots.filter((s) => s.id !== active.id);
+          this.activeAsciiSlotId = this.asciiSlots[0].id;
+          this._saveAsciiSlots();
+          this._renderAsciiSlotSelector();
+          this._toast(`🗑️ Đã xóa khung "${active.name}".`, 'info', 2400);
         });
       }
 
@@ -2759,7 +2946,8 @@
       if (btnDl && !btnDl.dataset.v109Bound) {
         btnDl.dataset.v109Bound = '1';
         btnDl.addEventListener('click', () => {
-          this._downloadAsciiTxtFile(box?.value || '');
+          const active = this._getActiveAsciiSlot();
+          this._downloadAsciiTxtFile(box?.value || '', active?.name || '');
         });
       }
 
@@ -2783,6 +2971,158 @@
           this._openAsciiToImageHelperModal(asciiVal, promptText);
         });
       }
+
+      this._bindMode5VisualMapImageUploader();
+    }
+
+    _bindMode5VisualMapImageUploader() {
+      const uploadBtn = document.getElementById('btn-mode5-upload-visual-img');
+      const fileInp = document.getElementById('input-mode5-visual-img');
+      const pasteBtn = document.getElementById('btn-mode5-paste-visual-img');
+      const toggleBtn = document.getElementById('btn-mode5-toggle-svg-or-img');
+      const dlBtn = document.getElementById('btn-mode5-download-visual-img');
+      const clearBtn = document.getElementById('btn-mode5-clear-visual-img');
+      const dropHost = document.getElementById('mode5-visual-drop-host');
+      const svgStage = document.getElementById('mode5-svg-canvas-Stage');
+      const imgStage = document.getElementById('mode5-custom-visual-img-stage');
+      const imgEl = document.getElementById('img-mode5-custom-visual');
+      const statusEl = document.getElementById('mode5-visual-status');
+      if (!dropHost || dropHost.dataset.v112VisualBound === '1') return;
+      dropHost.dataset.v112VisualBound = '1';
+
+      const IMG_IDB_KEY = 'mode5_visual_diagram_img_v112';
+      let currentImgDataUrl = '';
+      let showingCustomImg = false;
+
+      const applyView = () => {
+        const hasImg = Boolean(currentImgDataUrl);
+        if (imgEl) imgEl.src = currentImgDataUrl || '';
+        toggleBtn?.classList.toggle('hidden', !hasImg);
+        dlBtn?.classList.toggle('hidden', !hasImg);
+        clearBtn?.classList.toggle('hidden', !hasImg);
+        if (hasImg && showingCustomImg) {
+          svgStage?.classList.add('hidden');
+          imgStage?.classList.remove('hidden');
+          if (toggleBtn) toggleBtn.textContent = '🔄 Xem Sơ Đồ SVG';
+          if (statusEl) statusEl.textContent = '🖼️ Đang hiển thị ảnh sơ đồ đã dán/tải lên';
+        } else {
+          svgStage?.classList.remove('hidden');
+          imgStage?.classList.add('hidden');
+          if (toggleBtn) toggleBtn.textContent = '🖼️ Xem Ảnh Sơ Đồ Đã Lưu';
+          if (statusEl) statusEl.textContent = hasImg ? 'Đang xem SVG (có ảnh sơ đồ đã lưu)' : 'Sẵn sàng vẽ sơ đồ hoặc dán ảnh';
+        }
+      };
+
+      const acceptImageBlob = (blob) => {
+        if (!blob) return;
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const url = String(reader.result || '');
+          if (!url.startsWith('data:image/')) {
+            this._toast('⚠️ Tệp không phải định dạng ảnh hợp lệ!', 'warning');
+            return;
+          }
+          currentImgDataUrl = url;
+          showingCustomImg = true;
+          await this._putCoverDataUrlIdb(IMG_IDB_KEY, url);
+          applyView();
+          this._toast('🖼️ Đã gắn & lưu ảnh Bản Đồ Trực Quan thành công!', 'success', 2800);
+        };
+        reader.readAsDataURL(blob);
+      };
+
+      // Tải lại ảnh đã lưu từ IndexedDB khi mở trang
+      this._openCoversIdb().then((db) => {
+        if (!db) return;
+        try {
+          const tx = db.transaction(this.IDB_STORE, 'readonly');
+          const req = tx.objectStore(this.IDB_STORE).get(IMG_IDB_KEY);
+          req.onsuccess = () => {
+            if (req.result && req.result.dataUrl) {
+              currentImgDataUrl = req.result.dataUrl;
+              showingCustomImg = true;
+              applyView();
+            }
+          };
+        } catch (_) {}
+      });
+
+      uploadBtn?.addEventListener('click', () => fileInp?.click());
+      fileInp?.addEventListener('change', () => {
+        const f = fileInp.files && fileInp.files[0];
+        fileInp.value = '';
+        if (f) acceptImageBlob(f);
+      });
+
+      pasteBtn?.addEventListener('click', async () => {
+        dropHost.focus();
+        if (navigator.clipboard && typeof navigator.clipboard.read === 'function') {
+          try {
+            const clipItems = await navigator.clipboard.read();
+            for (const ci of clipItems) {
+              const imgType = ci.types.find((t) => t.startsWith('image/'));
+              if (imgType) {
+                const blob = await ci.getType(imgType);
+                acceptImageBlob(blob);
+                return;
+              }
+            }
+          } catch (_) {}
+        }
+        this._toast('📋 Hãy nhấn Ctrl+V ngay bây giờ để dán ảnh từ bộ nhớ tạm vào khung Bản đồ trực quan!', 'info', 3400);
+      });
+
+      dropHost.addEventListener('paste', (e) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i]?.type?.startsWith('image/')) {
+            const f = items[i].getAsFile();
+            if (f) {
+              e.preventDefault();
+              acceptImageBlob(f);
+              return;
+            }
+          }
+        }
+      });
+
+      dropHost.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropHost.classList.add('border-emerald-400', 'bg-emerald-950/20');
+      });
+      dropHost.addEventListener('dragleave', () => {
+        dropHost.classList.remove('border-emerald-400', 'bg-emerald-950/20');
+      });
+      dropHost.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropHost.classList.remove('border-emerald-400', 'bg-emerald-950/20');
+        const f = Array.from(e.dataTransfer?.files || []).find((x) => x.type.startsWith('image/'));
+        if (f) acceptImageBlob(f);
+      });
+
+      toggleBtn?.addEventListener('click', () => {
+        showingCustomImg = !showingCustomImg;
+        applyView();
+      });
+
+      dlBtn?.addEventListener('click', () => {
+        if (!currentImgDataUrl) return;
+        const a = document.createElement('a');
+        a.href = currentImgDataUrl;
+        a.download = `Ban_Do_Truc_Quan_${new Date().toISOString().slice(0, 10)}.png`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { try { document.body.removeChild(a); } catch (_) {} }, 400);
+      });
+
+      clearBtn?.addEventListener('click', async () => {
+        currentImgDataUrl = '';
+        showingCustomImg = false;
+        await this._deleteCoverDataUrlIdb(IMG_IDB_KEY);
+        applyView();
+        this._toast('🗑️ Đã xóa ảnh sơ đồ tùy chỉnh, quay về chế độ SVG.', 'info', 2200);
+      });
     }
 
     // ------------------------------------------------------------------------

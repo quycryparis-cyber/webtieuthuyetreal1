@@ -1387,9 +1387,23 @@
       return htmlBlocks.join('\n') + authorNoteHtml;
     }
 
+    resolveVietnamSafePdfFontStack(rawFont) {
+      const src = String(rawFont || "'Times New Roman', Times, serif").trim();
+      const isSans = /sans-serif|Inter|Be Vietnam Pro|Roboto|Arial|Segoe UI/i.test(src) && !/Times|Lora|Merriweather|Literata|Noto Serif|Cambria/i.test(src);
+      if (isSans) {
+        return `'Segoe UI', 'Arial', 'Roboto', 'Helvetica Neue', sans-serif`;
+      }
+      // Loại bỏ hoàn toàn Georgia vì font Georgia trên Windows Chrome Print-to-PDF tách rời dấu kép tiếng Việt (ố -> ô', ồ -> ô`)!
+      const cleaned = src.replace(/['"]?Georgia['"]?\s*,?/gi, '').replace(/,\s*,/g, ',').trim();
+      if (/Times New Roman/i.test(cleaned)) {
+        return `${cleaned.replace(/,\s*serif\s*$/i, '')}, 'Cambria', 'Segoe UI', serif`;
+      }
+      return `'Times New Roman', 'Cambria', 'Noto Serif', 'Segoe UI', serif`;
+    }
+
     // ------------------------------------------------------------------------
     // Tính toán chiều cao chuẩn đúng 1 trang riêng biệt cho Desktop & Mobile
-    // (Chống tràn trang bìa sang trang 2 ở mọi khổ sách & trình duyệt in)
+    // (Desktop giữ nguyên khổ sách; Mobile tự tối ưu vừa vặn trang ISO A4 không bị nhỏ & không tràn viền!)
     // ------------------------------------------------------------------------
     computeSafeSinglePageMetrics(trimPreset) {
       const sizeStr = String(trimPreset?.pageSizeCss || '145mm 205mm').trim();
@@ -1418,20 +1432,22 @@
           typeof window.matchMedia === 'function' &&
           window.matchMedia('(pointer: coarse)').matches);
 
-      // Desktop & Mobile dùng ngưỡng an toàn riêng biệt để 100% không tràn sang trang 2
+      // Desktop giữ nguyên kích thước khổ sách đã chọn (khung bìa Desktop đang rất đẹp)
       const desktopBoxHeightMm = Math.max(122, Math.floor(innerMm - 10));
-      const mobileCapMm = trimPreset?.id === 'MANUSCRIPT_A4_REVIEW' ? 208 : 136;
-      const mobileBoxHeightMm = Math.max(116, Math.min(Math.floor(innerMm - 14), mobileCapMm));
+      // Mobile: trình in Android/iOS mặc định in trên giấy ISO A4 (210x297mm) -> bung vừa vặn ~92% trang A4, không bị nhỏ lọt thỏm & giữ vùng đệm 20mm chống tràn viền!
+      const mobileBoxHeightMm = 244;
       const coverBoxHeightMm = isMobileEnv ? mobileBoxHeightMm : desktopBoxHeightMm;
 
-      const customCoverMarginMm = isMobileEnv ? 6 : 8;
+      const customCoverMarginMm = isMobileEnv ? 10 : 8;
       const customImageHeightMm = isMobileEnv
-        ? Math.max(126, Math.min(Math.floor(pageHeightMm - customCoverMarginMm * 2 - 14), trimPreset?.id === 'MANUSCRIPT_A4_REVIEW' ? 228 : 152))
+        ? 262
         : Math.max(136, Math.floor(pageHeightMm - customCoverMarginMm * 2 - 8));
 
       return {
         isMobileEnv,
-        pageHeightMm,
+        pageSizeCss: isMobileEnv ? 'A4 portrait' : trimPreset.pageSizeCss,
+        marginCss: isMobileEnv ? '14mm 14mm 16mm 14mm' : trimPreset.marginCss,
+        pageHeightMm: isMobileEnv ? 297 : pageHeightMm,
         coverBoxHeightMm,
         customCoverMarginMm,
         customImageHeightMm
@@ -1680,25 +1696,27 @@
         .join('\n');
 
       const safeCssBookTitle = String(this.prefs.bookTitle || 'Tác Phẩm Tiểu Thuyết')
+        .normalize('NFC')
         .replace(/["\\\r\n]/g, ' ')
         .trim();
       const singlePageMetrics = this.computeSafeSinglePageMetrics(trimPreset);
+      const vnSafeFontFamily = this.resolveVietnamSafePdfFontStack(this.prefs.fontFamily);
 
-      return `<!DOCTYPE html>
+      const fullHtml = `<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${utils.escapeHtml(this.prefs.bookTitle)}</title>
-  <!-- 100% Local-First Typography: xử lý tức thì trên máy người dùng, không chờ tải Google Fonts CDN -->
+  <!-- 100% Local-First Typography: Font chuẩn tiếng Việt NFC không tách dấu trên mọi HĐH -->
   <style>
     @page {
-      size: ${trimPreset.pageSizeCss};
-      margin: ${trimPreset.marginCss};
+      size: ${singlePageMetrics.pageSizeCss};
+      margin: ${singlePageMetrics.marginCss};
       @top-left { content: ""; }
       @top-center {
         content: "${safeCssBookTitle}";
-        font-family: ${this.prefs.fontFamily};
+        font-family: ${vnSafeFontFamily};
         font-size: 9pt;
         font-style: italic;
         color: ${paperTheme.mutedHex};
@@ -1709,7 +1727,7 @@
       @bottom-left { content: ""; }
       @bottom-center {
         content: counter(page);
-        font-family: ${this.prefs.fontFamily};
+        font-family: ${vnSafeFontFamily};
         font-size: 9.5pt;
         color: ${paperTheme.mutedHex};
         vertical-align: top;
@@ -1722,14 +1740,14 @@
       @bottom-center { content: ""; }
     }
     @page bookcoverpage {
-      size: ${trimPreset.pageSizeCss};
+      size: ${singlePageMetrics.pageSizeCss};
       margin: ${singlePageMetrics.customCoverMarginMm}mm;
       @top-center { content: ""; }
       @bottom-center { content: ""; }
     }
     @page pubinfopage {
-      size: ${trimPreset.pageSizeCss};
-      margin: ${trimPreset.marginCss};
+      size: ${singlePageMetrics.pageSizeCss};
+      margin: ${singlePageMetrics.marginCss};
       @top-center { content: ""; }
       @bottom-center { content: ""; }
     }
@@ -1743,10 +1761,19 @@
       padding: 0;
       background-color: ${paperTheme.bgHex};
       color: ${paperTheme.textHex};
-      font-family: ${this.prefs.fontFamily};
+      font-family: ${vnSafeFontFamily};
       font-size: ${this.prefs.fontSize};
       line-height: ${this.prefs.lineHeight};
+      font-kerning: normal;
+      font-variant-ligatures: none;
+      text-rendering: optimizeLegibility;
       -webkit-font-smoothing: antialiased;
+    }
+
+    table, thead, tr, td, th, .book-pubinfo-card, .book-appendix-card {
+      break-inside: avoid;
+      page-break-inside: avoid;
+      max-width: 100%;
     }
 
     /* Thanh công cụ điều khiển in trên đầu trang (Tự động ẩn khi lưu ra PDF) */
@@ -2167,6 +2194,7 @@
   </script>
 </body>
 </html>`;
+      return typeof fullHtml.normalize === 'function' ? fullHtml.normalize('NFC') : fullHtml;
     }
 
     /**

@@ -4653,6 +4653,20 @@
     "📓 Hướng dẫn NotebookLM (A → Z)": "📓 NotebookLM 图文指南 (A → Z)",
     "🚀 Mở thẳng Gemini (gemini.google.com) ↗": "🚀 直达 Gemini (gemini.google.com) ↗",
     "🚀 Mở thẳng NotebookLM (notebooklm.google.com) ↗": "🚀 直达 NotebookLM (notebooklm.google.com) ↗",
+    "➕ Tạo khung mới": "➕ 新建图框",
+    "✏️ Đặt tên khung": "✏️ 重命名图框",
+    "🗑️ Xóa khung": "🗑️ 删除图框",
+    "📄 Tải Story Bible (.PDF)": "📄 下载故事圣经 (.PDF)",
+    "📝 Tải File Tham Mưu / Chương (.TXT)": "📝 下载剧情大纲 / 章节 (.TXT)",
+    "⤢ Phóng to ô nhập": "⤢ 放大输入框",
+    "Thu gọn tất cả": "全部收起",
+    "Mở rộng tất cả": "全部展开",
+    "☁️ Liên kết Google Drive & OAuth (A → Z)": "☁️ Google Drive 与 OAuth 绑定指南 (A → Z)",
+    "📂 Chọn ảnh từ máy": "📂 从设备选图",
+    "📋 Dán ảnh (Ctrl+V)": "📋 粘贴图片 (Ctrl+V)",
+    "🔄 Xem Sơ Đồ SVG": "🔄 查看 SVG 图谱",
+    "🖼️ Xem Ảnh Sơ Đồ Đã Lưu": "🖼️ 查看已存图谱图片",
+    "🎛️ Chọn Chế Độ (1–6) · Mô Hình Gemini · Số Từ Đầu Ra · Mức Tư Duy": "🎛️ 运行模式 (1–6) · Gemini 模型 · 输出字数 · 思考深度",
   });
 
   const promptExact = Object.freeze({

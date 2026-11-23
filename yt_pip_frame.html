@@ -33,6 +33,9 @@
       var autoplay = params.get('autoplay') === '0' ? '0' : '1';
       var loop = params.get('loop') === '1' ? '1' : '0';
       var mute = params.get('mute') === '1' ? '1' : '0';
+      var rate = Number(params.get('rate')) || 1;
+      var vol = params.has('vol') ? Math.max(0, Math.min(100, Number(params.get('vol')) || 85)) : 85;
+      var sid = String(params.get('sid') || 'default');
 
       if (!vid && !listId) return;
 
@@ -64,6 +67,130 @@
       iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
       iframe.setAttribute('allowfullscreen', '');
       document.getElementById('mount').appendChild(iframe);
+
+      // Kênh đồng bộ 2 chiều siêu nhanh cùng origin giữa Cửa sổ nổi & Thanh điều khiển Studio chính
+      var bc = typeof BroadcastChannel === 'function' ? new BroadcastChannel('noir_mod39_pip_sync_v1') : null;
+      var acked = false;
+      var appliedInitialPrefs = false;
+      var handshakeTimer = null;
+
+      function postToYt(payload) {
+        try {
+          if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage(JSON.stringify(payload), '*');
+          }
+        } catch (_e) {}
+      }
+
+      function sendYtCmd(func, args) {
+        postToYt({
+          event: 'command',
+          func: func,
+          args: Array.isArray(args) ? args : [],
+          id: 1,
+          channel: 'widget'
+        });
+      }
+
+      function startHandshake() {
+        if (handshakeTimer) clearInterval(handshakeTimer);
+        var tries = 0;
+        var pulse = function () {
+          if (acked || tries >= 30) {
+            if (handshakeTimer) {
+              clearInterval(handshakeTimer);
+              handshakeTimer = null;
+            }
+            return;
+          }
+          tries += 1;
+          postToYt({ event: 'listening', id: 1, channel: 'widget' });
+        };
+        pulse();
+        handshakeTimer = setInterval(pulse, 220);
+      }
+
+      iframe.addEventListener('load', function () {
+        acked = false;
+        startHandshake();
+      });
+
+      window.addEventListener('message', function (ev) {
+        if (!ev || !ev.data) return;
+        var org = String(ev.origin || '');
+        if (org && org.indexOf('youtube.com') === -1 && org.indexOf('youtube-nocookie.com') === -1) return;
+        var data = ev.data;
+        if (typeof data === 'string') {
+          try { data = JSON.parse(data); } catch (_e) { return; }
+        }
+        if (!data || typeof data !== 'object') return;
+
+        if (!acked) {
+          acked = true;
+          if (handshakeTimer) {
+            clearInterval(handshakeTimer);
+            handshakeTimer = null;
+          }
+          ['onStateChange', 'onPlaybackRateChange', 'onError'].forEach(function (evName) {
+            sendYtCmd('addEventListener', [evName]);
+          });
+        }
+
+        if (!appliedInitialPrefs && (data.event === 'onReady' || data.event === 'initialDelivery' || data.event === 'infoDelivery')) {
+          appliedInitialPrefs = true;
+          setTimeout(function () {
+            if (rate && Math.abs(rate - 1) > 0.01) {
+              sendYtCmd('setPlaybackRate', [rate]);
+            }
+            if (mute === '1') {
+              sendYtCmd('mute', []);
+            } else {
+              sendYtCmd('unMute', []);
+              sendYtCmd('setVolume', [vol]);
+            }
+          }, 120);
+        }
+
+        if ((data.event === 'infoDelivery' || data.event === 'initialDelivery') && data.info && typeof data.info === 'object') {
+          var payload = {
+            type: 'sync',
+            sid: sid,
+            info: {
+              currentTime: typeof data.info.currentTime === 'number' ? data.info.currentTime : undefined,
+              duration: typeof data.info.duration === 'number' ? data.info.duration : undefined,
+              playerState: typeof data.info.playerState === 'number' ? data.info.playerState : undefined,
+              playbackRate: typeof data.info.playbackRate === 'number' ? data.info.playbackRate : undefined,
+              volume: typeof data.info.volume === 'number' ? data.info.volume : undefined,
+              muted: typeof data.info.muted === 'boolean' ? data.info.muted : undefined
+            }
+          };
+          if (bc) {
+            try { bc.postMessage(payload); } catch (_eBc) {}
+          }
+        }
+      });
+
+      if (bc) {
+        bc.onmessage = function (ev) {
+          var msg = ev && ev.data;
+          if (!msg || typeof msg !== 'object') return;
+          if (msg.sid && msg.sid !== sid) return;
+          if (msg.type === 'cmd' && msg.func) {
+            sendYtCmd(msg.func, msg.args || []);
+          } else if (msg.type === 'close') {
+            try { iframe.src = 'about:blank'; } catch (_eC) {}
+          }
+        };
+      }
+
+      window.addEventListener('pagehide', function () {
+        try {
+          if (bc) {
+            bc.postMessage({ type: 'closed', sid: sid });
+            bc.close();
+          }
+        } catch (_eH) {}
+      });
     })();
   </script>
 </body>

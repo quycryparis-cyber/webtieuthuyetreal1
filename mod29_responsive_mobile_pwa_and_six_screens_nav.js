@@ -4151,8 +4151,175 @@
     }
   }
 
+  // ============================================================================
+  // V112: NÚT "THU GỌN TẤT CẢ / MỞ RỘNG TẤT CẢ" ĐỒNG BỘ CHO MỌI TAB (1–6) & TRUNG TÂM AI
+  // ============================================================================
+  class V112MasterCollapseAllManager {
+    constructor(collapsibleCtrl) {
+      this.collapsibleCtrl = collapsibleCtrl;
+      this.scopeCollapsedState = {};
+    }
+
+    _tr(s) {
+      return window.NoirStudio?.i18n?.translateText
+        ? window.NoirStudio.i18n.translateText(s)
+        : s;
+    }
+
+    toggleAllInScope(scopeId, rootEl, btnEl) {
+      if (!rootEl) return;
+      const nextCollapsed = !Boolean(this.scopeCollapsedState[scopeId]);
+      this.scopeCollapsedState[scopeId] = nextCollapsed;
+
+      // 1) Toàn bộ nút chuẩn .noir-collapse-toggle bên trong phạm vi
+      rootEl
+        .querySelectorAll('.noir-collapse-toggle[data-noir-collapse-target]')
+        .forEach((toggleBtn) => {
+          const targetId = toggleBtn.getAttribute('data-noir-collapse-target');
+          if (!targetId) return;
+          if (this.collapsibleCtrl?.setTargetCollapsed) {
+            this.collapsibleCtrl.setTargetCollapsed(targetId, nextCollapsed);
+          } else {
+            const target = document.getElementById(targetId);
+            if (target) target.classList.toggle('hidden', nextCollapsed);
+          }
+        });
+
+      // 2) Các khối thu gọn đặc thù theo từng Tab / Trung tâm điều khiển AI
+      if (scopeId === 'TAB_1') {
+        const deskGroup = document.getElementById('tab1-desk-actions-collapsible-group');
+        const deskBtn = document.getElementById('btn-toggle-tab1-desk-actions');
+        if (deskGroup && deskBtn) {
+          const isCurHidden = deskGroup.classList.contains('hidden');
+          if (isCurHidden !== nextCollapsed) deskBtn.click();
+        }
+        const wfBar = document.getElementById('tab1-four-step-workflow-bar');
+        const wfBtn = document.getElementById('btn-toggle-tab1-workflow-bar');
+        if (wfBar && wfBtn) {
+          const isCurHidden = wfBar.classList.contains('hidden');
+          if (isCurHidden !== nextCollapsed) wfBtn.click();
+        }
+      } else if (scopeId === 'AI_CENTER') {
+        const heroTop = document.getElementById('cmd-hero-links-topbar');
+        if (heroTop) heroTop.classList.toggle('hidden', nextCollapsed);
+        const advWrap = document.getElementById('cmd-mode-prompt-advisories-wrap');
+        if (advWrap) advWrap.classList.toggle('hidden', nextCollapsed);
+        const advBtn = document.getElementById('btn-toggle-cmd-advisories');
+        if (advBtn) {
+          advBtn.setAttribute('aria-expanded', nextCollapsed ? 'false' : 'true');
+          advBtn.textContent = nextCollapsed
+            ? `▼ ${this._tr('Mở rộng gợi ý')}`
+            : `▲ ${this._tr('Thu gọn gợi ý')}`;
+        }
+      } else if (scopeId === 'TAB_5') {
+        // Hỗ trợ thêm các thẻ <details> & nút thu gọn nội bộ trong Tab 5
+        rootEl.querySelectorAll('details').forEach((d) => {
+          d.open = !nextCollapsed;
+        });
+      } else if (scopeId === 'TAB_6') {
+        rootEl.querySelectorAll('details').forEach((d) => {
+          d.open = !nextCollapsed;
+        });
+      }
+
+      if (btnEl) {
+        btnEl.setAttribute('aria-pressed', nextCollapsed ? 'true' : 'false');
+        btnEl.innerHTML = nextCollapsed
+          ? `<span>▼ ${this._tr('Mở rộng tất cả')}</span>`
+          : `<span>▲ ${this._tr('Thu gọn tất cả')}</span>`;
+      }
+    }
+
+    _createMasterBtn(scopeId, rootEl, extraClass = '') {
+      const btnId = `btn-v112-collapse-all-${scopeId.toLowerCase()}`;
+      const existing = document.getElementById(btnId);
+      if (existing) return existing;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = btnId;
+      btn.className =
+        `px-2.5 py-1 rounded-lg border border-amber-400/60 bg-amber-500/15 hover:bg-amber-500/30 text-amber-200 font-extrabold text-[10.5px] transition whitespace-nowrap shrink-0 cursor-pointer ${extraClass}`.trim();
+      btn.innerHTML = `<span>▲ ${this._tr('Thu gọn tất cả')}</span>`;
+      btn.title = 'Thu gọn hoặc mở rộng tất cả các khung chức năng trong màn hình này chỉ với 1 chạm';
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.toggleAllInScope(scopeId, rootEl, btn);
+      });
+      return btn;
+    }
+
+    mountAllButtons() {
+      if (typeof document === 'undefined') return;
+
+      // Tab 1 (Bàn viết truyện): gắn ngay cạnh nút Thu gọn thanh công cụ Tab 1
+      const tab1Root = document.getElementById('pane-right-manuscript');
+      const tab1ToolbarRow = document.querySelector('#stage6-reader-typography-bar > div');
+      if (tab1Root && tab1ToolbarRow && !document.getElementById('btn-v112-collapse-all-tab_1')) {
+        tab1ToolbarRow.appendChild(this._createMasterBtn('TAB_1', tab1Root));
+      }
+
+      // Tab 2 (Danh sách chương): gắn ngay hàng nút đầu Tab 2
+      const tab2Root = document.getElementById('left-sidebar-pane');
+      const tab2BtnGroup = document.getElementById('btn-toggle-tab2-filters')?.parentElement;
+      if (tab2Root && tab2BtnGroup && !document.getElementById('btn-v112-collapse-all-tab_2')) {
+        tab2BtnGroup.appendChild(this._createMasterBtn('TAB_2', tab2Root));
+      }
+
+      // Tab 3 (Cửa sổ đầu ra AI): gắn trên thanh tiêu đề đầu ra Tab 3
+      const tab3Root = document.getElementById('pane-left-ai-output');
+      const tab3BtnGroup = document.getElementById('btn-toggle-tab3-output-extras')?.parentElement;
+      if (tab3Root && tab3BtnGroup && !document.getElementById('btn-v112-collapse-all-tab_3')) {
+        tab3BtnGroup.appendChild(this._createMasterBtn('TAB_3', tab3Root));
+      }
+
+      // Tab 4 (Story Bible): gắn thanh nhỏ gọn đầu màn hình Tab 4
+      const tab4Root = document.getElementById('screen-4-story-bible');
+      if (tab4Root && !document.getElementById('btn-v112-collapse-all-tab_4')) {
+        const inner = tab4Root.firstElementChild || tab4Root;
+        const bar = document.createElement('div');
+        bar.className = 'flex items-center justify-end';
+        bar.appendChild(this._createMasterBtn('TAB_4', tab4Root));
+        inner.insertBefore(bar, inner.firstChild);
+      }
+
+      // Tab 5 (Nhạc nền & Không gian): gắn thanh nhỏ gọn đầu màn hình Tab 5
+      const tab5Root = document.getElementById('screen-5-ambience');
+      if (tab5Root && !document.getElementById('btn-v112-collapse-all-tab_5')) {
+        const inner = tab5Root.firstElementChild || tab5Root;
+        const bar = document.createElement('div');
+        bar.className = 'flex items-center justify-end';
+        bar.appendChild(this._createMasterBtn('TAB_5', tab5Root));
+        inner.insertBefore(bar, inner.firstChild);
+      }
+
+      // Tab 6 (Hệ thống & Cài đặt): gắn thanh nhỏ gọn đầu màn hình Tab 6
+      const tab6Root = document.getElementById('screen-6-system');
+      if (tab6Root && !document.getElementById('btn-v112-collapse-all-tab_6')) {
+        const inner = tab6Root.firstElementChild || tab6Root;
+        const bar = document.createElement('div');
+        bar.className = 'flex items-center justify-end';
+        bar.appendChild(this._createMasterBtn('TAB_6', tab6Root));
+        inner.insertBefore(bar, inner.firstChild);
+      }
+
+      // Trung tâm Điều khiển AI (#modal-fullscreen-ai-command): gắn ngay góc trên bên cạnh nút Đóng
+      const aiModal = document.getElementById('modal-fullscreen-ai-command');
+      const aiCloseBtn = document.getElementById('btn-close-fullscreen-ai-command');
+      if (aiModal && aiCloseBtn && aiCloseBtn.parentElement && !document.getElementById('btn-v112-collapse-all-ai_center')) {
+        aiCloseBtn.parentElement.insertBefore(
+          this._createMasterBtn('AI_CENTER', aiModal),
+          aiCloseBtn
+        );
+      }
+    }
+  }
+
   const focusWritingCtrl = new FocusWritingAndTab1SplitController();
   NS.focusWritingCtrl = focusWritingCtrl;
+
+  const masterCollapseAllMgr = new V112MasterCollapseAllManager(collapsibleToolbars);
+  NS.masterCollapseAllMgr = masterCollapseAllMgr;
 
   const delayedTooltipController = new HumanizedDelayedTooltipController();
   delayedTooltipController.bindGlobalEvents();
@@ -4165,6 +4332,7 @@
     collapsibleToolbars.refreshBindings();
     delayedTooltipController.bindGlobalEvents();
     focusWritingCtrl.bindEvents();
+    masterCollapseAllMgr.mountAllButtons();
     return res;
   };
 
