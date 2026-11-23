@@ -3894,6 +3894,36 @@
         document.getElementById('btn-open-fullscreen-ai-command')?.click();
       });
 
+      // Thu gọn / mở rộng thanh Quy trình 4 bước tại Tab 1 (Mặc định MỞ RỘNG, bấm thu gọn từ dưới lên)
+      const wfBar = document.getElementById('tab1-four-step-workflow-bar');
+      const wfCollapseBtn = document.getElementById('btn-tab1-collapse-workflow');
+      const wfExpandBtn = document.getElementById('btn-tab1-expand-workflow');
+      const setWfCollapsed = (collapsed) => {
+        if (wfBar) wfBar.classList.toggle('hidden', Boolean(collapsed));
+        if (wfExpandBtn) wfExpandBtn.classList.toggle('hidden', !collapsed);
+        try { localStorage.setItem('noir_v106_tab1_workflow_collapsed', collapsed ? '1' : '0'); } catch (_e) {}
+      };
+      wfCollapseBtn?.addEventListener('click', () => setWfCollapsed(true));
+      wfExpandBtn?.addEventListener('click', () => setWfCollapsed(false));
+
+      // Đồng bộ 2 chiều ô Số từ Chế độ 1 (tối đa 40.000) trong thanh Viết Tập Trung với #input-target-word-count
+      const focusWordInput = document.getElementById('input-focus-target-word-count');
+      const mainWordInput = document.getElementById('input-target-word-count');
+      if (focusWordInput && mainWordInput) {
+        focusWordInput.value = mainWordInput.value || '3500';
+        focusWordInput.addEventListener('input', () => {
+          const clamped = Math.max(300, Math.min(40000, Number(focusWordInput.value) || 3500));
+          mainWordInput.value = String(clamped);
+          mainWordInput.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        mainWordInput.addEventListener('input', () => {
+          focusWordInput.value = mainWordInput.value || '3500';
+        });
+        mainWordInput.addEventListener('change', () => {
+          focusWordInput.value = mainWordInput.value || '3500';
+        });
+      }
+
       const splitBible = document.getElementById('tab1-split-bible-textarea');
       if (splitBible) {
         splitBible.addEventListener('input', () => {

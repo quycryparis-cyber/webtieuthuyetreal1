@@ -2489,6 +2489,12 @@
       document.addEventListener('visibilitychange', () => {
         this.handleVisibilityChange(Boolean(document.hidden));
       });
+      NS.bus?.on?.('screen:changed', (payload) => {
+        const scr = typeof payload === 'string' ? payload : payload?.screenId || '';
+        if (scr === 'SCREEN_5_AMBIENCE' && isDesktopDirectYoutubeEnv() && this.playerCtrl?.activeEngine === 'IFRAME') {
+          setTimeout(() => this.nudgeDesktopIframeCompositorRepaint(), 40);
+        }
+      });
       if (typeof window !== 'undefined') {
         window.addEventListener('pagehide', () => this.handleVisibilityChange(true));
         window.addEventListener('pageshow', () => this.handleVisibilityChange(Boolean(document.hidden)));
@@ -4615,6 +4621,79 @@
       );
     }
 
+    nudgeDesktopIframeCompositorRepaint() {
+      if (typeof document === 'undefined') return;
+      if (this.playerCtrl?.activeEngine !== 'IFRAME') return;
+      // Bảo đảm mọi lớp phủ native/audio-only/poster đều ẩn hoàn toàn khi đang phát iframe trực tiếp
+      ['mod39-native-video-host', 'mod39-resolving-poster-card', 'mod39-audio-only-stage'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+      const iframe = document.getElementById('mod39-youtube-iframe');
+      if (!iframe) return;
+      iframe.classList.remove('hidden');
+      iframe.style.visibility = 'visible';
+      iframe.style.opacity = '1';
+      // Kích nhẹ GPU compositor layer của Chromium để tránh khung đen hardware-decode khi chuyển tab
+      iframe.style.transform = 'translateZ(0.01px)';
+      requestAnimationFrame(() => {
+        iframe.style.transform = 'translateZ(0)';
+      });
+    }
+
+    restoreDesktopIframeAfterFloatingClose(resumeAtSec = null, shouldResume = true) {
+      if (!this._desktopFloatingPublicStreamActive && !this._desktopFloatingIframePaused) return;
+      const video = this.playerCtrl?.activeVideo;
+      let sec = Number.isFinite(resumeAtSec) ? Math.max(0, Math.floor(resumeAtSec)) : null;
+
+      if (NS.nativePlayer?.isActive?.()) {
+        try {
+          if (sec === null && NS.nativePlayer.videoEl && Number.isFinite(NS.nativePlayer.videoEl.currentTime)) {
+            sec = Math.max(0, Math.floor(NS.nativePlayer.videoEl.currentTime));
+          }
+          if (document.pictureInPictureElement === NS.nativePlayer.videoEl) {
+            document.exitPictureInPicture?.().catch(() => {});
+          }
+          NS.nativePlayer.deactivate?.();
+        } catch (_eDeact) {}
+      }
+
+      this._desktopFloatingPublicStreamActive = false;
+      this._desktopFloatingIframePaused = false;
+      this._silencedIframeForBgAudio = false;
+      this.mode = 'iframe-fallback';
+      if (this.playerCtrl) {
+        this.playerCtrl.activeEngine = 'IFRAME';
+      }
+
+      // Khôi phục lại youtube-nocookie.com tại đúng giây hiện tại (tuyệt đối không chạy song song 2 nguồn!)
+      if (video && (video.videoId || video.playlistId)) {
+        const targetSec = sec !== null ? sec : Math.max(0, Math.floor(Number(this.playerCtrl?.bridge?.lastKnownTime) || 0));
+        const iframe = document.getElementById('mod39-youtube-iframe');
+        const parser = NS.youtubeStudio?.parser;
+        if (iframe && parser && (!iframe.src || iframe.src === 'about:blank')) {
+          iframe.src = parser.buildPrivacyEmbedUrl({
+            videoId: video.videoId,
+            playlistId: video.playlistId,
+            startSeconds: targetSec,
+            autoplay: Boolean(shouldResume),
+            loop: !video.isLive && Boolean(this.playerCtrl?.prefs?.repeatMode),
+            muted: Boolean(this.playerCtrl?.prefs?.muted),
+            controls: true,
+            forBackground: false
+          });
+        } else {
+          try {
+            if (targetSec > 0) this.playerCtrl?.bridge?.dispatchPlayerCommand?.('seekTo', [targetSec, true]);
+            if (shouldResume) this.playerCtrl?.bridge?.dispatchPlayerCommand?.('playVideo', []);
+          } catch (_eRes) {}
+        }
+        this.nudgeDesktopIframeCompositorRepaint();
+      }
+      this.syncStatusUi();
+      this.playerCtrl?.emitUiSync?.();
+    }
+
     closeDesktopFloatingWindow() {
       let closedAny = false;
       try {
@@ -4632,6 +4711,10 @@
           closedAny = true;
         } catch (_eRm) {}
       }
+      if (this._desktopFloatingPublicStreamActive || this._desktopFloatingIframePaused) {
+        this.restoreDesktopIframeAfterFloatingClose(null, true);
+        closedAny = true;
+      }
       if (closedAny) {
         this.syncStatusUi();
         this.playerCtrl.emitUiSync?.();
@@ -4646,14 +4729,61 @@
         return { ok: false, reason: 'no-video' };
       }
 
-      if (this.isFloatingWindowOpen() && !NS.nativePlayer?.isInSystemPiP) {
+      if (this.isFloatingWindowOpen() || this._desktopFloatingPublicStreamActive) {
         this.closeDesktopFloatingWindow();
-        safeNotify('🖼️ Đã đóng Cửa sổ nổi YouTube.', 'info', 2000);
+        safeNotify('🖼️ Đã đóng Cửa sổ nổi và trả phát lại về YouTube gốc!', 'info', 2200);
         return { ok: true, closed: true };
       }
 
       const snap = this.playerCtrl?.bridge?.getCurrentPlaybackSnapshot?.() || {};
       const startSec = Math.max(0, Math.floor(Number(snap.currentTime) || Number(video.startSeconds) || 0));
+
+      // 1) Tắt & tạm dừng hoàn toàn iframe youtube-nocookie.com TRƯỚC khi mở nguồn Cửa sổ nổi (tuyệt đối không chạy song song 2 nguồn!)
+      this._desktopFloatingIframePaused = true;
+      try {
+        this._silenceForegroundIframeForNativeTakeover?.();
+        this.playerCtrl?.pause?.();
+      } catch (_ePause) {}
+
+      // 2) Trên Desktop: chỉ lúc bấm "🖼️ Cửa sổ nổi" mới tìm nguồn phát công cộng để bật PiP Video có hình thật của hệ điều hành!
+      if (isDesktopDirectYoutubeEnv() && video.videoId && !video.isLive) {
+        safeNotify('🖼️ Đang tìm nguồn phát công cộng để mở Cửa sổ nổi Video (tự tắt nguồn gốc tránh trùng tiếng)...', 'info', 2800);
+        try {
+          const upgraded = await this.upgradeActiveVideoToNativePlayer(video, {
+            autoplay: true,
+            startTime: startSec,
+            preferVideo: true
+          });
+          if (upgraded && NS.nativePlayer?.isActive?.() && NS.nativePlayer.videoEl) {
+            this._desktopFloatingPublicStreamActive = true;
+            this._silenceForegroundIframeForNativeTakeover?.();
+            const vidEl = NS.nativePlayer.videoEl;
+            const onLeavePip = () => {
+              vidEl.removeEventListener('leavepictureinpicture', onLeavePip);
+              const curSec = Number.isFinite(vidEl.currentTime) ? Math.floor(vidEl.currentTime) : startSec;
+              const wasPlaying = !vidEl.paused;
+              this.restoreDesktopIframeAfterFloatingClose(curSec, wasPlaying);
+              safeNotify('🔄 Đã tắt nguồn công cộng và chuyển mượt về YouTube gốc!', 'info', 2400);
+            };
+            vidEl.addEventListener('leavepictureinpicture', onLeavePip, { once: true });
+
+            const pipRes = await NS.nativePlayer.enterSystemPictureInPicture?.();
+            if (pipRes && pipRes.ok !== false && document.pictureInPictureElement === vidEl) {
+              this.syncStatusUi();
+              this.playerCtrl?.emitUiSync?.();
+              safeNotify('🖼️ Đã bật Cửa sổ nổi Video thật! Khi đóng cửa sổ nổi sẽ tự trả về YouTube gốc.', 'success', 3000);
+              return { ok: true, mode: 'desktop-native-video-pip' };
+            }
+            // Nếu trình duyệt không cho gọi OS Video PiP trực tiếp -> tắt native stream trước khi mở Document PiP / Floating Window
+            vidEl.removeEventListener('leavepictureinpicture', onLeavePip);
+            NS.nativePlayer.deactivate?.();
+            this._desktopFloatingPublicStreamActive = false;
+          }
+        } catch (_eDeskStream) {
+          this._desktopFloatingPublicStreamActive = false;
+        }
+      }
+
       const parser = NS.youtubeStudio?.parser;
       const embedUrl = parser
         ? parser.buildPrivacyEmbedUrl({
@@ -4668,12 +4798,7 @@
           })
         : `https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.videoId || '')}?autoplay=1&start=${startSec}&rel=0`;
 
-      // Tạm dừng iframe chính để tránh phát trùng tiếng khi mở Cửa sổ nổi
-      try {
-        this.playerCtrl?.pause?.();
-      } catch (_ePause) {}
-
-      // Ưu tiên 1: Document Picture-in-Picture thật của hệ điều hành (Chrome / Edge / Desktop PWA)
+      // Ưu tiên dự phòng 1: Document Picture-in-Picture thật của hệ điều hành (Chrome / Edge / Desktop PWA)
       if (
         typeof window !== 'undefined' &&
         window.documentPictureInPicture &&
@@ -4708,8 +4833,7 @@
           });
           pipWin.addEventListener('pagehide', () => {
             this._docPipWindow = null;
-            this.syncStatusUi();
-            this.playerCtrl?.emitUiSync?.();
+            this.restoreDesktopIframeAfterFloatingClose(null, true);
           });
           this.syncStatusUi();
           this.playerCtrl?.emitUiSync?.();
@@ -4892,6 +5016,14 @@
             player.play().catch(() => {});
           }
           this.syncStatusUi();
+        }
+        return;
+      }
+
+      // Desktop phát trực tiếp qua youtube-nocookie.com: KHÔNG cướp quyền nền sang audio-only (tránh đen khung hình khi quay lại tab!)
+      if (isDesktopDirectYoutubeEnv() && this.playerCtrl?.activeEngine === 'IFRAME' && !this._desktopFloatingPublicStreamActive) {
+        if (!isHidden) {
+          this.nudgeDesktopIframeCompositorRepaint();
         }
         return;
       }

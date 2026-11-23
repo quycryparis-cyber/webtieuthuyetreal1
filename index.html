@@ -905,19 +905,77 @@
         padding-bottom: 9.5rem;
       }
     }
-    /* Tối thiểu hóa Cửa sổ Chọn Mô Hình AI khi ở Chế độ Viết Tập Trung: chỉ giữ Chế độ, Mô hình, Khung Prompt mẫu & Ô nhập lệnh */
+    /* Tối thiểu hóa Cửa sổ Chọn Mô Hình AI khi ở Chế độ Viết Tập Trung: giữ Chế độ, Mô hình, Số từ (tối đa 40.000), Khung Prompt & Ô nhập lệnh */
     body.noir-focus-writing-mode #modal-fullscreen-ai-command #ai-realtime-quota-widget,
     body.noir-focus-writing-mode #modal-fullscreen-ai-command #btn-toggle-cmd-params-drawer,
     body.noir-focus-writing-mode #modal-fullscreen-ai-command #cmd-params-collapsible-body,
     body.noir-focus-writing-mode #modal-fullscreen-ai-command #btn-cmd-open-bible-drawer {
       display: none !important;
     }
-    body.noir-focus-writing-mode #modal-fullscreen-ai-command #cmd-params-essential-bar > div:nth-child(3),
     body.noir-focus-writing-mode #modal-fullscreen-ai-command #cmd-params-essential-bar > div:nth-child(4) {
       display: none !important;
     }
     body.noir-focus-writing-mode #modal-fullscreen-ai-command #cmd-params-essential-bar {
-      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+    /* Bảo đảm Tooltip nổi KHÔNG BAO GIỜ chặn cú click vào các nút trong hộp thoại */
+    #noir-smart-delayed-tooltip,
+    #noir-smart-hover-tooltip {
+      pointer-events: none !important;
+    }
+    /* Làm nổi bật & nhấp nháy dịu nút Viết Tập Trung để tác giả thấy ngay */
+    @keyframes noirFocusCtaPulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.72), 0 0 14px rgba(52, 211, 153, 0.55);
+        transform: scale(1);
+      }
+      50% {
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0), 0 0 24px rgba(16, 185, 129, 0.9);
+        transform: scale(1.03);
+      }
+    }
+    .noir-focus-cta-glow {
+      animation: noirFocusCtaPulse 2.1s ease-in-out infinite;
+    }
+    /* Thu gọn Danh Sách Chương Tab 2 về phía bên trái */
+    #left-sidebar-pane.noir-sidebar-collapsed {
+      width: 0 !important;
+      min-width: 0 !important;
+      max-width: 0 !important;
+      padding: 0 !important;
+      border-right-width: 0 !important;
+      overflow: hidden !important;
+      opacity: 0;
+      pointer-events: none;
+      transition: width 0.22s ease, opacity 0.18s ease;
+    }
+    /* Định dạng Bảng & Ảnh giống Word/Google Docs trong Ô Nhập Lệnh Rich */
+    #s18-rich-prompt-editor:empty::before {
+      content: attr(data-placeholder);
+      color: #71717a;
+      white-space: pre-line;
+      pointer-events: none;
+    }
+    #s18-rich-prompt-editor table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 8px 0;
+      font-size: 12.5px;
+    }
+    #s18-rich-prompt-editor th,
+    #s18-rich-prompt-editor td {
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      padding: 5px 8px;
+      text-align: left;
+    }
+    #s18-rich-prompt-editor img {
+      max-width: 240px;
+      max-height: 180px;
+      border-radius: 10px;
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      margin: 6px 6px 6px 0;
+      display: inline-block;
+      vertical-align: middle;
     }
     /* Cửa sổ Story Bible tối giản khi mở từ Chế độ Viết Tập Trung */
     body.noir-focus-writing-mode.noir-focus-bible-open #right-bible-pane {
@@ -1029,7 +1087,7 @@
         }, true);
       } catch (_eSub) {}
       try {
-        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v105';
+        var TARGET_SW_CACHE = 'bi-novel-studio-pwa-v106';
         if (typeof window !== 'undefined' && 'caches' in window && window.caches && typeof window.caches.keys === 'function') {
           window.caches.keys().then(function (keys) {
             for (var i = 0; i < keys.length; i++) {
@@ -1429,6 +1487,12 @@
             <span>📂 Danh Sách Chương</span>
           </h2>
           <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+            <button type="button" id="btn-tab2-collapse-sidebar" class="px-2 py-1 rounded-lg border border-amber-500/50 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-bold text-[10px] transition whitespace-nowrap" title="Thu gọn danh sách chương sang bên trái cho rộng màn hình">
+              <span>◀ Thu gọn</span>
+            </button>
+            <button type="button" id="btn-tab2-sync-from-disk" class="px-2 py-1 rounded-lg border border-cyan-500/45 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-200 font-bold text-[10px] transition whitespace-nowrap" title="Đồng bộ 2 chiều tên thư mục Quyển / Chương / Cảnh với thư mục công việc trên máy tính">
+              <span>🔄 Đồng bộ thư mục</span>
+            </button>
             <button type="button" id="btn-tab2-split-gemini" class="px-2 py-1 rounded-lg border border-indigo-500/50 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-200 font-bold text-[10px] transition whitespace-nowrap" title="Copy câu lệnh & chia đôi màn hình làm việc cùng Gemini Web/App">
               <span>🪟 Chia đôi màn hình với Gemini</span>
             </button>
@@ -1484,6 +1548,10 @@
         </div>
       </div>
     </aside>
+    <button type="button" id="btn-tab2-expand-sidebar" class="hidden fixed left-2 top-1/2 -translate-y-1/2 z-40 px-2.5 py-3 rounded-r-2xl rounded-l-lg border-2 border-emerald-400/75 bg-zinc-950/95 hover:bg-emerald-700 text-emerald-200 hover:text-white font-extrabold text-[11px] shadow-2xl transition flex flex-col items-center gap-1" title="Mở lại Danh Sách Chương">
+      <span>▶</span>
+      <span class="[writing-mode:vertical-rl] tracking-wider">Mở Chương</span>
+    </button>
 
     <!-- =================================================================== -->
     <!-- KHU VỰC GIỮA (HIỆN Ở TAB 1: BÀN VIẾT, TAB 2: XEM KÈM, TAB 3: AI)    -->
@@ -1758,6 +1826,10 @@
             <div class="flex items-center gap-1.5 flex-wrap">
               <span class="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 font-extrabold text-[10.5px]">🎯 Viết Tập Trung</span>
               <button type="button" id="btn-focus-open-ai-cmd" class="px-2.5 py-1 rounded-lg border border-indigo-400/50 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-200 font-bold text-[11px] transition">🤖 Mô hình &amp; Lệnh AI</button>
+              <label class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border border-indigo-400/45 bg-indigo-950/50 text-indigo-200 font-bold text-[10.5px]" title="Số từ mục tiêu cho Chế độ 1 (hỗ trợ tối đa 40.000 từ)">
+                <span>📏 Số từ CĐ1:</span>
+                <input id="input-focus-target-word-count" type="number" min="300" max="40000" step="100" value="3500" class="w-20 px-1.5 py-0.5 rounded bg-zinc-900 border border-indigo-500/50 text-indigo-200 font-monoCode font-extrabold text-[11px] focus:outline-none focus:border-emerald-400" />
+              </label>
               <button type="button" id="btn-focus-open-bible" class="px-2.5 py-1 rounded-lg border border-amber-400/50 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-bold text-[11px] transition">🏛️ Story Bible</button>
               <button type="button" id="btn-focus-toggle-split" class="px-2.5 py-1 rounded-lg border border-cyan-400/50 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-200 font-bold text-[11px] transition">⚡ Split Bible &amp; Lệnh</button>
             </div>
@@ -1775,7 +1847,7 @@
                 <button type="button" id="btn-tab1-toggle-chapter-tree" class="px-2.5 py-1 rounded-lg border border-teal-500/45 bg-teal-500/15 hover:bg-teal-500/25 text-teal-200 text-[11px] font-bold transition" title="Mở / Đóng nhanh cây Quyển - Chương - Cảnh ngay tại Bàn viết Tab 1">
                   <span>📚 Cây Chương</span>
                 </button>
-                <button type="button" id="btn-tab1-focus-writing-mode" class="px-2.5 py-1 rounded-lg border border-emerald-500/45 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-[11px] font-bold transition" title="Bật Chế độ Viết Tập Trung Hoàn Toàn (chỉ giữ Tab 1 + nút Mô hình AI tối giản & Story Bible, nhấn Esc để thoát)">
+                <button type="button" id="btn-tab1-focus-writing-mode" class="noir-focus-cta-glow px-3 py-1 rounded-lg border-2 border-emerald-300 bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white text-[11.5px] font-black shadow-lg transition" title="Bật Chế độ Viết Tập Trung Hoàn Toàn (chỉ giữ Tab 1 + nút Mô hình AI tối giản & Story Bible, nhấn Esc để thoát)">
                   <span>🎯 Viết Tập Trung</span>
                 </button>
                 <button type="button" id="btn-tab1-split-bible-cmd" class="px-2.5 py-1 rounded-lg border border-cyan-500/45 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-200 text-[11px] font-bold transition" title="Mở bảng chia đôi (Split Table) xem Story Bible hiện tại & Câu lệnh AI hiện tại ngay tại Tab 1">
@@ -1791,34 +1863,44 @@
               </div>
             </div>
 
-            <!-- Quy trình soạn thảo ngắn 4 bước ngay trên Tab 1 (bấm chữ gạch chân vào thẳng đúng chế độ) -->
-            <div id="tab1-four-step-workflow-bar" class="px-2.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-950/25 text-[10.5px] sm:text-[11px] text-zinc-200 leading-relaxed flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span class="font-extrabold text-emerald-300 shrink-0">🧭 Quy trình 4 bước:</span>
-              <span>
-                <strong class="text-amber-300">1.</strong>
-                <button type="button" data-workflow-jump="TAB4_BIBLE" class="underline decoration-2 underline-offset-2 font-bold text-amber-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Cập nhật Story Bible</button>
-                <span class="text-zinc-400">(nếu bạn đã có các chương, nội dung từ trước)</span>
-              </span>
-              <span class="text-zinc-500">→</span>
-              <span>
-                <strong class="text-cyan-300">2.</strong>
-                <button type="button" data-workflow-jump="MODE_2_BRAINSTORM" class="underline decoration-2 underline-offset-2 font-bold text-cyan-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Tham mưu cốt truyện (Chế độ 2)</button>
-              </span>
-              <span class="text-zinc-500">→</span>
-              <span>
-                <strong class="text-emerald-300">3.</strong>
-                <button type="button" data-workflow-jump="MODE_1_DRAFT" class="underline decoration-2 underline-offset-2 font-bold text-emerald-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Viết truyện, chạy prompt tổng hợp (Chế độ 1)</button>
-              </span>
-              <span class="text-zinc-500">→</span>
-              <span>
-                <strong class="text-violet-300">4.</strong>
-                <span>Lặp lại bước 1, 2, 3 hoặc</span>
-                <button type="button" data-workflow-jump="MODE_3_AUDIT" class="underline decoration-2 underline-offset-2 font-bold text-amber-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Kiểm tra logic</button>,
-                <button type="button" data-workflow-jump="MODE_4_REVIEW" class="underline decoration-2 underline-offset-2 font-bold text-pink-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Review lại</button>,
-                <button type="button" data-workflow-jump="MODE_5_DIAGRAM" class="underline decoration-2 underline-offset-2 font-bold text-sky-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Vẽ trục timeline</button>
-                <span>hay là</span>
-                <button type="button" data-workflow-jump="MODE_6_BOOK_COVER" class="underline decoration-2 underline-offset-2 font-bold text-violet-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Tạo bìa</button>.
-              </span>
+            <!-- Quy trình soạn thảo ngắn 4 bước ngay trên Tab 1 (Mặc định mở rộng, có nút Thu gọn từ dưới lên) -->
+            <div id="tab1-four-step-workflow-shell" class="space-y-1">
+              <div id="tab1-four-step-workflow-bar" class="px-2.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-950/25 text-[10.5px] sm:text-[11px] text-zinc-200 leading-relaxed flex flex-wrap items-center justify-between gap-2 transition-all duration-200 origin-top">
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-1 flex-1 min-w-0">
+                  <span class="font-extrabold text-emerald-300 shrink-0">🧭 Quy trình 4 bước:</span>
+                  <span>
+                    <strong class="text-amber-300">1.</strong>
+                    <button type="button" data-workflow-jump="TAB4_BIBLE" class="underline decoration-2 underline-offset-2 font-bold text-amber-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Cập nhật Story Bible</button>
+                    <span class="text-zinc-400">(nếu bạn đã có các chương, nội dung từ trước)</span>
+                  </span>
+                  <span class="text-zinc-500">→</span>
+                  <span>
+                    <strong class="text-cyan-300">2.</strong>
+                    <button type="button" data-workflow-jump="MODE_2_BRAINSTORM" class="underline decoration-2 underline-offset-2 font-bold text-cyan-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Tham mưu cốt truyện (Chế độ 2)</button>
+                  </span>
+                  <span class="text-zinc-500">→</span>
+                  <span>
+                    <strong class="text-emerald-300">3.</strong>
+                    <button type="button" data-workflow-jump="MODE_1_DRAFT" class="underline decoration-2 underline-offset-2 font-bold text-emerald-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Viết truyện, chạy prompt tổng hợp (Chế độ 1)</button>
+                  </span>
+                  <span class="text-zinc-500">→</span>
+                  <span>
+                    <strong class="text-violet-300">4.</strong>
+                    <span>Lặp lại bước 1, 2, 3 hoặc</span>
+                    <button type="button" data-workflow-jump="MODE_3_AUDIT" class="underline decoration-2 underline-offset-2 font-bold text-amber-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Kiểm tra logic</button>,
+                    <button type="button" data-workflow-jump="MODE_4_REVIEW" class="underline decoration-2 underline-offset-2 font-bold text-pink-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Review lại</button>,
+                    <button type="button" data-workflow-jump="MODE_5_DIAGRAM" class="underline decoration-2 underline-offset-2 font-bold text-sky-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Vẽ trục timeline</button>
+                    <span>hay là</span>
+                    <button type="button" data-workflow-jump="MODE_6_BOOK_COVER" class="underline decoration-2 underline-offset-2 font-bold text-violet-200 hover:text-white cursor-pointer bg-transparent border-0 p-0">Tạo bìa</button>.
+                  </span>
+                </div>
+                <button type="button" id="btn-tab1-collapse-workflow" class="px-2 py-0.5 rounded-lg border border-emerald-500/45 bg-emerald-900/50 hover:bg-emerald-800/70 text-emerald-200 font-bold text-[10px] shrink-0 transition" title="Thu gọn thanh Quy trình 4 bước từ dưới lên">
+                  ▲ Thu gọn
+                </button>
+              </div>
+              <button type="button" id="btn-tab1-expand-workflow" class="hidden px-2.5 py-0.5 rounded-lg border border-emerald-500/40 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 font-bold text-[10px] transition">
+                ▼ Mở Quy trình 4 bước
+              </button>
             </div>
 
             <div id="tab1-collapsible-tools-body" class="hidden flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-studioLightBorder/60 dark:border-zinc-800">
@@ -2998,6 +3080,35 @@
 
       <!-- Body -->
       <div class="p-3 sm:p-5 overflow-y-auto overflow-x-hidden flex-1 space-y-3 overscroll-contain touch-pan-y min-w-0">
+        <!-- THANH LIÊN KẾT NỔI BẬT TRÊN CÙNG: FILE STORY BIBLE (Mọi chế độ) & THAM MƯU CỐT TRUYỆN (Chế độ 1) -->
+        <div id="cmd-hero-links-topbar" class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+          <div id="cmd-hero-bible-link-card" class="flex items-stretch gap-2 p-2.5 rounded-2xl border-2 border-amber-400/75 bg-gradient-to-r from-amber-950/65 via-zinc-900 to-zinc-950 shadow-lg">
+            <label class="flex items-center px-1.5 cursor-pointer select-none" title="Tick để tự động đính kèm toàn bộ Story Bible vào câu lệnh tổng hợp (bỏ tick nếu muốn tắt)">
+              <input type="checkbox" id="chk-cmd-link-story-bible-file" checked class="accent-amber-400 w-5 h-5 cursor-pointer" />
+            </label>
+            <button type="button" id="btn-cmd-hero-story-bible-viewer" class="flex-1 min-w-0 text-left px-2 py-1 rounded-xl hover:bg-amber-500/15 transition">
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-black text-amber-300 text-xs sm:text-sm tracking-wide">📄 FILE STORY BIBLE</span>
+                <span id="badge-cmd-hero-bible-status" class="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/60 text-emerald-200 font-extrabold text-[10px] shrink-0">Đã liên kết · Bấm xem toàn bộ</span>
+              </div>
+              <div class="text-[11px] text-amber-100/85 mt-0.5 truncate">Bấm để xem toàn văn Story Bible đang gắn vào Prompt (giữ nguyên 100%, không bị cắt chữ)</div>
+            </button>
+          </div>
+
+          <div id="cmd-hero-plot-link-card" class="flex items-stretch gap-2 p-2.5 rounded-2xl border-2 border-cyan-400/75 bg-gradient-to-r from-cyan-950/65 via-zinc-900 to-zinc-950 shadow-lg">
+            <label class="flex items-center px-1.5 cursor-pointer select-none" title="Tick để đính kèm Tham mưu cốt truyện (theo AI Gemini và/hoặc bạn tự viết) vào Chế độ 1">
+              <input type="checkbox" id="chk-cmd-link-plot-brainstorm" checked class="accent-cyan-400 w-5 h-5 cursor-pointer" />
+            </label>
+            <button type="button" id="btn-cmd-hero-plot-selector" class="flex-1 min-w-0 text-left px-2 py-1 rounded-xl hover:bg-cyan-500/15 transition">
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-black text-cyan-300 text-xs sm:text-sm tracking-wide">🧭 THAM MƯU CỐT TRUYỆN</span>
+                <span id="badge-cmd-hero-plot-status" class="px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/60 text-cyan-100 font-extrabold text-[10px] shrink-0">Bấm chọn AI / Tự viết</span>
+              </div>
+              <div class="text-[11px] text-cyan-100/85 mt-0.5 truncate">Chọn gắn cốt truyện AI (Gemini), cốt truyện riêng bạn tự viết, hoặc tick cả 2!</div>
+            </button>
+          </div>
+        </div>
+
         <!-- Hàng thông số cơ bản LUÔN HIỆN kể cả khi thu gọn: Chế độ, Mô hình, Số từ, Mức tư duy -->
         <div id="cmd-params-essential-bar" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3.5 rounded-2xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightBg dark:bg-zinc-950">
           <div class="min-w-0">
@@ -3018,8 +3129,8 @@
           </div>
 
           <div class="min-w-0">
-            <label for="input-target-word-count" class="block text-[10px] font-bold uppercase text-indigo-400 mb-1">3. Số từ đầu ra:</label>
-            <input id="input-target-word-count" type="number" min="300" max="12000" step="100" value="3500" class="w-full min-w-0 px-3 py-2 rounded-xl border border-studioLightBorder dark:border-zinc-700 bg-studioLightPanel dark:bg-zinc-900 font-monoCode font-extrabold text-indigo-300" />
+            <label for="input-target-word-count" class="block text-[10px] font-bold uppercase text-indigo-400 mb-1">3. Số từ đầu ra (tối đa 40.000):</label>
+            <input id="input-target-word-count" type="number" min="300" max="40000" step="100" value="3500" class="w-full min-w-0 px-3 py-2 rounded-xl border border-studioLightBorder dark:border-zinc-700 bg-studioLightPanel dark:bg-zinc-900 font-monoCode font-extrabold text-indigo-300" />
           </div>
 
           <div class="min-w-0">
@@ -3071,10 +3182,6 @@
                 <span id="cmd-scenes-status-pill" class="px-2 py-0.5 rounded-md bg-zinc-900 border border-amber-500/40 text-amber-300 font-monoCode">Mốc chuyển cảnh: 0 mốc</span>
                 <span id="cmd-rag-status-pill" class="px-2 py-0.5 rounded-md bg-zinc-900 border border-indigo-500/40 text-indigo-300 font-monoCode">Chống quên BM25: Sẵn sàng</span>
                 <span id="cmd-mode2-plot-pill" class="hidden px-2 py-0.5 rounded-md bg-zinc-900 border border-amber-400/50 text-amber-200 font-monoCode">Cốt truyện Chế độ 2: Đã liên kết</span>
-                <label class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-zinc-900 border border-sky-500/40 text-sky-200 font-bold text-[10px] cursor-pointer select-none" title="Bật/tắt tự động gắn dữ liệu từ File Story Bible (Tab 4) vào toàn bộ Prompt Chế độ 1–6">
-                  <input type="checkbox" id="chk-cmd-link-story-bible-file" checked class="accent-sky-400 w-3 h-3" />
-                  <span>📄 File Story Bible</span>
-                </label>
               </span>
             </div>
             <div class="flex items-center gap-1.5">
@@ -3217,8 +3324,27 @@
             </div>
           </div>
 
-          <textarea id="s18-fullscreen-prompt-textarea" class="w-full min-h-[42vh] sm:min-h-[52vh] p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-500/40 bg-studioLightBg dark:bg-zinc-950 text-sm leading-relaxed select-text focus:outline-none focus:border-emerald-400 resize-y shadow-inner touch-pan-y" placeholder="Nhập diễn biến chương truyện, tình tiết mong muốn, nội tâm nhân vật hoặc câu lệnh cho AI tại đây...&#10;&#10;Khi bạn bấm '🚀 Chạy Prompt Tổng Hợp' bên dưới, hệ thống sẽ tự động kết hợp câu lệnh này với toàn bộ Story Bible (Hồ sơ nhân vật, Ma trận Ai Biết Gì, Phục bút, Từ cấm), các Mốc chuyển phân cảnh/POV và thông số từ để tạo ra Prompt Tổng Hợp chính thức!"></textarea>
-          <p class="text-[10.5px] text-zinc-400">💡 Mẹo trên điện thoại: bạn có thể chạm &amp; vuốt lên/xuống mượt mà ở vùng ngoài hoặc góc ô nhập để xem toàn bộ màn hình mà không bị cấn chữ.</p>
+          <!-- Thanh soạn thảo Rich (Giống Word/Google Docs: Đậm/Nghiêng/Bảng/Dán nhiều ảnh + Gộp PDF nếu >10 ảnh) riêng biệt cho từng Chế độ 1–6 -->
+          <div id="cmd-rich-editor-toolbar" class="flex flex-wrap items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl border border-emerald-500/35 bg-zinc-950/90 text-[11px]">
+            <div class="flex flex-wrap items-center gap-1">
+              <span id="cmd-active-mode-draft-badge" class="px-2 py-0.5 rounded-lg bg-emerald-600/25 border border-emerald-400/50 text-emerald-200 font-extrabold text-[10px]">🗂️ Ô lệnh riêng: Chế độ 1</span>
+              <button type="button" data-cmd-rich-exec="bold" class="px-2 py-0.5 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-100 font-black" title="In đậm">B</button>
+              <button type="button" data-cmd-rich-exec="italic" class="px-2 py-0.5 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-100 italic font-serif" title="In nghiêng">I</button>
+              <button type="button" data-cmd-rich-exec="underline" class="px-2 py-0.5 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-100 underline" title="Gạch chân">U</button>
+              <button type="button" id="btn-cmd-rich-insert-table" class="px-2 py-0.5 rounded-lg border border-cyan-500/45 bg-cyan-500/10 hover:bg-cyan-500/25 text-cyan-200 font-bold" title="Chèn bảng biểu như Word / Google Docs">📊 + Bảng</button>
+              <button type="button" id="btn-cmd-rich-add-images" class="px-2 py-0.5 rounded-lg border border-violet-500/45 bg-violet-500/10 hover:bg-violet-500/25 text-violet-200 font-bold" title="Chèn ảnh từ máy hoặc dán ảnh trực tiếp Ctrl+V (vượt 10 ảnh tự gợi ý gộp PDF cho Gemini)">🖼️ + Ảnh</button>
+              <input type="file" id="input-cmd-rich-image-files" accept="image/*" multiple class="hidden" />
+              <button type="button" id="btn-cmd-images-to-pdf" class="hidden px-2 py-0.5 rounded-lg border border-amber-400/70 bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 font-extrabold" title="Gộp toàn bộ ảnh đính kèm thành 1 file PDF tải về máy để gửi lên Gemini">📄 Gộp ảnh → PDF (<span id="cmd-attached-images-count">0</span>)</button>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button type="button" id="btn-cmd-toggle-rich-mode" class="px-2 py-0.5 rounded-lg border border-emerald-500/45 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 font-bold text-[10px]" title="Bật/tắt chế độ soạn thảo Rich (giữ định dạng Word/Bảng/Ảnh) hoặc văn bản thuần">📄 Chế độ Word (Bảng + Ảnh)</button>
+            </div>
+          </div>
+
+          <div id="s18-rich-prompt-editor" contenteditable="true" spellcheck="false" data-placeholder="Nhập hoặc dán câu lệnh, bảng biểu Word/Google Docs, hoặc dán ảnh trực tiếp (Ctrl+V) riêng cho Chế độ hiện tại...&#10;&#10;Mỗi Chế độ (1–6) có một ô lệnh độc lập riêng, không bị lẫn nhau! Khi vượt quá 10 ảnh, hệ thống tự động gợi ý gộp thành PDF cho Gemini quét." class="w-full min-h-[42vh] sm:min-h-[50vh] max-h-[68vh] overflow-y-auto p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-500/45 bg-studioLightBg dark:bg-zinc-950 text-sm leading-relaxed select-text focus:outline-none focus:border-emerald-400 shadow-inner touch-pan-y whitespace-pre-wrap break-words"></div>
+          <div id="cmd-attached-images-bar" class="hidden p-2 rounded-xl border border-violet-500/35 bg-violet-950/20 space-y-1.5"></div>
+          <textarea id="s18-fullscreen-prompt-textarea" class="hidden w-full min-h-[42vh] sm:min-h-[52vh] p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-500/40 bg-studioLightBg dark:bg-zinc-950 text-sm leading-relaxed select-text focus:outline-none focus:border-emerald-400 resize-y shadow-inner touch-pan-y" placeholder="Nhập diễn biến chương truyện, tình tiết mong muốn, nội tâm nhân vật hoặc câu lệnh cho AI tại đây...&#10;&#10;Khi bạn bấm '🚀 Chạy Prompt Tổng Hợp' bên dưới, hệ thống sẽ tự động kết hợp câu lệnh này với toàn bộ Story Bible (Hồ sơ nhân vật, Ma trận Ai Biết Gì, Phục bút, Từ cấm), các Mốc chuyển phân cảnh/POV và thông số từ để tạo ra Prompt Tổng Hợp chính thức!"></textarea>
+          <p class="text-[10.5px] text-zinc-400">💡 Mẹo: Mỗi chế độ 1–6 lưu ô lệnh riêng biệt. Bạn có thể dán thẳng bảng từ Word/Docs hoặc dán ảnh (Ctrl+V). Trên điện thoại, vuốt lên/xuống mượt mà ở vùng ngoài hoặc góc ô nhập.</p>
         </div>
       </div>
 
@@ -3357,6 +3483,9 @@
             📋 Copy Toàn Bộ Câu Lệnh
           </button>
         </div>
+
+        <!-- Cảnh báo thông minh khi Prompt vượt giới hạn nhập lệnh của NotebookLM (hướng dẫn + Lưu ý) hoặc Gemini (Xuất file PDF tải lên) -->
+        <div id="confirm-prompt-length-limit-guard" class="hidden space-y-2"></div>
 
         <!-- Toàn văn Prompt Tổng Hợp Chính Thức (Có thể rà soát hoặc chỉnh sửa thêm trước khi bắn API) -->
         <div class="space-y-1.5">

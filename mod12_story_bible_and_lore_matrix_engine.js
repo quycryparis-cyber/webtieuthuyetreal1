@@ -2593,6 +2593,14 @@
      * + Phục bút + Từ cấm thành một khối ngữ cảnh chuẩn mực để tự động đưa 100% vào Prompt Tổng Hợp!
      */
     buildCompiledBibleBlockForPrompt() {
+      const cmdLinkChk = typeof document !== 'undefined' ? document.getElementById('chk-cmd-link-story-bible-file') : null;
+      const masterLinkEnabled = cmdLinkChk
+        ? Boolean(cmdLinkChk.checked)
+        : localStorage.getItem('noir_v105_story_bible_file_link_enabled') !== '0';
+      if (!masterLinkEnabled) {
+        return '(Tác giả đã tắt liên kết Story Bible cho câu lệnh này)';
+      }
+
       const constants = getStudioConstants();
       const tpl =
         document.getElementById('textarea-bible-template-frame')?.value ||
@@ -2656,7 +2664,7 @@
           ? [
               ``,
               `[FILE STORY BIBLE ĐANG LIÊN KẾT TỰ ĐỘNG (${linkedFileData.fileName})]:`,
-              linkedFileData.text.trim().slice(0, 28000)
+              linkedFileData.text.trim()
             ].join('\n')
           : '';
 

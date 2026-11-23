@@ -354,11 +354,12 @@
 
       this.manager.saveHierarchyMapToStorage(persistMap);
       await this.manager.persistAllChaptersToStorage();
+      await this.manager.syncHierarchyFolderStructureToDisk?.();
       this.manager.renderChapterTreeAndQuickSwitcher();
 
       const levelVi = safeLevel === 'volume' ? 'Quyển (Volume)' : safeLevel === 'chapter' ? 'Chương (Chapter)' : 'Cảnh (Scene)';
       this.manager.utils.showToast(
-        `📚 Đã gộp ${updated} mục vào ${levelVi}: "${cleanName}"!`,
+        `📚 Đã gộp ${updated} mục vào ${levelVi}: "${cleanName}" & tạo thư mục đồng bộ!`,
         'success',
         2800
       );
@@ -374,13 +375,16 @@
       const persistMap = this.manager.loadHierarchyMapFromStorage();
       this.manager.chapters.forEach((chap) => {
         if (!idSet.has(chap.id)) return;
+        const oldPath = chap.diskRelPath || '';
         delete chap.hierarchyLevel;
         delete chap.hierarchyGroup;
         delete chap.hierarchyGroupId;
         delete persistMap[chap.id];
+        if (oldPath) chap._prevDiskRelPath = oldPath;
       });
       this.manager.saveHierarchyMapToStorage(persistMap);
       await this.manager.persistAllChaptersToStorage();
+      await this.manager.syncHierarchyFolderStructureToDisk?.();
       this.manager.renderChapterTreeAndQuickSwitcher();
       this.manager.utils.showToast('🧹 Đã tách nhóm phân cấp cho các chương đã chọn.', 'info', 2200);
       return true;
@@ -1872,9 +1876,233 @@
       this.loadActiveChapterIntoEditor();
       this.renderChapterTreeAndQuickSwitcher();
       this.persistChapters();
+      this.syncSingleChapterToDisk(newChap).catch(() => {});
 
-      this.utils.showToast(`🌱 Đã tạo "${newChap.displayTitle}" và chuyển tới trình soạn thảo!`, 'success');
+      this.utils.showToast(`🌱 Đã tạo "${newChap.displayTitle}" & tự động tạo file trong thư mục công việc!`, 'success');
       return newChap;
+    }
+
+    sanitizeDiskSegment(rawName, fallback = 'Muc_Khong_Ten') {
+      const cleaned = String(rawName || '')
+        .replace(/[<>:"/\\|?*\u0000-\u001F]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/[. ]+$/g, '');
+      return (cleaned || fallback).slice(0, 90);
+    }
+
+    computeDiskSegmentsForChapter(chap) {
+      const safeTitle = this.sanitizeDiskSegment(chap?.displayTitle || chap?.title || 'Chuong_Moi', 'Chuong_Moi');
+      const level = String(chap?.hierarchyLevel || '').trim();
+      const group = String(chap?.hierarchyGroup || '').trim();
+      const parentVol = String(chap?.parentVolumeName || '').trim();
+
+      if (level === 'volume' && group) {
+        return { dirs: [this.sanitizeDiskSegment(group, 'Quyen_1')], fileName: `${safeTitle}.txt` };
+      }
+      if (level === 'chapter' && group) {
+        const dirs = [];
+        if (parentVol) dirs.push(this.sanitizeDiskSegment(parentVol, 'Quyen_1'));
+        dirs.push(this.sanitizeDiskSegment(group, 'Chuong_1'));
+        return { dirs, fileName: `${safeTitle}.txt` };
+      }
+      if (level === 'scene' && group) {
+        const dirs = [];
+        if (parentVol) dirs.push(this.sanitizeDiskSegment(parentVol, 'Quyen_1'));
+        dirs.push(this.sanitizeDiskSegment(group, 'Chuong_Canh'));
+        return { dirs, fileName: `${safeTitle}.txt` };
+      }
+      return { dirs: [], fileName: `${safeTitle}.txt` };
+    }
+
+    async _getHierarchyDiskRoot() {
+      const fs = this.NS?.fsEngine || window.NoirStudio?.fsEngine;
+      if (!fs || !fs.rootDirHandle) return null;
+      try {
+        return await fs.rootDirHandle.getDirectoryHandle('00_Thu_Muc_Quyen_Chuong_Canh', { create: true });
+      } catch (_e) {
+        return fs.rootDirHandle;
+      }
+    }
+
+    async _removeDiskRelPath(rootDir, relPath) {
+      if (!rootDir || !relPath) return;
+      const parts = String(relPath).split('/').filter(Boolean);
+      if (parts.length === 0) return;
+      try {
+        let dir = rootDir;
+        for (let i = 0; i < parts.length - 1; i++) {
+          dir = await dir.getDirectoryHandle(parts[i], { create: false });
+        }
+        await dir.removeEntry(parts[parts.length - 1], { recursive: true });
+      } catch (_eRm) {}
+    }
+
+    async syncSingleChapterToDisk(chap, explicitOldRelPath = '') {
+      if (!chap) return false;
+      const rootDir = await this._getHierarchyDiskRoot();
+      if (!rootDir) return false;
+      try {
+        const oldPath = explicitOldRelPath || chap._prevDiskRelPath || chap.diskRelPath || '';
+        const { dirs, fileName } = this.computeDiskSegmentsForChapter(chap);
+        let curDir = rootDir;
+        for (const d of dirs) {
+          curDir = await curDir.getDirectoryHandle(d, { create: true });
+        }
+        const newRelPath = [...dirs, fileName].join('/');
+        const fh = await curDir.getFileHandle(fileName, { create: true });
+        const writable = await fh.createWritable();
+        await writable.write(String(chap.content || ''));
+        await writable.close();
+
+        if (oldPath && oldPath !== newRelPath) {
+          await this._removeDiskRelPath(rootDir, oldPath);
+        }
+        chap.diskRelPath = newRelPath;
+        chap.fileName = fileName;
+        delete chap._prevDiskRelPath;
+        return true;
+      } catch (_eSync) {
+        return false;
+      }
+    }
+
+    async syncHierarchyFolderStructureToDisk() {
+      const rootDir = await this._getHierarchyDiskRoot();
+      if (!rootDir) return false;
+      let okCount = 0;
+      for (const chap of this.chapters) {
+        const ok = await this.syncSingleChapterToDisk(chap);
+        if (ok) okCount += 1;
+      }
+      return okCount > 0;
+    }
+
+    async syncFromDiskFolderIfConnected(showFeedback = true) {
+      const rootDir = await this._getHierarchyDiskRoot();
+      if (!rootDir) {
+        if (showFeedback) {
+          this.utils.showToast('📂 Hãy kết nối Thư mục công việc trên máy tính trước (Tab 6) để đồng bộ file 2 chiều!', 'info', 3400);
+        }
+        return { ok: false, updated: 0, added: 0 };
+      }
+
+      const foundFiles = [];
+      const walkDir = async (dirHandle, relDirs = []) => {
+        try {
+          for await (const [name, handle] of dirHandle.entries()) {
+            if (handle.kind === 'directory') {
+              await walkDir(handle, [...relDirs, name]);
+            } else if (handle.kind === 'file' && /\.(txt|md)$/i.test(name)) {
+              const file = await handle.getFile();
+              const text = await file.text();
+              foundFiles.push({
+                relPath: [...relDirs, name].join('/'),
+                dirs: relDirs,
+                fileName: name,
+                baseTitle: name.replace(/\.(txt|md)$/i, ''),
+                text,
+                lastModified: file.lastModified || Date.now()
+              });
+            }
+          }
+        } catch (_eWalk) {}
+      };
+      await walkDir(rootDir, []);
+
+      if (foundFiles.length === 0) {
+        await this.syncHierarchyFolderStructureToDisk();
+        if (showFeedback) {
+          this.utils.showToast('✅ Đã đẩy toàn bộ cấu trúc Quyển / Chương / Cảnh lên thư mục máy tính!', 'success', 2800);
+        }
+        return { ok: true, updated: 0, added: 0 };
+      }
+
+      let updated = 0;
+      let added = 0;
+      const byPath = new Map(this.chapters.map((c) => [c.diskRelPath || '', c]));
+      const byTitle = new Map(this.chapters.map((c) => [this.sanitizeDiskSegment(c.displayTitle || c.title), c]));
+      const persistMap = this.loadHierarchyMapFromStorage();
+
+      for (const f of foundFiles) {
+        const matched = byPath.get(f.relPath) || byTitle.get(this.sanitizeDiskSegment(f.baseTitle));
+        if (matched) {
+          let changed = false;
+          if (f.baseTitle && matched.displayTitle !== f.baseTitle && f.relPath !== matched.diskRelPath) {
+            matched.displayTitle = f.baseTitle;
+            matched.title = f.baseTitle;
+            changed = true;
+          }
+          if (f.text && f.lastModified > (matched.updatedAt || 0) + 1500 && f.text !== matched.content) {
+            matched.content = f.text;
+            matched.wordCount = this.utils.countVietnameseWords(f.text);
+            matched.updatedAt = f.lastModified;
+            changed = true;
+          }
+          if (f.dirs.length >= 1) {
+            const topDir = f.dirs[0];
+            if (matched.hierarchyGroup !== topDir) {
+              matched.hierarchyLevel = f.dirs.length >= 2 ? 'scene' : 'volume';
+              matched.hierarchyGroup = f.dirs[f.dirs.length - 1];
+              if (f.dirs.length >= 2) matched.parentVolumeName = topDir;
+              persistMap[matched.id] = {
+                level: matched.hierarchyLevel,
+                group: matched.hierarchyGroup,
+                groupId: matched.hierarchyGroupId || `${matched.hierarchyLevel}_${Date.now()}`
+              };
+              changed = true;
+            }
+          }
+          matched.diskRelPath = f.relPath;
+          if (changed) updated += 1;
+        } else {
+          const newChap = this.normalizeChapterRecord(
+            {
+              id: `chap_disk_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              title: f.baseTitle,
+              displayTitle: f.baseTitle,
+              order: this.chapters.length,
+              status: 'DRAFT',
+              content: f.text || '',
+              beats: '',
+              notes: '',
+              diskRelPath: f.relPath,
+              fileName: f.fileName,
+              createdAt: f.lastModified,
+              updatedAt: f.lastModified
+            },
+            this.chapters.length
+          );
+          if (f.dirs.length >= 1) {
+            newChap.hierarchyLevel = f.dirs.length >= 2 ? 'scene' : 'volume';
+            newChap.hierarchyGroup = f.dirs[f.dirs.length - 1];
+            if (f.dirs.length >= 2) newChap.parentVolumeName = f.dirs[0];
+            persistMap[newChap.id] = {
+              level: newChap.hierarchyLevel,
+              group: newChap.hierarchyGroup,
+              groupId: `${newChap.hierarchyLevel}_${Date.now()}`
+            };
+          }
+          this.chapters.push(newChap);
+          added += 1;
+        }
+      }
+
+      if (updated > 0 || added > 0) {
+        this.saveHierarchyMapToStorage(persistMap);
+        this.persistChapters();
+        this.loadActiveChapterIntoEditor();
+        this.renderChapterTreeAndQuickSwitcher();
+      }
+      await this.syncHierarchyFolderStructureToDisk();
+      if (showFeedback) {
+        this.utils.showToast(
+          `🔄 Đồng bộ 2 chiều thư mục xong! (Cập nhật: ${updated} · Thêm mới từ ổ cứng: ${added})`,
+          'success',
+          3200
+        );
+      }
+      return { ok: true, updated, added };
     }
 
     renameChapter(chapterId, newTitle) {
@@ -1882,6 +2110,7 @@
       if (!chap) return false;
       const cleaned = String(newTitle || '').trim();
       if (!cleaned) return false;
+      const oldDiskPath = chap.diskRelPath || '';
 
       chap.displayTitle = cleaned;
       chap.title = cleaned;
@@ -1896,7 +2125,64 @@
 
       this.renderChapterTreeAndQuickSwitcher();
       this.persistChapters();
+      this.syncSingleChapterToDisk(chap, oldDiskPath).catch(() => {});
+      this.utils.showToast(`✏️ Đã đổi tên thành "${cleaned}" & đồng bộ tên file!`, 'success', 2400);
       return true;
+    }
+
+    async renameHierarchyGroup(level, oldGroupName, newGroupName) {
+      const cleaned = String(newGroupName || '').trim();
+      if (!cleaned || cleaned === oldGroupName) return false;
+      const persistMap = this.loadHierarchyMapFromStorage();
+      const affected = [];
+      this.chapters.forEach((c) => {
+        if ((c.hierarchyLevel || '') === level && (c.hierarchyGroup || '') === oldGroupName) {
+          c._prevDiskRelPath = c.diskRelPath || '';
+          c.hierarchyGroup = cleaned;
+          persistMap[c.id] = {
+            level,
+            group: cleaned,
+            groupId: c.hierarchyGroupId || `${level}_${Date.now()}`
+          };
+          affected.push(c);
+        }
+      });
+      if (affected.length === 0) return false;
+
+      this.saveHierarchyMapToStorage(persistMap);
+      this.persistChapters();
+      const rootDir = await this._getHierarchyDiskRoot();
+      for (const chap of affected) {
+        await this.syncSingleChapterToDisk(chap, chap._prevDiskRelPath || '');
+      }
+      if (rootDir) {
+        const oldDirName = this.sanitizeDiskSegment(oldGroupName, '');
+        if (oldDirName && oldDirName !== this.sanitizeDiskSegment(cleaned, '')) {
+          try { await rootDir.removeEntry(oldDirName, { recursive: true }); } catch (_eRmOld) {}
+        }
+      }
+      this.renderChapterTreeAndQuickSwitcher();
+      const levelVi = level === 'volume' ? 'Quyển' : level === 'chapter' ? 'Chương' : 'Cảnh';
+      this.utils.showToast(`✏️ Đã đổi tên ${levelVi} thành "${cleaned}" & đồng bộ thư mục!`, 'success', 2600);
+      return true;
+    }
+
+    promptInlineRenameChapter(chapterId) {
+      const chap = this.chapters.find((c) => c.id === chapterId);
+      if (!chap) return;
+      const current = chap.displayTitle || chap.title || '';
+      const next = window.prompt('✏️ Nhập tên mới cho chương / cảnh này (tự đồng bộ tên file trên máy):', current);
+      if (next !== null && next.trim() && next.trim() !== current.trim()) {
+        this.renameChapter(chapterId, next.trim());
+      }
+    }
+
+    promptInlineRenameGroup(level, oldGroupName) {
+      const levelVi = level === 'volume' ? 'Quyển' : level === 'chapter' ? 'Chương' : 'Cảnh';
+      const next = window.prompt(`✏️ Nhập tên mới cho ${levelVi} "${oldGroupName}" (tự đồng bộ tên thư mục):`, oldGroupName);
+      if (next !== null && next.trim() && next.trim() !== oldGroupName.trim()) {
+        this.renameHierarchyGroup(level, oldGroupName, next.trim());
+      }
     }
 
     async deleteChapter(chapterId) {
@@ -2120,7 +2406,7 @@
                   ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-200'
                   : 'border-amber-400/50 bg-amber-500/15 text-amber-200';
             const gIcon = hLevel === 'volume' ? '📚 Quyển' : hLevel === 'chapter' ? '📖 Chương' : '🎬 Cảnh';
-            groupHeaderHtml = `<div class="mt-2 mb-1 px-2.5 py-1 rounded-lg border ${gBadgeCls} text-[10.5px] font-extrabold flex items-center justify-between"><span>${gIcon}: ${esc(hGroup)}</span></div>`;
+            groupHeaderHtml = `<div data-action="dblclick-rename-group" data-group-level="${esc(hLevel)}" data-group-name="${esc(hGroup)}" title="Double-click hoặc bấm ✏️ để đổi tên ${gIcon} (đồng bộ tên thư mục)" class="mt-2 mb-1 px-2.5 py-1 rounded-lg border ${gBadgeCls} text-[10.5px] font-extrabold flex items-center justify-between gap-2 cursor-pointer select-none"><span class="truncate">${gIcon}: ${esc(hGroup)}</span><button type="button" data-action="rename-group" data-group-level="${esc(hLevel)}" data-group-name="${esc(hGroup)}" title="Đổi tên ${gIcon}" class="px-1.5 py-0.5 rounded bg-black/25 hover:bg-black/50 text-[10px] font-bold shrink-0">✏️ Sửa tên</button></div>`;
           }
           lastRenderedGroupKey = groupKey;
 
@@ -2135,12 +2421,13 @@
                   <div class="min-w-0 flex-1" data-action="select-chap" data-chap-id="${esc(chap.id)}">
                     <div class="flex items-center gap-1.5">
                       <span class="text-[10px] font-mono text-zinc-500 shrink-0">#${displayIdx + 1}</span>
-                      <span data-i18n-ignore="true" class="text-xs font-bold truncate ${isActive ? 'text-emerald-200' : 'text-zinc-200'}">${esc(this.localizeDefaultChapterTitle(chap.displayTitle || chap.title))}</span>
+                      <span data-i18n-ignore="true" data-action="dblclick-rename-chap" data-chap-id="${esc(chap.id)}" title="Double-click để đổi tên chương / cảnh nhanh" class="text-xs font-bold truncate ${isActive ? 'text-emerald-200' : 'text-zinc-200'}">${esc(this.localizeDefaultChapterTitle(chap.displayTitle || chap.title))}</span>
                     </div>
                     <div class="flex items-center gap-2 mt-1 text-[10px] text-zinc-400 flex-wrap">
                       <span class="${isApproved ? 'text-emerald-400' : 'text-amber-400'} font-semibold">${isApproved ? '✅ Đã duyệt' : '📝 Nháp'}</span>
                       <span>•</span>
                       <span data-i18n-ignore="true">${esc(window.NoirNovel?.i18n?.translateText ? window.NoirNovel.i18n.translateText(`${window.NoirNovel.i18n.formatNumber(chap.wordCount || 0)} từ`) : `${(chap.wordCount || 0).toLocaleString('vi-VN')} từ`)}</span>
+                      <button type="button" data-action="rename-chap" data-chap-id="${esc(chap.id)}" title="Đổi tên chương / cảnh (đồng bộ tên file)" class="px-1.5 py-0.5 rounded-md border border-zinc-700/80 bg-zinc-800/70 hover:bg-emerald-600/30 hover:border-emerald-400/60 text-zinc-200 hover:text-emerald-200 font-bold text-[9.5px] transition">✏️ Sửa tên</button>
                     </div>
                   </div>
                 </div>
@@ -2238,8 +2525,42 @@
       });
 
       treeContainer.querySelectorAll('[data-action="select-chap"]').forEach((el) => {
-        el.addEventListener('click', () => {
+        el.addEventListener('click', (e) => {
+          if (e.target?.closest?.('button')) return;
           this.selectChapter(el.getAttribute('data-chap-id'));
+        });
+        el.addEventListener('dblclick', (e) => {
+          if (e.target?.closest?.('button')) return;
+          e.stopPropagation();
+          this.promptInlineRenameChapter(el.getAttribute('data-chap-id'));
+        });
+      });
+
+      treeContainer.querySelectorAll('[data-action="rename-chap"]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.promptInlineRenameChapter(btn.getAttribute('data-chap-id'));
+        });
+      });
+
+      treeContainer.querySelectorAll('[data-action="rename-group"]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.promptInlineRenameGroup(
+            btn.getAttribute('data-group-level') || 'volume',
+            btn.getAttribute('data-group-name') || ''
+          );
+        });
+      });
+
+      treeContainer.querySelectorAll('[data-action="dblclick-rename-group"]').forEach((hdr) => {
+        hdr.addEventListener('dblclick', (e) => {
+          if (e.target?.closest?.('button')) return;
+          e.stopPropagation();
+          this.promptInlineRenameGroup(
+            hdr.getAttribute('data-group-level') || 'volume',
+            hdr.getAttribute('data-group-name') || ''
+          );
         });
       });
 
@@ -2392,6 +2713,52 @@
         this.ensureHelpersReady();
         if (this.studioModal && typeof this.studioModal.openModal === 'function') {
           this.studioModal.openModal();
+        }
+      });
+
+      // Nút thu gọn / mở lại Danh Sách Chương Tab 2 sang bên trái
+      const setSidebarCollapsed = (collapsed) => {
+        const aside = document.getElementById('left-sidebar-pane');
+        const expandBtn = document.getElementById('btn-tab2-expand-sidebar');
+        if (aside) aside.classList.toggle('noir-sidebar-collapsed', Boolean(collapsed));
+        if (expandBtn) expandBtn.classList.toggle('hidden', !collapsed);
+        try { localStorage.setItem('noir_v106_tab2_sidebar_collapsed', collapsed ? '1' : '0'); } catch (_e) {}
+      };
+      bind('btn-tab2-collapse-sidebar', 'click', () => setSidebarCollapsed(true));
+      bind('btn-tab2-expand-sidebar', 'click', () => setSidebarCollapsed(false));
+
+      // Tự động ẩn nút mở sidebar nếu chuyển sang tab không dùng sidebar
+      this.NS.bus?.on?.('screen:changed', (payload) => {
+        const aside = document.getElementById('left-sidebar-pane');
+        const expandBtn = document.getElementById('btn-tab2-expand-sidebar');
+        if (!expandBtn) return;
+        const scr = typeof payload === 'string' ? payload : payload?.screenId || '';
+        const isTab2 = scr === 'SCREEN_2_FILES' || scr === 'SCREEN_2_SOURCES';
+        const isCollapsed = aside?.classList.contains('noir-sidebar-collapsed');
+        expandBtn.classList.toggle('hidden', !(isTab2 && isCollapsed));
+      });
+
+      // Đồng bộ 2 chiều thư mục Quyển / Chương / Cảnh với ổ cứng khi bấm nút hoặc quay lại tab
+      bind('btn-tab2-sync-from-disk', 'click', () => {
+        this.syncFromDiskFolderIfConnected(true);
+      });
+      if (!this._diskRescanBound) {
+        this._diskRescanBound = true;
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden && this.NS?.fsEngine?.rootDirHandle) {
+            this.syncFromDiskFolderIfConnected(false).catch(() => {});
+          }
+        });
+      }
+
+      // Đồng bộ đổi tên tiêu đề chương tại Tab 1 xuống tên file khi blur
+      bind('input-chapter-title', 'change', (e) => {
+        const chap = this.getActiveChapter();
+        if (!chap || this._suppressSyncOnce) return;
+        const cleaned = String(e.target.value || '').trim();
+        if (cleaned) {
+          this.syncSingleChapterToDisk(chap).catch(() => {});
+          this.renderChapterTreeAndQuickSwitcher();
         }
       });
     }

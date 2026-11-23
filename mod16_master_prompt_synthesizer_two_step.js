@@ -1160,12 +1160,12 @@
           const rawVal = Number(targetWordInput.value);
           if (rawVal >= 300) {
             try {
-              localStorage.setItem(this.constants.STORAGE_KEYS.TARGET_WORDS, String(Math.min(25000, rawVal)));
+              localStorage.setItem(this.constants.STORAGE_KEYS.TARGET_WORDS, String(Math.min(40000, rawVal)));
             } catch (_) {}
           }
         });
         targetWordInput.addEventListener('change', () => {
-          const cleanWords = Math.max(300, Math.min(25000, Number(targetWordInput.value) || 3500));
+          const cleanWords = Math.max(300, Math.min(40000, Number(targetWordInput.value) || 3500));
           targetWordInput.value = String(cleanWords);
           try {
             localStorage.setItem(this.constants.STORAGE_KEYS.TARGET_WORDS, String(cleanWords));
@@ -1491,6 +1491,15 @@
       if (promptBox && MODE_PROMPT_PLACEHOLDERS[modeKey] && !window.NoirStudio?.guestMode?.isActive?.()) {
         promptBox.placeholder = tr16(MODE_PROMPT_PLACEHOLDERS[modeKey]);
       }
+      if (window.NoirStudio?.v106CommandSuite) {
+        const suite = window.NoirStudio.v106CommandSuite;
+        if (suite.activeModeKey !== modeKey) {
+          suite.saveCurrentModeDraft(suite.activeModeKey);
+          suite.loadModeDraftIntoEditors(modeKey);
+        } else {
+          suite.refreshHeroTopLinksUI(modeKey);
+        }
+      }
 
       const advisoryDomByMode = {
         MODE_1_DRAFT: 'cmd-mode1-prompt-advisory',
@@ -1791,51 +1800,76 @@
      * Lấy câu lệnh của tác giả từ mọi nguồn có thể để TUYỆT ĐỐI KHÔNG BAO GIỜ
      * báo lỗi giả "Vui lòng nhập câu lệnh" khi tác giả đã nhập rồi!
      */
-    getResolvedUserCommand() {
-      // Nguồn 1: Ô nhập câu lệnh chính trong Cửa sổ điều khiển AI (#s18-fullscreen-prompt-textarea)
+    getResolvedUserCommand(explicitModeKey = '') {
+      const modeKey =
+        explicitModeKey ||
+        document.getElementById('select-ai-execution-mode')?.value ||
+        'MODE_1_DRAFT';
+      // Đồng bộ từ ô Rich Word-style nếu đang mở
+      if (window.NoirStudio?.v106CommandSuite?.syncRichEditorToPlainTextarea) {
+        try {
+          window.NoirStudio.v106CommandSuite.syncRichEditorToPlainTextarea(false);
+        } catch (_eSync) {}
+      }
+
+      // Nguồn 1: Ô nhập câu lệnh chính trong Cửa sổ điều khiển AI (đã tách riêng biệt theo từng Chế độ 1–6)
       const primaryEl = document.getElementById('s18-fullscreen-prompt-textarea');
       const primary = primaryEl?.value || '';
       if (primary.trim()) {
         return primary.trim();
       }
 
-      // Nguồn 2: Ô nhập câu lệnh tại Chế độ 5 Vẽ biểu đồ (#mode5-prompt-input)
-      const mode5Box = document.getElementById('mode5-prompt-input')?.value || '';
-      if (mode5Box.trim()) {
-        if (primaryEl && !primaryEl.value) primaryEl.value = mode5Box.trim();
-        return mode5Box.trim();
-      }
+      // Nguồn 2: Draft đã lưu riêng cho đúng modeKey này (TUYỆT ĐỐI KHÔNG lấy nhầm draft của chế độ khác!)
+      try {
+        const perModeSaved = localStorage.getItem(`noir_v106_cmd_draft_${modeKey}`) || '';
+        if (perModeSaved.trim()) {
+          if (primaryEl && !primaryEl.value) primaryEl.value = perModeSaved.trim();
+          return perModeSaved.trim();
+        }
+      } catch (_ePm) {}
 
-      // Nguồn 3: Ô nhập dàn ý / beats chương (#textarea-chapter-beats)
-      const legacyBeats = document.getElementById('textarea-chapter-beats')?.value || '';
-      if (legacyBeats.trim()) {
-        if (primaryEl && !primaryEl.value) primaryEl.value = legacyBeats.trim();
-        return legacyBeats.trim();
-      }
-
-      // Nguồn 4: Bộ nhớ cục bộ tức thời (noir_v36_last_command_prompt)
-      const savedLocal = localStorage.getItem('noir_v36_last_command_prompt') || '';
-      if (savedLocal.trim()) {
-        if (primaryEl && !primaryEl.value) primaryEl.value = savedLocal.trim();
-        return savedLocal.trim();
-      }
-
-      // Nguồn 5: Beats lưu trong đối tượng chương đang mở (activeChap.beats)
-      const activeChap = this.chapterMgr?.getActiveChapter?.();
-      if (activeChap && activeChap.beats && String(activeChap.beats).trim()) {
-        const chapBeats = String(activeChap.beats).trim();
-        if (primaryEl && !primaryEl.value) primaryEl.value = chapBeats;
-        return chapBeats;
-      }
-
-      // Nguồn 6: Lịch sử câu lệnh gần nhất
-      const fromHistory = this.commandHistory.getLatestSavedCommand();
-      if (fromHistory) {
-        if (primaryEl && !primaryEl.value) primaryEl.value = fromHistory;
-        return fromHistory;
+      // Nguồn 3: Chỉ riêng Chế độ 5 mới đọc thêm ô phụ #mode5-prompt-input
+      if (modeKey === 'MODE_5_DIAGRAM') {
+        const mode5Box = document.getElementById('mode5-prompt-input')?.value || '';
+        if (mode5Box.trim()) {
+          return mode5Box.trim();
+        }
       }
 
       return '';
+    }
+
+    getCompiledMode1PlotOutlineForPrompt() {
+      const masterChk = document.getElementById('chk-cmd-link-plot-brainstorm');
+      const masterEnabled = masterChk
+        ? Boolean(masterChk.checked)
+        : localStorage.getItem('noir_v106_plot_link_master_v1') !== '0';
+      if (!masterEnabled) return '';
+
+      const useAi = localStorage.getItem('noir_v106_plot_use_ai_v1') !== '0';
+      const useManual = localStorage.getItem('noir_v106_plot_use_manual_v1') === '1';
+
+      const parts = [];
+      if (useAi) {
+        const aiText = String(this.getMode2DevelopedOutlineText() || '').trim();
+        if (aiText) {
+          parts.push(
+            `[A. THAM MƯU CỐT TRUYỆN THEO GEMINI / AI (CHẾ ĐỘ 2)]:\n${aiText}`
+          );
+        }
+      }
+      if (useManual) {
+        let manualText = '';
+        try {
+          manualText = String(localStorage.getItem('noir_v106_manual_plot_outline_v1') || '').trim();
+        } catch (_eM) {}
+        if (manualText) {
+          parts.push(
+            `[B. THAM MƯU CỐT TRUYỆN RIÊNG TÁC GIẢ TỰ VIẾT (KHÔNG DÙNG AI)]:\n${manualText}`
+          );
+        }
+      }
+      return parts.join('\n\n--------------------------------------------------------------------\n\n');
     }
 
     /**
@@ -1925,16 +1959,16 @@
           activeChap?.displayTitle || 'Chương hiện tại'
         }" dựa theo các Mốc chuyển phân cảnh, Hồ sơ Story Bible và mạch văn bên trên một cách tự nhiên, sâu sắc và lôi cuốn nhất.`;
 
-      // Khi chạy Chế độ 1 (Viết bản thảo), lồng ghép khéo léo diễn biến cốt truyện đã phát triển tại Chế độ 2 (nếu có)
+      // Khi chạy Chế độ 1 (Viết bản thảo), gắn nguyên văn (KHÔNG CẮT XÉN) Tham mưu cốt truyện theo AI Gemini và/hoặc Tác giả tự viết
       const mode2OutlineText =
-        modeKey === 'MODE_1_DRAFT' ? this.getMode2DevelopedOutlineText().slice(0, 12000) : '';
+        modeKey === 'MODE_1_DRAFT' ? this.getCompiledMode1PlotOutlineForPrompt() : '';
       const mode2WeaveSection = mode2OutlineText
         ? [
             ``,
             `====================================================================`,
-            `🧭 DIỄN BIẾN & DÀN Ý CỐT TRUYỆN ĐÃ PHÁT TRIỂN Ở CHẾ ĐỘ 2 (LỒNG GHÉP SÂU)`,
+            `🧭 THAM MƯU CỐT TRUYỆN & DIỄN BIẾN ĐÃ LIÊN KẾT (NGUYÊN VĂN 100%)`,
             `====================================================================`,
-            `Hãy lồng ghép khéo léo và triển khai chậm rãi, giàu chiều sâu tâm lý theo diễn biến cốt truyện từ Chế độ 2 dưới đây kết hợp hài hòa với Story Bible, Mốc chuyển phân cảnh và Câu lệnh bên dưới (tuyệt đối không tua nhanh sự kiện):`,
+            `Hãy lồng ghép khéo léo và triển khai chậm rãi, giàu chiều sâu tâm lý theo toàn bộ diễn biến cốt truyện dưới đây kết hợp hài hòa với Story Bible, Mốc chuyển phân cảnh và Yêu cầu cá nhân của tác giả (tuyệt đối không tua nhanh sự kiện):`,
             mode2OutlineText
           ].join('\n')
         : '';
@@ -2015,13 +2049,14 @@
         tailContext,
         `-> Chỉ dẫn nối mạch: ${continuationInfo.continuationHint}`,
         ``,
-        `====================================================================`,
-        `✍️ YÊU CẦU / CÂU LỆNH SÁNG TÁC CỤ THỂ CỦA TÁC GIẢ CHO CHƯƠNG NÀY`,
-        `====================================================================`,
+        `********************************************************************`,
+        `⭐ YÊU CẦU / CÂU LỆNH CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN THỰC THI CAO NHẤT) ⭐`,
+        `********************************************************************`,
         resolvedCommandText,
+        `********************************************************************`,
         ``,
         `====================================================================`,
-        `🚀 CHỈ THỊ BẮT ĐẦU: Hãy thực thi ngay yêu cầu trên với chất lượng văn học cao nhất, tuân thủ 100% Story Bible, Mốc chuyển phân cảnh và Ma trận Ai Biết Gì!`
+        `🚀 CHỈ THỊ BẮT ĐẦU: Hãy thực thi ngay yêu cầu cá nhân trên với chất lượng văn học cao nhất, tuân thủ 100% Story Bible, Tham mưu cốt truyện, Mốc chuyển phân cảnh và Ma trận Ai Biết Gì!`
       ].join('\n');
       const trPrompt = window.NoirNovel?.i18n?.translatePromptFrame;
       return typeof trPrompt === 'function' ? trPrompt(rawPrompt) : rawPrompt;
@@ -2201,18 +2236,21 @@
       };
 
       if (modeKey === 'MODE_2_BRAINSTORM') {
-        const recentChapterHint = chapText
-          ? chapText.slice(-2600)
-          : '(Chương hiện tại đang trống)';
+        const recentChapterHint = chapText || '(Chương hiện tại đang trống)';
         const sceneMarkersBlock =
           this.sceneBuilder?.buildCompiledSceneMarkersBlockForPrompt?.() ||
           '(Chưa đặt mốc chuyển phân cảnh riêng)';
-        const guardrailsBlock = this.inspector.buildEpistemicAndContinuityGuardrails(
-          this.storyBible,
-          this.sceneBuilder,
-          activeChap,
-          cleanCmd
-        );
+        let guardrailsBlock = '';
+        try {
+          guardrailsBlock = this.inspector?.buildEpistemicAndContinuityGuardrails?.(
+            this.storyBible,
+            this.sceneBuilder,
+            activeChap,
+            cleanCmd
+          ) || '';
+        } catch (_eGuard) {
+          guardrailsBlock = '';
+        }
         return wrapModePrompt([
           `####################################################################`,
           `🧭 CHẾ ĐỘ 2: THAM MƯU CỐT TRUYỆN & THIẾT KẾ DIỄN BIẾN CHUYÊN SÂU`,
@@ -2220,7 +2258,7 @@
           `[1. KHUNG PROMPT CỐ ĐỊNH & VAI TRÒ THAM MƯU]:`,
           sysInstruction,
           ``,
-          `[2. TOÀN BỘ STORY BIBLE, HỒ SƠ NHÂN VẬT, MA TRẬN AI BIẾT GÌ, SỔ CÁI PHỤC BÚT & TỪ CẤM]:`,
+          `[2. TOÀN BỘ STORY BIBLE, HỒ SƠ NHÂN VẬT, MA TRẬN AI BIẾT GÌ, SỔ CÁI PHỤC BÚT & TỪ CẤM (NGUYÊN VĂN 100%)]:`,
           bibleBlock,
           ``,
           sceneMarkersBlock,
@@ -2228,7 +2266,7 @@
           `[3. RÀNG BUỘC LOGIC & NHẬN THỨC NHÂN VẬT]:`,
           guardrailsBlock || '• Tuyệt đối tôn trọng Ma trận Ai Biết Gì và tính nhất quán nhân vật.',
           ``,
-          `[4. NGỮ CẢNH ĐOẠN CUỐI BẢN THẢO (${activeChap?.displayTitle || 'Chương hiện tại'})]:`,
+          `[4. NGỮ CẢNH BẢN THẢO HIỆN TẠI (${activeChap?.displayTitle || 'Chương hiện tại'})]:`,
           recentChapterHint,
           ``,
           `[5. CHƯƠNG ĐANG CHUẨN BỊ / ĐIỂM NHÌN POV]: ${activeChap?.displayTitle || 'Chương tiếp theo'} · POV: ${pov}`,
@@ -2236,15 +2274,18 @@
           ...modeSpec.outputStructureGuide,
           `- Tuyệt đối triển khai nhịp chậm, giàu căng thẳng tâm lý, không tua nhanh sự kiện hay giải quyết mâu thuẫn hời hợt.`,
           ``,
-          `[6. DÀN Ý THÔ / Ý TƯỞNG CỦA TÁC GIẢ]:`,
+          `********************************************************************`,
+          `⭐ YÊU CẦU / DÀN Ý CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN THỰC THI CAO NHẤT) ⭐`,
+          `********************************************************************`,
           cleanCmd || `Hãy phát triển 3 phương án diễn biến chi tiết cho chương tiếp theo khớp 100% Story Bible bên trên (triển khai chậm rãi, gài phục bút tinh tế, không tua nhanh sự kiện).`,
+          `********************************************************************`,
           ``,
           `🚀 Hãy trả lời thành bản tham mưu rõ ràng từng phân cảnh để tác giả chốt và chuyển thẳng sang Chế độ 1 viết tiểu thuyết.`
         ]);
       }
 
       if (modeKey === 'MODE_3_AUDIT') {
-        const excerpt = chapText.length > 14000 ? chapText.slice(-14000) : chapText;
+        const excerpt = chapText;
         const chapterInventory = (this.chapterMgr?.chapters || [])
           .map((c, idx) => `  - Chương ${idx + 1}: ${c.displayTitle || c.title} (${c.wordCount || 0} từ · ${c.status === 'APPROVED' ? 'Đã duyệt' : 'Nháp'})`)
           .join('\n');
@@ -2267,19 +2308,22 @@
           `[DANH SÁCH CHƯƠNG HIỆN CÓ TRONG STUDIO]:`,
           chapterInventory || '  (Chương hiện tại)',
           ``,
-          `[STORY BIBLE, NHÂN VẬT, MA TRẬN AI BIẾT GÌ & PHỤC BÚT]:`,
+          `[TOÀN BỘ STORY BIBLE, NHÂN VẬT, MA TRẬN AI BIẾT GÌ & PHỤC BÚT (NGUYÊN VĂN 100%)]:`,
           bibleBlock,
           ``,
           `[NỘI DUNG BẢN THẢO ĐANG KIỂM TRA (${activeChap?.displayTitle || 'Chương hiện tại'})]:`,
           excerpt || '(Bản thảo hiện đang trống — hãy đối chiếu toàn bộ nguồn tài liệu tôi tải lên NotebookLM)',
           ``,
-          `[YÊU CẦU KIỂM TOÁN CỤ THỂ CỦA TÁC GIẢ]:`,
-          cleanCmd || `Hãy soi lỗi cực kỳ chi tiết như tiểu thuyết gia 30 năm kinh nghiệm toàn bộ logic dòng thời gian, tiền bạc, thương tích, vật chứng, OOC nhân vật và rò rỉ thông tin trong Ma trận Ai Biết Gì.`
+          `********************************************************************`,
+          `⭐ YÊU CẦU KIỂM TOÁN CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN THỰC THI CAO NHẤT) ⭐`,
+          `********************************************************************`,
+          cleanCmd || `Hãy soi lỗi cực kỳ chi tiết như tiểu thuyết gia 30 năm kinh nghiệm toàn bộ logic dòng thời gian, tiền bạc, thương tích, vật chứng, OOC nhân vật và rò rỉ thông tin trong Ma trận Ai Biết Gì.`,
+          `********************************************************************`
         ]);
       }
 
       if (modeKey === 'MODE_4_REVIEW') {
-        const excerpt = chapText.length > 14000 ? chapText.slice(-14000) : chapText;
+        const excerpt = chapText;
         return wrapModePrompt([
           `####################################################################`,
           `📊 CHẾ ĐỘ 4: NHÀ PHÊ BÌNH VĂN HỌC 20 NĂM KINH NGHIỆM & HỘI ĐỒNG ĐỘC GIẢ BETA (KHUYÊN DÙNG GOOGLE NOTEBOOKLM)`,
@@ -2294,14 +2338,17 @@
           `[QUY TẮC BIÊN TẬP & TIÊU CHUẨN VĂN PHONG]:`,
           sysInstruction,
           ``,
-          `[STORY BIBLE & BỐI CẢNH ĐỐI CHIẾU]:`,
+          `[TOÀN BỘ STORY BIBLE & BỐI CẢNH ĐỐI CHIẾU (NGUYÊN VĂN 100%)]:`,
           bibleBlock,
           ``,
           `[BẢN THẢO / ĐOẠN VĂN CẦN ĐÁNH GIÁ & CHỈNH SỬA (${activeChap?.displayTitle || 'Chương hiện tại'})]:`,
           excerpt || '(Đánh giá dựa trên toàn bộ nguồn chương truyện tôi tải lên Google NotebookLM)',
           ``,
-          `[TRỌNG TÂM ĐÁNH GIÁ / GỌT VĂN TÁC GIẢ YÊU CẦU]:`,
-          cleanCmd || `Bạn là 1 nhà phê bình tiểu thuyết, văn học mạng và chính quy 20 năm kinh nghiệm cho các nhà xuất bản lớn và phân tích cho tôi hướng đi cốt truyện đã tối ưu chưa, có thực sự lôi cuốn độc giả không, có chỗ nào cần cải thiện để giữ chân người đọc và khiến sức mạnh, tốc độ của cốt truyện không bị ảo quá không?`
+          `********************************************************************`,
+          `⭐ YÊU CẦU ĐÁNH GIÁ CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN THỰC THI CAO NHẤT) ⭐`,
+          `********************************************************************`,
+          cleanCmd || `Bạn là 1 nhà phê bình tiểu thuyết, văn học mạng và chính quy 20 năm kinh nghiệm cho các nhà xuất bản lớn và phân tích cho tôi hướng đi cốt truyện đã tối ưu chưa, có thực sự lôi cuốn độc giả không, có chỗ nào cần cải thiện để giữ chân người đọc và khiến sức mạnh, tốc độ của cốt truyện không bị ảo quá không?`,
+          `********************************************************************`
         ]);
       }
 
@@ -2316,20 +2363,23 @@
           document.getElementById('export-author-name-input')?.value?.trim() ||
           localStorage.getItem('noir_s6_author_name') ||
           'Tác giả';
-        const bibleExcerpt = String(bibleBlock || '').slice(0, 6500);
+        const fullBibleText = String(bibleBlock || '');
 
         if (styleKey === 'CUSTOM_FREE' && cleanCmd) {
           return wrapModePrompt([
             `🖼️ [CHẾ ĐỘ 6 — TẠO BÌA TRUYỆN TỰ DO BẰNG GEMINI TẠO HÌNH ẢNH]`,
             `Hãy tạo trực tiếp một bức ảnh bìa tiểu thuyết hoàn chỉnh (tỷ lệ dọc 2:3 chuẩn bìa sách xuất bản, độ sắc nét cao, ánh sáng chuyên nghiệp) theo đúng mô tả sau:`,
             ``,
-            cleanCmd,
-            ``,
-            `[THÔNG TIN THAM KHẢO TỪ TRUYỆN]:`,
+            `[TOÀN BỘ THÔNG TIN & STORY BIBLE NGUYÊN VĂN 100%]:`,
             `- Tên truyện: ${novelTitle}`,
             `- Bút danh tác giả: ${authorName}`,
-            `- Bối cảnh & Nhân vật từ Story Bible (tóm gọn để giữ đúng tạo hình):`,
-            bibleExcerpt.slice(0, 2600)
+            fullBibleText,
+            ``,
+            `********************************************************************`,
+            `⭐ YÊU CẦU THIẾT KẾ BÌA CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN CAO NHẤT) ⭐`,
+            `********************************************************************`,
+            cleanCmd,
+            `********************************************************************`
           ]);
         }
 
@@ -2347,11 +2397,14 @@
           `2. PHONG CÁCH NGHỆ THUẬT ĐÃ CHỌN (${styleObj.label}):`,
           styleObj.directive || 'Phong cách minh họa bìa tiểu thuyết xuất bản chuyên nghiệp, ánh sáng điện ảnh, giàu cảm xúc.',
           ``,
-          `3. YÊU CẦU THIẾT KẾ CỤ THỂ CỦA TÁC GIẢ:`,
-          cleanCmd || `Thiết kế cảnh đắt giá nhất thể hiện linh hồn bộ truyện, nhân vật chính có thần thái cuốn hút, đạo cụ biểu tượng nổi bật và bầu không khí giàu kịch tính.`,
+          `3. TOÀN BỘ DỮ LIỆU STORY BIBLE, CỐT TRUYỆN, NHÂN VẬT & BỐI CẢNH (NGUYÊN VĂN 100%, KHÔNG CẮT XÉN):`,
+          fullBibleText,
           ``,
-          `4. DỮ LIỆU CỐT TRUYỆN, NHÂN VẬT & BỐI CẢNH TỪ STORY BIBLE (ĐỂ VẼ ĐÚNG CHỦ ĐỀ & TẠO HÌNH):`,
-          bibleExcerpt,
+          `********************************************************************`,
+          `⭐ YÊU CẦU THIẾT KẾ BÌA CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN CAO NHẤT) ⭐`,
+          `********************************************************************`,
+          cleanCmd || `Thiết kế cảnh đắt giá nhất thể hiện linh hồn bộ truyện, nhân vật chính có thần thái cuốn hút, đạo cụ biểu tượng nổi bật và bầu không khí giàu kịch tính.`,
+          `********************************************************************`,
           ``,
           `🚀 CHỈ THỊ VẼ ẢNH: Vẽ sắc nét, không méo bàn tay/khuôn mặt, ánh sáng có chiều sâu, màu sắc hài hòa đẳng cấp bìa sách bán chạy. Nếu chèn chữ, chỉ chèn chính xác tên tác phẩm hoặc để sạch không chữ rác (no gibberish text).`
         ]);
@@ -2372,11 +2425,14 @@
         `  3. CÂY PHỤC BÚT & NGÒI NỔ HIỆN TẠI (Nhánh [ĐÃ KÍCH NỔ] vs [ĐANG TREO CHỜ BÙNG NỔ] kèm cảnh báo điểm mâu thuẫn logic nếu có).`,
         `- Đính kèm thêm khối mã sơ đồ Mermaid (flowchart TD / mindmap) để tác giả có thể xem hoặc xuất ảnh trực quan ngay lập tức.`,
         ``,
-        `[STORY BIBLE CHÍNH THỨC CẦN LIÊN KẾT & ĐỐI CHIẾU (TAB 4)]:`,
+        `[TOÀN BỘ STORY BIBLE CHÍNH THỨC CẦN LIÊN KẾT & ĐỐI CHIẾU (NGUYÊN VĂN 100%)]:`,
         bibleBlock,
         ``,
-        `[YÊU CẦU VẼ SƠ ĐỒ CỐT TRUYỆN CỦA TÁC GIẢ]:`,
-        cleanCmd || `Hãy vẽ đúng sơ đồ cốt truyện, sơ đồ timeline đang diễn biến ở hiện tại, mạng lưới nhân vật và tạo thêm báo cáo trực quan / mindmap ở thanh bên NotebookLM dựa trên toàn bộ các chương và Story Bible.`
+        `********************************************************************`,
+        `⭐ YÊU CẦU VẼ SƠ ĐỒ CÁ NHÂN CỦA NGƯỜI DÙNG (ƯU TIÊN THỰC THI CAO NHẤT) ⭐`,
+        `********************************************************************`,
+        cleanCmd || `Hãy vẽ đúng sơ đồ cốt truyện, sơ đồ timeline đang diễn biến ở hiện tại, mạng lưới nhân vật và tạo thêm báo cáo trực quan / mindmap ở thanh bên NotebookLM dựa trên toàn bộ các chương và Story Bible.`,
+        `********************************************************************`
       ].join('\n');
       const trPrompt = window.NoirNovel?.i18n?.translatePromptFrame;
       return typeof trPrompt === 'function' ? trPrompt(rawMode5) : rawMode5;
@@ -2503,6 +2559,7 @@
       if (confirmModal) window.NoirNovel?.i18n?.translateElement?.(confirmModal);
 
       // Tự động copy câu lệnh tổng hợp vào bộ nhớ tạm + cập nhật nhắc chọn mô hình/tư duy + hỏi chia đôi màn hình
+      window.NoirStudio?.v106CommandSuite?.renderPromptLengthLimitGuard?.(completePrompt, modeKey);
       window.NoirStudio?.geminiSplitBridge?.autoCopyAndAnnounceCompiledPrompt?.(completePrompt, modeKey, {
         openFloatingAsk: true
       });
@@ -2660,14 +2717,16 @@
           if (currentModeKey === 'MODE_1_DRAFT' && syncTracker.shouldWarnMode1Stale()) {
             this.isSynthesizing = false;
             syncTracker.openMode1StaleWarningModal(() => {
-              this.runStep1MasterSynthesis(bypassMode2Check, true);
+              this.isSynthesizing = false;
+              this.runStep1MasterSynthesis(true, true);
             });
             return;
           }
           if (currentModeKey === 'MODE_2_BRAINSTORM' && syncTracker.shouldWarnMode2Stale()) {
             this.isSynthesizing = false;
             syncTracker.openMode2StaleWarningModal(() => {
-              this.runStep1MasterSynthesis(bypassMode2Check, true);
+              this.isSynthesizing = false;
+              this.runStep1MasterSynthesis(true, true);
             });
             return;
           }
@@ -2792,6 +2851,7 @@
         if (confirmModal) window.NoirNovel?.i18n?.translateElement?.(confirmModal);
 
         // Tự động copy Prompt Tổng Hợp Chế độ 1 + thông báo nhắc chọn mô hình/tư duy + cửa sổ nổi chia đôi màn hình Gemini
+        window.NoirStudio?.v106CommandSuite?.renderPromptLengthLimitGuard?.(synthesized, 'MODE_1_DRAFT');
         window.NoirStudio?.geminiSplitBridge?.autoCopyAndAnnounceCompiledPrompt?.(synthesized, 'MODE_1_DRAFT', {
           openFloatingAsk: true
         });
@@ -3592,8 +3652,9 @@
       modal.id = 'modal-v105-stale-mode1-warn';
       modal.setAttribute('role', 'dialog');
       modal.setAttribute('aria-modal', 'true');
+      modal.style.zIndex = '2147483000';
       modal.className =
-        'fixed inset-0 z-[195] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto';
+        'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto';
 
       modal.innerHTML = `
         <div class="my-auto w-full max-w-lg rounded-2xl border-2 border-amber-400/75 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden text-xs">
@@ -3652,10 +3713,15 @@
       modal.querySelector('#btn-v105-m1-go-mode2')?.addEventListener('click', goMode2);
       modal.querySelector('#btn-v105-warn-jump-bible')?.addEventListener('click', goBible);
       modal.querySelector('#btn-v105-m1-go-bible')?.addEventListener('click', goBible);
-      modal.querySelector('#btn-v105-m1-proceed')?.addEventListener('click', () => {
+      modal.querySelector('#btn-v105-m1-proceed')?.addEventListener('click', (ev) => {
+        ev?.preventDefault?.();
+        ev?.stopPropagation?.();
         saveSkipIfChecked();
         close();
-        onProceed?.();
+        if (this.synth) this.synth.isSynthesizing = false;
+        setTimeout(() => {
+          try { onProceed?.(); } catch (err) { console.error('[mod16] m1 proceed err:', err); }
+        }, 15);
       });
     }
 
@@ -3669,8 +3735,9 @@
       modal.id = 'modal-v105-stale-mode2-warn';
       modal.setAttribute('role', 'dialog');
       modal.setAttribute('aria-modal', 'true');
+      modal.style.zIndex = '2147483000';
       modal.className =
-        'fixed inset-0 z-[195] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto';
+        'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto';
 
       modal.innerHTML = `
         <div class="my-auto w-full max-w-md rounded-2xl border-2 border-amber-400/75 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden text-xs">
@@ -3709,12 +3776,17 @@
         window.NoirStudio?.navigator?.navigateToScreen?.('SCREEN_4_BIBLE');
         this.refreshTab4StaleReminder();
       });
-      modal.querySelector('#btn-v105-m2-proceed')?.addEventListener('click', () => {
+      modal.querySelector('#btn-v105-m2-proceed')?.addEventListener('click', (ev) => {
+        ev?.preventDefault?.();
+        ev?.stopPropagation?.();
         if (modal.querySelector('#chk-v105-skip-m2-warn')?.checked) {
           try { localStorage.setItem(this.KEY_SKIP_M2, '1'); } catch (_e) {}
         }
         close();
-        onProceed?.();
+        if (this.synth) this.synth.isSynthesizing = false;
+        setTimeout(() => {
+          try { onProceed?.(); } catch (err) { console.error('[mod16] m2 proceed err:', err); }
+        }, 15);
       });
     }
 
@@ -4222,15 +4294,1067 @@
     }
   }
 
+  class V106CommandBoxAndLimitGuards {
+    constructor(synthEngine) {
+      this.synth = synthEngine;
+      this.activeModeKey = 'MODE_1_DRAFT';
+      this.richModeActive = true;
+      this.modeImagesMap = {};
+      this.lastOver10AlertModeCount = {};
+      this._bound = false;
+      this._syncingFromPlain = false;
+      this.SKIP_IMG_PDF_KEY = 'noir_v106_skip_img_pdf_popup_v1';
+      this.PLOT_MASTER_KEY = 'noir_v106_plot_link_master_v1';
+      this.PLOT_USE_AI_KEY = 'noir_v106_plot_use_ai_v1';
+      this.PLOT_USE_MANUAL_KEY = 'noir_v106_plot_use_manual_v1';
+      this.PLOT_MANUAL_TEXT_KEY = 'noir_v106_manual_plot_outline_v1';
+    }
+
+    getModeShortLabel(modeKey) {
+      const map = {
+        MODE_1_DRAFT: 'Chế độ 1 (Viết truyện)',
+        MODE_2_BRAINSTORM: 'Chế độ 2 (Tham mưu)',
+        MODE_3_AUDIT: 'Chế độ 3 (Soi logic)',
+        MODE_4_REVIEW: 'Chế độ 4 (Đánh giá)',
+        MODE_5_DIAGRAM: 'Chế độ 5 (Sơ đồ)',
+        MODE_6_BOOK_COVER: 'Chế độ 6 (Tạo bìa)'
+      };
+      return map[modeKey] || modeKey;
+    }
+
+    escapeHtml(s) {
+      return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    serializeRichNodeToPlainText(rootEl) {
+      if (!rootEl) return '';
+      const walk = (node) => {
+        if (!node) return '';
+        if (node.nodeType === 3) return node.nodeValue || '';
+        if (node.nodeType !== 1) return '';
+        const tag = String(node.tagName || '').toUpperCase();
+        if (tag === 'BR') return '\n';
+        if (tag === 'IMG') {
+          const alt = node.getAttribute('alt') || 'Ảnh đính kèm';
+          return `[🖼️ ${alt}]`;
+        }
+        if (tag === 'TABLE') {
+          const rows = Array.from(node.querySelectorAll('tr'));
+          const mdRows = rows.map((tr, rIdx) => {
+            const cells = Array.from(tr.querySelectorAll('th,td')).map((c) =>
+              String(c.innerText || c.textContent || '')
+                .replace(/\s+/g, ' ')
+                .trim()
+            );
+            const line = `| ${cells.join(' | ')} |`;
+            if (rIdx === 0 && cells.length > 0) {
+              return `${line}\n| ${cells.map(() => '---').join(' | ')} |`;
+            }
+            return line;
+          });
+          return `\n${mdRows.join('\n')}\n`;
+        }
+        let inner = '';
+        node.childNodes.forEach((ch) => {
+          inner += walk(ch);
+        });
+        if (['DIV', 'P', 'LI', 'H1', 'H2', 'H3', 'H4', 'BLOCKQUOTE'].includes(tag)) {
+          return `${inner}\n`;
+        }
+        return inner;
+      };
+      return walk(rootEl)
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+
+    saveCurrentModeDraft(modeKey = this.activeModeKey) {
+      const mKey = modeKey || 'MODE_1_DRAFT';
+      const plainEl = document.getElementById('s18-fullscreen-prompt-textarea');
+      const richEl = document.getElementById('s18-rich-prompt-editor');
+      let plainVal = plainEl ? String(plainEl.value || '') : '';
+      if (this.richModeActive && richEl) {
+        plainVal = this.serializeRichNodeToPlainText(richEl);
+        if (plainEl && plainEl.value !== plainVal) {
+          plainEl.value = plainVal;
+        }
+      }
+      try {
+        localStorage.setItem(`noir_v106_cmd_draft_${mKey}`, plainVal);
+        if (richEl && this.richModeActive) {
+          const clone = richEl.cloneNode(true);
+          clone.querySelectorAll('img').forEach((im) => {
+            if ((im.getAttribute('src') || '').length > 120000) im.remove();
+          });
+          const html = clone.innerHTML || '';
+          if (html.length < 180000) {
+            localStorage.setItem(`noir_v106_cmd_rich_${mKey}`, html);
+          }
+        }
+      } catch (_eSave) {}
+    }
+
+    loadModeDraftIntoEditors(modeKey) {
+      const mKey = modeKey || 'MODE_1_DRAFT';
+      this.activeModeKey = mKey;
+      const plainEl = document.getElementById('s18-fullscreen-prompt-textarea');
+      const richEl = document.getElementById('s18-rich-prompt-editor');
+      let savedPlain = '';
+      let savedRich = '';
+      try {
+        savedPlain = localStorage.getItem(`noir_v106_cmd_draft_${mKey}`) || '';
+        savedRich = localStorage.getItem(`noir_v106_cmd_rich_${mKey}`) || '';
+      } catch (_eLoad) {}
+
+      this._syncingFromPlain = true;
+      if (plainEl) {
+        plainEl.value = savedPlain;
+      }
+      if (richEl) {
+        if (savedRich && savedRich.trim()) {
+          richEl.innerHTML = savedRich;
+        } else {
+          richEl.innerText = savedPlain;
+        }
+      }
+      this._syncingFromPlain = false;
+
+      const badge = document.getElementById('cmd-active-mode-draft-badge');
+      if (badge) {
+        badge.textContent = `🗂️ Ô lệnh riêng: ${this.getModeShortLabel(mKey)}`;
+      }
+
+      const counterEl = document.getElementById('prompt-char-counter');
+      if (counterEl) {
+        counterEl.textContent = `${savedPlain.length.toLocaleString('vi-VN')} ký tự`;
+      }
+
+      this.refreshHeroTopLinksUI(mKey);
+      this.renderAttachedImagesBar(mKey);
+    }
+
+    syncRichEditorToPlainTextarea(persist = true) {
+      if (this._syncingFromPlain) return;
+      const richEl = document.getElementById('s18-rich-prompt-editor');
+      const plainEl = document.getElementById('s18-fullscreen-prompt-textarea');
+      if (!richEl || !plainEl || !this.richModeActive) return;
+      const serialized = this.serializeRichNodeToPlainText(richEl);
+      if (plainEl.value !== serialized) {
+        plainEl.value = serialized;
+      }
+      const counterEl = document.getElementById('prompt-char-counter');
+      if (counterEl) {
+        counterEl.textContent = `${serialized.length.toLocaleString('vi-VN')} ký tự`;
+      }
+      if (persist) {
+        this.saveCurrentModeDraft(this.activeModeKey);
+      }
+    }
+
+    getModeImages(modeKey = this.activeModeKey) {
+      const mKey = modeKey || 'MODE_1_DRAFT';
+      if (!Array.isArray(this.modeImagesMap[mKey])) {
+        this.modeImagesMap[mKey] = [];
+      }
+      return this.modeImagesMap[mKey];
+    }
+
+    addImagesToCurrentMode(imageItems = []) {
+      const mKey = this.activeModeKey || 'MODE_1_DRAFT';
+      const list = this.getModeImages(mKey);
+      imageItems.forEach((item) => {
+        if (item && item.dataUrl) {
+          list.push({
+            id: `img_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            name: item.name || `Anh_${list.length + 1}.png`,
+            dataUrl: item.dataUrl
+          });
+        }
+      });
+      this.renderAttachedImagesBar(mKey);
+      if (list.length > 10) {
+        const skipPopup = localStorage.getItem(this.SKIP_IMG_PDF_KEY) === '1';
+        const prevAlerted = this.lastOver10AlertModeCount[mKey] || 0;
+        if (!skipPopup && list.length > prevAlerted) {
+          this.lastOver10AlertModeCount[mKey] = list.length;
+          this.openOver10ImagesPdfPromptModal(mKey, list.length);
+        }
+      }
+    }
+
+    renderAttachedImagesBar(modeKey = this.activeModeKey) {
+      const list = this.getModeImages(modeKey);
+      const bar = document.getElementById('cmd-attached-images-bar');
+      const btnPdf = document.getElementById('btn-cmd-images-to-pdf');
+      const countEl = document.getElementById('cmd-attached-images-count');
+      if (countEl) countEl.textContent = String(list.length);
+      if (btnPdf) btnPdf.classList.toggle('hidden', list.length === 0);
+      if (!bar) return;
+      if (list.length === 0) {
+        bar.classList.add('hidden');
+        bar.innerHTML = '';
+        return;
+      }
+      bar.classList.remove('hidden');
+      const overLimitHtml =
+        list.length > 10
+          ? `<span class="px-2 py-0.5 rounded-full bg-amber-500/25 border border-amber-400 text-amber-200 font-black text-[10px]">⚠️ ${list.length} ảnh (vượt 10 ảnh/lệnh Gemini — nên gộp PDF!)</span>`
+          : `<span class="text-[10.5px] text-violet-200 font-bold">🖼️ Đã đính kèm ${list.length} ảnh riêng cho ${this.getModeShortLabel(modeKey)}</span>`;
+      const thumbsHtml = list
+        .map(
+          (img, idx) => `
+          <div class="relative group w-14 h-14 rounded-lg overflow-hidden border border-violet-400/50 bg-zinc-950 shrink-0">
+            <img src="${img.dataUrl}" alt="${this.escapeHtml(img.name)}" class="w-full h-full object-cover" />
+            <button type="button" data-remove-cmd-img="${idx}" class="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] font-black leading-none flex items-center justify-center opacity-90 hover:opacity-100" title="Gỡ ảnh này">✕</button>
+          </div>
+        `
+        )
+        .join('');
+      bar.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          ${overLimitHtml}
+          <div class="flex items-center gap-1.5">
+            <button type="button" id="btn-cmd-bar-convert-pdf" class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold text-[10px] transition">📄 Gộp ${list.length} ảnh thành PDF & Tải về</button>
+            <button type="button" id="btn-cmd-bar-clear-imgs" class="px-2 py-1 rounded-lg border border-rose-500/50 text-rose-300 hover:bg-rose-500/20 font-bold text-[10px] transition">🗑️ Xóa hết ảnh</button>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1">${thumbsHtml}</div>
+      `;
+      bar.querySelectorAll('[data-remove-cmd-img]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const idx = Number(b.getAttribute('data-remove-cmd-img'));
+          if (!Number.isNaN(idx)) {
+            list.splice(idx, 1);
+            this.renderAttachedImagesBar(modeKey);
+          }
+        });
+      });
+      bar.querySelector('#btn-cmd-bar-convert-pdf')?.addEventListener('click', () => {
+        this.exportAttachedImagesToPdf(modeKey);
+      });
+      bar.querySelector('#btn-cmd-bar-clear-imgs')?.addEventListener('click', () => {
+        list.length = 0;
+        this.renderAttachedImagesBar(modeKey);
+      });
+    }
+
+    openOver10ImagesPdfPromptModal(modeKey, count) {
+      document.getElementById('modal-v106-over10-images-pdf')?.remove();
+      const modal = document.createElement('div');
+      modal.id = 'modal-v106-over10-images-pdf';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.style.zIndex = '2147483100';
+      modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto';
+      modal.innerHTML = `
+        <div class="my-auto w-full max-w-md rounded-2xl border-2 border-amber-400/80 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden text-xs">
+          <div class="px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-amber-950/80 to-violet-950/60 flex items-center justify-between gap-2">
+            <div class="font-extrabold text-sm text-amber-300">🖼️ Bạn Đang Có Nhiều Ảnh (${count} ảnh)</div>
+            <button type="button" id="btn-close-v106-img-pdf" class="px-2 py-0.5 rounded-lg bg-zinc-800 hover:bg-rose-600 text-white font-bold">✕</button>
+          </div>
+          <div class="p-4 space-y-3.5">
+            <p class="text-[12.5px] leading-relaxed text-zinc-100">
+              Bạn đang có nhiều ảnh (<strong class="text-amber-300">${count} ảnh</strong> — vượt giới hạn <strong>10 ảnh/câu lệnh</strong> của Gemini). Bạn muốn mình <strong class="text-emerald-300">gộp &amp; convert mớ ảnh này thẳng qua 1 file PDF</strong> tải về máy để bạn gửi cho Gemini quét không?
+            </p>
+            <p class="text-[11px] text-zinc-400">
+              ⚡ Xử lý 100% ngay trên máy bạn (tải thẳng về thư mục Downloads, KHÔNG ghi vào thư mục công việc truyện).
+            </p>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-zinc-800 bg-zinc-900/80 text-[11px] text-zinc-300 cursor-pointer select-none">
+              <input type="checkbox" id="chk-v106-skip-img-pdf" class="accent-amber-400 w-4 h-4 shrink-0" />
+              <span>Không hiện hộp thoại này ở lần sau</span>
+            </label>
+            <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
+              <button type="button" id="btn-v106-img-pdf-cancel" class="px-3.5 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-200 font-bold transition">Không, giữ nguyên</button>
+              <button type="button" id="btn-v106-img-pdf-confirm" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-zinc-950 font-black shadow-lg transition">✅ Có, Gộp Ảnh Thành PDF &amp; Tải Về</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      const saveSkip = () => {
+        if (modal.querySelector('#chk-v106-skip-img-pdf')?.checked) {
+          try { localStorage.setItem(this.SKIP_IMG_PDF_KEY, '1'); } catch (_e) {}
+        }
+      };
+      const close = () => { saveSkip(); modal.remove(); };
+      modal.addEventListener('click', (ev) => { if (ev.target === modal) close(); });
+      modal.querySelector('#btn-close-v106-img-pdf')?.addEventListener('click', close);
+      modal.querySelector('#btn-v106-img-pdf-cancel')?.addEventListener('click', close);
+      modal.querySelector('#btn-v106-img-pdf-confirm')?.addEventListener('click', async () => {
+        saveSkip();
+        modal.remove();
+        await this.exportAttachedImagesToPdf(modeKey);
+      });
+    }
+
+    // Pure-JS 100% Client-Side Multi-Page JPEG-in-PDF 1.4 Binary Builder (Zero server upload!)
+    buildPdfBlobFromJpegPages(jpegPages = []) {
+      const encoder = new TextEncoder();
+      const chunks = [];
+      let byteLen = 0;
+      const pushStr = (s) => {
+        const b = encoder.encode(s);
+        chunks.push(b);
+        byteLen += b.length;
+      };
+      const pushBytes = (u8) => {
+        chunks.push(u8);
+        byteLen += u8.length;
+      };
+
+      const offsets = [0];
+      pushStr('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+
+      const pageCount = jpegPages.length;
+      const kidsRefs = [];
+      // Object 1: Catalog, Object 2: Pages
+      // For each page i (0-based): ImageObj = 3 + i*3, ContentObj = 4 + i*3, PageObj = 5 + i*3
+      for (let i = 0; i < pageCount; i++) {
+        kidsRefs.push(`${5 + i * 3} 0 R`);
+      }
+
+      offsets.push(byteLen);
+      pushStr('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+
+      offsets.push(byteLen);
+      pushStr(`2 0 obj\n<< /Type /Pages /Kids [${kidsRefs.join(' ')}] /Count ${pageCount} >>\nendobj\n`);
+
+      for (let i = 0; i < pageCount; i++) {
+        const pg = jpegPages[i];
+        const imgObjNum = 3 + i * 3;
+        const contentObjNum = 4 + i * 3;
+        const pageObjNum = 5 + i * 3;
+
+        // A4 width=595pt, compute height keeping aspect ratio (capped nicely)
+        const pageW = 595;
+        const pageH = Math.max(240, Math.min(842, Math.round((pg.height / Math.max(1, pg.width)) * pageW)));
+        const drawW = pageW - 24;
+        const drawH = Math.min(pageH - 24, (pg.height / Math.max(1, pg.width)) * drawW);
+        const drawX = Math.round((pageW - drawW) / 2);
+        const drawY = Math.round((pageH - drawH) / 2);
+
+        offsets.push(byteLen);
+        pushStr(
+          `${imgObjNum} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${pg.width} /Height ${pg.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${pg.bytes.length} >>\nstream\n`
+        );
+        pushBytes(pg.bytes);
+        pushStr('\nendstream\nendobj\n');
+
+        const contentStream = `q\n${drawW.toFixed(2)} 0 0 ${drawH.toFixed(2)} ${drawX} ${drawY} cm\n/Im0 Do\nQ\n`;
+        const contentBytes = encoder.encode(contentStream);
+        offsets.push(byteLen);
+        pushStr(`${contentObjNum} 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n`);
+        pushBytes(contentBytes);
+        pushStr('endstream\nendobj\n');
+
+        offsets.push(byteLen);
+        pushStr(
+          `${pageObjNum} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Resources << /XObject << /Im0 ${imgObjNum} 0 R >> >> /Contents ${contentObjNum} 0 R >>\nendobj\n`
+        );
+      }
+
+      const xrefOffset = byteLen;
+      pushStr(`xref\n0 ${offsets.length}\n`);
+      pushStr('0000000000 65535 f \n');
+      for (let i = 1; i < offsets.length; i++) {
+        pushStr(`${String(offsets[i]).padStart(10, '0')} 00000 n \n`);
+      }
+      pushStr(`trailer\n<< /Size ${offsets.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`);
+
+      return new Blob(chunks, { type: 'application/pdf' });
+    }
+
+    dataUrlToJpegPage(dataUrl) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const maxDim = 1600;
+            let w = img.naturalWidth || img.width || 800;
+            let h = img.naturalHeight || img.height || 600;
+            if (w > maxDim || h > maxDim) {
+              const ratio = Math.min(maxDim / w, maxDim / h);
+              w = Math.max(1, Math.round(w * ratio));
+              h = Math.max(1, Math.round(h * ratio));
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.88);
+            const b64 = jpegDataUrl.split(',')[1] || '';
+            const bin = atob(b64);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            resolve({ width: w, height: h, bytes });
+          } catch (_eC) {
+            resolve(null);
+          }
+        };
+        img.onerror = () => resolve(null);
+        img.src = dataUrl;
+      });
+    }
+
+    triggerBlobDownload(blob, fileName) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        a.remove();
+        URL.revokeObjectURL(url);
+      }, 2000);
+    }
+
+    async exportAttachedImagesToPdf(modeKey = this.activeModeKey) {
+      const list = this.getModeImages(modeKey);
+      if (list.length === 0) {
+        window.NoirStudio?.utils?.showToast?.('⚠️ Chưa có ảnh nào được đính kèm trong ô lệnh này!', 'warning', 2400);
+        return false;
+      }
+      window.NoirStudio?.utils?.showToast?.(`⏳ Đang gộp ${list.length} ảnh thành PDF ngay trên máy bạn...`, 'info', 2200);
+      const pages = [];
+      for (const item of list) {
+        const pg = await this.dataUrlToJpegPage(item.dataUrl);
+        if (pg) pages.push(pg);
+      }
+      if (pages.length === 0) {
+        window.NoirStudio?.utils?.showToast?.('❌ Không thể chuyển đổi ảnh sang PDF.', 'error', 2800);
+        return false;
+      }
+      const pdfBlob = this.buildPdfBlobFromJpegPages(pages);
+      const stamp = new Date().toISOString().slice(0, 10);
+      this.triggerBlobDownload(pdfBlob, `Gemini_Images_${pages.length}anh_${stamp}.pdf`);
+      window.NoirStudio?.utils?.showToast?.(
+        `✅ Đã gộp ${pages.length} ảnh thành file PDF và tải thẳng về thư mục Downloads! Bạn chỉ cần tải file PDF này lên Gemini nhé.`,
+        'success',
+        4600
+      );
+      return true;
+    }
+
+    // Xuất toàn bộ Prompt dài thành file PDF tiếng Việt sắc nét 100% trên máy người dùng (Canvas UTF-8 -> PDF)
+    async exportCompiledPromptToPdf(promptText, modeKey = 'MODE_1_DRAFT') {
+      const text = String(promptText || '').trim();
+      if (!text) {
+        window.NoirStudio?.utils?.showToast?.('⚠️ Nội dung Prompt đang trống!', 'warning', 2200);
+        return false;
+      }
+      window.NoirStudio?.utils?.showToast?.('📄 Đang tạo file PDF câu lệnh tổng hợp ngay trên máy bạn...', 'info', 2500);
+      const pageW = 1240;
+      const pageH = 1754;
+      const padX = 76;
+      const padY = 76;
+      const maxTextW = pageW - padX * 2;
+      const lineH = 30;
+      const maxLinesPerPage = Math.floor((pageH - padY * 2 - 40) / lineH);
+
+      const measureCanvas = document.createElement('canvas');
+      const mCtx = measureCanvas.getContext('2d');
+      mCtx.font = '21px "Segoe UI", "Roboto", "Arial", sans-serif';
+
+      const wrappedLines = [];
+      const rawLines = text.split(/\r?\n/);
+      for (const rawLine of rawLines) {
+        if (!rawLine.trim()) {
+          wrappedLines.push('');
+          continue;
+        }
+        const words = rawLine.split(/\s+/);
+        let cur = '';
+        for (const w of words) {
+          const test = cur ? `${cur} ${w}` : w;
+          if (mCtx.measureText(test).width > maxTextW && cur) {
+            wrappedLines.push(cur);
+            cur = w;
+          } else {
+            cur = test;
+          }
+        }
+        if (cur) wrappedLines.push(cur);
+      }
+
+      const pages = [];
+      const totalPages = Math.max(1, Math.ceil(wrappedLines.length / maxLinesPerPage));
+      for (let p = 0; p < totalPages; p++) {
+        const canvas = document.createElement('canvas');
+        canvas.width = pageW;
+        canvas.height = pageH;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, pageW, pageH);
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 18px "Segoe UI", "Roboto", "Arial", sans-serif';
+        ctx.fillText(`PROMPT TỔNG HỢP (${this.getModeShortLabel(modeKey)}) — Trang ${p + 1}/${totalPages}`, padX, 46);
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(padX, 58);
+        ctx.lineTo(pageW - padX, 58);
+        ctx.stroke();
+
+        ctx.fillStyle = '#111827';
+        ctx.font = '21px "Segoe UI", "Roboto", "Arial", sans-serif';
+        const slice = wrappedLines.slice(p * maxLinesPerPage, (p + 1) * maxLinesPerPage);
+        slice.forEach((line, idx) => {
+          ctx.fillText(line, padX, padY + 24 + idx * lineH);
+        });
+
+        const jpegUrl = canvas.toDataURL('image/jpeg', 0.86);
+        const b64 = jpegUrl.split(',')[1] || '';
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        pages.push({ width: pageW, height: pageH, bytes });
+      }
+
+      const pdfBlob = this.buildPdfBlobFromJpegPages(pages);
+      const stamp = new Date().toISOString().slice(0, 10);
+      this.triggerBlobDownload(pdfBlob, `Prompt_Gemini_${modeKey}_${stamp}.pdf`);
+      window.NoirStudio?.utils?.showToast?.(
+        `✅ Đã xuất file PDF câu lệnh (${totalPages} trang) về Downloads! Bạn tải file PDF này lên Gemini rồi nhắn "Đọc và thực thi toàn bộ file PDF này" nhé.`,
+        'success',
+        5200
+      );
+      return true;
+    }
+
+    refreshHeroTopLinksUI(modeKey = this.activeModeKey) {
+      const mKey = modeKey || document.getElementById('select-ai-execution-mode')?.value || 'MODE_1_DRAFT';
+      const topBar = document.getElementById('cmd-hero-links-topbar');
+      const plotCard = document.getElementById('cmd-hero-plot-link-card');
+      const bibleStatus = document.getElementById('badge-cmd-hero-bible-status');
+      const plotStatus = document.getElementById('badge-cmd-hero-plot-status');
+      const bibleChk = document.getElementById('chk-cmd-link-story-bible-file');
+      const plotChk = document.getElementById('chk-cmd-link-plot-brainstorm');
+
+      const isMode1 = mKey === 'MODE_1_DRAFT';
+      if (plotCard) plotCard.classList.toggle('hidden', !isMode1);
+      if (topBar) {
+        topBar.classList.toggle('md:grid-cols-2', isMode1);
+        topBar.classList.toggle('md:grid-cols-1', !isMode1);
+      }
+
+      if (bibleStatus) {
+        const enabled = bibleChk ? bibleChk.checked : localStorage.getItem('noir_v105_story_bible_file_link_enabled') !== '0';
+        const bibleLen = String(document.getElementById('textarea-rendered-bible-content')?.value || '').trim().length;
+        const linkedFile = window.NoirStudio?.storyBible?.getLinkedStoryBibleFileData?.();
+        const extraFileLen = linkedFile?.text ? linkedFile.text.length : 0;
+        const totalChars = bibleLen + extraFileLen;
+        if (!enabled) {
+          bibleStatus.textContent = 'Đang TẮT liên kết';
+          bibleStatus.className = 'px-2 py-0.5 rounded-full bg-zinc-800 border border-zinc-600 text-zinc-400 font-extrabold text-[10px] shrink-0';
+        } else {
+          bibleStatus.textContent = totalChars > 0
+            ? `Đã liên kết (${totalChars.toLocaleString('vi-VN')} ký tự) · Xem`
+            : 'Đã liên kết · Bấm xem';
+          bibleStatus.className = 'px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/60 text-emerald-200 font-extrabold text-[10px] shrink-0';
+        }
+      }
+
+      if (plotStatus) {
+        const masterOn = plotChk ? plotChk.checked : localStorage.getItem(this.PLOT_MASTER_KEY) !== '0';
+        const useAi = localStorage.getItem(this.PLOT_USE_AI_KEY) !== '0';
+        const useManual = localStorage.getItem(this.PLOT_USE_MANUAL_KEY) === '1';
+        if (!masterOn) {
+          plotStatus.textContent = 'Đang TẮT liên kết';
+          plotStatus.className = 'px-2 py-0.5 rounded-full bg-zinc-800 border border-zinc-600 text-zinc-400 font-extrabold text-[10px] shrink-0';
+        } else {
+          const tags = [];
+          if (useAi) tags.push('AI Gemini');
+          if (useManual) tags.push('Tự viết');
+          plotStatus.textContent = tags.length > 0 ? `Đang gắn: ${tags.join(' + ')}` : 'Chưa chọn nguồn';
+          plotStatus.className = 'px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/60 text-cyan-100 font-extrabold text-[10px] shrink-0';
+        }
+      }
+    }
+
+    openStoryBibleFullViewerModal() {
+      document.getElementById('modal-v106-story-bible-viewer')?.remove();
+      const fullBible =
+        window.NoirStudio?.storyBible?.buildCompiledBibleBlockForPrompt?.() ||
+        document.getElementById('textarea-rendered-bible-content')?.value ||
+        '(Chưa có nội dung Story Bible)';
+      const modal = document.createElement('div');
+      modal.id = 'modal-v106-story-bible-viewer';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.style.zIndex = '2147483100';
+      modal.className = 'fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-5 overflow-y-auto';
+      modal.innerHTML = `
+        <div class="my-auto w-full max-w-4xl max-h-[90dvh] rounded-2xl border-2 border-amber-400/75 bg-zinc-950 text-zinc-100 shadow-2xl flex flex-col overflow-hidden text-xs">
+          <div class="px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-amber-950/75 to-zinc-900 flex items-center justify-between gap-2 shrink-0">
+            <div>
+              <div class="font-extrabold text-sm text-amber-300">📄 TOÀN VĂN FILE STORY BIBLE ĐANG LIÊN KẾT (NGUYÊN VĂN 100%, KHÔNG CẮT XÉN)</div>
+              <div class="text-[11px] text-amber-100/80">Tổng độ dài: ${fullBible.length.toLocaleString('vi-VN')} ký tự</div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button type="button" id="btn-v106-bible-goto-tab4" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold transition">✏️ Mở Tab 4 Chỉnh Sửa</button>
+              <button type="button" id="btn-v106-bible-close" class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-rose-600 text-white font-bold">✕ Đóng</button>
+            </div>
+          </div>
+          <div class="p-4 overflow-y-auto flex-1">
+            <pre class="whitespace-pre-wrap break-words font-monoCode text-[12px] leading-relaxed text-zinc-100 select-text bg-zinc-900/70 p-3.5 rounded-xl border border-zinc-800">${this.escapeHtml(fullBible)}</pre>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.remove(); });
+      modal.querySelector('#btn-v106-bible-close')?.addEventListener('click', () => modal.remove());
+      modal.querySelector('#btn-v106-bible-goto-tab4')?.addEventListener('click', () => {
+        modal.remove();
+        document.getElementById('modal-fullscreen-ai-command')?.classList.add('hidden');
+        window.NoirStudio?.navigator?.navigateToScreen?.('SCREEN_4_BIBLE');
+      });
+    }
+
+    openDualPlotBrainstormingModal() {
+      document.getElementById('modal-v106-dual-plot-modal')?.remove();
+      const useAiInit = localStorage.getItem(this.PLOT_USE_AI_KEY) !== '0';
+      const useManualInit = localStorage.getItem(this.PLOT_USE_MANUAL_KEY) === '1';
+      const aiOutlineVal = String(this.synth?.getMode2DevelopedOutlineText?.() || '').trim();
+      let manualOutlineVal = '';
+      try {
+        manualOutlineVal = localStorage.getItem(this.PLOT_MANUAL_TEXT_KEY) || '';
+      } catch (_eM) {}
+
+      const modal = document.createElement('div');
+      modal.id = 'modal-v106-dual-plot-modal';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.style.zIndex = '2147483100';
+      modal.className = 'fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-5 overflow-y-auto';
+      modal.innerHTML = `
+        <div class="my-auto w-full max-w-5xl max-h-[92dvh] rounded-2xl border-2 border-cyan-400/75 bg-zinc-950 text-zinc-100 shadow-2xl flex flex-col overflow-hidden text-xs">
+          <div class="px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-cyan-950/75 to-indigo-950/70 flex items-center justify-between gap-2 shrink-0">
+            <div class="font-extrabold text-sm text-cyan-300">🧭 CHỌN NGUỒN THAM MƯU CỐT TRUYỆN CHO CHẾ ĐỘ 1 (AI GEMINI / TỰ VIẾT / CẢ 2)</div>
+            <button type="button" id="btn-v106-plot-close" class="px-2.5 py-1 rounded-xl bg-zinc-800 hover:bg-rose-600 text-white font-bold">✕ Đóng</button>
+          </div>
+          <div class="p-4 overflow-y-auto flex-1 space-y-3">
+            <div class="p-3 rounded-xl border border-amber-400/55 bg-amber-950/40 text-amber-100 text-[12px] leading-relaxed">
+              💡 Tại đây, bạn tick chọn <strong class="text-cyan-300">tham mưu cốt truyện theo câu trả lời của Gemini</strong> thì AI sẽ tổng hợp prompt theo hướng tham mưu cốt truyện của Gemini, còn nếu bạn chọn ô bên cạnh, là <strong class="text-emerald-300">tham mưu cốt truyện riêng bạn viết, không dùng AI</strong> thì cũng được, hoặc là <strong class="text-amber-300">tick cả 2</strong>.
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <div class="p-3 rounded-2xl border-2 border-cyan-500/50 bg-cyan-950/20 space-y-2 flex flex-col">
+                <label class="flex items-center gap-2 font-extrabold text-cyan-300 text-xs cursor-pointer select-none">
+                  <input type="checkbox" id="chk-v106-plot-ai" ${useAiInit ? 'checked' : ''} class="accent-cyan-400 w-4 h-4 shrink-0" />
+                  <span>🤖 Tham mưu cốt truyện theo câu trả lời của Gemini (Chế độ 2)</span>
+                </label>
+                <p class="text-[11px] text-zinc-400">Tự động liên kết kết quả Chế độ 2 (hoặc bạn có thể dán thẳng câu trả lời tham mưu của Gemini Web/App vào đây):</p>
+                <textarea id="textarea-v106-plot-ai" class="w-full min-h-[260px] flex-1 p-3 rounded-xl border border-cyan-500/40 bg-zinc-950 text-xs text-zinc-100 leading-relaxed focus:outline-none focus:border-cyan-400 select-text" placeholder="Dán câu trả lời tham mưu cốt truyện từ Gemini (hoặc chạy Chế độ 2 để tự điền vào đây)...">${this.escapeHtml(aiOutlineVal)}</textarea>
+              </div>
+              <div class="p-3 rounded-2xl border-2 border-emerald-500/50 bg-emerald-950/20 space-y-2 flex flex-col">
+                <label class="flex items-center gap-2 font-extrabold text-emerald-300 text-xs cursor-pointer select-none">
+                  <input type="checkbox" id="chk-v106-plot-manual" ${useManualInit ? 'checked' : ''} class="accent-emerald-400 w-4 h-4 shrink-0" />
+                  <span>✍️ Tham mưu cốt truyện riêng bạn tự viết (không dùng AI)</span>
+                </label>
+                <p class="text-[11px] text-zinc-400">Viết dàn ý, nút thắt, diễn biến chương tiếp theo hoàn toàn theo ý riêng của bạn:</p>
+                <textarea id="textarea-v106-plot-manual" class="w-full min-h-[260px] flex-1 p-3 rounded-xl border border-emerald-500/40 bg-zinc-950 text-xs text-zinc-100 leading-relaxed focus:outline-none focus:border-emerald-400 select-text" placeholder="Gõ cốt truyện riêng bạn tự nghĩ ra tại đây (sẽ được giữ nguyên văn 100%, không cắt xén)...">${this.escapeHtml(manualOutlineVal)}</textarea>
+              </div>
+            </div>
+          </div>
+          <div class="px-4 py-3 border-t border-zinc-800 bg-zinc-950 flex flex-wrap items-center justify-between gap-2 shrink-0">
+            <span class="text-[11px] text-zinc-400">✅ Toàn bộ nội dung bạn tick chọn sẽ được ghép nguyên văn 100% vào Prompt Chế độ 1.</span>
+            <button type="button" id="btn-v106-plot-save" class="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 text-white font-extrabold shadow-lg transition">💾 Lưu &amp; Áp Dụng Vào Chế Độ 1</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const saveAndClose = () => {
+        const useAi = Boolean(modal.querySelector('#chk-v106-plot-ai')?.checked);
+        const useManual = Boolean(modal.querySelector('#chk-v106-plot-manual')?.checked);
+        const aiTxt = String(modal.querySelector('#textarea-v106-plot-ai')?.value || '').trim();
+        const manualTxt = String(modal.querySelector('#textarea-v106-plot-manual')?.value || '').trim();
+        try {
+          localStorage.setItem(this.PLOT_USE_AI_KEY, useAi ? '1' : '0');
+          localStorage.setItem(this.PLOT_USE_MANUAL_KEY, useManual ? '1' : '0');
+          localStorage.setItem(this.PLOT_MANUAL_TEXT_KEY, manualTxt);
+          localStorage.setItem('noir_v36_mode2_latest_plot_outline', aiTxt);
+        } catch (_eS) {}
+        this.refreshHeroTopLinksUI('MODE_1_DRAFT');
+        this.synth?.refreshCommandModeUX?.('MODE_1_DRAFT');
+        modal.remove();
+        window.NoirStudio?.utils?.showToast?.(
+          '✅ Đã lưu cấu hình Tham mưu cốt truyện cho Chế độ 1!',
+          'success',
+          2600
+        );
+      };
+
+      modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.remove(); });
+      modal.querySelector('#btn-v106-plot-close')?.addEventListener('click', () => modal.remove());
+      modal.querySelector('#btn-v106-plot-save')?.addEventListener('click', saveAndClose);
+    }
+
+    renderPromptLengthLimitGuard(promptText, modeKey = 'MODE_1_DRAFT') {
+      const box = document.getElementById('confirm-prompt-length-limit-guard');
+      if (!box) return;
+      const len = String(promptText || '').length;
+      const isNotebookLmMode =
+        modeKey === 'MODE_3_AUDIT' || modeKey === 'MODE_4_REVIEW' || modeKey === 'MODE_5_DIAGRAM';
+
+      // 1) NotebookLM: khung chat ngắn (~4.500 ký tự) -> Hướng dẫn tạo Ghi chú (+ Lưu ý / Studio) kèm giao diện mô phỏng trực quan!
+      if (isNotebookLmMode && len > 4500) {
+        const shortTriggerCmd =
+          'Hãy đọc thật kỹ toàn bộ hướng dẫn, vai trò và yêu cầu trong Ghi chú (Note) mới tôi vừa tạo trong mục Studio, đối chiếu toàn bộ các chương nguồn và thực thi đầy đủ từng bước!';
+        box.classList.remove('hidden');
+        box.innerHTML = `
+          <div class="p-3.5 rounded-2xl border-2 border-sky-400/75 bg-gradient-to-r from-sky-950/75 via-zinc-950 to-indigo-950/70 space-y-3 text-xs shadow-xl">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="font-extrabold text-sky-300 text-xs sm:text-sm">
+                📝 Prompt dài ${len.toLocaleString('vi-VN')} ký tự — Có thể vượt giới hạn ô chat NotebookLM!
+              </div>
+              <span class="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/60 text-amber-200 font-bold text-[10px]">Mẹo chuẩn NotebookLM</span>
+            </div>
+            <p class="text-sky-100 leading-relaxed text-[11.5px]">
+              Nếu ô chat NotebookLM báo quá dài không dán hết được, hãy bấm nút <strong class="text-amber-300">+ Lưu ý (Add note)</strong> ở thanh <strong>Studio bên phải</strong> NotebookLM → dán toàn bộ Prompt đã copy vào ghi chú đó → rồi quay lại ô chat dán lệnh gọi siêu ngắn bên dưới là NotebookLM đọc trọn vẹn 100%!
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+              <!-- Mô phỏng trực quan giao diện Studio của NotebookLM -->
+              <div class="rounded-xl border border-zinc-700 bg-[#1e1f24] p-2.5 space-y-2 shadow-inner">
+                <div class="flex items-center justify-between text-[10.5px] font-bold text-zinc-300 border-b border-zinc-700/80 pb-1.5">
+                  <span>✨ Studio (Bên phải NotebookLM)</span>
+                  <span class="text-sky-400">Ghi chú mới</span>
+                </div>
+                <div class="grid grid-cols-2 gap-1.5 text-[10px] text-zinc-400">
+                  <div class="px-2 py-1.5 rounded-lg bg-zinc-800/80">🎧 Tổng quan âm thanh</div>
+                  <div class="px-2 py-1.5 rounded-lg bg-zinc-800/80">🗺️ Bản đồ tư duy</div>
+                  <div class="px-2 py-1.5 rounded-lg bg-zinc-800/80">📊 Báo cáo</div>
+                  <div class="px-2 py-1.5 rounded-lg bg-zinc-800/80">📑 Trình chiếu</div>
+                </div>
+                <div class="flex justify-center pt-1">
+                  <div class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-amber-400 text-zinc-950 font-black text-[11px] shadow-lg ring-4 ring-amber-400/35 animate-pulse">
+                    <span>📝</span><span>+ Lưu ý (BẤM ĐÂY ĐỂ DÁN PROMPT)</span>
+                  </div>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div class="text-[11px] font-bold text-emerald-300">⚡ Lệnh gọi siêu ngắn dán vào ô Chat NotebookLM sau khi tạo Lưu ý:</div>
+                <div class="p-2.5 rounded-xl bg-zinc-950 border border-emerald-500/40 text-emerald-100 text-[11px] leading-relaxed select-text">${this.escapeHtml(shortTriggerCmd)}</div>
+                <button type="button" id="btn-v106-copy-nlm-short-cmd" class="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] shadow transition">
+                  📋 Copy Lệnh Gọi Ghi Chú Siêu Ngắn (1 Chạm)
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+        box.querySelector('#btn-v106-copy-nlm-short-cmd')?.addEventListener('click', async () => {
+          await window.NoirStudio?.geminiSplitBridge?.copyTextSafe?.(shortTriggerCmd);
+          window.NoirStudio?.utils?.showToast?.('✅ Đã copy lệnh gọi Ghi chú NotebookLM vào bộ nhớ tạm!', 'success', 2600);
+        });
+        return;
+      }
+
+      // 2) Gemini: khi prompt tổng quá dài (> 28.000 ký tự) -> Nút bấm xuất thẳng file PDF câu lệnh để tải lên Gemini đọc!
+      if (!isNotebookLmMode && len > 28000) {
+        box.classList.remove('hidden');
+        box.innerHTML = `
+          <button type="button" id="btn-v106-export-prompt-pdf-for-gemini" class="w-full text-left p-3.5 rounded-2xl border-2 border-amber-400/85 bg-gradient-to-r from-amber-950/80 via-rose-950/60 to-violet-950/75 hover:from-amber-900/85 hover:to-violet-900/80 text-amber-100 shadow-xl transition flex flex-wrap items-center justify-between gap-3">
+            <div class="space-y-1 flex-1 min-w-[220px]">
+              <div class="font-black text-amber-300 text-xs sm:text-sm leading-snug">
+                📄 Prompt tổng của bạn có thể đang vượt quá giới hạn nhập lệnh của Gemini, bạn nên xuất file pdf câu lệnh và tải lên cho Gemini nó đọc =))
+              </div>
+              <div class="text-[11px] text-amber-100/85">
+                Độ dài hiện tại: <strong>${len.toLocaleString('vi-VN')} ký tự</strong> · Bấm vào đây để xuất ngay file <strong>.PDF</strong> câu lệnh ngay trên máy bạn (tải thẳng về Downloads)!
+              </div>
+            </div>
+            <span class="px-4 py-2 rounded-xl bg-amber-400 text-zinc-950 font-black text-xs shadow-lg shrink-0">⬇️ Xuất File PDF Câu Lệnh Ngay</span>
+          </button>
+        `;
+        box.querySelector('#btn-v106-export-prompt-pdf-for-gemini')?.addEventListener('click', () => {
+          const latestText =
+            document.getElementById('textarea-synthesized-master-prompt')?.value ||
+            promptText;
+          this.exportCompiledPromptToPdf(latestText, modeKey);
+        });
+        return;
+      }
+
+      box.classList.add('hidden');
+      box.innerHTML = '';
+    }
+
+    bindAutoCopyOnAllExternalAiLinks() {
+      if (this._linksBound || typeof document === 'undefined') return;
+      this._linksBound = true;
+      document.addEventListener(
+        'click',
+        (ev) => {
+          const anchor = ev.target?.closest?.('a[href]');
+          if (!anchor) return;
+          const href = String(anchor.getAttribute('href') || '');
+          const isNlm = href.includes('notebooklm.google.com');
+          const isGemini = href.includes('gemini.google.com');
+          if (!isNlm && !isGemini) return;
+
+          try {
+            const confirmModal = document.getElementById('modal-confirm-synthesized-prompt');
+            let textToCopy = '';
+            if (confirmModal && !confirmModal.classList.contains('hidden')) {
+              textToCopy =
+                document.getElementById('textarea-synthesized-master-prompt')?.value ||
+                this.synth?.lastSynthesizedPrompt ||
+                '';
+            }
+            if (!textToCopy.trim()) {
+              const modeKey =
+                document.getElementById('select-ai-execution-mode')?.value || 'MODE_1_DRAFT';
+              const resolvedCmd = this.synth?.getResolvedUserCommand?.(modeKey) || '';
+              textToCopy =
+                this.synth?.buildSynthesizedPromptForMode?.(modeKey, resolvedCmd) || '';
+            }
+            if (textToCopy.trim()) {
+              window.NoirStudio?.geminiSplitBridge?.copyTextSafe?.(textToCopy);
+              window.NoirStudio?.utils?.showToast?.(
+                isNlm
+                  ? '✅ Đã tự động copy toàn bộ Prompt tổng hợp vào bộ nhớ tạm trước khi mở Google NotebookLM!'
+                  : '✅ Đã tự động copy toàn bộ Prompt tổng hợp vào bộ nhớ tạm trước khi mở Gemini!',
+                'success',
+                3400
+              );
+            }
+          } catch (_eCp) {}
+        },
+        true
+      );
+    }
+
+    init() {
+      if (this._bound || typeof document === 'undefined') return;
+      this._bound = true;
+
+      const modeSelect = document.getElementById('select-ai-execution-mode');
+      const richEl = document.getElementById('s18-rich-prompt-editor');
+      const plainEl = document.getElementById('s18-fullscreen-prompt-textarea');
+      const bibleChk = document.getElementById('chk-cmd-link-story-bible-file');
+      const plotChk = document.getElementById('chk-cmd-link-plot-brainstorm');
+
+      this.activeModeKey = modeSelect?.value || 'MODE_1_DRAFT';
+      this.loadModeDraftIntoEditors(this.activeModeKey);
+
+      // Chuyển Chế độ 1..6 -> lưu ô lệnh cũ, nạp ô lệnh riêng của chế độ mới
+      if (modeSelect) {
+        modeSelect.addEventListener('change', () => {
+          const prevMode = this.activeModeKey;
+          this.saveCurrentModeDraft(prevMode);
+          const nextMode = modeSelect.value || 'MODE_1_DRAFT';
+          this.loadModeDraftIntoEditors(nextMode);
+        });
+      }
+
+      // Đồng bộ Rich Editor <-> Plain Textarea + Enter để chạy
+      if (richEl) {
+        richEl.addEventListener('input', () => {
+          this.syncRichEditorToPlainTextarea(true);
+        });
+        richEl.addEventListener('paste', (ev) => {
+          const items = ev.clipboardData?.items;
+          if (!items) return;
+          const imgFiles = [];
+          for (let i = 0; i < items.length; i++) {
+            if (items[i].type && items[i].type.startsWith('image/')) {
+              const f = items[i].getAsFile();
+              if (f) imgFiles.push(f);
+            }
+          }
+          if (imgFiles.length > 0) {
+            ev.preventDefault();
+            Promise.all(
+              imgFiles.map(
+                (file) =>
+                  new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve({ name: file.name || 'Pasted_Image.png', dataUrl: reader.result });
+                    reader.onerror = () => resolve(null);
+                    reader.readAsDataURL(file);
+                  })
+              )
+            ).then((loaded) => {
+              const valid = loaded.filter(Boolean);
+              this.addImagesToCurrentMode(valid);
+              valid.forEach((im) => {
+                try {
+                  document.execCommand('insertHTML', false, `<img src="${im.dataUrl}" alt="${this.escapeHtml(im.name)}" />`);
+                } catch (_eIns) {}
+              });
+              this.syncRichEditorToPlainTextarea(true);
+            });
+          } else {
+            setTimeout(() => this.syncRichEditorToPlainTextarea(true), 20);
+          }
+        });
+        richEl.addEventListener('keydown', (ev) => {
+          if (ev.isComposing || ev.keyCode === 229) return;
+          if (ev.key === 'Enter' && !ev.shiftKey && !ev.ctrlKey && !ev.altKey && !ev.metaKey) {
+            // Không chặn Enter khi đang gõ trong ô bảng <td>/<th>
+            const selNode = window.getSelection?.()?.anchorNode;
+            const inTable = selNode?.parentElement?.closest?.('td, th');
+            if (inTable) return;
+            ev.preventDefault();
+            this.syncRichEditorToPlainTextarea(true);
+            plainEl?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+          }
+        });
+      }
+
+      if (plainEl) {
+        plainEl.addEventListener('input', () => {
+          if (!this.richModeActive) {
+            this.saveCurrentModeDraft(this.activeModeKey);
+            const counterEl = document.getElementById('prompt-char-counter');
+            if (counterEl) counterEl.textContent = `${plainEl.value.length.toLocaleString('vi-VN')} ký tự`;
+          }
+        });
+      }
+
+      // Nút B / I / U
+      document.querySelectorAll('[data-cmd-rich-exec]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (!this.richModeActive) return;
+          richEl?.focus();
+          try { document.execCommand(btn.getAttribute('data-cmd-rich-exec'), false, null); } catch (_e) {}
+          this.syncRichEditorToPlainTextarea(true);
+        });
+      });
+
+      // Chèn bảng kiểu Word/Google Docs
+      document.getElementById('btn-cmd-rich-insert-table')?.addEventListener('click', () => {
+        if (!this.richModeActive) {
+          document.getElementById('btn-cmd-toggle-rich-mode')?.click();
+        }
+        richEl?.focus();
+        const tableHtml =
+          '<table><thead><tr><th>Mục / Phân cảnh</th><th>Chi tiết diễn biến</th><th>Ghi chú POV / Số từ</th></tr></thead><tbody><tr><td>Cảnh 1</td><td>...</td><td>...</td></tr><tr><td>Cảnh 2</td><td>...</td><td>...</td></tr></tbody></table><p><br></p>';
+        try {
+          document.execCommand('insertHTML', false, tableHtml);
+        } catch (_eT) {
+          if (richEl) richEl.innerHTML += tableHtml;
+        }
+        this.syncRichEditorToPlainTextarea(true);
+      });
+
+      // Thêm ảnh từ máy tính/điện thoại
+      const imgInput = document.getElementById('input-cmd-rich-image-files');
+      document.getElementById('btn-cmd-rich-add-images')?.addEventListener('click', () => {
+        imgInput?.click();
+      });
+      imgInput?.addEventListener('change', () => {
+        const files = Array.from(imgInput.files || []);
+        if (files.length === 0) return;
+        Promise.all(
+          files.map(
+            (file) =>
+              new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve({ name: file.name, dataUrl: reader.result });
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(file);
+              })
+          )
+        ).then((loaded) => {
+          const valid = loaded.filter(Boolean);
+          this.addImagesToCurrentMode(valid);
+          if (this.richModeActive && richEl) {
+            valid.forEach((im) => {
+              const imgTag = document.createElement('img');
+              imgTag.src = im.dataUrl;
+              imgTag.alt = im.name;
+              richEl.appendChild(imgTag);
+            });
+            this.syncRichEditorToPlainTextarea(true);
+          }
+          imgInput.value = '';
+        });
+      });
+
+      document.getElementById('btn-cmd-images-to-pdf')?.addEventListener('click', () => {
+        this.exportAttachedImagesToPdf(this.activeModeKey);
+      });
+
+      // Chuyển đổi Chế độ Word (Bảng + Ảnh) <-> Văn bản thuần
+      const toggleRichBtn = document.getElementById('btn-cmd-toggle-rich-mode');
+      toggleRichBtn?.addEventListener('click', () => {
+        if (this.richModeActive) {
+          this.syncRichEditorToPlainTextarea(true);
+          this.richModeActive = false;
+          richEl?.classList.add('hidden');
+          plainEl?.classList.remove('hidden');
+          toggleRichBtn.textContent = '📝 Văn bản thuần (Bấm bật Word)';
+        } else {
+          this.richModeActive = true;
+          if (richEl && plainEl) richEl.innerText = plainEl.value || '';
+          plainEl?.classList.add('hidden');
+          richEl?.classList.remove('hidden');
+          toggleRichBtn.textContent = '📄 Chế độ Word (Bảng + Ảnh)';
+        }
+      });
+
+      // Cập nhật nút Phóng to ô nhập áp dụng cho cả Rich Editor lẫn Textarea
+      const expandBtn = document.getElementById('btn-toggle-prompt-box-expand');
+      if (expandBtn) {
+        expandBtn.removeAttribute('onclick');
+        expandBtn.addEventListener('click', () => {
+          const target = this.richModeActive ? richEl : plainEl;
+          if (!target) return;
+          const big = target.classList.toggle('min-h-[68vh]');
+          target.classList.toggle('min-h-[42vh]', !big);
+          expandBtn.textContent = big ? '⤡ Thu gọn ô nhập' : '⤢ Phóng to ô nhập';
+        });
+      }
+
+      // 2 nút lớn trên cùng: FILE STORY BIBLE & THAM MƯU CỐT TRUYỆN
+      document.getElementById('btn-cmd-hero-story-bible-viewer')?.addEventListener('click', () => {
+        this.openStoryBibleFullViewerModal();
+      });
+      document.getElementById('btn-cmd-hero-plot-selector')?.addEventListener('click', () => {
+        this.openDualPlotBrainstormingModal();
+      });
+      bibleChk?.addEventListener('change', () => {
+        this.refreshHeroTopLinksUI();
+      });
+      if (plotChk) {
+        plotChk.checked = localStorage.getItem(this.PLOT_MASTER_KEY) !== '0';
+        plotChk.addEventListener('change', () => {
+          try { localStorage.setItem(this.PLOT_MASTER_KEY, plotChk.checked ? '1' : '0'); } catch (_e) {}
+          this.refreshHeroTopLinksUI();
+        });
+      }
+
+      // Khi mở modal lệnh AI -> làm mới trạng thái 2 nút lớn trên cùng
+      document.getElementById('btn-open-fullscreen-ai-command')?.addEventListener('click', () => {
+        setTimeout(() => this.refreshHeroTopLinksUI(), 30);
+      });
+
+      this.bindAutoCopyOnAllExternalAiLinks();
+      this.refreshHeroTopLinksUI();
+    }
+  }
+
   const manuscriptSyncTracker = new ManuscriptSyncChangeTracker(promptSynthesizer);
   const geminiSplitBridge = new GeminiAndNotebookLmSplitBridge(promptSynthesizer);
+  const v106CommandSuite = new V106CommandBoxAndLimitGuards(promptSynthesizer);
   window.NoirStudio.manuscriptSyncTracker = manuscriptSyncTracker;
   window.NoirStudio.geminiSplitBridge = geminiSplitBridge;
+  window.NoirStudio.v106CommandSuite = v106CommandSuite;
 
   const bootV105SplitAndTrackers = () => {
     try {
       manuscriptSyncTracker.init();
       geminiSplitBridge.init();
+      v106CommandSuite.init();
     } catch (_eBoot) {}
   };
   if (typeof document !== 'undefined') {
