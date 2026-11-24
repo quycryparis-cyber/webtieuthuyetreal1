@@ -3032,12 +3032,13 @@
             <button type="button" id="${CLOSE_BTN_ID}" aria-label="Đóng cửa sổ" title="Đóng cửa sổ (có thể bấm lại dòng chữ trên đầu trang để mở lại bất kỳ lúc nào)" class="w-9 h-9 rounded-xl border border-rose-500/40 bg-rose-500/15 hover:bg-rose-600 hover:text-white text-rose-700 dark:text-rose-300 font-black text-base flex items-center justify-center transition shrink-0 cursor-pointer">✕</button>
           </div>
 
-          <!-- 4 Tab Chức Năng Trong Cửa Sổ -->
+          <!-- 5 Tab Chức Năng Trong Cửa Sổ -->
           <div id="mod42-modal-tabs-bar" class="px-4 py-2 border-b border-zinc-300/70 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/50 flex flex-wrap items-center gap-1.5 shrink-0">
             <button type="button" data-mod42-tab="timezone" class="mod42-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition">🕒 Múi Giờ &amp; Định Dạng</button>
             <button type="button" data-mod42-tab="weather" class="mod42-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition">🌤️ Xem Thời Tiết</button>
             <button type="button" data-mod42-tab="alarm" class="mod42-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition">⏰ Báo Thức &amp; Chuông MP3</button>
             <button type="button" data-mod42-tab="market" class="mod42-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition inline-flex items-center gap-1.5"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg><span>Đầu tư hôm nay</span></button>
+            <button type="button" data-mod42-tab="wisdom" class="mod42-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition inline-flex items-center gap-1.5"><span>🧠</span><span>20 phút thông thái</span></button>
           </div>
 
           <!-- Nội dung cuộn -->
@@ -3082,7 +3083,7 @@
 
     openModal(initialTab) {
       this.ensureModalShellExists();
-      if (initialTab && ['timezone', 'weather', 'alarm', 'market'].includes(initialTab)) {
+      if (initialTab && ['timezone', 'weather', 'alarm', 'market', 'wisdom'].includes(initialTab)) {
         this.activeModalTab = initialTab;
       }
       this.modalOpen = true;
@@ -3110,6 +3111,9 @@
       if (NS.marketAdvisor && typeof NS.marketAdvisor.onModalClosed === 'function') {
         NS.marketAdvisor.onModalClosed();
       }
+      if (NS.twentyMinWisdom && typeof NS.twentyMinWisdom.onModalClosed === 'function') {
+        NS.twentyMinWisdom.onModalClosed();
+      }
       return true;
     }
 
@@ -3122,12 +3126,17 @@
 
     switchModalTab(tabKey) {
       const prevTab = this.activeModalTab;
-      this.activeModalTab = ['timezone', 'weather', 'alarm', 'market'].includes(tabKey)
+      this.activeModalTab = ['timezone', 'weather', 'alarm', 'market', 'wisdom'].includes(tabKey)
         ? tabKey
         : 'timezone';
       if (prevTab === 'market' && this.activeModalTab !== 'market') {
         if (NS.marketAdvisor && typeof NS.marketAdvisor.onModalClosed === 'function') {
           NS.marketAdvisor.onModalClosed();
+        }
+      }
+      if (prevTab === 'wisdom' && this.activeModalTab !== 'wisdom') {
+        if (NS.twentyMinWisdom && typeof NS.twentyMinWisdom.onModalClosed === 'function') {
+          NS.twentyMinWisdom.onModalClosed();
         }
       }
       this.renderModalBody();
@@ -3174,6 +3183,12 @@
         const mHost = body.querySelector('#mod49-market-inline-mount');
         if (mHost && NS.marketAdvisor?.mountIntoContainer) {
           NS.marketAdvisor.mountIntoContainer(mHost);
+        }
+      } else if (this.activeModalTab === 'wisdom') {
+        body.innerHTML = '<div id="mod50-wisdom-inline-mount"></div>';
+        const wHost = body.querySelector('#mod50-wisdom-inline-mount');
+        if (wHost && NS.twentyMinWisdom?.mountIntoContainer) {
+          NS.twentyMinWisdom.mountIntoContainer(wHost);
         }
       } else {
         body.innerHTML = buildTimezoneTabPanelHtml(this.state, this);

@@ -4842,6 +4842,21 @@
     "⏳ Đang tải toàn bộ tài nguyên & 45 module Studio...": "⏳ Loading all assets & 45 Studio modules...",
     "📦 Đang nạp dữ liệu chương, Story Bible & hoàn tất giao diện...": "📦 Loading chapters, Story Bible & finalizing UI...",
     "✨ Sẵn sàng sáng tác!": "✨ Ready to write!",
+    "20 phút thông thái": "20-Min Daily Wisdom",
+    "20 Phút Thông Thái Mỗi Ngày — Xác nhận Vị trí & Khu vực": "20-Min Daily Wisdom — Confirm Location & Region",
+    "📡 Tự động dò vị trí (GPS)": "📡 Auto-detect location (GPS)",
+    "✅ Xác nhận vị trí này & Quét tin hôm nay": "✅ Confirm this location & Scan today's news",
+    "🚀 Xác nhận Quốc gia & Quét 20 phút thông thái hôm nay": "🚀 Confirm Country & Scan Today's 20-Min Wisdom",
+    "📰 Xem Thông Tin Thô Hôm Nay (Đã tự chia 5 mục khoa học)": "📰 View Raw Daily Feed (Auto-organized into 5 Scientific Sections)",
+    "📰 Xem thông tin thô ngay ➔": "📰 Read Raw Feed Now ➔",
+    "📰 Thông tin thô (5 mục khoa học)": "📰 Raw Feed (5 Sections)",
+    "🧠 Bản tin 20 phút (Gemini)": "🧠 20-Min Briefing (Gemini)",
+    "📊 Biểu đồ, Sơ đồ & Hình ảnh": "📊 Charts, Diagrams & Visuals",
+    "📍 Đổi vị trí": "📍 Change Location",
+    "🔄 Quét lại tin mới": "🔄 Rescan Latest",
+    "📋 Tự động sao chép & Mở Gemini": "📋 Auto-Copy & Open Gemini",
+    "✨ Đồng bộ Bản tin 20 phút, Biểu đồ & Sơ đồ ngay": "✨ Sync 20-Min Briefing, Charts & Diagrams Now",
+    "🖥️ Font máy": "🖥️ System Fonts",
   });
 
   const promptExact = Object.freeze({

@@ -39,6 +39,362 @@
   }
 
   // ==========================================================================
+  // PHẦN 0A: UNIFIED HiDPI PDF RENDERER (CHỐNG MỜ CHỮ TOÀN DIỆN 2x–3x CHO 48 CÔNG CỤ)
+  // ==========================================================================
+  const activeRenderTasks = new WeakMap();
+
+  const DangLovePDFRenderer = {
+    getOutputScale(isThumbnail = false) {
+      const dpr = Number(global.devicePixelRatio) || 1;
+      return isThumbnail ? Math.min(Math.max(dpr, 1.5), 2) : Math.min(Math.max(dpr, 2), 3);
+    },
+
+    async renderPageToCanvas(page, canvas, { scale = 1, rotation = 0, isThumbnail = false, bgColor = '#ffffff' } = {}) {
+      if (!page || !canvas) return { cssW: 0, cssH: 0, outputScale: 2, viewport: null };
+      const prevTask = activeRenderTasks.get(canvas);
+      if (prevTask && typeof prevTask.cancel === 'function') {
+        try { prevTask.cancel(); } catch (_e) {}
+      }
+
+      const outputScale = this.getOutputScale(isThumbnail);
+      const viewport = page.getViewport({ scale, rotation });
+      const cssW = Math.max(1, Math.floor(viewport.width));
+      const cssH = Math.max(1, Math.floor(viewport.height));
+      const backingW = Math.max(1, Math.floor(viewport.width * outputScale));
+      const backingH = Math.max(1, Math.floor(viewport.height * outputScale));
+
+      canvas.width = backingW;
+      canvas.height = backingH;
+      canvas.style.width = `${cssW}px`;
+      canvas.style.height = `${cssH}px`;
+
+      const ctx = canvas.getContext('2d', { alpha: false });
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, backingW, backingH);
+      ctx.restore();
+
+      const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+      const task = page.render({
+        canvasContext: ctx,
+        viewport,
+        transform,
+        intent: 'display',
+      });
+      activeRenderTasks.set(canvas, task);
+      try {
+        await task.promise;
+      } catch (err) {
+        if (err?.name !== 'RenderingCancelledException') throw err;
+      } finally {
+        if (activeRenderTasks.get(canvas) === task) activeRenderTasks.delete(canvas);
+      }
+      return { cssW, cssH, backingW, backingH, outputScale, viewport };
+    },
+  };
+  global.DangLovePDFRenderer = DangLovePDFRenderer;
+
+  // ==========================================================================
+  // PHẦN 0B: 3-TIER FONT SYNCHRONIZATION ENGINE (ELECTRON / LOCAL / METRIC CDN + IDB)
+  // ==========================================================================
+  const FONT_IDB_NAME = 'DangLovePDF_FontCache';
+  const FONT_CDN_URLS = {
+    tinos: {
+      regular: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/tinos/Tinos-Regular.ttf',
+      bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/tinos/Tinos-Bold.ttf',
+      italic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/tinos/Tinos-Italic.ttf',
+      boldItalic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/tinos/Tinos-BoldItalic.ttf',
+      label: 'Tinos (Khớp 1:1 Times New Roman)',
+      cssFallback: '"Times New Roman", Georgia, serif',
+    },
+    arimo: {
+      regular: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/arimo/Arimo%5Bwght%5D.ttf',
+      bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/arimo/Arimo%5Bwght%5D.ttf',
+      italic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/arimo/Arimo-Italic%5Bwght%5D.ttf',
+      boldItalic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/arimo/Arimo-Italic%5Bwght%5D.ttf',
+      label: 'Arimo (Khớp 1:1 Arial/Helvetica)',
+      cssFallback: 'Arial, Helvetica, sans-serif',
+    },
+    cousine: {
+      regular: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/cousine/Cousine-Regular.ttf',
+      bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/cousine/Cousine-Bold.ttf',
+      italic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/cousine/Cousine-Italic.ttf',
+      boldItalic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/cousine/Cousine-BoldItalic.ttf',
+      label: 'Cousine (Khớp 1:1 Courier New)',
+      cssFallback: '"Courier New", Consolas, monospace',
+    },
+    carlito: {
+      regular: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/carlito/Carlito-Regular.ttf',
+      bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/carlito/Carlito-Bold.ttf',
+      italic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/carlito/Carlito-Italic.ttf',
+      boldItalic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/carlito/Carlito-BoldItalic.ttf',
+      label: 'Carlito (Khớp 1:1 Calibri)',
+      cssFallback: 'Calibri, "Segoe UI", Arial, sans-serif',
+    },
+    caladea: {
+      regular: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/caladea/Caladea-Regular.ttf',
+      bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/caladea/Caladea-Bold.ttf',
+      italic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/caladea/Caladea-Italic.ttf',
+      boldItalic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/caladea/Caladea-BoldItalic.ttf',
+      label: 'Caladea (Khớp 1:1 Cambria)',
+      cssFallback: 'Cambria, Georgia, serif',
+    },
+    roboto: {
+      regular: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/roboto/Roboto%5Bwdth%2Cwght%5D.ttf',
+      bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/roboto/Roboto%5Bwdth%2Cwght%5D.ttf',
+      italic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/roboto/Roboto-Italic%5Bwdth%2Cwght%5D.ttf',
+      boldItalic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/roboto/Roboto-Italic%5Bwdth%2Cwght%5D.ttf',
+      label: 'Roboto (Chuẩn tiếng Việt)',
+      cssFallback: 'Roboto, "Segoe UI", Arial, sans-serif',
+    },
+    notosans: {
+      regular: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf',
+      bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf',
+      italic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans-Italic%5Bwdth%2Cwght%5D.ttf',
+      boldItalic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans-Italic%5Bwdth%2Cwght%5D.ttf',
+      label: 'Noto Sans (Đầy đủ dấu Việt)',
+      cssFallback: '"Segoe UI", Arial, sans-serif',
+    },
+  };
+
+  const DangLovePDFFontResolver = {
+    _memCache: new Map(), // key -> { bytes: Uint8Array, dynamicFamily: string, badge: string, cssFallback: string }
+    _localFontsCache: null,
+    _fontkitPromise: null,
+
+    async ensureFontkit() {
+      if (global.fontkit) return global.fontkit;
+      if (this._fontkitPromise) return this._fontkitPromise;
+      this._fontkitPromise = new Promise((resolve) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js';
+        s.async = true;
+        s.onload = () => resolve(global.fontkit || null);
+        s.onerror = () => resolve(null);
+        document.head.appendChild(s);
+      });
+      return this._fontkitPromise;
+    },
+
+    cleanRawFontName(rawName) {
+      return String(rawName || '')
+        .replace(/^[A-Z]{6}\+/, '')
+        .replace(/[,_]+/g, ' ')
+        .trim();
+    },
+
+    classifyFontMeta(rawName, styleObj) {
+      const clean = this.cleanRawFontName(rawName);
+      const combo = `${clean} ${styleObj?.fontFamily || ''}`.toLowerCase();
+      const isBold = /bold|black|heavy|semibold|demi|700|800|-b\b|bd\b/i.test(combo);
+      const isItalic = /italic|oblique|slant|-i\b|it\b/i.test(combo);
+
+      let canonicalKey = 'arimo';
+      let displayFamily = clean || 'Sans-Serif';
+      let genericCategory = 'sans';
+      let cssFallback = 'Arial, Helvetica, sans-serif';
+
+      if (/courier|consolas|mono|menlo|code|inconsolata/i.test(combo)) {
+        canonicalKey = 'cousine';
+        displayFamily = clean || 'Courier New';
+        genericCategory = 'mono';
+        cssFallback = '"Courier New", Consolas, monospace';
+      } else if (/calibri|carlito/i.test(combo)) {
+        canonicalKey = 'carlito';
+        displayFamily = 'Calibri';
+        genericCategory = 'sans';
+        cssFallback = 'Calibri, "Segoe UI", Arial, sans-serif';
+      } else if (/cambria|caladea/i.test(combo)) {
+        canonicalKey = 'caladea';
+        displayFamily = 'Cambria';
+        genericCategory = 'serif';
+        cssFallback = 'Cambria, Georgia, serif';
+      } else if (/times|tinos|nimbus\s*roman|minion|garamond|georgia|palatino|serif|vn-?time/i.test(combo)) {
+        canonicalKey = 'tinos';
+        displayFamily = /georgia/i.test(combo) ? 'Georgia' : 'Times New Roman';
+        genericCategory = 'serif';
+        cssFallback = '"Times New Roman", Georgia, serif';
+      } else if (/roboto/i.test(combo)) {
+        canonicalKey = 'roboto';
+        displayFamily = 'Roboto';
+        genericCategory = 'sans';
+        cssFallback = 'Roboto, "Segoe UI", Arial, sans-serif';
+      } else if (/arial|helvetica|arimo|inter|be\s*vietnam|open\s*sans|segoe|tahoma|verdana|sans/i.test(combo)) {
+        canonicalKey = 'arimo';
+        displayFamily = /segoe/i.test(combo) ? 'Segoe UI' : /tahoma/i.test(combo) ? 'Tahoma' : /verdana/i.test(combo) ? 'Verdana' : 'Arial';
+        genericCategory = 'sans';
+        cssFallback = 'Arial, Helvetica, sans-serif';
+      } else if (styleObj?.fontFamily && /serif/i.test(styleObj.fontFamily) && !/sans/i.test(styleObj.fontFamily)) {
+        canonicalKey = 'tinos';
+        displayFamily = 'Times New Roman';
+        genericCategory = 'serif';
+        cssFallback = '"Times New Roman", Georgia, serif';
+      }
+
+      return {
+        rawFontName: rawName || '',
+        cleanFontFamily: displayFamily,
+        canonicalKey,
+        isBold,
+        isItalic,
+        genericCategory,
+        cssFallback,
+      };
+    },
+
+    async _idbGet(key) {
+      if (typeof indexedDB === 'undefined') return null;
+      return new Promise((resolve) => {
+        try {
+          const req = indexedDB.open(FONT_IDB_NAME, 1);
+          req.onupgradeneeded = () => {
+            if (!req.result.objectStoreNames.contains('fonts')) req.result.createObjectStore('fonts');
+          };
+          req.onsuccess = () => {
+            const db = req.result;
+            const tx = db.transaction('fonts', 'readonly');
+            const g = tx.objectStore('fonts').get(key);
+            g.onsuccess = () => { db.close(); resolve(g.result || null); };
+            g.onerror = () => { db.close(); resolve(null); };
+          };
+          req.onerror = () => resolve(null);
+        } catch (_e) { resolve(null); }
+      });
+    },
+
+    async _idbSet(key, bytes) {
+      if (typeof indexedDB === 'undefined') return;
+      return new Promise((resolve) => {
+        try {
+          const req = indexedDB.open(FONT_IDB_NAME, 1);
+          req.onupgradeneeded = () => {
+            if (!req.result.objectStoreNames.contains('fonts')) req.result.createObjectStore('fonts');
+          };
+          req.onsuccess = () => {
+            const db = req.result;
+            const tx = db.transaction('fonts', 'readwrite');
+            tx.objectStore('fonts').put(bytes, key);
+            tx.oncomplete = () => { db.close(); resolve(); };
+            tx.onerror = () => { db.close(); resolve(); };
+          };
+          req.onerror = () => resolve();
+        } catch (_e) { resolve(); }
+      });
+    },
+
+    async enableWebLocalFonts() {
+      if (typeof global.queryLocalFonts !== 'function') return { ok: false, count: 0 };
+      try {
+        const list = await global.queryLocalFonts();
+        this._localFontsCache = Array.isArray(list) ? list : [];
+        return { ok: true, count: this._localFontsCache.length };
+      } catch (_e) {
+        return { ok: false, count: 0 };
+      }
+    },
+
+    async _registerDynamicFontFace(cacheKey, bytes) {
+      const dynFamily = `DL_Sync_${cacheKey.replace(/[^a-z0-9]/gi, '_')}`;
+      try {
+        if (typeof FontFace !== 'undefined' && document.fonts) {
+          const ff = new FontFace(dynFamily, bytes.slice().buffer);
+          const loaded = await ff.load();
+          document.fonts.add(loaded);
+          return dynFamily;
+        }
+      } catch (_eFf) {}
+      return '';
+    },
+
+    async resolveFontForBlock(meta) {
+      const variant = meta.isBold && meta.isItalic ? 'boldItalic' : meta.isBold ? 'bold' : meta.isItalic ? 'italic' : 'regular';
+      const cacheKey = `${meta.canonicalKey}_${meta.cleanFontFamily}_${variant}`.toLowerCase();
+      if (this._memCache.has(cacheKey)) return this._memCache.get(cacheKey);
+
+      let bytes = null;
+      let badge = `Đồng bộ tương đương: ${meta.cleanFontFamily}`;
+
+      // Tầng 1: Electron Native System Fonts (100% offline thật từ Windows/Mac)
+      if (global.NoirDesktopLocalEngine?.resolveSystemFont) {
+        try {
+          const res = await global.NoirDesktopLocalEngine.resolveSystemFont({
+            family: meta.cleanFontFamily,
+            isBold: meta.isBold,
+            isItalic: meta.isItalic,
+          });
+          if (res?.ok && res.base64) {
+            const bin = atob(res.base64);
+            bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            badge = `🎯 Khớp 100% Font máy: ${meta.cleanFontFamily}`;
+          }
+        } catch (_eElec) {}
+      }
+
+      // Tầng 2: Browser Local Font Access (nếu người dùng đã cấp quyền)
+      if (!bytes && Array.isArray(this._localFontsCache) && this._localFontsCache.length) {
+        try {
+          const needle = meta.cleanFontFamily.toLowerCase();
+          const match = this._localFontsCache.find((f) => {
+            const fn = String(f.family || '').toLowerCase();
+            const st = String(f.style || '').toLowerCase();
+            if (!fn.includes(needle)) return false;
+            const bOk = meta.isBold ? /bold|700/i.test(st) : !/bold|700/i.test(st);
+            const iOk = meta.isItalic ? /italic|oblique/i.test(st) : !/italic|oblique/i.test(st);
+            return bOk && iOk;
+          });
+          if (match && typeof match.blob === 'function') {
+            const blob = await match.blob();
+            bytes = new Uint8Array(await blob.arrayBuffer());
+            badge = `🎯 Khớp 100% Font máy: ${match.family}`;
+          }
+        } catch (_eLoc) {}
+      }
+
+      // Tầng 3: Kho Font Metric-Compatible Tiếng Việt (IndexedDB Cache -> jsDelivr CDN)
+      if (!bytes) {
+        const idbKey = `cdn_${meta.canonicalKey}_${variant}`;
+        const cachedBytes = await this._idbGet(idbKey);
+        if (cachedBytes && cachedBytes.byteLength > 1000) {
+          bytes = cachedBytes instanceof Uint8Array ? cachedBytes : new Uint8Array(cachedBytes);
+          const entry = FONT_CDN_URLS[meta.canonicalKey] || FONT_CDN_URLS.arimo;
+          badge = `🎯 Đồng bộ 1:1 (Cache): ${meta.cleanFontFamily} → ${entry.label}`;
+        } else {
+          const entry = FONT_CDN_URLS[meta.canonicalKey] || FONT_CDN_URLS.arimo;
+          const url = entry[variant] || entry.regular;
+          try {
+            const resp = await fetch(url);
+            if (resp.ok) {
+              bytes = new Uint8Array(await resp.arrayBuffer());
+              if (bytes.byteLength > 1000) {
+                await this._idbSet(idbKey, bytes);
+                badge = `🎯 Đồng bộ 1:1: ${meta.cleanFontFamily} → ${entry.label}`;
+              } else {
+                bytes = null;
+              }
+            }
+          } catch (_eCdn) {
+            bytes = null;
+          }
+        }
+      }
+
+      const dynamicFamily = bytes ? await this._registerDynamicFontFace(cacheKey, bytes) : '';
+      const result = {
+        bytes,
+        dynamicFamily,
+        cssFontFamily: dynamicFamily ? `"${dynamicFamily}", ${meta.cssFallback}` : meta.cssFallback,
+        badge: bytes ? badge : `🔤 Khớp họ font: ${meta.cleanFontFamily}`,
+        isVectorReady: Boolean(bytes),
+      };
+      this._memCache.set(cacheKey, result);
+      return result;
+    },
+  };
+  global.DangLovePDFFontResolver = DangLovePDFFontResolver;
+
+  // ==========================================================================
   // PHẦN 1: PRO 4-LAYER INTERACTIVE PDF VIEWER
   // ==========================================================================
   async function openProPdfViewer(resItem, ensurePdfJs) {
@@ -263,10 +619,10 @@
           ? Math.max(300, measuredW - 20)
           : Math.max(460, Math.min(measuredW - 56, 1180));
       const fitScale = maxCardW / Math.max(1, baseVp.width);
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = DangLovePDFRenderer.getOutputScale(false);
       const renderScale = Math.max(0.55, Math.min(3.5, fitScale * zoomFactor));
-      const cssW = Math.round(baseVp.width * renderScale);
-      const cssH = Math.round(baseVp.height * renderScale);
+      const cssW = Math.floor(baseVp.width * renderScale);
+      const cssH = Math.floor(baseVp.height * renderScale);
       return { renderScale, dpr, cssW, cssH };
     }
 
@@ -276,29 +632,25 @@
       if (isClosed || !pdfDoc || expectedToken !== renderToken) return;
       const rot = (page.rotate + viewRot) % 360;
       const baseVp = page.getViewport({ scale: 1, rotation: rot });
-      const { renderScale, dpr, cssW, cssH } = computePageDimensions(baseVp);
-      const vp = page.getViewport({ scale: renderScale * dpr, rotation: rot });
+      const { renderScale, cssW, cssH } = computePageDimensions(baseVp);
 
       wrap.style.width = `${cssW}px`;
       wrap.style.height = `${cssH}px`;
       wrap.style.filter = darkInvert ? 'invert(0.9) hue-rotate(180deg) contrast(0.95)' : '';
       wrap.innerHTML = '';
 
-      // Layer 1: HiDPI Bitmap Canvas
+      // Layer 1: Unified HiDPI 2x–3x Canvas (chống mờ chữ hoàn toàn!)
       const canvas = document.createElement('canvas');
       if (isFirstPrimary) canvas.id = 'mod46-preview-pdf-canvas';
-      canvas.width = Math.round(vp.width);
-      canvas.height = Math.round(vp.height);
-      canvas.style.width = `${cssW}px`;
-      canvas.style.height = `${cssH}px`;
       canvas.className = 'block';
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
       wrap.appendChild(canvas);
 
       try {
-        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        await DangLovePDFRenderer.renderPageToCanvas(page, canvas, {
+          scale: renderScale,
+          rotation: rot,
+          isThumbnail: false,
+        });
       } catch (_eRender) {
         return;
       }
@@ -688,18 +1040,18 @@
             try {
               const pg = await pdfDoc.getPage(i);
               if (isClosed || !pdfDoc) break;
-              const tvp = pg.getViewport({ scale: 0.25 });
+              const tvp = pg.getViewport({ scale: 0.48 });
               const tc = document.createElement('canvas');
-              tc.width = tvp.width;
-              tc.height = tvp.height;
-              await pg.render({ canvasContext: tc.getContext('2d'), viewport: tvp }).promise;
+              tc.width = Math.round(tvp.width);
+              tc.height = Math.round(tvp.height);
+              await pg.render({ canvasContext: tc.getContext('2d'), viewport: tvp, intent: 'display' }).promise;
               if (isClosed || !pv.isConnected) { tc.width = tc.height = 0; break; }
               const itemBtn = document.createElement('button');
               itemBtn.type = 'button';
               itemBtn.setAttribute('data-thumb-page', String(i));
               const isCur = i === currentPage;
               itemBtn.className = `w-full p-1.5 rounded-xl border ${isCur ? 'border-amber-400 ring-1 ring-amber-400' : 'border-zinc-700'} hover:border-emerald-400 bg-zinc-950 flex flex-col items-center gap-1 cursor-pointer`;
-              itemBtn.innerHTML = `<img src="${tc.toDataURL('image/jpeg', 0.7)}" class="w-full rounded bg-white" /><span class="text-[10px] font-bold text-zinc-300">Trang ${i}</span>`;
+              itemBtn.innerHTML = `<img src="${tc.toDataURL('image/jpeg', 0.86)}" class="w-full rounded bg-white" /><span class="text-[10px] font-bold text-zinc-300">Trang ${i}</span>`;
               tc.width = tc.height = 0;
               itemBtn.addEventListener('click', () => goToPage(i, { smooth: true }));
               thumbsList.appendChild(itemBtn);
@@ -740,6 +1092,8 @@
       this.stampLabel = 'ĐÃ DUYỆT';
       this.pendingImgDataUrl = '';
       this.pageScale = 1;
+      this.zoomFactor = 1.0;
+      this.outputScale = DangLovePDFRenderer.getOutputScale(false);
       this.baseWidth = 595;
       this.baseHeight = 842;
       this.objectsByPage = {}; // { pageNo: [ ...objects ] }
@@ -836,9 +1190,14 @@
                   <option value="ĐÃ KIỂM TRA">ĐÃ KIỂM TRA</option>
                 </select>
               </label>
+              <span id="mod46-ed-font-badge" class="px-2 py-0.5 rounded-full bg-emerald-950/90 border border-emerald-500/40 text-emerald-300 font-bold text-[10px]">🎯 Sẵn sàng khớp font gốc 3 tầng</span>
+              <button type="button" id="btn-mod46-ed-local-fonts" class="px-2 py-0.5 rounded-lg border border-sky-500/40 bg-sky-950/60 hover:bg-sky-700 text-sky-200 font-bold text-[10px] cursor-pointer" title="Cấp quyền đọc font thật cài trên Windows/Mac để đồng bộ 100%">🖥️ Font máy</button>
               <span id="mod46-ed-hint" class="text-emerald-300 font-bold">💡 Bấm trực tiếp vào bất kỳ dòng chữ gốc nào (viền nét đứt xanh) để sửa — tự ưu tiên khớp phông &amp; màu chữ xung quanh!</span>
             </div>
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <button type="button" id="btn-mod46-ed-zoom-out" class="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 font-black cursor-pointer" title="Thu nhỏ trang chỉnh sửa">➖</button>
+              <span id="mod46-ed-zoom-val" class="text-[10.5px] font-bold text-zinc-300 w-9 text-center">100%</span>
+              <button type="button" id="btn-mod46-ed-zoom-in" class="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 font-black cursor-pointer" title="Phóng to siêu nét để sửa chữ nhỏ">➕</button>
               <button type="button" id="btn-mod46-ed-prev" class="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 font-bold cursor-pointer">◀</button>
               <span id="mod46-ed-pg-info" class="inline-flex items-center gap-1 font-extrabold text-amber-300" title="Bấm vào số trang để nhập và nhảy thẳng tới trang muốn sửa">
                 <span>Trang</span>
@@ -884,35 +1243,41 @@
 
       const redrawOverlay = () => {
         const ctx = overlayCanvas.getContext('2d');
+        const outSc = this.outputScale || DangLovePDFRenderer.getOutputScale(false);
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        ctx.setTransform(outSc, 0, 0, outSc, 0, 0);
         const sc = this.pageScale;
         const objs = this.getPageObjects(this.currentPage);
 
         for (const o of objs) {
           if (o.type === 'replace_text') {
-            const fam = o.fontFamily || '"Times New Roman", Georgia, serif';
-            const fPx = Math.max(9, (o.fontSize || 12) * sc);
-            ctx.fillStyle = '#ffffff';
+            const fam = o.fontFamily || 'Arial, Helvetica, sans-serif';
+            const fPx = Math.max(8, (o.fontSize || 12) * sc);
+            const maxDrawW = Math.max(40, (this.baseWidth - o.x - 18) * sc);
+            ctx.fillStyle = o.bgColor || '#ffffff';
             ctx.fillRect(o.x * sc - 2, o.y * sc - 2, o.w * sc + 6, o.h * sc + 4);
             ctx.fillStyle = o.color || '#0f172a';
             ctx.font = `${o.italic ? 'italic ' : ''}${o.bold ? '700 ' : '400 '}${fPx}px ${fam}`;
             ctx.textBaseline = 'top';
-            ctx.fillText(o.text, o.x * sc, o.y * sc);
+            ctx.fillText(o.text, o.x * sc, o.y * sc, maxDrawW);
             if (o.underline && o.text) {
-              const tw = ctx.measureText(o.text).width;
+              const tw = Math.min(maxDrawW, ctx.measureText(o.text).width);
               ctx.strokeStyle = o.color || '#0f172a';
               ctx.lineWidth = Math.max(1, fPx * 0.07);
               ctx.beginPath(); ctx.moveTo(o.x * sc, o.y * sc + fPx * 1.05); ctx.lineTo(o.x * sc + tw, o.y * sc + fPx * 1.05); ctx.stroke();
             }
           } else if (o.type === 'add_text') {
-            const fam = o.fontFamily || '"Times New Roman", Georgia, serif';
-            const fPx = Math.max(9, (o.fontSize || 14) * sc);
+            const fam = o.fontFamily || 'Arial, Helvetica, sans-serif';
+            const fPx = Math.max(8, (o.fontSize || 14) * sc);
+            const maxDrawW = Math.max(40, (this.baseWidth - o.x - 18) * sc);
             ctx.fillStyle = o.color || '#dc2626';
             ctx.font = `${o.italic ? 'italic ' : ''}${o.bold ? '700 ' : '500 '}${fPx}px ${fam}`;
             ctx.textBaseline = 'top';
-            ctx.fillText(o.text, o.x * sc, o.y * sc);
+            ctx.fillText(o.text, o.x * sc, o.y * sc, maxDrawW);
             if (o.underline && o.text) {
-              const tw = ctx.measureText(o.text).width;
+              const tw = Math.min(maxDrawW, ctx.measureText(o.text).width);
               ctx.strokeStyle = o.color || '#dc2626';
               ctx.lineWidth = Math.max(1, fPx * 0.07);
               ctx.beginPath(); ctx.moveTo(o.x * sc, o.y * sc + fPx * 1.05); ctx.lineTo(o.x * sc + tw, o.y * sc + fPx * 1.05); ctx.stroke();
@@ -976,48 +1341,64 @@
             ctx.drawImage(o._imgEl, o.x * sc, o.y * sc, o.w * sc, o.h * sc);
           }
         }
+        ctx.restore();
         updateSummary();
       };
 
-      // Nhận diện phông chữ gốc xung quanh (Times/Serif, Arial/Sans, Courier/Mono, Bold, Italic)
-      const detectPdfFontMeta = (fontName, styleObj) => {
-        const raw = `${fontName || ''} ${styleObj?.fontFamily || ''}`.toLowerCase();
-        const isBold = /bold|black|heavy|semibold|demi|700|800|-b\b/i.test(raw);
-        const isItalic = /italic|oblique|slant|-i\b/i.test(raw);
-        let family = '"Times New Roman", Georgia, serif';
-        if (/courier|consolas|mono|code|menlo/i.test(raw)) {
-          family = '"Courier New", Consolas, monospace';
-        } else if (/arial|helvetica|roboto|inter|segoe|calibri|tahoma|verdana|sans|open\s*sans|noto\s*sans/i.test(raw)) {
-          family = 'Arial, Helvetica, sans-serif';
-        } else if (/georgia|palatino|garamond|cambria|minion|times|serif/i.test(raw)) {
-          family = '"Times New Roman", Georgia, serif';
-        }
-        return { fontFamily: family, bold: isBold, italic: isItalic };
+      // Nhận diện phông chữ gốc thực thụ từ PDF.js page.commonObjs + tc.styles qua DangLovePDFFontResolver
+      const detectPdfFontMeta = (page, fontName, styleObj) => {
+        let realPdfFontName = fontName || '';
+        try {
+          if (page?.commonObjs?.has?.(fontName)) {
+            const obj = page.commonObjs.get(fontName);
+            if (obj?.name) realPdfFontName = obj.name;
+          }
+        } catch (_eCommon) {}
+        const meta = DangLovePDFFontResolver.classifyFontMeta(realPdfFontName, styleObj);
+        return {
+          ...meta,
+          fontFamily: meta.cssFallback,
+          bold: meta.isBold,
+          italic: meta.isItalic,
+        };
       };
 
-      // Lấy mẫu màu mực chữ thực tế từ trang PDF gốc để đồng bộ màu chữ xung quanh
-      const sampleBlockInkColor = (ctx, bx, by, bw, bh, sc) => {
+      // Lấy mẫu màu mực chữ & màu nền trung vị (median outer-border) trên canvas HiDPI 2x–3x
+      const sampleBlockColors = (ctx, bx, by, bw, bh, sc, outSc) => {
+        const k = sc * outSc;
+        const toHex = (r, g, b) =>
+          `#${Math.max(0, Math.min(255, Math.round(r))).toString(16).padStart(2, '0')}${Math.max(0, Math.min(255, Math.round(g))).toString(16).padStart(2, '0')}${Math.max(0, Math.min(255, Math.round(b))).toString(16).padStart(2, '0')}`;
+        let inkColor = '#0f172a';
+        let bgColor = '#ffffff';
         try {
-          const sx = Math.max(0, Math.floor(bx * sc));
-          const sy = Math.max(0, Math.floor(by * sc));
-          const sw = Math.max(4, Math.min(ctx.canvas.width - sx, Math.ceil(bw * sc)));
-          const sh = Math.max(4, Math.min(ctx.canvas.height - sy, Math.ceil(bh * sc)));
-          if (sw <= 0 || sh <= 0) return '#0f172a';
-          const data = ctx.getImageData(sx, sy, sw, sh).data;
-          let rSum = 0, gSum = 0, bSum = 0, cnt = 0;
-          for (let i = 0; i < data.length; i += 16) {
-            const r = data[i], g = data[i + 1], b = data[i + 2];
-            const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-            if (lum < 190) {
-              rSum += r; gSum += g; bSum += b; cnt++;
+          const sx = Math.max(0, Math.floor(bx * k));
+          const sy = Math.max(0, Math.floor(by * k));
+          const sw = Math.max(4, Math.min(ctx.canvas.width - sx, Math.ceil(bw * k)));
+          const sh = Math.max(4, Math.min(ctx.canvas.height - sy, Math.ceil(bh * k)));
+          if (sw > 0 && sh > 0) {
+            const data = ctx.getImageData(sx, sy, sw, sh).data;
+            let rSum = 0, gSum = 0, bSum = 0, cnt = 0;
+            const bgR = [], bgG = [], bgB = [];
+            for (let i = 0; i < data.length; i += 16) {
+              const r = data[i], g = data[i + 1], b = data[i + 2];
+              const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+              if (lum < 175) {
+                rSum += r; gSum += g; bSum += b; cnt++;
+              } else if (lum > 200) {
+                bgR.push(r); bgG.push(g); bgB.push(b);
+              }
+            }
+            if (cnt >= 3) inkColor = toHex(rSum / cnt, gSum / cnt, bSum / cnt);
+            if (bgR.length >= 3) {
+              bgR.sort((a, b) => a - b);
+              bgG.sort((a, b) => a - b);
+              bgB.sort((a, b) => a - b);
+              const mid = Math.floor(bgR.length / 2);
+              bgColor = toHex(bgR[mid], bgG[mid], bgB[mid]);
             }
           }
-          if (cnt < 3) return '#0f172a';
-          const toHex = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
-          return `#${toHex(rSum / cnt)}${toHex(gSum / cnt)}${toHex(bSum / cnt)}`;
-        } catch (_eCol) {
-          return '#0f172a';
-        }
+        } catch (_eCol) {}
+        return { inkColor, bgColor };
       };
 
       // Bộ gõ trực tiếp NGAY TRÊN TRANG PDF (KHÔNG bật popup window.prompt, tự khớp font/màu gốc!)
@@ -1095,19 +1476,31 @@
           b.style.width = `${Math.max(24, blk.w * sc)}px`;
           b.style.height = `${Math.max(16, blk.h * sc)}px`;
           b.className = 'border border-dashed border-emerald-500/75 bg-emerald-400/10 hover:bg-emerald-400/25 rounded cursor-text transition';
-          b.addEventListener('click', (ev) => {
+          b.addEventListener('click', async (ev) => {
             ev.stopPropagation();
             const existingReplaced = [...this.getPageObjects(this.currentPage)]
               .reverse()
               .find((o) => o.type === 'replace_text' && Math.abs(o.x - blk.x) < 3 && Math.abs(o.y - blk.y) < 3);
             const startText = existingReplaced ? existingReplaced.text : blk.text;
             const autoMatch = this.fontFamily === 'auto';
-            const useFont = autoMatch ? (blk.fontFamily || '"Times New Roman", Georgia, serif') : this.fontFamily;
+            const fontBadgeEl = container.querySelector('#mod46-ed-font-badge');
+            let resolvedFont = null;
+            if (autoMatch && blk.fontMeta) {
+              if (fontBadgeEl) fontBadgeEl.textContent = `⏳ Đang khớp font: ${blk.fontMeta.cleanFontFamily}...`;
+              try {
+                resolvedFont = await DangLovePDFFontResolver.resolveFontForBlock(blk.fontMeta);
+                if (fontBadgeEl && resolvedFont?.badge) fontBadgeEl.textContent = resolvedFont.badge;
+              } catch (_eFr) {}
+            }
+            const useFont = autoMatch
+              ? (resolvedFont?.cssFontFamily || blk.fontFamily || 'Arial, Helvetica, sans-serif')
+              : this.fontFamily;
             const useBold = autoMatch ? (this.bold || Boolean(blk.bold)) : this.bold;
             const useItalic = autoMatch ? (this.italic || Boolean(blk.italic)) : this.italic;
             const useUnderline = this.underline;
             const useSize = Math.max(8, Math.round(blk.fontSize || this.fontSize || 12));
             const useColor = this.colorTouched ? this.color : (blk.inkColor || '#0f172a');
+            const useBgColor = blk.bgColor || '#ffffff';
             openInlinePdfTextEditor({
               x: blk.x,
               y: blk.y,
@@ -1132,10 +1525,12 @@
                   text: edited,
                   fontSize: useSize,
                   fontFamily: useFont,
+                  fontMeta: blk.fontMeta || null,
                   bold: useBold,
                   italic: useItalic,
                   underline: useUnderline,
                   color: useColor,
+                  bgColor: useBgColor,
                 });
                 redrawOverlay();
               },
@@ -1158,21 +1553,28 @@
         const baseVp = page.getViewport({ scale: 1 });
         this.baseWidth = baseVp.width;
         this.baseHeight = baseVp.height;
-        const maxW = Math.min(920, Math.max(320, container.clientWidth - 28));
-        this.pageScale = maxW / Math.max(1, baseVp.width);
-        const vp = page.getViewport({ scale: this.pageScale });
+        const maxW = Math.min(960, Math.max(320, container.clientWidth - 28));
+        this.pageScale = (maxW / Math.max(1, baseVp.width)) * (this.zoomFactor || 1);
+        const zoomValEl = container.querySelector('#mod46-ed-zoom-val');
+        if (zoomValEl) zoomValEl.textContent = `${Math.round((this.zoomFactor || 1) * 100)}%`;
 
-        pdfCanvas.width = overlayCanvas.width = Math.round(vp.width);
-        pdfCanvas.height = overlayCanvas.height = Math.round(vp.height);
-        stage.style.width = `${Math.round(vp.width)}px`;
-        stage.style.height = `${Math.round(vp.height)}px`;
+        // Unified HiDPI 2x–3x Canvas Render (chống mờ chữ tuyệt đối trên Mobile & Laptop!)
+        const rendered = await DangLovePDFRenderer.renderPageToCanvas(page, pdfCanvas, {
+          scale: this.pageScale,
+          rotation: 0,
+          isThumbnail: false,
+        });
+        this.outputScale = rendered.outputScale;
+        overlayCanvas.width = rendered.backingW;
+        overlayCanvas.height = rendered.backingH;
+        overlayCanvas.style.width = `${rendered.cssW}px`;
+        overlayCanvas.style.height = `${rendered.cssH}px`;
+        stage.style.width = `${rendered.cssW}px`;
+        stage.style.height = `${rendered.cssH}px`;
 
         const pCtx = pdfCanvas.getContext('2d');
-        pCtx.fillStyle = '#ffffff';
-        pCtx.fillRect(0, 0, pdfCanvas.width, pdfCanvas.height);
-        await page.render({ canvasContext: pCtx, viewport: vp }).promise;
 
-        // Trích xuất & gom cụm các dòng chữ gốc kèm nhận diện phông chữ & màu mực xung quanh
+        // Trích xuất & gom cụm các dòng chữ gốc kèm nhận diện font thật từ page.commonObjs, màu mực & màu nền trung vị
         if (!this.extractedBlocksByPage[this.currentPage]) {
           const tc = await page.getTextContent();
           const lineMap = new Map();
@@ -1181,10 +1583,10 @@
             if (!s) continue;
             const x = it.transform[4];
             const yPdf = it.transform[5];
-            const fSize = Math.max(8, Math.hypot(it.transform[0], it.transform[1]));
+            const fSize = Math.max(7.5, Math.hypot(it.transform[0], it.transform[1]));
             const yTop = this.baseHeight - yPdf - fSize * 0.9;
-            const bucket = Math.round(yTop / 7) * 7;
-            const meta = detectPdfFontMeta(it.fontName, tc.styles?.[it.fontName]);
+            const bucket = Math.round(yTop / Math.max(4, fSize * 0.45)) * Math.max(4, Math.round(fSize * 0.45));
+            const meta = detectPdfFontMeta(page, it.fontName, tc.styles?.[it.fontName]);
             if (!lineMap.has(bucket)) lineMap.set(bucket, []);
             lineMap.get(bucket).push({
               x,
@@ -1194,6 +1596,7 @@
               text: s,
               fontSize: fSize,
               fontFamily: meta.fontFamily,
+              fontMeta: meta,
               bold: meta.bold,
               italic: meta.italic,
             });
@@ -1206,7 +1609,7 @@
             const maxX = Math.max(...arr.map((a) => a.x + a.w));
             const maxH = Math.max(...arr.map((a) => a.h));
             const bw = Math.max(30, maxX - minX);
-            const inkColor = sampleBlockInkColor(pCtx, minX, minY, bw, maxH, this.pageScale);
+            const cols = sampleBlockColors(pCtx, minX, minY, bw, maxH, this.pageScale, this.outputScale);
             blocks.push({
               x: minX,
               y: minY,
@@ -1214,13 +1617,18 @@
               h: maxH,
               fontSize: arr[0].fontSize,
               fontFamily: arr[0].fontFamily,
+              fontMeta: arr[0].fontMeta,
               bold: arr[0].bold,
               italic: arr[0].italic,
-              inkColor,
+              inkColor: cols.inkColor,
+              bgColor: cols.bgColor,
               text: arr.map((a) => a.text).join(' '),
             });
           });
           this.extractedBlocksByPage[this.currentPage] = blocks;
+          if (!blocks.length && hintEl) {
+            hintEl.textContent = '📄 Trang này là ảnh scan chưa có lớp chữ gốc — bạn vẫn có thể chèn chữ mới / tô sáng / vẽ, hoặc dùng công cụ OCR để nhận diện chữ!';
+          }
         }
 
         renderEditableTextBlocks();
@@ -1401,6 +1809,23 @@
       bindToggle('#btn-mod46-ed-italic', 'italic');
       bindToggle('#btn-mod46-ed-underline', 'underline');
       container.querySelector('#sel-mod46-ed-stamp')?.addEventListener('change', (ev) => { this.stampLabel = ev.target.value; });
+      container.querySelector('#btn-mod46-ed-zoom-out')?.addEventListener('click', () => {
+        this.zoomFactor = Math.max(0.6, Number(((this.zoomFactor || 1) - 0.2).toFixed(2)));
+        renderPage(this.currentPage);
+      });
+      container.querySelector('#btn-mod46-ed-zoom-in')?.addEventListener('click', () => {
+        this.zoomFactor = Math.min(2.6, Number(((this.zoomFactor || 1) + 0.2).toFixed(2)));
+        renderPage(this.currentPage);
+      });
+      container.querySelector('#btn-mod46-ed-local-fonts')?.addEventListener('click', async () => {
+        const res = await DangLovePDFFontResolver.enableWebLocalFonts();
+        const badgeEl = container.querySelector('#mod46-ed-font-badge');
+        if (res.ok) {
+          if (badgeEl) badgeEl.textContent = `🖥️ Đã nạp ${res.count} font thật từ máy tính!`;
+        } else if (badgeEl) {
+          badgeEl.textContent = '🌐 Trình duyệt dùng kho Font 1:1 Tiếng Việt tự động (Tinos/Arimo/Carlito)';
+        }
+      });
       container.querySelector('#btn-mod46-ed-prev')?.addEventListener('click', () => renderPage(this.currentPage - 1));
       container.querySelector('#btn-mod46-ed-next')?.addEventListener('click', () => renderPage(this.currentPage + 1));
       const edPageInput = container.querySelector('#inp-mod46-ed-page');
@@ -1435,10 +1860,15 @@
       const { ensurePdfLib, renderVietnameseTextToPngBytes, prog } = helpers;
       const { PDFDocument, rgb } = await ensurePdfLib();
       const doc = await PDFDocument.load(fileRec.bytes, { ignoreEncryption: true });
+      const fontkitLib = await DangLovePDFFontResolver.ensureFontkit();
+      if (fontkitLib && typeof doc.registerFontkit === 'function') {
+        try { doc.registerFontkit(fontkitLib); } catch (_eFk) {}
+      }
+      const embeddedFontCache = new Map();
       const pages = doc.getPages();
 
       const hexToRgb = (hex) => {
-        const m = String(hex || '#dc2626').replace('#', '');
+        const m = String(hex || '#0f172a').replace('#', '');
         return rgb(
           parseInt(m.slice(0, 2), 16) / 255 || 0,
           parseInt(m.slice(2, 4), 16) / 255 || 0,
@@ -1446,36 +1876,90 @@
         );
       };
 
+      const resolveEmbeddedVectorFont = async (o) => {
+        if (!fontkitLib) return null;
+        const meta = o.fontMeta || DangLovePDFFontResolver.classifyFontMeta(o.fontFamily || 'Arial', null);
+        const effMeta = { ...meta, isBold: Boolean(o.bold), isItalic: Boolean(o.italic) };
+        const key = `${effMeta.canonicalKey}_${effMeta.cleanFontFamily}_${effMeta.isBold}_${effMeta.isItalic}`;
+        if (embeddedFontCache.has(key)) return embeddedFontCache.get(key);
+        try {
+          const resolved = await DangLovePDFFontResolver.resolveFontForBlock(effMeta);
+          if (resolved?.bytes) {
+            const emb = await doc.embedFont(resolved.bytes, { subset: true });
+            embeddedFontCache.set(key, emb);
+            return emb;
+          }
+        } catch (_eEmb) {}
+        embeddedFontCache.set(key, null);
+        return null;
+      };
+
       const editedPageNums = Object.keys(this.objectsByPage).map(Number).filter((n) => this.objectsByPage[n]?.length);
       for (let idx = 0; idx < editedPageNums.length; idx++) {
         const pNo = editedPageNums[idx];
         const pg = pages[pNo - 1];
         if (!pg) continue;
-        prog(20 + ((idx + 1) / Math.max(1, editedPageNums.length)) * 70, `Đang ghi chỉnh sửa trang ${pNo}...`);
-        const { height } = pg.getSize();
+        prog(20 + ((idx + 1) / Math.max(1, editedPageNums.length)) * 70, `Đang ghi chỉnh sửa vector trang ${pNo}...`);
+        const { width, height } = pg.getSize();
 
         for (const o of this.objectsByPage[pNo]) {
           if (o.type === 'replace_text') {
-            pg.drawRectangle({ x: o.x - 2, y: height - o.y - o.h - 2, width: o.w + 6, height: o.h + 4, color: rgb(1, 1, 1) });
+            pg.drawRectangle({
+              x: o.x - 1.5,
+              y: height - o.y - o.h - 1.5,
+              width: o.w + 4,
+              height: o.h + 3,
+              color: hexToRgb(o.bgColor || '#ffffff'),
+            });
             if (o.text.trim()) {
-              const png = renderVietnameseTextToPngBytes(o.text, {
-                fontSize: o.fontSize || 12,
-                color: o.color || '#0f172a',
-                fontFamily: o.fontFamily || '"Times New Roman", Georgia, serif',
-                bold: Boolean(o.bold),
-                italic: Boolean(o.italic),
-                underline: Boolean(o.underline),
-                padX: 2,
-                padY: 1,
-              });
-              const img = await doc.embedPng(png.bytes);
-              pg.drawImage(img, { x: o.x, y: height - o.y - png.heightPt, width: png.widthPt, height: png.heightPt });
+              const vecFont = await resolveEmbeddedVectorFont(o);
+              if (vecFont) {
+                let sz = o.fontSize || 12;
+                const availW = Math.max(40, width - o.x - 18);
+                try {
+                  const tw = vecFont.widthOfTextAtSize(o.text, sz);
+                  if (tw > availW) sz = Math.max(7, sz * (availW / tw));
+                } catch (_eW) {}
+                const baselineY = height - o.y - sz * 0.92;
+                pg.drawText(o.text, { x: o.x, y: baselineY, size: sz, font: vecFont, color: hexToRgb(o.color || '#0f172a') });
+                if (o.underline) {
+                  const uw = Math.min(availW, vecFont.widthOfTextAtSize(o.text, sz));
+                  pg.drawLine({ start: { x: o.x, y: baselineY - 1.5 }, end: { x: o.x + uw, y: baselineY - 1.5 }, thickness: Math.max(0.6, sz * 0.06), color: hexToRgb(o.color || '#0f172a') });
+                }
+              } else {
+                const png = renderVietnameseTextToPngBytes(o.text, {
+                  fontSize: o.fontSize || 12,
+                  color: o.color || '#0f172a',
+                  fontFamily: o.fontFamily || 'Arial, Helvetica, sans-serif',
+                  bold: Boolean(o.bold),
+                  italic: Boolean(o.italic),
+                  underline: Boolean(o.underline),
+                  padX: 2,
+                  padY: 1,
+                });
+                const img = await doc.embedPng(png.bytes);
+                const drawW = Math.min(png.widthPt, Math.max(40, width - o.x - 18));
+                const drawH = png.heightPt * (drawW / Math.max(1, png.widthPt));
+                pg.drawImage(img, { x: o.x, y: height - o.y - drawH, width: drawW, height: drawH });
+              }
             }
           } else if (o.type === 'add_text') {
+            const vecFont = await resolveEmbeddedVectorFont(o);
+            if (vecFont && o.text.trim()) {
+              let sz = o.fontSize || 14;
+              const availW = Math.max(40, width - o.x - 18);
+              try {
+                const tw = vecFont.widthOfTextAtSize(o.text, sz);
+                if (tw > availW) sz = Math.max(7, sz * (availW / tw));
+              } catch (_eW2) {}
+              const baselineY = height - o.y - sz * 0.92;
+              pg.drawText(o.text, { x: o.x, y: baselineY, size: sz, font: vecFont, color: hexToRgb(o.color || '#dc2626') });
+              continue;
+            }
             const png = renderVietnameseTextToPngBytes(o.text, {
               fontSize: o.fontSize || 14,
               color: o.color || '#dc2626',
-              fontFamily: o.fontFamily || '"Times New Roman", Georgia, serif',
+              fontFamily: o.fontFamily || 'Arial, Helvetica, sans-serif',
               bold: Boolean(o.bold),
               italic: Boolean(o.italic),
               underline: Boolean(o.underline),

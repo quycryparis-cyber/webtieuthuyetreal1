@@ -1,0 +1,306 @@
+/* ============================================================================
+ * 🧠 20 PHÚT THÔNG THÁI MỖI NGÀY — STYLESHEET (v130.0)
+ * Thiết kế rõ ràng, sáng/tối hài hòa, tương thích cả Desktop lẫn Mobile.
+ * ============================================================================ */
+
+.wis20-root {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: inherit;
+}
+
+.wis20-card {
+  border-radius: 16px;
+  border: 1px solid rgba(113, 113, 122, 0.28);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dark .wis20-card {
+  background: rgba(24, 24, 27, 0.78);
+  border-color: rgba(63, 63, 70, 0.75);
+}
+
+.wis20-raw-hero {
+  border-radius: 16px;
+  border: 2px solid rgba(16, 185, 129, 0.65);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.14), rgba(14, 165, 233, 0.10));
+  padding: 14px 16px;
+  box-shadow: 0 8px 24px -12px rgba(16, 185, 129, 0.35);
+}
+
+.dark .wis20-raw-hero {
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.42), rgba(12, 74, 110, 0.32));
+  border-color: rgba(52, 211, 153, 0.65);
+}
+
+.wis20-gemini-card {
+  border-radius: 16px;
+  border: 1.5px solid rgba(139, 92, 246, 0.5);
+  background: linear-gradient(145deg, rgba(139, 92, 246, 0.08), rgba(59, 130, 246, 0.06));
+  padding: 14px 16px;
+}
+
+.dark .wis20-gemini-card {
+  background: linear-gradient(145deg, rgba(76, 29, 149, 0.28), rgba(30, 58, 138, 0.22));
+  border-color: rgba(167, 139, 250, 0.5);
+}
+
+.wis20-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 12px;
+  padding: 8px 13px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  border: 1px solid rgba(113, 113, 122, 0.35);
+  background: rgba(255, 255, 255, 0.85);
+  color: #18181b;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.dark .wis20-btn {
+  background: rgba(39, 39, 42, 0.92);
+  color: #f4f4f5;
+  border-color: rgba(82, 82, 91, 0.8);
+}
+
+.wis20-btn:hover {
+  transform: translateY(-1px);
+}
+
+.wis20-btn-primary {
+  background: linear-gradient(135deg, #059669, #0284c7);
+  color: #ffffff !important;
+  border-color: rgba(16, 185, 129, 0.7) !important;
+  box-shadow: 0 6px 18px -6px rgba(5, 150, 105, 0.55);
+}
+
+.wis20-btn-gemini {
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  color: #ffffff !important;
+  border-color: rgba(139, 92, 246, 0.75) !important;
+  box-shadow: 0 6px 18px -6px rgba(124, 58, 237, 0.55);
+}
+
+.wis20-btn-change-loc {
+  background: linear-gradient(135deg, #d97706, #ea580c);
+  color: #ffffff !important;
+  border: 1.5px solid rgba(251, 191, 36, 0.85) !important;
+  box-shadow: 0 4px 14px -4px rgba(217, 119, 6, 0.55);
+}
+
+.wis20-btn-change-loc:hover {
+  filter: brightness(1.08);
+}
+
+.wis20-subtab {
+  border-radius: 12px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid rgba(113, 113, 122, 0.35);
+  background: rgba(255, 255, 255, 0.65);
+  color: #3f3f46;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dark .wis20-subtab {
+  background: rgba(24, 24, 27, 0.85);
+  color: #d4d4d8;
+  border-color: rgba(63, 63, 70, 0.8);
+}
+
+.wis20-subtab.is-active {
+  background: linear-gradient(135deg, #059669, #0d9488);
+  color: #ffffff !important;
+  border-color: rgba(52, 211, 153, 0.8) !important;
+  box-shadow: 0 4px 12px -4px rgba(16, 185, 129, 0.5);
+}
+
+.wis20-input,
+.wis20-select,
+.wis20-textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(113, 113, 122, 0.42);
+  background: rgba(255, 255, 255, 0.92);
+  color: #18181b;
+  padding: 8px 11px;
+  font-size: 12.5px;
+  outline: none;
+}
+
+.dark .wis20-input,
+.dark .wis20-select,
+.dark .wis20-textarea {
+  background: rgba(9, 9, 11, 0.88);
+  color: #f4f4f5;
+  border-color: rgba(82, 82, 91, 0.85);
+}
+
+.wis20-input:focus,
+.wis20-select:focus,
+.wis20-textarea:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.22);
+}
+
+.wis20-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 10.5px;
+  font-weight: 800;
+  border: 1px solid rgba(113, 113, 122, 0.3);
+  background: rgba(113, 113, 122, 0.12);
+}
+
+.wis20-news-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.wis20-news-item {
+  border-radius: 14px;
+  border: 1px solid rgba(113, 113, 122, 0.28);
+  background: rgba(255, 255, 255, 0.78);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.dark .wis20-news-item {
+  background: rgba(9, 9, 11, 0.65);
+  border-color: rgba(63, 63, 70, 0.75);
+}
+
+.wis20-news-item:hover {
+  border-color: rgba(16, 185, 129, 0.65);
+  transform: translateY(-1px);
+}
+
+.wis20-news-thumb {
+  width: 100%;
+  height: 132px;
+  object-fit: cover;
+  background: rgba(39, 39, 42, 0.35);
+}
+
+.wis20-chart-box {
+  border-radius: 16px;
+  border: 1px solid rgba(113, 113, 122, 0.3);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 14px;
+}
+
+.dark .wis20-chart-box {
+  background: rgba(15, 15, 20, 0.88);
+  border-color: rgba(63, 63, 70, 0.8);
+}
+
+.wis20-timer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid rgba(16, 185, 129, 0.55);
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+.dark .wis20-timer-pill {
+  color: #6ee7b7;
+  background: rgba(6, 78, 59, 0.45);
+}
+
+.wis20-copy-mockup {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(139, 92, 246, 0.55);
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.wis20-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.wis20-modal-box {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 18px;
+  border: 1px solid rgba(245, 158, 11, 0.55);
+  background: #ffffff;
+  color: #18181b;
+  padding: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.dark .wis20-modal-box {
+  background: #18181b;
+  color: #f4f4f5;
+}
+
+.wis20-progress-bar {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(113, 113, 122, 0.25);
+  overflow: hidden;
+}
+
+.wis20-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #10b981, #0ea5e9, #8b5cf6);
+  transition: width 0.25s ease;
+}
+
+.wis20-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.wis20-md-body h2,
+.wis20-md-body h3,
+.wis20-md-body h4 {
+  font-weight: 900;
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+
+.wis20-md-body ul,
+.wis20-md-body ol {
+  padding-left: 18px;
+  margin: 6px 0;
+}
+
+.wis20-md-body li {
+  margin-bottom: 4px;
+}

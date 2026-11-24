@@ -954,12 +954,13 @@
           for (let i = 0; i < limit; i++) {
             if (this.activeTool?.id !== 'organize') return;
             const page = await pdf.getPage(i + 1);
-            const vp = page.getViewport({ scale: 0.35 });
+            const vp = page.getViewport({ scale: 0.55 });
             const c = document.createElement('canvas');
-            c.width = vp.width;
-            c.height = vp.height;
-            await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
-            const url = c.toDataURL('image/jpeg', 0.72);
+            c.width = Math.round(vp.width);
+            c.height = Math.round(vp.height);
+            await page.render({ canvasContext: c.getContext('2d'), viewport: vp, intent: 'display' }).promise;
+            const url = c.toDataURL('image/jpeg', 0.86);
+            c.width = c.height = 0;
             const st = this.pagesState.find((p) => !p.isBlank && p.pageIndex === i);
             if (st) {
               st.thumbUrl = url;
@@ -974,12 +975,13 @@
           const pdf = await pdfjsLib.getDocument({ data: rec.bytes.slice() }).promise;
           rec.pageCount = pdf.numPages;
           const page = await pdf.getPage(1);
-          const vp = page.getViewport({ scale: tool.id === 'crop' || tool.id === 'sign_edit' ? 0.9 : 0.38 });
+          const vp = page.getViewport({ scale: tool.id === 'crop' || tool.id === 'sign_edit' ? 1.15 : 0.58 });
           const c = document.createElement('canvas');
-          c.width = vp.width;
-          c.height = vp.height;
-          await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
-          rec.thumbUrl = c.toDataURL('image/jpeg', 0.8);
+          c.width = Math.round(vp.width);
+          c.height = Math.round(vp.height);
+          await page.render({ canvasContext: c.getContext('2d'), viewport: vp, intent: 'display' }).promise;
+          rec.thumbUrl = c.toDataURL('image/jpeg', 0.88);
+          c.width = c.height = 0;
           const imgEl = document.querySelector(`[data-mod46-file-thumb="${rec.id}"]`);
           if (imgEl) imgEl.src = rec.thumbUrl;
           const pgEl = document.querySelector(`[data-mod46-file-pages="${rec.id}"]`);
@@ -1647,11 +1649,21 @@
             const pdf = await pdfjsLib.getDocument({ data: this.files[0].bytes.slice() }).promise;
             const pg = await pdf.getPage(1);
             const baseVp = pg.getViewport({ scale: 1 });
-            const targetW = Math.min(520, Math.max(260, (body.clientWidth || 600) * 0.55));
-            const vp = pg.getViewport({ scale: targetW / Math.max(1, baseVp.width) });
-            cropCanvas.width = Math.round(vp.width);
-            cropCanvas.height = Math.round(vp.height);
-            await pg.render({ canvasContext: cropCanvas.getContext('2d'), viewport: vp }).promise;
+            const targetW = Math.min(540, Math.max(280, (body.clientWidth || 620) * 0.56));
+            const cssScale = targetW / Math.max(1, baseVp.width);
+            if (window.DangLovePDFRenderer?.renderPageToCanvas) {
+              await window.DangLovePDFRenderer.renderPageToCanvas(pg, cropCanvas, cssScale, { key: 'mod46-crop-pv' });
+            } else {
+              const outSc = Math.min(Math.max(window.devicePixelRatio || 1, 2), 3);
+              const vp = pg.getViewport({ scale: cssScale });
+              const cssW = Math.round(vp.width);
+              const cssH = Math.round(vp.height);
+              cropCanvas.width = Math.round(cssW * outSc);
+              cropCanvas.height = Math.round(cssH * outSc);
+              cropCanvas.style.width = `${cssW}px`;
+              cropCanvas.style.height = `${cssH}px`;
+              await pg.render({ canvasContext: cropCanvas.getContext('2d'), viewport: vp, transform: [outSc, 0, 0, outSc, 0, 0], intent: 'display' }).promise;
+            }
           } catch (_eCropPv) {}
         })();
       }
@@ -1799,11 +1811,21 @@
               const safePg = Math.max(1, Math.min(pdf.numPages, Number(pgNo) || 1));
               const pg = await pdf.getPage(safePg);
               const baseVp = pg.getViewport({ scale: 1 });
-              const targetW = Math.min(500, Math.max(260, (body.clientWidth || 600) * 0.55));
-              const vp = pg.getViewport({ scale: targetW / Math.max(1, baseVp.width) });
-              sigPageCanvas.width = Math.round(vp.width);
-              sigPageCanvas.height = Math.round(vp.height);
-              await pg.render({ canvasContext: sigPageCanvas.getContext('2d'), viewport: vp }).promise;
+              const targetW = Math.min(520, Math.max(280, (body.clientWidth || 620) * 0.56));
+              const cssScale = targetW / Math.max(1, baseVp.width);
+              if (window.DangLovePDFRenderer?.renderPageToCanvas) {
+                await window.DangLovePDFRenderer.renderPageToCanvas(pg, sigPageCanvas, cssScale, { key: 'mod46-sign-pv' });
+              } else {
+                const outSc = Math.min(Math.max(window.devicePixelRatio || 1, 2), 3);
+                const vp = pg.getViewport({ scale: cssScale });
+                const cssW = Math.round(vp.width);
+                const cssH = Math.round(vp.height);
+                sigPageCanvas.width = Math.round(cssW * outSc);
+                sigPageCanvas.height = Math.round(cssH * outSc);
+                sigPageCanvas.style.width = `${cssW}px`;
+                sigPageCanvas.style.height = `${cssH}px`;
+                await pg.render({ canvasContext: sigPageCanvas.getContext('2d'), viewport: vp, transform: [outSc, 0, 0, outSc, 0, 0], intent: 'display' }).promise;
+              }
               applySigBoxStyle();
             } catch (_eSigPv) {}
           };
@@ -2067,11 +2089,21 @@
               if (pageInp) { pageInp.max = String(pdf.numPages); pageInp.value = String(safePg); }
               const pg = await pdf.getPage(safePg);
               const baseVp = pg.getViewport({ scale: 1 });
-              const targetW = Math.min(520, Math.max(260, (body.clientWidth || 620) * 0.56));
-              const vp = pg.getViewport({ scale: targetW / Math.max(1, baseVp.width) });
-              simCanvas.width = Math.round(vp.width);
-              simCanvas.height = Math.round(vp.height);
-              await pg.render({ canvasContext: simCanvas.getContext('2d'), viewport: vp }).promise;
+              const targetW = Math.min(540, Math.max(280, (body.clientWidth || 640) * 0.58));
+              const cssScale = targetW / Math.max(1, baseVp.width);
+              if (window.DangLovePDFRenderer?.renderPageToCanvas) {
+                await window.DangLovePDFRenderer.renderPageToCanvas(pg, simCanvas, cssScale, { key: 'mod46-papersim-pv' });
+              } else {
+                const outSc = Math.min(Math.max(window.devicePixelRatio || 1, 2), 3);
+                const vp = pg.getViewport({ scale: cssScale });
+                const cssW = Math.round(vp.width);
+                const cssH = Math.round(vp.height);
+                simCanvas.width = Math.round(cssW * outSc);
+                simCanvas.height = Math.round(cssH * outSc);
+                simCanvas.style.width = `${cssW}px`;
+                simCanvas.style.height = `${cssH}px`;
+                await pg.render({ canvasContext: simCanvas.getContext('2d'), viewport: vp, transform: [outSc, 0, 0, outSc, 0, 0], intent: 'display' }).promise;
+              }
               syncVisualOverlays();
             } catch (_eSim) {
               simCanvas.width = 420;
@@ -3087,26 +3119,32 @@
 
           const page = await pdfDoc.getPage(currentPage);
           const baseVp = page.getViewport({ scale: 1 });
-          const availW = Math.max(280, Math.min(stage.clientWidth - 28, 920));
+          const availW = Math.max(280, Math.min(stage.clientWidth - 28, 960));
           const fitScale = availW / Math.max(1, baseVp.width);
-          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          const outSc = Math.min(Math.max(window.devicePixelRatio || 1, 2), 3);
           const renderScale = Math.max(0.5, Math.min(3.2, fitScale * zoomFactor));
-          const vp = page.getViewport({ scale: renderScale * dpr });
 
           stage.innerHTML = '';
           const canvas = document.createElement('canvas');
           canvas.id = 'mod46-preview-pdf-canvas';
           canvas.className = 'rounded-xl shadow-2xl border border-zinc-700 bg-white block';
-          canvas.width = Math.round(vp.width);
-          canvas.height = Math.round(vp.height);
-          canvas.style.width = `${Math.round(vp.width / dpr)}px`;
-          canvas.style.height = `${Math.round(vp.height / dpr)}px`;
           stage.appendChild(canvas);
 
-          const ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          await page.render({ canvasContext: ctx, viewport: vp }).promise;
+          if (window.DangLovePDFRenderer?.renderPageToCanvas) {
+            await window.DangLovePDFRenderer.renderPageToCanvas(page, canvas, renderScale, { key: 'mod46-fallback-pv' });
+          } else {
+            const vp = page.getViewport({ scale: renderScale });
+            const cssW = Math.round(vp.width);
+            const cssH = Math.round(vp.height);
+            canvas.width = Math.round(cssW * outSc);
+            canvas.height = Math.round(cssH * outSc);
+            canvas.style.width = `${cssW}px`;
+            canvas.style.height = `${cssH}px`;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            await page.render({ canvasContext: ctx, viewport: vp, transform: [outSc, 0, 0, outSc, 0, 0], intent: 'display' }).promise;
+          }
         };
 
         prevBtn?.addEventListener('click', () => renderPage(currentPage - 1));

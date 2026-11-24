@@ -227,6 +227,55 @@ ipcMain.handle('invest:http-fetch', async (_ev, payload) => {
   }
 });
 
+// ============================================================================
+// CẦU NỐI FONT HỆ THỐNG CỤC BỘ CHO ĐĂNGLOVEPDF (ĐỒNG BỘ FONT THẬT 100% OFFLINE)
+// ============================================================================
+ipcMain.handle('fonts:resolveSystemFont', async (_ev, payload) => {
+  const fam = String(payload?.family || '').toLowerCase().trim();
+  const bold = Boolean(payload?.isBold);
+  const italic = Boolean(payload?.isItalic);
+  const fontDirs = process.platform === 'win32'
+    ? [path.join(process.env.WINDIR || 'C:\\Windows', 'Fonts')]
+    : process.platform === 'darwin'
+    ? ['/System/Library/Fonts', '/Library/Fonts']
+    : ['/usr/share/fonts', '/usr/local/share/fonts'];
+
+  const winFileMap = {
+    'times new roman': bold && italic ? ['timesbi.ttf'] : bold ? ['timesbd.ttf'] : italic ? ['timesi.ttf'] : ['times.ttf'],
+    arial: bold && italic ? ['arialbi.ttf'] : bold ? ['arialbd.ttf'] : italic ? ['ariali.ttf'] : ['arial.ttf'],
+    calibri: bold && italic ? ['calibriz.ttf'] : bold ? ['calibrib.ttf'] : italic ? ['calibrii.ttf'] : ['calibri.ttf'],
+    cambria: bold && italic ? ['cambriaz.ttf'] : bold ? ['cambriab.ttf'] : italic ? ['cambriai.ttf'] : ['cambria.ttc', 'cambria.ttf'],
+    tahoma: bold ? ['tahomabd.ttf'] : ['tahoma.ttf'],
+    verdana: bold && italic ? ['verdanaz.ttf'] : bold ? ['verdanab.ttf'] : italic ? ['verdanai.ttf'] : ['verdana.ttf'],
+    georgia: bold && italic ? ['georgiaz.ttf'] : bold ? ['georgiab.ttf'] : italic ? ['georgiai.ttf'] : ['georgia.ttf'],
+    'courier new': bold && italic ? ['courbi.ttf'] : bold ? ['courbd.ttf'] : italic ? ['couri.ttf'] : ['cour.ttf'],
+    'segoe ui': bold && italic ? ['segoeuiz.ttf'] : bold ? ['segoeuib.ttf'] : italic ? ['segoeuii.ttf'] : ['segoeui.ttf'],
+  };
+
+  let candidates = [];
+  for (const [key, files] of Object.entries(winFileMap)) {
+    if (fam.includes(key)) {
+      candidates = files;
+      break;
+    }
+  }
+  if (!candidates.length) return { ok: false };
+
+  for (const dir of fontDirs) {
+    if (!fs.existsSync(dir)) continue;
+    for (const fileName of candidates) {
+      const full = path.join(dir, fileName);
+      if (fs.existsSync(full) && /\.ttf|\.otf$/i.test(fileName)) {
+        try {
+          const buf = fs.readFileSync(full);
+          return { ok: true, fileName, base64: buf.toString('base64') };
+        } catch (_eRead) {}
+      }
+    }
+  }
+  return { ok: false };
+});
+
 app.whenReady().then(createMainWindow);
 
 app.on('window-all-closed', () => {

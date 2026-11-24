@@ -4821,6 +4821,21 @@
     "⏳ Đang tải toàn bộ tài nguyên & 45 module Studio...": "⏳ 正在載入全部資源與 45 個工坊模組...",
     "📦 Đang nạp dữ liệu chương, Story Bible & hoàn tất giao diện...": "📦 正在載入章節資料、故事聖經並完成介面同步...",
     "✨ Sẵn sàng sáng tác!": "✨ 準備就緒，開始創作！",
+    "20 phút thông thái": "每日20分鐘智慧",
+    "20 Phút Thông Thái Mỗi Ngày — Xác nhận Vị trí & Khu vực": "每日20分鐘智慧 — 確認位置與地區",
+    "📡 Tự động dò vị trí (GPS)": "📡 自動定位 (GPS)",
+    "✅ Xác nhận vị trí này & Quét tin hôm nay": "✅ 確認此位置並掃描今日資訊",
+    "🚀 Xác nhận Quốc gia & Quét 20 phút thông thái hôm nay": "🚀 確認國家並掃描今日20分鐘智慧",
+    "📰 Xem Thông Tin Thô Hôm Nay (Đã tự chia 5 mục khoa học)": "📰 立即查看今日原始資訊（已自動分為5大科學欄目）",
+    "📰 Xem thông tin thô ngay ➔": "📰 立即閱讀原始資訊 ➔",
+    "📰 Thông tin thô (5 mục khoa học)": "📰 原始資訊（5大欄目）",
+    "🧠 Bản tin 20 phút (Gemini)": "🧠 20分鐘精要 (Gemini)",
+    "📊 Biểu đồ, Sơ đồ & Hình ảnh": "📊 圖表、導圖與實景圖",
+    "📍 Đổi vị trí": "📍 更改位置",
+    "🔄 Quét lại tin mới": "🔄 重新掃描最新",
+    "📋 Tự động sao chép & Mở Gemini": "📋 自動複製並開啟 Gemini",
+    "✨ Đồng bộ Bản tin 20 phút, Biểu đồ & Sơ đồ ngay": "✨ 立即同步20分鐘簡報、圖表與導圖",
+    "🖥️ Font máy": "🖥️ 本機字型",
   });
 
   const promptExact = Object.freeze({
