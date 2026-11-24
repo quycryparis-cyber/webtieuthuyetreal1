@@ -9238,11 +9238,51 @@
       const panel = this.getPanelContainer();
       if (!panel) return;
 
+      if (!document.getElementById('mod39-v121-hero-search-glow-css')) {
+        const st = document.createElement('style');
+        st.id = 'mod39-v121-hero-search-glow-css';
+        st.textContent = `
+          @keyframes mod39SearchPulseRing {
+            0%, 100% {
+              border-color: rgba(251, 113, 133, 0.92);
+              box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.55), 0 0 24px rgba(251, 191, 36, 0.32);
+            }
+            50% {
+              border-color: rgba(251, 191, 36, 0.98);
+              box-shadow: 0 0 0 6px rgba(244, 63, 94, 0), 0 0 34px rgba(244, 63, 94, 0.55);
+            }
+          }
+          @keyframes mod39LoadBtnGlow {
+            0%, 100% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.03); filter: brightness(1.14); }
+          }
+          .mod39-hero-search-blink {
+            animation: mod39SearchPulseRing 2s ease-in-out infinite;
+          }
+          .mod39-hero-search-blink:focus-within {
+            animation: none;
+            border-color: rgba(52, 211, 153, 0.95) !important;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.28), 0 0 28px rgba(16, 185, 129, 0.35) !important;
+          }
+          .mod39-load-btn-blink {
+            animation: mod39LoadBtnGlow 1.9s ease-in-out infinite;
+          }
+        `;
+        document.head.appendChild(st);
+      }
+
       panel.innerHTML = `
-        <!-- Thanh Tìm Kiếm Nổi Bật (Hero Search Bar ngay dưới Ô Lớn #5 — bấm Enter tìm/phát ngay trên cả ĐT & Laptop) -->
-        <form id="mod39-hero-search-card" class="p-3.5 sm:p-5 rounded-2xl bg-gradient-to-br from-rose-950/35 via-zinc-950/95 to-zinc-900/95 border-2 border-rose-500/50 shadow-xl space-y-3" action="javascript:void(0);" onsubmit="return false;" novalidate>
+        <!-- Thanh Tìm Kiếm Nổi Bật Nhấp Nháy (Hero Search Bar ngay dưới Ô Lớn #5 — bấm Enter tìm/phát ngay trên cả ĐT & Laptop) -->
+        <form id="mod39-hero-search-card" class="mod39-hero-search-blink p-3.5 sm:p-5 rounded-2xl bg-gradient-to-br from-rose-950/60 via-zinc-950/95 to-amber-950/45 border-2 border-rose-400 shadow-2xl space-y-3" action="javascript:void(0);" onsubmit="return false;" novalidate>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-rose-600 to-amber-500 text-white text-[10.5px] font-black uppercase tracking-wide shadow">
+              <span>🔥</span>
+              <span>Khung Tìm Kiếm &amp; Phát Video YouTube Không Quảng Cáo</span>
+            </span>
+            <span class="text-[10.5px] font-bold text-amber-200/95">Dán link hoặc gõ tên bài hát rồi bấm Enter</span>
+          </div>
           <div class="relative flex items-center">
-            <span class="pointer-events-none absolute left-4 text-base sm:text-lg text-rose-300" aria-hidden="true">🔎</span>
+            <span class="pointer-events-none absolute left-4 text-base sm:text-lg text-amber-300" aria-hidden="true">🔎</span>
             <input
               type="search"
               enterkeyhint="search"
@@ -9250,15 +9290,15 @@
               autocomplete="off"
               spellcheck="false"
               placeholder="Gõ từ khóa tìm video (vd: lofi mưa đêm, sáo trúc, anime ost...) hoặc dán link YouTube rồi bấm Enter..."
-              class="w-full pl-11 sm:pl-12 pr-4 py-3.5 sm:py-4 rounded-2xl bg-zinc-900/95 border-2 border-zinc-700 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25 focus:outline-none text-sm sm:text-base font-medium text-white placeholder-zinc-400 shadow-inner transition"
+              class="w-full pl-11 sm:pl-12 pr-4 py-3.5 sm:py-4 rounded-2xl bg-zinc-900/95 border-2 border-amber-400/70 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/30 focus:outline-none text-sm sm:text-base font-medium text-white placeholder-zinc-300 shadow-inner transition"
             />
           </div>
           <div class="flex flex-wrap items-center gap-2.5">
             <button
               type="button"
               id="btn-mod39-step2-load"
-              class="flex-1 sm:flex-initial min-w-[120px] px-5 py-2.5 sm:py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-extrabold shadow-lg shadow-emerald-950/40 transition"
-            >🔍 Tìm / ▶ Phát</button>
+              class="mod39-load-btn-blink flex-1 sm:flex-initial min-w-[140px] px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-zinc-950 text-sm font-black shadow-lg shadow-emerald-950/50 transition cursor-pointer"
+            >🔍 Tìm / ▶ Phát Ngay</button>
           </div>
         </form>
 

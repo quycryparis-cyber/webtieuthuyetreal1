@@ -193,6 +193,40 @@ ipcMain.handle('danglovepdf:run-local-tool', async (_ev, payload) => {
   }
 });
 
+// ============================================================================
+// CẦU NỐI HTTP TRỰC TIẾP (KHÔNG BỊ CORS) CHO PHÂN HỆ "ĐẦU TƯ HÔM NAY" (MOD 49)
+// ============================================================================
+ipcMain.handle('invest:http-fetch', async (_ev, payload) => {
+  const rawUrl = String(payload?.url || '').trim();
+  const timeoutMs = Math.min(20000, Math.max(2000, Number(payload?.timeoutMs) || 10000));
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch (_e) {
+    return { ok: false, status: 400, error: 'URL không hợp lệ.' };
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    return { ok: false, status: 403, error: 'Chỉ cho phép giao thức http/https.' };
+  }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const resp = await fetch(parsed.toString(), {
+      signal: ctrl.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) BiNovelStudio-InvestToday/2.0',
+        Accept: 'application/json, application/xml, text/xml, text/plain, */*',
+      },
+    });
+    const text = (await resp.text()).slice(0, 2 * 1024 * 1024);
+    return { ok: resp.ok, status: resp.status, text };
+  } catch (err) {
+    return { ok: false, status: 0, error: err?.message || String(err) };
+  } finally {
+    clearTimeout(timer);
+  }
+});
+
 app.whenReady().then(createMainWindow);
 
 app.on('window-all-closed', () => {

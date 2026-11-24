@@ -499,8 +499,8 @@
             </button>
             <button type="button" id="btn-mod46-choice-danglovepdf" class="group text-left p-4 rounded-2xl border-2 border-rose-500/60 hover:border-rose-300 bg-gradient-to-br from-rose-950/60 to-zinc-900 hover:from-rose-900/50 transition space-y-2 cursor-pointer shadow-lg">
               <div class="flex items-center justify-between gap-2">
-                <img src="assets/danglovepdf_icon.jpg" alt="Em ILovePDF hư đã có anh lo" class="w-11 h-11 rounded-xl object-cover border-2 border-rose-300/80 shadow-md" />
-                <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-[10px] font-extrabold">41 Công Cụ · 100% Trên Máy</span>
+                <img src="assets/app-icon-192.png" alt="Logo ĐăngLovePDF" class="w-11 h-11 rounded-xl object-cover border-2 border-rose-300/80 shadow-md" />
+                <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-[10px] font-extrabold">48 Công Cụ · 100% Trên Máy</span>
               </div>
               <div class="text-sm font-black text-rose-200 group-hover:text-white">ĐăngLovePDF ( ͡° ͜ʖ ͡°)</div>
               <p class="text-[11.5px] text-zinc-300 leading-relaxed">Đủ mọi tính năng Premium: Gộp, tách, nén, dàn trang sách, OCR 2 lớp, che đen vĩnh viễn, so sánh PDF, xử lý hàng loạt &amp; đổi mọi định dạng!</p>
@@ -542,11 +542,11 @@
           <!-- Header gọn gàng -->
           <div class="px-3 sm:px-5 py-3 border-b border-zinc-800 bg-zinc-900/95 flex flex-wrap items-center justify-between gap-2 shrink-0">
             <div class="flex items-center gap-2.5 min-w-0">
-              <img src="assets/danglovepdf_icon.jpg" alt="Em ILovePDF hư đã có anh lo" class="w-9 h-9 rounded-xl object-cover border-2 border-rose-400/80 shadow-md shrink-0" />
+              <img src="assets/app-icon-192.png" alt="Logo ĐăngLovePDF" class="w-9 h-9 rounded-xl object-cover border-2 border-rose-400/80 shadow-md shrink-0" />
               <div class="min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
                   <h2 class="text-sm sm:text-base font-black text-rose-300 tracking-tight">ĐăngLovePDF ( ͡° ͜ʖ ͡°)</h2>
-                  <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/50 text-emerald-300 text-[10px] font-extrabold">🔒 41 Công cụ Premium · Xử lý 100% trên máy</span>
+                  <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/50 text-emerald-300 text-[10px] font-extrabold">🔒 48 Công cụ Premium · Xử lý 100% trên máy</span>
                 </div>
               </div>
             </div>
@@ -767,6 +767,11 @@
           thumbUrl: ''
         };
         if (/\.pdf$/i.test(f.name) || f.type === 'application/pdf') {
+          const headStr = String.fromCharCode(...bytes.slice(0, 8));
+          if (!headStr.includes('%PDF') && tool.id !== 'repair_pdf') {
+            this.toast(`⚠️ Tệp "${f.name}" không đúng ruột định dạng PDF thật (%PDF) nên đã tự động từ chối an toàn.`, 'warning', 3600);
+            continue;
+          }
           try {
             const { PDFDocument } = await ensurePdfLib();
             const doc = await PDFDocument.load(bytes, { ignoreEncryption: false });
@@ -984,6 +989,11 @@
               .join('')}
           </div>
         `;
+      }
+
+      // Chế độ True Interactive PDF Editor (Mod 46C)
+      if (tool.id === 'annotate_edit' && this.files[0]) {
+        return `<div id="mod46-true-editor-mount" class="min-h-[320px] flex items-center justify-center text-xs text-emerald-300 font-bold">⏳ Đang nạp Trình Chỉnh sửa PDF Trực Quan (Sửa chữ gốc, Vẽ, Ảnh, CAD)...</div>`;
       }
 
       // Chế độ Ký tên & Vẽ chữ ký tay
@@ -1263,20 +1273,26 @@
       }
       if (id === 'ocr_pdf') {
         return `
-          <label class="block space-y-1"><span class="font-bold">Ngôn ngữ tài liệu:</span>
+          <label class="block space-y-1"><span class="font-bold">Ngôn ngữ nhận diện (Đa ngôn ngữ):</span>
             <select id="opt-ocr-lang" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
               <option value="vie+eng">Tiếng Việt + Tiếng Anh</option>
               <option value="vie">Chỉ Tiếng Việt</option>
               <option value="eng">Chỉ Tiếng Anh</option>
+              <option value="chi_sim+eng">Tiếng Trung + Tiếng Anh</option>
+              <option value="jpn+eng">Tiếng Nhật + Tiếng Anh</option>
             </select>
           </label>
-          <label class="block space-y-1"><span class="font-bold">Định dạng kết quả OCR:</span>
+          <label class="block space-y-1"><span class="font-bold">Định dạng kết quả OCR 5 bước:</span>
             <select id="opt-ocr-out-fmt" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
               <option value="searchable_pdf">PDF 2 lớp tìm &amp; copy được (Ctrl+F — Khuyên dùng)</option>
+              <option value="docx">Word (.DOCX — Tái cấu trúc văn bản)</option>
+              <option value="md">Markdown (.MD — Sạch gọn)</option>
               <option value="txt">Văn bản thuần (.TXT)</option>
             </select>
           </label>
-          <p class="text-[11px] text-zinc-400">Chạy trực tiếp trên CPU máy bạn — lần đầu tải gói ngôn ngữ lưu đệm sẵn cho các lần sau.</p>`;
+          <label class="flex items-center gap-2"><input id="opt-ocr-smart-skip" type="checkbox" checked class="accent-teal-400" /><span>Smart Skip: Tự lấy chữ gốc với trang đã có lớp văn bản</span></label>
+          <label class="flex items-center gap-2"><input id="opt-ocr-denoise" type="checkbox" checked class="accent-teal-400" /><span>Tiền xử lý: Tẩy nền ố vàng, khử bóng &amp; làm nét trước khi OCR</span></label>
+          <p class="text-[11px] text-zinc-400">Chạy trực tiếp trên CPU máy bạn — giữ nguyên ảnh gốc sắc nét ở bản thành phẩm.</p>`;
       }
       const proOpt = NS.dangLovePdfPro?.buildProOptionsHtml?.(this, id);
       if (proOpt) return proOpt;
@@ -1354,6 +1370,16 @@
           this.renderUploadOrWorkspaceScreen();
         });
       });
+
+      // Gắn True Interactive Visual PDF Editor (Mod 46C) nếu đang mở annotate_edit
+      const trueEdMount = body.querySelector('#mod46-true-editor-mount');
+      if (trueEdMount && this.files[0] && NS.dangLovePdfStudioPro?.editor?.mount) {
+        NS.dangLovePdfStudioPro.editor.mount(trueEdMount, this.files[0], ensurePdfJs);
+        const cadInp = body.querySelector('#opt-pro-cad-scale');
+        cadInp?.addEventListener('change', () => {
+          NS.dangLovePdfStudioPro.editor.measureScale = Math.max(0.1, Number(cadInp.value) || 5);
+        });
+      }
 
       // Bảng vẽ chữ ký bằng chuột & cảm ứng
       const sigCanvas = body.querySelector('#canvas-mod46-sig-pad');
@@ -2014,44 +2040,80 @@
             pg.drawImage(emb, { x: 0, y: 0, width: pw, height: ph });
           };
 
+          const preprocessScanCanvas = (srcCanvas) => {
+            if (!pro.ocrDenoise) return srcCanvas;
+            const tmp = document.createElement('canvas');
+            tmp.width = srcCanvas.width;
+            tmp.height = srcCanvas.height;
+            const tctx = tmp.getContext('2d');
+            tctx.drawImage(srcCanvas, 0, 0);
+            const im = tctx.getImageData(0, 0, tmp.width, tmp.height);
+            const d = im.data;
+            for (let k = 0; k < d.length; k += 4) {
+              const g = 0.299 * d[k] + 0.587 * d[k + 1] + 0.114 * d[k + 2];
+              const boosted = g > 192 ? 255 : g < 110 ? Math.max(0, g - 32) : g;
+              d[k] = d[k + 1] = d[k + 2] = boosted;
+            }
+            tctx.putImageData(im, 0, 0);
+            return tmp;
+          };
+
           if (/\.pdf$/i.test(this.files[0].name)) {
             const pdfjsLib = await ensurePdfJs();
             const pdf = await pdfjsLib.getDocument({ data: this.files[0].bytes.slice() }).promise;
             for (let i = 1; i <= pdf.numPages; i++) {
               if (this.cancelled) return;
-              prog(10 + ((i - 1) / pdf.numPages) * 80, `Đang quét nhận diện chữ OCR trang ${i}/${pdf.numPages}...`);
               const page = await pdf.getPage(i);
+              // Bước 1: Smart Skip — nếu trang đã có lớp chữ vector đầy đủ thì lấy thẳng không tốn CPU OCR lại!
+              let existingText = '';
+              if (pro.ocrSmartSkip) {
+                try {
+                  const tc = await page.getTextContent();
+                  existingText = tc.items.map((x) => x.str).join(' ').trim();
+                } catch (_eTc) {}
+              }
+              if (pro.ocrSmartSkip && existingText.length >= 25 && !wantSearchablePdf) {
+                prog(10 + (i / pdf.numPages) * 80, `⚡ Smart Skip trang ${i}/${pdf.numPages} (đã có lớp chữ gốc)...`);
+                fullTextParts.push(`--- TRANG ${i} ---\n${existingText}`);
+                continue;
+              }
+              prog(10 + ((i - 1) / pdf.numPages) * 80, `Đang tiền xử lý & quét OCR trang ${i}/${pdf.numPages}...`);
               const vp = page.getViewport({ scale: 2.0 });
               const c = document.createElement('canvas');
               c.width = vp.width;
               c.height = vp.height;
               await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
-              const res = await Tesseract.recognize(c, opts.ocrLang);
+              const cleanForOcr = preprocessScanCanvas(c);
+              const res = await Tesseract.recognize(cleanForOcr, opts.ocrLang);
               fullTextParts.push(`--- TRANG ${i} ---\n${res?.data?.text || ''}`);
               if (wantSearchablePdf) await appendSearchablePage(c, res?.data);
             }
           } else {
-            prog(30, 'Đang nhận diện chữ trên ảnh (OCR)...');
-            const res = await Tesseract.recognize(this.files[0].file, opts.ocrLang);
+            prog(30, 'Đang tiền xử lý ảnh & nhận diện chữ (OCR 5 bước)...');
+            const im = await new Promise((resolve, reject) => {
+              const el = new Image();
+              el.onload = () => resolve(el);
+              el.onerror = reject;
+              el.src = this.trackUrl(this.files[0].file);
+            });
+            const c = document.createElement('canvas');
+            c.width = im.naturalWidth || im.width;
+            c.height = im.naturalHeight || im.height;
+            c.getContext('2d').drawImage(im, 0, 0);
+            const cleanForOcr = preprocessScanCanvas(c);
+            const res = await Tesseract.recognize(cleanForOcr, opts.ocrLang);
             fullTextParts.push(res?.data?.text || '');
-            if (wantSearchablePdf) {
-              const im = await new Promise((resolve, reject) => {
-                const el = new Image();
-                el.onload = () => resolve(el);
-                el.onerror = reject;
-                el.src = this.trackUrl(this.files[0].file);
-              });
-              const c = document.createElement('canvas');
-              c.width = im.naturalWidth || im.width;
-              c.height = im.naturalHeight || im.height;
-              c.getContext('2d').drawImage(im, 0, 0);
-              await appendSearchablePage(c, res?.data);
-            }
+            if (wantSearchablePdf) await appendSearchablePage(c, res?.data);
           }
+          const combinedText = fullTextParts.join('\n\n');
           if (wantSearchablePdf && outPdf) {
             outputs.push({ name: `${baseName}_OCR_Searchable.pdf`, blob: new Blob([await outPdf.save()], { type: 'application/pdf' }) });
+          } else if (pro.ocrOutFormat === 'docx') {
+            outputs.push({ name: `${baseName}_OCR.docx`, blob: await buildDocxBlobFromParagraphs(baseName, combinedText.split(/\r?\n/)) });
+          } else if (pro.ocrOutFormat === 'md') {
+            outputs.push({ name: `${baseName}_OCR.md`, blob: new Blob([combinedText], { type: 'text/markdown;charset=utf-8' }) });
           }
-          outputs.push({ name: `${baseName}_OCR.txt`, blob: new Blob([fullTextParts.join('\n\n')], { type: 'text/plain;charset=utf-8' }) });
+          outputs.push({ name: `${baseName}_OCR.txt`, blob: new Blob([combinedText], { type: 'text/plain;charset=utf-8' }) });
         }
 
         if (this.cancelled) return;
@@ -2095,6 +2157,9 @@
       const primary = this.resultZipItem || this.resultItems[0];
       if (!primary) return;
 
+      const canPreviewPrimary =
+        this.resultItems.length === 1 &&
+        /\.(pdf|html?|txt|md|json|csv|png|jpe?g|webp)$/i.test(this.resultItems[0].name);
       const isSinglePdf = this.resultItems.length === 1 && /\.pdf$/i.test(this.resultItems[0].name);
       const savedPct =
         this.activeTool?.id === 'compress' && inputTotalSize > 0
@@ -2117,7 +2182,7 @@
               <a href="${primary.url}" download="${escHtml(primary.name)}" class="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-xl transition">
                 ⬇️ ${this.resultZipItem ? 'Tải tất cả (.ZIP)' : 'Tải xuống tệp ngay'}
               </a>
-              ${isSinglePdf ? `<button type="button" id="btn-mod46-preview-result" class="px-4 py-3 rounded-2xl border border-sky-400/60 bg-sky-500/15 hover:bg-sky-500/30 text-sky-200 font-extrabold text-xs cursor-pointer">👁️ Xem trước PDF</button>` : ''}
+              ${canPreviewPrimary ? `<button type="button" id="btn-mod46-preview-result" class="px-4 py-3 rounded-2xl border border-sky-400/60 bg-sky-500/15 hover:bg-sky-500/30 text-sky-200 font-extrabold text-xs cursor-pointer">👁️ ${isSinglePdf ? 'Xem trước PDF' : 'Xem trước kết quả'}</button>` : ''}
               <button type="button" id="btn-mod46-do-another" class="px-4 py-3 rounded-2xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-extrabold text-xs cursor-pointer">🔄 Làm tệp mới</button>
             </div>
 
@@ -2133,14 +2198,17 @@
 
           ${this.resultItems.length > 1 ? `
             <div class="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-3.5 space-y-2">
-              <div class="text-xs font-extrabold text-zinc-300">📂 Hoặc tải lẻ từng tệp (${this.resultItems.length} tệp):</div>
+              <div class="text-xs font-extrabold text-zinc-300">📂 Hoặc xem trước / tải lẻ từng tệp (${this.resultItems.length} tệp):</div>
               <div class="max-h-56 overflow-y-auto space-y-1.5">
                 ${this.resultItems
                   .map(
-                    (it) => `
+                    (it, idx) => `
                   <div class="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs">
                     <span class="truncate text-zinc-200 font-semibold">${escHtml(it.name)} <span class="text-zinc-500">(${formatBytes(it.size)})</span></span>
-                    <a href="${it.url}" download="${escHtml(it.name)}" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-emerald-600 text-zinc-100 font-bold shrink-0">⬇️ Tải</a>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                      ${/\.(pdf|html?|txt|md|json|csv|png|jpe?g|webp)$/i.test(it.name) ? `<button type="button" data-mod46-preview-idx="${idx}" class="px-2 py-1 rounded-lg bg-sky-900/60 hover:bg-sky-600 text-sky-100 font-bold cursor-pointer">👁️ Xem</button>` : ''}
+                      <a href="${it.url}" download="${escHtml(it.name)}" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-emerald-600 text-zinc-100 font-bold">⬇️ Tải</a>
+                    </div>
                   </div>`
                   )
                   .join('')}
@@ -2155,18 +2223,13 @@
       });
       body.querySelector('#btn-mod46-preview-result')?.addEventListener('click', () => {
         const resItem = this.resultItems[0];
-        if (!resItem) return;
-        const pv = document.createElement('div');
-        pv.className = 'fixed inset-0 z-[2147483620] bg-zinc-950/90 flex flex-col p-3 sm:p-5';
-        pv.innerHTML = `
-          <div class="flex items-center justify-between pb-2 text-zinc-100">
-            <span class="text-sm font-black">👁️ Xem trước: ${escHtml(resItem.name)}</span>
-            <button type="button" class="px-3 py-1 rounded-xl bg-rose-600 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
-          </div>
-          <iframe src="${resItem.url}" class="flex-1 w-full rounded-2xl border border-zinc-700 bg-white"></iframe>
-        `;
-        pv.querySelector('button')?.addEventListener('click', () => pv.remove());
-        document.body.appendChild(pv);
+        if (resItem) this.openInteractiveResultPreview(resItem);
+      });
+      body.querySelectorAll('[data-mod46-preview-idx]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const item = this.resultItems[Number(b.getAttribute('data-mod46-preview-idx'))];
+          if (item) this.openInteractiveResultPreview(item);
+        });
       });
       body.querySelector('#btn-mod46-chain-go')?.addEventListener('click', () => {
         const nextId = body.querySelector('#sel-mod46-chain-tool')?.value;
@@ -2179,13 +2242,156 @@
     }
 
     // ------------------------------------------------------------------------
+    // TRÌNH XEM TRƯỚC TƯƠNG TÁC PDF.JS CANVAS (CHẠY MƯỢT 100% DESKTOP & MOBILE)
+    // Không phụ thuộc <iframe> PDF plugin hay cài đặt trình duyệt!
+    // ------------------------------------------------------------------------
+    async openInteractiveResultPreview(resItem) {
+      const isPdf = /\.pdf$/i.test(resItem.name) || resItem.blob?.type === 'application/pdf';
+      // Ưu tiên dùng Pro 4-Layer PDF Viewer (Mod 46C: Thumbnails + Bookmarks + Text Selection + Ctrl+F Regex + 2-Page Spread + Dark Mode!)
+      if (isPdf && NS.dangLovePdfStudioPro?.openProPdfViewer) {
+        return NS.dangLovePdfStudioPro.openProPdfViewer(resItem, ensurePdfJs);
+      }
+      document.getElementById('modal-mod46-interactive-preview')?.remove();
+      const pv = document.createElement('div');
+      pv.id = 'modal-mod46-interactive-preview';
+      pv.className = 'fixed inset-0 z-[2147483625] bg-zinc-950/95 backdrop-blur-md flex flex-col p-2.5 sm:p-4 text-zinc-100';
+      pv.setAttribute('role', 'dialog');
+      pv.setAttribute('aria-modal', 'true');
+
+      const isHtml = /\.html?$/i.test(resItem.name);
+      const isImg = /\.(png|jpe?g|webp|gif|bmp)$/i.test(resItem.name);
+
+      pv.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-zinc-800 shrink-0">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-sm sm:text-base font-black text-sky-300 truncate">👁️ Xem trước: ${escHtml(resItem.name)}</span>
+            <span id="mod46-pv-meta" class="px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 text-[10.5px] font-bold shrink-0">${formatBytes(resItem.size)}</span>
+          </div>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            ${isPdf ? `
+              <button type="button" id="btn-mod46-pv-prev" class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer">◀ Trước</button>
+              <span id="mod46-pv-page-info" class="px-2 py-1 text-xs font-extrabold text-amber-300">Đang dựng...</span>
+              <button type="button" id="btn-mod46-pv-next" class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer">Sau ▶</button>
+              <button type="button" id="btn-mod46-pv-zoom-out" class="px-2 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-black cursor-pointer" title="Thu nhỏ">➖</button>
+              <span id="mod46-pv-zoom-val" class="text-[11px] font-bold text-zinc-300 w-10 text-center">100%</span>
+              <button type="button" id="btn-mod46-pv-zoom-in" class="px-2 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-black cursor-pointer" title="Phóng to">➕</button>
+            ` : ''}
+            <a href="${resItem.url}" download="${escHtml(resItem.name)}" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black">⬇️ Tải</a>
+            <button type="button" id="btn-mod46-pv-close" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
+          </div>
+        </div>
+        <div id="mod46-pv-stage" class="flex-1 min-h-0 overflow-auto py-4 px-2 flex flex-col items-center gap-4 bg-zinc-900/70 rounded-2xl mt-2 border border-zinc-800">
+          <div class="py-12 text-sm font-bold text-sky-300 animate-pulse">⏳ Đang dựng hình xem trước sắc nét ngay trên máy...</div>
+        </div>
+      `;
+      document.body.appendChild(pv);
+
+      let pdfDoc = null;
+      const closePreview = () => {
+        pv.querySelectorAll('canvas').forEach((c) => { c.width = 0; c.height = 0; });
+        try { pdfDoc?.destroy?.(); } catch (_e) {}
+        pdfDoc = null;
+        pv.remove();
+      };
+      pv.querySelector('#btn-mod46-pv-close')?.addEventListener('click', closePreview);
+
+      const stage = pv.querySelector('#mod46-pv-stage');
+      if (!stage) return;
+
+      try {
+        if (isImg) {
+          stage.innerHTML = `<img src="${resItem.url}" alt="${escHtml(resItem.name)}" class="max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-zinc-700 bg-white" />`;
+          return;
+        }
+        if (isHtml) {
+          const htmlText = await resItem.blob.text();
+          stage.innerHTML = `<iframe id="mod46-pv-html-frame" class="w-full h-full min-h-[70vh] rounded-xl border border-zinc-700 bg-white"></iframe>`;
+          const ifr = stage.querySelector('#mod46-pv-html-frame');
+          if (ifr) ifr.srcdoc = htmlText;
+          return;
+        }
+        if (!isPdf) {
+          const txt = await resItem.blob.text();
+          stage.innerHTML = `<pre class="w-full max-w-4xl p-4 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 whitespace-pre-wrap break-words font-mono">${escHtml(txt.slice(0, 60000))}</pre>`;
+          return;
+        }
+
+        // PDF: Dựng bằng PDF.js Canvas trực tiếp (KHÔNG dùng iframe blob hay bị trắng trang trên Mobile/Edge!)
+        const pdfjsLib = await ensurePdfJs();
+        const bytes = new Uint8Array(await resItem.blob.arrayBuffer());
+        pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
+        const totalPages = pdfDoc.numPages;
+        let currentPage = 1;
+        let zoomFactor = 1.0;
+
+        const pageInfoEl = pv.querySelector('#mod46-pv-page-info');
+        const zoomValEl = pv.querySelector('#mod46-pv-zoom-val');
+        const prevBtn = pv.querySelector('#btn-mod46-pv-prev');
+        const nextBtn = pv.querySelector('#btn-mod46-pv-next');
+
+        const renderPage = async (pageNo) => {
+          if (!pdfDoc || !pv.isConnected) return;
+          currentPage = Math.max(1, Math.min(totalPages, pageNo));
+          if (pageInfoEl) pageInfoEl.textContent = `Trang ${currentPage} / ${totalPages}`;
+          if (zoomValEl) zoomValEl.textContent = `${Math.round(zoomFactor * 100)}%`;
+          if (prevBtn) prevBtn.disabled = currentPage <= 1;
+          if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+
+          const page = await pdfDoc.getPage(currentPage);
+          const baseVp = page.getViewport({ scale: 1 });
+          const availW = Math.max(280, Math.min(stage.clientWidth - 28, 920));
+          const fitScale = availW / Math.max(1, baseVp.width);
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          const renderScale = Math.max(0.5, Math.min(3.2, fitScale * zoomFactor));
+          const vp = page.getViewport({ scale: renderScale * dpr });
+
+          stage.innerHTML = '';
+          const canvas = document.createElement('canvas');
+          canvas.id = 'mod46-preview-pdf-canvas';
+          canvas.className = 'rounded-xl shadow-2xl border border-zinc-700 bg-white block';
+          canvas.width = Math.round(vp.width);
+          canvas.height = Math.round(vp.height);
+          canvas.style.width = `${Math.round(vp.width / dpr)}px`;
+          canvas.style.height = `${Math.round(vp.height / dpr)}px`;
+          stage.appendChild(canvas);
+
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        };
+
+        prevBtn?.addEventListener('click', () => renderPage(currentPage - 1));
+        nextBtn?.addEventListener('click', () => renderPage(currentPage + 1));
+        pv.querySelector('#btn-mod46-pv-zoom-out')?.addEventListener('click', () => {
+          zoomFactor = Math.max(0.5, Number((zoomFactor - 0.2).toFixed(2)));
+          renderPage(currentPage);
+        });
+        pv.querySelector('#btn-mod46-pv-zoom-in')?.addEventListener('click', () => {
+          zoomFactor = Math.min(2.4, Number((zoomFactor + 0.2).toFixed(2)));
+          renderPage(currentPage);
+        });
+
+        await renderPage(1);
+      } catch (err) {
+        stage.innerHTML = `
+          <div class="p-6 text-center space-y-3 max-w-md">
+            <div class="text-3xl">⚠️</div>
+            <div class="text-sm font-bold text-rose-300">Không dựng được xem trước trực tiếp: ${escHtml(err?.message || err)}</div>
+            <a href="${resItem.url}" target="_blank" rel="noopener" class="inline-block px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-black">↗️ Mở trong tab mới</a>
+          </div>
+        `;
+      }
+    }
+
+    // ------------------------------------------------------------------------
     // NÂNG CẤP NÚT TAB 6 (CÓ ICON MEME) + NÚT VÀO NHANH DƯỚI CHẾ ĐỘ KHÁCH
     // ------------------------------------------------------------------------
     upgradeExportPdfButton() {
       const btn = document.getElementById('btn-tab6-top-export-pdf');
       if (btn) {
         btn.classList.add('noir-danglovepdf-glow-btn');
-        btn.innerHTML = `<span class="inline-flex items-center gap-1.5"><img src="assets/danglovepdf_icon.jpg" alt="" class="w-5 h-5 rounded-md object-cover border border-white/80 shrink-0" /><span>Xuất truyện qua PDF &amp; ĐăngLovePDF</span></span>`;
+        btn.innerHTML = `<span class="inline-flex items-center gap-1.5"><img src="assets/app-icon-192.png" alt="" class="w-5 h-5 rounded-md object-cover border border-white/80 shrink-0" /><span>Xuất truyện qua PDF &amp; ĐăngLovePDF</span></span>`;
         btn.title = 'Chọn Xuất truyện đã viết qua PDF hoặc dùng bộ 41 công cụ ĐăngLovePDF (100% trên máy)';
       }
 

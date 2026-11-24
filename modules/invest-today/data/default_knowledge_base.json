@@ -1,0 +1,549 @@
+{
+  "schema_version": "2.0.0",
+  "metadata": {
+    "title": "Cẩm Nang Toàn Diện Đánh Giá Và Ra Quyết Định Đầu Tư Vàng, Chứng Khoán, Bất Động Sản Và Hệ Điều Hành AI Thực Chiến",
+    "short_title": "Khung Phân Tích Đầu Tư (7 chương — Vàng, Chứng khoán, Nhà đất)",
+    "source_file": "Khung Phân Tích Đầu Tư.docx",
+    "chapters_count": 7,
+    "compiled_as_of": "2026-11-24",
+    "benchmark_disclaimer": "Các số liệu trong file cẩm nang gốc là mốc kiểm chứng thực địa đến ngày 24/11/2026 dùng làm tham chiếu lịch sử; khi đánh giá thực tế, hệ thống luôn ưu tiên số liệu sống mới nhất vừa tìm được và ghi rõ DATA_MISSING nếu nguồn trực tuyến thiếu chỉ số.",
+    "mandatory_disclaimer": "Nhận xét chỉ mang tính tham khảo thôi",
+    "chapters": [
+      "Chương 1: Hệ Trục Vĩ Mô Toàn Cầu, Thanh Khoản Và Chu Kỳ Lịch Sử",
+      "Chương 2: Hệ Trục Vĩ Mô, Tiền Tệ, Tỷ Giá Và Chuẩn An Toàn Hệ Thống Tại Việt Nam",
+      "Chương 3: Cẩm Nang Chuyên Sâu Đầu Tư Vàng (Toàn Cầu Và Đặc Thù Việt Nam)",
+      "Chương 4: Cẩm Nang Chuyên Sâu Đầu Tư Chứng Khoán (Từ Phân Tích Ngành Đến Pháp Y Tài Chính)",
+      "Chương 5: Cẩm Nang Chuyên Sâu Đầu Tư Bất Động Sản Và Đất Đai (Pháp Lý Mới, Định Giá Và Kiểm Định Dòng Tiền)",
+      "Chương 6: Khung Tích Hợp Xuyên Tài Sản, Phân Bổ Vốn Và Quản Trị Rủi Ro",
+      "Chương 7: Hệ Điều Hành Đầu Tư Ứng Dụng AI (Thu Thập Dữ Liệu, Thiết Kế Prompt Và Kiểm Toán)"
+    ]
+  },
+  "plain_dictionary": [
+    {
+      "technical": "Fed Net Liquidity / TIPS 10Y / DXY",
+      "plain": "Dòng tiền & Lãi suất toàn cầu",
+      "hint": "Tiền trên thế giới đang dễ vay hay bị siết chặt"
+    },
+    {
+      "technical": "Landed Parity / Chênh lệch quy đổi",
+      "plain": "Độ đắt hơn so với giá thế giới",
+      "hint": "Giá vàng trong nước đang cao hơn giá thế giới bao nhiêu"
+    },
+    {
+      "technical": "Bid–Ask Spread",
+      "plain": "Mức lỗ ngay nếu mua xong bán lại",
+      "hint": "Khoảng cách giữa giá tiệm bán ra và giá tiệm mua lại"
+    },
+    {
+      "technical": "AISC (All-In Sustaining Cost)",
+      "plain": "Chi phí gốc để đào ra 1 lượng vàng",
+      "hint": "Mức giá sàn dài hạn của các mỏ vàng trên thế giới"
+    },
+    {
+      "technical": "P/E & Earnings Yield (1/P/E)",
+      "plain": "Mức đắt – rẻ của cổ phiếu",
+      "hint": "So sánh lợi nhuận cổ phiếu với lãi suất gửi ngân hàng"
+    },
+    {
+      "technical": "Margin / Thanh khoản phiên",
+      "plain": "Mức độ vay mượn trên sàn chứng khoán",
+      "hint": "Lượng tiền vay mua cổ phiếu đang ở mức an toàn hay quá căng"
+    },
+    {
+      "technical": "Beneish M / Altman Z / Piotroski F / Sloan",
+      "plain": "Kiểm tra độ sạch & sức khỏe doanh nghiệp",
+      "hint": "Soi xem công ty làm ăn có ra tiền thật và có nguy cơ nợ xấu không"
+    },
+    {
+      "technical": "DSCR (Debt Service Coverage Ratio)",
+      "plain": "Khả năng tiền thuê nhà tự trả tiền vay",
+      "hint": "Tiền cho thuê nhà mỗi tháng bù được bao nhiêu phần trăm tiền ngân hàng"
+    },
+    {
+      "technical": "LTV (Loan-to-Value)",
+      "plain": "Tỷ lệ vay ngân hàng trên giá nhà",
+      "hint": "Bạn đang vay bao nhiêu phần trăm giá trị căn nhà"
+    },
+    {
+      "technical": "Stress Test lãi suất 12%–15%",
+      "plain": "Thử sức chịu đựng khi hết ưu đãi lãi vay",
+      "hint": "Kiểm tra xem khi lãi suất thả nổi tăng lên thì mỗi tháng phải bù thêm bao nhiêu"
+    },
+    {
+      "technical": "Rebalancing 5/25 & Half-Kelly",
+      "plain": "Nguyên tắc chia vốn an toàn",
+      "hint": "Cách chia tiền đều để không mất trắng khi một kênh bị giảm sâu"
+    },
+    {
+      "technical": "Invalidation Triggers",
+      "plain": "Dấu hiệu cần dừng lại hoặc đổi kế hoạch",
+      "hint": "Những mốc cụ thể báo hiệu tình hình đã đổi chiều"
+    },
+    {
+      "technical": "Human-in-the-Loop Escalation Gates",
+      "plain": "5 Chốt chặn an toàn bắt buộc",
+      "hint": "Những giới hạn đỏ mà hệ thống sẽ cảnh báo không nên vượt qua"
+    }
+  ],
+  "trusted_sources": [
+    "fred.stlouisfed.org",
+    "federalreserve.gov",
+    "imf.org",
+    "bis.org",
+    "nso.gov.vn",
+    "sbv.gov.vn",
+    "mof.gov.vn",
+    "baochinhphu.vn",
+    "gold.org",
+    "hsx.vn",
+    "hnx.vn",
+    "visrating.com",
+    "fiinratings.vn",
+    "cbrevietnam.com",
+    "savills.com.vn",
+    "vietstock.vn",
+    "vneconomy.vn",
+    "cafef.vn",
+    "vietnamnet.vn",
+    "vnexpress.net"
+  ],
+  "search_checklist": [
+    {
+      "id": "fed_rate",
+      "layer": "global_macro",
+      "quick": true,
+      "plain_label": "Lãi suất điều hành Mỹ (Fed)",
+      "technical_label": "Fed Funds Target Rate",
+      "unit": "%/năm",
+      "freq": "Hàng tháng",
+      "query_template": "lãi suất Fed mới nhất tháng {MONTH} {YEAR} federal reserve",
+      "baseline_2026_11_24": "3,75%–4,00% (tăng +25 bps T9/2026)"
+    },
+    {
+      "id": "us_10y_tips",
+      "layer": "global_macro",
+      "quick": true,
+      "plain_label": "Lãi suất thực trái phiếu Mỹ 10 năm",
+      "technical_label": "US 10Y Treasury & 10Y TIPS Real Yield",
+      "unit": "%/năm",
+      "freq": "Hàng tuần",
+      "query_template": "US 10 year Treasury yield TIPS real yield {MONTH_EN} {YEAR}",
+      "baseline_2026_11_24": "Danh nghĩa 5,07% · Thực TIPS 2,83%"
+    },
+    {
+      "id": "fed_net_liquidity",
+      "layer": "global_macro",
+      "quick": false,
+      "plain_label": "Lượng tiền lưu thông từ ngân hàng trung ương Mỹ",
+      "technical_label": "Fed Net Liquidity = WALCL - TGA - ON RRP",
+      "unit": "nghìn tỷ USD",
+      "freq": "Hàng tuần",
+      "query_template": "Fed Net Liquidity WALCL TGA ON RRP {MONTH_EN} {YEAR}",
+      "baseline_2026_11_24": "5,82–5,85 nghìn tỷ USD (ON RRP gần cạn ~0,4 tỷ USD)"
+    },
+    {
+      "id": "dxy_index",
+      "layer": "global_macro",
+      "quick": true,
+      "plain_label": "Sức mạnh đồng Đô la Mỹ (DXY)",
+      "technical_label": "US Dollar Index (DXY)",
+      "unit": "điểm",
+      "freq": "Hàng ngày",
+      "query_template": "US Dollar Index DXY today {MONTH_EN} {YEAR}",
+      "baseline_2026_11_24": "103,2–103,8 điểm"
+    },
+    {
+      "id": "brent_oil",
+      "layer": "global_macro",
+      "quick": true,
+      "plain_label": "Giá dầu thô thế giới & căng thẳng địa chính trị",
+      "technical_label": "Brent / WTI Crude Oil & GPR Risk",
+      "unit": "USD/thùng",
+      "freq": "Hàng ngày",
+      "query_template": "giá dầu thô Brent thế giới hôm nay {MONTH}/{YEAR}",
+      "baseline_2026_11_24": "91,98 USD/thùng (BQ 2026 ~95,74 USD)"
+    },
+    {
+      "id": "central_banks_global",
+      "layer": "global_macro",
+      "quick": false,
+      "plain_label": "Động thái lãi suất châu Âu, Nhật Bản & Trung Quốc",
+      "technical_label": "ECB / BoE / BoJ / PBOC Policy Divergence",
+      "unit": "%/năm",
+      "freq": "Hàng tháng",
+      "query_template": "lãi suất ECB BoJ PBOC mới nhất {MONTH}/{YEAR}",
+      "baseline_2026_11_24": "ECB 2,50% · BoE 4,00% · BoJ 1,25% · PBOC LPR 1Y 3,00%"
+    },
+    {
+      "id": "us_cpi_lei",
+      "layer": "global_macro",
+      "quick": false,
+      "plain_label": "Lạm phát Mỹ & chỉ báo cảnh báo suy thoái",
+      "technical_label": "US CPI/PCE/PPI & Conference Board LEI",
+      "unit": "% YoY",
+      "freq": "Hàng tháng",
+      "query_template": "US CPI PPI inflation Conference Board LEI {MONTH_EN} {YEAR}",
+      "baseline_2026_11_24": "PPI Mỹ 6,3% YoY · LEI YoY +1,22%"
+    },
+    {
+      "id": "vn_gdp",
+      "layer": "vn_macro",
+      "quick": true,
+      "plain_label": "Tốc độ tăng trưởng kinh tế Việt Nam",
+      "technical_label": "Vietnam GDP YoY (Cục Thống kê NSO)",
+      "unit": "% YoY",
+      "freq": "Hàng quý",
+      "query_template": "tăng trưởng GDP Việt Nam mới nhất Cục Thống kê {YEAR}",
+      "baseline_2026_11_24": "Q3/2026 +9,95% · 9 tháng +9,01%"
+    },
+    {
+      "id": "vn_cpi",
+      "layer": "vn_macro",
+      "quick": true,
+      "plain_label": "Mức tăng giá sinh hoạt (Lạm phát Việt Nam)",
+      "technical_label": "Vietnam CPI YoY & Core CPI",
+      "unit": "% YoY",
+      "freq": "Hàng tháng",
+      "query_template": "CPI lạm phát Việt Nam tháng {MONTH} {YEAR} Cục Thống kê",
+      "baseline_2026_11_24": "Tháng 10/2026 +5,09% · BQ 10 tháng +4,57% (vượt mục tiêu 4,5%)"
+    },
+    {
+      "id": "vn_usd_vnd",
+      "layer": "vn_macro",
+      "quick": true,
+      "plain_label": "Tỷ giá Đô la Mỹ tại ngân hàng & tự do",
+      "technical_label": "USD/VND Vietcombank Sell & Free Market",
+      "unit": "VNĐ/USD",
+      "freq": "Hàng ngày",
+      "query_template": "tỷ giá USD Vietcombank bán ra hôm nay {MONTH}/{YEAR}",
+      "baseline_2026_11_24": "VCB bán ra 25.990 đ · Tự do >26.000 đ"
+    },
+    {
+      "id": "vn_omo_interbank",
+      "layer": "vn_macro",
+      "quick": true,
+      "plain_label": "Độ căng thanh khoản ngân hàng & bơm hút tiền NHNN",
+      "technical_label": "SBV OMO & Interbank Rates (ON vs 3M)",
+      "unit": "%/năm",
+      "freq": "Hàng tuần",
+      "query_template": "NHNN bơm hút OMO lãi suất liên ngân hàng qua đêm 3 tháng {MONTH}/{YEAR}",
+      "baseline_2026_11_24": "ON 4,50% · Kỳ hạn 3 tháng vọt 7,85% · Dự trữ ngoại hối ~87,6 tỷ USD"
+    },
+    {
+      "id": "vn_credit_npl",
+      "layer": "vn_macro",
+      "quick": false,
+      "plain_label": "Tăng trưởng cho vay ngân hàng & tỷ lệ nợ xấu",
+      "technical_label": "Credit Growth, NPL Ratio & Circular 50/2026 Basel III",
+      "unit": "%",
+      "freq": "Hàng tháng",
+      "query_template": "tăng trưởng tín dụng nợ xấu ngân hàng Việt Nam {MONTH}/{YEAR}",
+      "baseline_2026_11_24": "Tín dụng +11,9% · Nợ xấu ngành 2,3% · TT 50/2026 LDR 95% + LCR/NSFR"
+    },
+    {
+      "id": "vn_fdi_trade",
+      "layer": "vn_macro",
+      "quick": false,
+      "plain_label": "Vốn đầu tư nước ngoài (FDI), đầu tư công & xuất nhập khẩu",
+      "technical_label": "FDI Disbursement, Public CapEx & Trade Balance",
+      "unit": "tỷ USD",
+      "freq": "Hàng tháng",
+      "query_template": "FDI giải ngân đầu tư công cán cân thương mại Việt Nam {MONTH}/{YEAR}",
+      "baseline_2026_11_24": "FDI đăng ký 9T 50,36 tỷ USD · Đầu tư công 75,3% · Q3 nhập siêu 2,42 tỷ USD"
+    },
+    {
+      "id": "gold_world_spot",
+      "layer": "gold",
+      "quick": true,
+      "plain_label": "Giá vàng thế giới quy đổi sang tiền Việt",
+      "technical_label": "XAU/USD Spot & Landed Parity",
+      "unit": "USD/oz",
+      "freq": "Hàng ngày",
+      "query_template": "giá vàng thế giới XAU USD hôm nay {MONTH}/{YEAR}",
+      "baseline_2026_11_24": "3.638–3.651 USD/oz (quy đổi thô ~114,00 tr/lượng)"
+    },
+    {
+      "id": "gold_vn_sjc_9999",
+      "layer": "gold",
+      "quick": true,
+      "plain_label": "Giá vàng miếng SJC, vàng nhẫn 9999 & độ đắt hơn thế giới",
+      "technical_label": "SJC & 9999 Premium vs World + Bid-Ask Spread",
+      "unit": "triệu đồng/lượng",
+      "freq": "Hàng ngày",
+      "query_template": "giá vàng SJC vàng nhẫn 9999 hôm nay mua vào bán ra chênh lệch thế giới",
+      "baseline_2026_11_24": "SJC 130–135 tr (+21 tr/+18,4% vs TG · Spread 5 tr/3,7%)"
+    },
+    {
+      "id": "gold_cb_etf_aisc",
+      "layer": "gold",
+      "quick": false,
+      "plain_label": "Lực mua vàng của Ngân hàng Trung ương & chi phí đào mỏ gốc",
+      "technical_label": "WGC Central Bank Demand, ETF Flows & AISC",
+      "unit": "tấn / USD/oz",
+      "freq": "Hàng quý",
+      "query_template": "World Gold Council central bank gold demand AISC Q{QUARTER} {YEAR}",
+      "baseline_2026_11_24": "NHTW mua 321,2 tấn Q3 (+42%) · ETF 4.256 tấn · AISC 1.930 USD/oz"
+    },
+    {
+      "id": "gold_policy_vn",
+      "layer": "gold",
+      "quick": false,
+      "plain_label": "Chính sách quản lý vàng, nhập khẩu & thanh toán chuyển khoản",
+      "technical_label": "Decree 232/2025 & Decree 390/2026",
+      "unit": "văn bản",
+      "freq": "Khi ban hành",
+      "query_template": "Nghị định 390 2026 quản lý kinh doanh vàng thuế vàng miếng Việt Nam",
+      "baseline_2026_11_24": "NĐ 232 bỏ độc quyền SX · NĐ 390 giao dịch >=5 triệu/ngày chuyển khoản"
+    },
+    {
+      "id": "stock_vnindex_pe",
+      "layer": "stock",
+      "quick": true,
+      "plain_label": "Điểm số & mức đắt – rẻ chung của chứng khoán Việt Nam",
+      "technical_label": "VN-Index, P/E, P/B & Earnings Yield vs 10Y Bond",
+      "unit": "điểm / lần",
+      "freq": "Hàng ngày",
+      "query_template": "VN-Index hôm nay P/E định giá chứng khoán Việt Nam {MONTH}/{YEAR}",
+      "baseline_2026_11_24": "VN-Index 1.688–1.759 · P/E 10,8x (TB 10Y 14,0x) · EY 9,26% vs TPCP 4,57%"
+    },
+    {
+      "id": "stock_margin_liquidity",
+      "layer": "stock",
+      "quick": true,
+      "plain_label": "Mức độ vay mượn (margin) so với thanh khoản trên sàn",
+      "technical_label": "Total Margin Debt / Daily Liquidity Ratio",
+      "unit": "nghìn tỷ / phiên",
+      "freq": "Hàng quý / tháng",
+      "query_template": "dư nợ margin toàn thị trường chứng khoán Việt Nam thanh khoản phiên {YEAR}",
+      "baseline_2026_11_24": "Margin đỉnh 457,5 nghìn tỷ · Thanh khoản Q3 14,8 nghìn tỷ (~31 phiên — CỜ ĐỎ)"
+    },
+    {
+      "id": "stock_foreign_ftse",
+      "layer": "stock",
+      "quick": true,
+      "plain_label": "Dòng tiền khối ngoại & giải ngân quỹ nâng hạng thị trường",
+      "technical_label": "Foreign Net Flow & FTSE Emerging Tranches",
+      "unit": "nghìn tỷ / tỷ USD",
+      "freq": "Hàng tuần",
+      "query_template": "khối ngoại mua bán ròng chứng khoán Việt Nam nâng hạng FTSE {MONTH}/{YEAR}",
+      "baseline_2026_11_24": "Bán ròng 10T gần 122 nghìn tỷ · 90% vốn FTSE giải ngân 3 đợt T3–T6–T9/2027"
+    },
+    {
+      "id": "re_mortgage_rates",
+      "layer": "real_estate",
+      "quick": true,
+      "plain_label": "Lãi suất vay mua nhà ưu đãi & thả nổi tại các ngân hàng",
+      "technical_label": "Vietnam Mortgage Teaser & Floating Rates",
+      "unit": "%/năm",
+      "freq": "Hàng tháng",
+      "query_template": "lãi suất vay mua nhà thả nổi các ngân hàng Việt Nam tháng {MONTH} {YEAR}",
+      "baseline_2026_11_24": "Ưu đãi Big4 9,6%–13,5% · Thả nổi 12%–15%/năm · NOXH 5,4%–6,5%"
+    },
+    {
+      "id": "re_rental_yield",
+      "layer": "real_estate",
+      "quick": true,
+      "plain_label": "Tỷ suất cho thuê nhà thực tế so với giá mua",
+      "technical_label": "Apartment & Townhouse Gross Rental Yield & PIR",
+      "unit": "%/năm",
+      "freq": "Hàng quý",
+      "query_template": "tỷ suất lợi suất cho thuê căn hộ chung cư Hà Nội TP HCM Đà Nẵng {YEAR}",
+      "baseline_2026_11_24": "Căn hộ HN 2,32% · TP.HCM 3,30% · Đà Nẵng 4,34% (DSCR vay 70% chỉ 0,18x–0,30x)"
+    },
+    {
+      "id": "re_supply_industrial",
+      "layer": "real_estate",
+      "quick": false,
+      "plain_label": "Thanh khoản nhà ở, đất nền & sức khỏe bất động sản khu công nghiệp",
+      "technical_label": "Residential Absorption vs Industrial Park Occupancy",
+      "unit": "% / USD/m2",
+      "freq": "Hàng quý",
+      "query_template": "báo cáo thị trường bất động sản CBRE Savills khu công nghiệp quý {QUARTER} {YEAR}",
+      "baseline_2026_11_24": "Căn hộ HN sơ cấp 127 tr/m2 (-76% giao dịch) · KCN miền Nam lấp đầy 92%"
+    },
+    {
+      "id": "re_bonds_law2026",
+      "layer": "real_estate",
+      "quick": false,
+      "plain_label": "Áp lực trái phiếu doanh nghiệp BĐS đáo hạn & quy định luật đất đai mới",
+      "technical_label": "Corporate Bond Maturity Wall & Amended Land/RE Laws (21/11/2026)",
+      "unit": "nghìn tỷ đồng",
+      "freq": "Hàng quý",
+      "query_template": "trái phiếu doanh nghiệp bất động sản đáo hạn VIS Rating Luật Đất đai sửa đổi {YEAR}",
+      "baseline_2026_11_24": "235 nghìn tỷ TPDN đáo hạn 12T tới (đỉnh Q4/26 & Q2/27) · Bảng giá đất + Hệ số K từ 2028"
+    }
+  ],
+  "scoring_rules": {
+    "gold": {
+      "ounce_per_tael": 1.205653,
+      "default_shipping_insurance_usd": 1.0,
+      "default_import_tax_rate": 0.01,
+      "default_processing_fee_vnd": 40000,
+      "weights": {
+        "opportunity_cost_tips_dxy": 30,
+        "structural_cb_etf": 25,
+        "systemic_risk_aisc": 20,
+        "vietnam_domestic_structure": 15,
+        "positioning_cot_ratios": 10
+      },
+      "premium_thresholds_pct": {
+        "green_max": 5,
+        "yellow_max": 10,
+        "red_breaker": 10
+      },
+      "spread_thresholds_pct": {
+        "green_max": 1.5,
+        "yellow_max": 3.0,
+        "red_breaker": 3.0
+      }
+    },
+    "stock": {
+      "vn_bond_10y_ref_pct": 4.573,
+      "damodaran_default_spread_ba2_pct": 2.56,
+      "damodaran_clean_rf_vnd_pct": 2.013,
+      "damodaran_mature_erp_pct": 4.23,
+      "damodaran_vn_crp_pct": 3.9,
+      "damodaran_total_erp_pct": 8.13,
+      "damodaran_cost_of_equity_pct": 10.14,
+      "vnindex_pe_10y_avg": 14.0,
+      "margin_sessions_caution": 15,
+      "margin_sessions_danger": 25,
+      "forensic_thresholds": {
+        "beneish_m_danger": -1.78,
+        "beneish_m_grey": -2.22,
+        "altman_z_safe": 2.99,
+        "altman_z_danger": 1.81,
+        "piotroski_f_strong": 7,
+        "piotroski_f_weak": 2,
+        "sloan_danger_pct": 10,
+        "sloan_healthy_pct": -10
+      },
+      "sector_tickers": {
+        "bank": ["VCB", "BID", "CTG", "TCB", "MBB", "ACB", "VPB", "STB", "HDB", "TPB", "VIB", "SHB", "SSB", "EIB", "OCB", "LPB", "MSB", "NAB", "BAB", "ABB"],
+        "real_estate": ["VHM", "VIC", "VRE", "NVL", "KDH", "NLG", "DXG", "PDR", "DIG", "CEO", "TCH", "HDC", "AGG", "NTL", "KBC", "IDC", "SZC", "VGC", "BCM", "SIP", "PHR"]
+      }
+    },
+    "real_estate": {
+      "operating_vacancy_deduction_rate": 0.15,
+      "dscr_safe_min": 1.2,
+      "dscr_strong_min": 2.0,
+      "stress_test_rates_pct": [10, 12, 14, 15],
+      "city_yield_benchmarks_pct": {
+        "hanoi_apt": 2.32,
+        "hcm_apt": 3.3,
+        "danang_apt": 4.34,
+        "national_apt": 3.05,
+        "hanoi_house": 2.04,
+        "hcm_house": 2.31,
+        "danang_house": 2.64
+      }
+    },
+    "cycle_phases": {
+      "reflation": {
+        "label": "Pha I — Tái lạm phát (Kinh tế chậm, lạm phát giảm, lãi suất hạ)",
+        "plain_advice": "Ưu tiên khóa lãi suất gửi tiết kiệm/trái phiếu kỳ hạn dài, gom dần Vàng khi lãi suất thực giảm và chuẩn bị đón đáy Chứng khoán."
+      },
+      "recovery": {
+        "label": "Pha II — Phục hồi (Kinh tế tăng mạnh, lạm phát thấp, tiền dễ vay)",
+        "plain_advice": "Giai đoạn đẹp nhất cho Cổ phiếu đầu ngành tăng trưởng và Bất động sản đô thị pháp lý sạch (vay dưới 40%)."
+      },
+      "overheat": {
+        "label": "Pha III — Quá nhiệt (Kinh tế tăng nhanh nhưng lạm phát & lãi suất leo cao)",
+        "plain_advice": "Giữ tiền mặt sinh lãi cao làm đạn dược, tuyệt đối tránh vay mượn mua đuổi; chọn lọc cổ phiếu giá rẻ không margin và chờ chênh lệch vàng hạ nhiệt."
+      },
+      "stagflation": {
+        "label": "Pha IV — Đình lạm (Kinh tế chậm lại nhưng lạm phát & lãi suất vẫn cao)",
+        "plain_advice": "Phòng thủ tối đa bằng tiền mặt ngắn hạn sinh lãi và vàng bảo toàn sức mua (nếu chênh lệch hợp lý); tránh vay nợ chứng khoán và BĐS âm dòng tiền."
+      }
+    },
+    "allocation_profiles": {
+      "conservative": {
+        "name": "Thận trọng (Ưu tiên bảo toàn vốn)",
+        "cash": 40,
+        "stock": 20,
+        "gold": 10,
+        "real_estate": 30
+      },
+      "balanced": {
+        "name": "Cân bằng (Vừa phòng thủ vừa tích lũy)",
+        "cash": 25,
+        "stock": 35,
+        "gold": 10,
+        "real_estate": 30
+      },
+      "growth": {
+        "name": "Chủ động (Chấp nhận biến động trung bình)",
+        "cash": 15,
+        "stock": 45,
+        "gold": 10,
+        "real_estate": 30
+      },
+      "rebalancing_rule": "Quy tắc 5/25 (Larry Swedroe): chỉ tái cân bằng khi tỷ trọng lệch quá mức nhỏ hơn giữa ±5% tuyệt đối hoặc ±25% tương đối, ưu tiên dùng tiền tiết kiệm mới nạp vào kênh thiếu để tránh mất phí giao dịch; giới hạn quy mô lệnh bằng Half-Kelly."
+    }
+  },
+  "circuit_breakers": [
+    {
+      "id": "CB_1_SIZE_ILLIQUID",
+      "title": "Chốt chặn 1 — Thương vụ lớn (>5% tài sản) hoặc Nhà đất khó bán nhanh",
+      "plain_rule": "Mọi khoản đầu tư vượt 5% tổng tài sản hoặc mua bất động sản bắt buộc bạn phải tự đi kiểm tra thực địa, xem sổ đỏ gốc và bấm lại bảng tính tiền vay trước khi ký."
+    },
+    {
+      "id": "CB_2_CONFLICT_DATA",
+      "title": "Chốt chặn 2 — Dữ liệu thiếu hoặc hai góc nhìn mâu thuẫn",
+      "plain_rule": "Nếu số liệu quan trọng bị thiếu (DATA_MISSING) hoặc hai góc nhìn phân tích trái ngược nhau, mặc định NÊN CHỜ xác minh lại từ nguồn gốc chứ không vội xuống tiền."
+    },
+    {
+      "id": "CB_3_LEVERAGE_TRAP",
+      "title": "Chốt chặn 3 — Bẫy vay mượn quá căng (Margin CK / Vay mua nhà DSCR < 1,2x)",
+      "plain_rule": "Không vay margin mua cổ phiếu khi dư nợ vay toàn sàn ở mức căng thẳng, và không vay mua nhà cho thuê khi tiền thuê ròng không đủ trả tối thiểu 1,2 lần tiền ngân hàng mỗi tháng."
+    },
+    {
+      "id": "CB_4_GOLD_FRICTION",
+      "title": "Chốt chặn 4 — Ma sát & Độ đắt giá vàng trong nước vượt ngưỡng",
+      "plain_rule": "Không mua đuổi vàng vật chất trong nước khi giá bán cao hơn thế giới quy đổi trên 10% hoặc khoảng cách mua–bán vượt quá 3% (lỗ ngay khi vừa mua xong)."
+    },
+    {
+      "id": "CB_5_AUDIT_LOG",
+      "title": "Chốt chặn 5 — Nhật ký kiểm toán quyết định",
+      "plain_rule": "Luôn lưu lại ngày quyết định, con số đầu vào, lý do mua/chờ và mốc dừng lỗ định sẵn vào Nhật ký để sau 6–12 tháng tự kiểm chứng lại."
+    }
+  ],
+  "legal_checklist_7": [
+    {
+      "id": "law1",
+      "title": "1. Kiểm tra sổ đỏ & tình trạng thế chấp",
+      "detail": "Đã xem bản gốc/sao y sổ đỏ, chứng từ đóng đủ tiền sử dụng đất và xác nhận nhà đất không tranh chấp, không bị cắm ngân hàng chưa giải chấp."
+    },
+    {
+      "id": "law2",
+      "title": "2. Kiểm tra uy tín chủ đầu tư & áp lực nợ trái phiếu",
+      "detail": "Xem chủ đầu tư có lịch sử ra sổ đỏ đúng hạn và có đang gánh lượng lớn trái phiếu sắp đáo hạn 12–24 tháng tới hay không."
+    },
+    {
+      "id": "law3",
+      "title": "3. Kiểm tra quy hoạch 3 cấp & chỉ giới mở đường",
+      "detail": "Đối chiếu quy hoạch 1/500, chỉ giới đường đỏ, kế hoạch mở đường và nguy cơ ngập úng tại cơ quan địa phương."
+    },
+    {
+      "id": "law4",
+      "title": "4. Kiểm tra giấy phép xây dựng & biên bản xong móng",
+      "detail": "Xác nhận có giấy phép xây dựng hợp lệ và biên bản nghiệm thu xong phần móng (chung cư) hoặc hạ tầng kỹ thuật (nhà thấp tầng)."
+    },
+    {
+      "id": "law5",
+      "title": "5. Kiểm tra văn bản đủ điều kiện bán của Sở Xây dựng",
+      "detail": "Nếu dự án chưa có văn bản cho phép mở bán của Sở Xây dựng, tuyệt đối không chuyển tiền giữ chỗ hay đặt cọc dưới mọi hình thức."
+    },
+    {
+      "id": "law6",
+      "title": "6. Kiểm tra trần thanh toán theo Luật Kinh doanh BĐS mới (21/11/2026)",
+      "detail": "Đặt cọc tối đa 5%, đợt đầu tối đa 30% (gồm cọc), trước nhận nhà tối đa 70% (50% với CĐT vốn ngoại), trước nhận sổ đỏ tối đa 95%; xác nhận hợp đồng mẫu & bảo lãnh."
+    },
+    {
+      "id": "law7",
+      "title": "7. Khảo sát thực tế đường đi & khả năng bán lại",
+      "detail": "Tự đi thử giờ cao điểm, xem tỷ lệ người ở thật bán kính 3–5 km, lượng giao dịch công chứng 6 tháng qua và bấm thử lãi vay tăng thêm +2%."
+    }
+  ],
+  "core_principles_digest": "KHUNG QUY TẮC CỐT LÕI (TỪ CẨM NANG 7 CHƯƠNG):\n1. CHUỖI TRUYỀN DẪN 4 TẦNG: Thanh khoản toàn cầu (Fed Net Liquidity = WALCL - TGA - ON RRP, lãi suất Fed/ECB/BoJ/PBOC, lợi suất thực TIPS 10Y, DXY, dầu Brent) -> Vĩ mô & tiền tệ Việt Nam (GDP, CPI mục tiêu 4,5%, tỷ giá VCB, bơm/hút OMO, lãi suất LNH qua đêm vs 3 tháng, tín dụng, nợ xấu, chuẩn Basel III TT 50/2026) -> Định giá vi mô từng tài sản -> Phân bổ vốn & Quản trị rủi ro.\n2. ĐỒNG HỒ CHU KỲ 4 PHA (Merrill Lynch & Ray Dalio All Weather): Pha I Tái lạm phát (ưu tiên tiền gửi dài/trái phiếu, gom dần vàng); Pha II Phục hồi (ưu tiên cổ phiếu tăng trưởng); Pha III Quá nhiệt (tăng tiền mặt sinh lãi, thận trọng đòn bẩy, chọn lọc cổ phiếu rẻ không margin); Pha IV Đình lạm (tiền mặt + vàng phòng thủ, tránh tuyệt đối vay nợ).\n3. QUY TẮC VÀNG (5 nhân tố: Chi phí cơ hội TIPS/DXY 30%, Mua ròng NHTW & ETF 25%, Rủi ro tài khóa & Giá sàn khai thác AISC 20%, Cấu trúc nội địa VN 15%, Vị thế COMEX COT 10%): Công thức quy đổi 1 lượng = 1,205653 troy oz; Landed Parity = [(XAU + phí VC&BH) * (1 + thuế NK) * 1,205653 * Tỷ giá bán VCB] + phí gia công. CHỐT CHẶN ĐỎ: KHÔNG mua đuổi vàng vật chất VN khi chênh lệch với thế giới > 10% hoặc khoảng cách mua–bán > 3%. Lưu ý NĐ 390/2026: mua bán vàng cộng dồn >= 5 triệu/ngày bắt buộc chuyển khoản.\n4. QUY TẮC CHỨNG KHOÁN: So sánh Tỷ suất thu nhập (Earnings Yield = 100/P/E) với TPCP 10Y và Chi phí vốn chuẩn Damodaran (Ke ~10,14% với Rf sạch + Total ERP 8,13%). Theo dõi dư nợ margin/thanh khoản phiên và khối ngoại + lộ trình FTSE. Phân tách theo ngành: (a) Sản xuất/Công nghệ/Tiêu dùng chạy Bộ tứ Pháp y (Beneish M > -1,78 cờ đỏ; Altman Z < 1,81 nguy cơ, > 2,99 an toàn; Piotroski F 7–9 khỏe, 0–2 yếu; Sloan Ratio > +10% báo động lãi giấy) + DuPont 5 nhân tố; (b) Ngân hàng KHÔNG dùng M/Z-Score mà soi P/B vs ROE, NIM, CASA, nợ xấu/LLR, CAR & sẵn sàng LCR/NSFR TT 50/2026; (c) BĐS niêm yết soi CFO thực, nợ/VCSH, lịch đáo hạn trái phiếu & RNAV.\n5. QUY TẮC BẤT ĐỘNG SẢN: Kiểm định dòng tiền cho thuê thực tế sau trừ 15% chi phí vận hành/trống phòng (NOI) chia cho tiền trả góp gốc+lãi (PMT) tại các kịch bản lãi suất thả nổi 10%–12%–14%–15%/năm. Chuẩn an toàn DSCR >= 1,2x (nếu < 1,0x là âm dòng tiền, kích hoạt chốt chặn đỏ không vay đòn bẩy cao). Bắt buộc kiểm tra đủ 7 bước pháp lý (Luật Đất đai & Luật KDBĐS sửa đổi 21/11/2026: bảng giá đất + hệ số K từ 2028, chế tài đất bỏ hoang, trần cọc 5%/đợt đầu 30%/trước bàn giao 70%/trước sổ 95%).\n6. QUẢN TRỊ VỐN & CHỐNG THIÊN KIẾN AI: Định cỡ vị thế tối đa Half-Kelly; tái cân bằng theo quy tắc 5/25 ưu tiên bằng dòng tiền mới; tư duy Quả tạ (Barbell) loại bỏ tài sản dễ vỡ. Áp dụng 5 Cầu chì Ngắt mạch: (1) Thương vụ >5% NAV hoặc BĐS phải tự thẩm định thực địa; (2) Dữ liệu thiếu/mâu thuẫn -> chờ xác minh; (3) Cấm vay margin khi sàn căng & cấm vay mua nhà DSCR < 1,2x; (4) Cấm mua đuổi vàng chênh >10% hoặc spread >3%; (5) Lưu Nhật ký Kiểm toán Quyết định. Khi phân tích bằng AI phải trình bày cân bằng hai chiều Phe Bò vs Phe Gấu, cấm bịa số liệu (ghi DATA_MISSING nếu thiếu) và luôn kết thúc bằng: 'Nhận xét chỉ mang tính tham khảo thôi.'"
+}

@@ -6,7 +6,7 @@
  * (Windows / macOS / Linux) ngay cả khi mất kết nối mạng.
  * ============================================================================
  */
-const CACHE_NAME = 'bi-novel-studio-pwa-v119';
+const CACHE_NAME = 'bi-novel-studio-pwa-v123';
 const OFFLINE_CDN_HOSTS = [
   'cdn.tailwindcss.com',
   'cdnjs.cloudflare.com',
@@ -43,7 +43,6 @@ const CORE_ASSETS = [
   './assets/misc_mo_xum_xue_sa_luoi.jpg',
   './assets/misc_qua_bo_linh_vat_2.png',
   './assets/misc_sinh_vien_bach_khoa_2h_sang.jpg',
-  './assets/danglovepdf_icon.jpg',
   './assets/misc_dang_vien_tranh_cu_quoc_hoi.jpg',
   './assets/misc_fan_ham_mo_1.jpg',
   './assets/misc_fan_ham_mo_2.jpg',
@@ -100,10 +99,12 @@ const CORE_ASSETS = [
   './mod43_realtime_weather_sky_engine.js',
   './mod44_site_traffic_analytics_box.js',
   './mod45_scientific_fx570_and_desmos_graphing_calc.js',
+  './mod46c_danglovepdf_studio_editor_and_viewer.js',
   './mod46b_danglovepdf_pro_engines.js',
   './mod46_danglovepdf_and_doc_converter.js',
   './mod47_performance_ram_and_lifecycle_manager.js',
   './mod48_autotester_loader.js',
+  './mod49_market_gold_realestate_stock_advisor.js',
   './systemFontScale.js',
   './miscFunHub.js',
   './i18n_lang_en.js',

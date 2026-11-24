@@ -22,7 +22,7 @@
   });
 
   // ==========================================================================
-  // 1. DANH MỤC 7 CỤM — 41 CÔNG CỤ ĐĂNGLOVEPDF PRO (100% NỘI BỘ)
+  // 1. DANH MỤC 7 CỤM — 48 CÔNG CỤ ĐĂNGLOVEPDF ULTRA PRO (CHUYỂN ĐỔI Ở CỤM 2!)
   // ==========================================================================
   const PRO_TOOL_GROUPS = Object.freeze([
     {
@@ -38,32 +38,39 @@
         { id: 'crop', icon: '🔲', name: 'Cắt xén lề thừa (Crop PDF)', badge: 'Toàn bộ / Lẻ / Chẵn', desc: 'Cắt gọn 4 mép viền trắng thừa của toàn bộ tài liệu hoặc chỉ trang lẻ / trang chẵn.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Cắt viền & Lưu' },
         { id: 'resize_scale', icon: '📐', name: 'Đổi khổ giấy & Co giãn trang', badge: 'A4 / A3 / A5 / Letter', desc: 'Chuẩn hóa toàn bộ trang PDF về khổ A4, A3, A5, Letter, Legal (Dọc/Ngang) giữ tỷ lệ chuẩn.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Chuẩn hóa khổ giấy' },
         { id: 'nup_booklet', icon: '📖', name: 'Dàn trang Nhiều trang/tờ & Đóng gáy sách', badge: 'N-up 2/4/6/9 & Booklet', desc: 'Gom 2, 4, 6, 9 trang vào 1 mặt giấy hoặc đảo trang tự động để in sách đóng gáy giữa.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Dàn trang ngay' },
+        { id: 'split_smart_books', icon: '🪓', name: 'Cắt đôi trang sách A3, In Áp phích & Tách theo trang trắng/từ khóa', badge: 'Split Half / Posterize / Smart', desc: 'Cắt dọc trang scan 2 trang liền nhau, chia khổ lớn A0/A1 ra lưới A4 dán tường, hoặc tách tự động theo trang trắng/từ khóa.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Xử lý cắt tách thông minh' },
         { id: 'alternate_mix', icon: '🔀', name: 'Trộn xen kẽ 2 file PDF (Scan 1 mặt)', badge: 'File 1 lẻ + File 2 chẵn', desc: 'Ghép xen kẽ trang từ 2 file PDF (có tùy chọn đảo ngược file 2 cho tài liệu scan 1 mặt).', accept: '.pdf', multiple: true, minFiles: 2, actionLabel: 'Trộn xen kẽ ngay' },
         { id: 'create_blank_pdf', icon: '🗒️', name: 'Tạo sổ PDF Trắng / Kẻ ngang / Ô ly', badge: 'Tạo mới 0 file', desc: 'Khởi tạo nhanh tập giấy PDF A4/A5 trắng, dòng kẻ ngang hoặc chấm bi để ghi chú & in ấn.', accept: '.pdf', multiple: false, minFiles: 0, noFileRequired: true, actionLabel: 'Tạo file PDF mới' },
       ],
     },
     {
-      id: 'optimize',
-      icon: '⚡',
-      title: 'Cụm 2: Nén dung lượng, Sửa lỗi, Màu in & Chuẩn lưu trữ',
-      accent: 'cyan',
+      id: 'convert',
+      icon: '🔄',
+      title: 'Cụm 2: Chuyển đổi định dạng hai chiều (Word, Excel, Slide, Ảnh, EPUB, SVG, Email ↔ PDF)',
+      accent: 'violet',
       tools: [
-        { id: 'compress', icon: '🗜️', name: 'Nén nhỏ PDF (3 cấp độ)', badge: 'Giảm dung lượng', desc: 'Làm nhẹ file PDF tức thì với 3 mức nén (Nhẹ, Vừa, Cực đại) tối ưu gửi Zalo/Email.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Nén PDF ngay' },
-        { id: 'repair_pdf', icon: '🔧', name: 'Sửa lỗi cấu trúc PDF (Repair)', badge: 'Dựng lại Xref & Stream', desc: 'Quét và dựng lại cấu trúc bảng tham chiếu bị hỏng khi tải lỗi hoặc mở không ổn định.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Sửa lỗi & Phục hồi PDF' },
-        { id: 'grayscale_pdf', icon: '🖨️', name: 'Chuyển Đen trắng / Thang độ xám', badge: 'Tối ưu in ấn', desc: 'Chuyển toàn bộ văn bản & hình ảnh sang xám mịn hoặc đen trắng sắc nét tiết kiệm mực.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Chuyển sang Đen trắng' },
-        { id: 'invert_dark_pdf', icon: '🌙', name: 'Đảo màu Đọc ban đêm (Dark Mode PDF)', badge: 'Dịu mắt ban đêm', desc: 'Đổi nền trắng chói thành nền tối dịu mắt để đọc sách/tài liệu PDF vào ban đêm.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Tạo bản PDF nền tối' },
-        { id: 'flatten', icon: '🔒', name: 'Làm phẳng & Khóa chỉnh sửa (Flatten)', badge: 'Khóa Form & Ghi chú', desc: 'Biến ô nhập liệu (AcroForms), chữ ký & ghi chú thành đồ họa tĩnh không thể sửa đổi.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Làm phẳng PDF' },
-        { id: 'pdf_a_archive', icon: '🏛️', name: 'Chuẩn hóa Lưu trữ PDF/A & Tải nhanh', badge: 'ISO 19005 / Fast View', desc: 'Loại bỏ mã động JavaScript, chuẩn hóa siêu dữ liệu & luồng đối tượng để lưu trữ bền vững.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Chuẩn hóa PDF/A' },
+        { id: 'docx_convert', icon: '📘', name: 'Word (.DOCX) → PDF / TXT / MD / HTML', badge: 'DOCX → PDF/TXT/MD', desc: 'Đổi file Word sang PDF chuẩn tiếng Việt, văn bản thuần, Markdown hoặc trang HTML.', accept: '.docx', multiple: false, minFiles: 1, actionLabel: 'Chuyển đổi file Word' },
+        { id: 'pdf_to_docx', icon: '📄', name: 'PDF → Word (.DOCX) / Markdown / TXT / JSON', badge: 'Kèm tọa độ & tiêu đề', desc: 'Xuất nội dung PDF sang Word chỉnh sửa được, Markdown phân cấp tiêu đề, TXT hoặc JSON.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Chuyển đổi PDF ngay' },
+        { id: 'pdf_to_excel', icon: '📈', name: 'PDF → Excel (.XLSX) / CSV (Quét bảng)', badge: 'Nhận diện hàng & cột', desc: 'Phân tích tọa độ X/Y văn bản trong PDF để tái tạo bảng tính Excel (.xlsx) hoặc CSV.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Quét bảng sang Excel' },
+        { id: 'sheet_convert', icon: '📊', name: 'Excel / CSV / JSON ↔ Qua lại & PDF', badge: '4 chiều không lỗi dấu', desc: 'Chuyển đổi nhanh giữa Excel (.xlsx), CSV UTF-8, JSON và bảng PDF in ấn gọn gàng.', accept: '.xlsx,.xls,.csv,.json', multiple: false, minFiles: 1, actionLabel: 'Chuyển đổi Bảng tính' },
+        { id: 'pdf_pptx', icon: '📽️', name: 'PDF ↔ PowerPoint (.PPTX)', badge: '2 chiều PDF ↔ PPTX', desc: 'Đổi PDF thành bài chiếu PowerPoint 16:9 hoặc rút nội dung từ .PPTX sang PDF / TXT.', accept: '.pdf,.pptx', multiple: false, minFiles: 1, actionLabel: 'Chuyển đổi Slide' },
+        { id: 'pdf_to_img', icon: '🖼️', name: 'PDF → Ảnh sắc nét (JPG / PNG / WEBP)', badge: '72 – 300 DPI', desc: 'Xuất từng trang PDF thành ảnh siêu nét tùy chọn định dạng & độ phân giải DPI.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Xuất thành Ảnh' },
+        { id: 'img_to_pdf', icon: '📸', name: 'Ảnh (JPG / PNG / WEBP / BMP) → PDF', badge: 'ẢNH → PDF', desc: 'Gộp nhiều ảnh thành 1 cuốn PDF chuẩn khổ A4/Letter/Khít ảnh với tùy chỉnh lề gọn gàng.', accept: 'image/jpeg,image/png,image/webp,image/bmp,.jpg,.jpeg,.png,.webp,.bmp', multiple: true, minFiles: 1, actionLabel: 'Tạo PDF từ Ảnh' },
+        { id: 'text_to_pdf_docx', icon: '🌐', name: 'HTML / Markdown / TXT → PDF / Word', badge: 'Web & Văn bản → PDF', desc: 'Đóng gói trang HTML, Markdown hoặc TXT sang PDF/DOCX gọn đẹp chuẩn tiếng Việt.', accept: '.txt,.md,.html,.htm', multiple: false, minFiles: 1, actionLabel: 'Xuất file ngay' },
+        { id: 'epub_to_pdf', icon: '📚', name: 'Sách điện tử EPUB → PDF / Word / TXT', badge: 'EPUB → PDF/DOCX', desc: 'Giải nén cấu trúc XHTML trong sách .EPUB và dàn trang lại thành PDF tiếng Việt sắc nét.', accept: '.epub', multiple: false, minFiles: 1, actionLabel: 'Chuyển đổi EPUB' },
+        { id: 'pdf_to_epub', icon: '📱', name: 'PDF → Sách điện tử (.EPUB)', badge: 'PDF → EPUB Kindle/Phone', desc: 'Đóng gói nội dung văn bản PDF thành sách điện tử chuẩn .EPUB đọc mượt trên điện thoại.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Xuất sách .EPUB' },
+        { id: 'svg_eml_to_pdf', icon: '✉️', name: 'SVG / Email (.EML) / Truyện (.CBZ) → PDF', badge: 'Định dạng mở rộng', desc: 'Chuyển trực tiếp hình vector .SVG, thư điện tử .EML hoặc truyện tranh .CBZ sang PDF.', accept: '.svg,.eml,.cbz', multiple: false, minFiles: 1, actionLabel: 'Chuyển sang PDF' },
       ],
     },
     {
       id: 'edit',
       icon: '✨',
-      title: 'Cụm 3: Chỉnh sửa, Chú thích, Đánh số, Đóng dấu & Bóc tài nguyên',
+      title: 'Cụm 3: Đọc PDF 4 lớp, Chỉnh sửa PDF thực thụ (True Editor), Ký tên & Đánh số',
       accent: 'amber',
       tools: [
+        { id: 'pdf_viewer_pro', icon: '👁️', name: 'Trình Đọc & Xem Trước PDF 4 Lớp Chuyên Nghiệp', badge: 'Ctrl+F / Bôi đen / 2 trang', desc: 'Đọc sách 2 trang đối xứng, bôi đen copy chữ, tìm kiếm Ctrl+F hỗ trợ Regex, cột Thumbnails/Mục lục & Chế độ tối thông minh.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Mở Trình Đọc PDF 4 Lớp' },
+        { id: 'annotate_edit', icon: '🖍️', name: 'Trình Chỉnh sửa PDF Trực Quan (True PDF Editor)', badge: 'Sửa chữ gốc · CAD · Vẽ · Ảnh', desc: 'Bấm trực tiếp vào dòng chữ gốc để sửa, chèn chữ/ảnh, tô sáng, vẽ bút mượt, đo kích thước bản vẽ CAD, con dấu động & Undo/Redo!', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Lưu bản PDF đã chỉnh sửa' },
         { id: 'sign_edit', icon: '✍️', name: 'Ký tên điện tử (Vẽ tay / Font / Ảnh)', badge: 'Tự tách nền trắng', desc: 'Vẽ chữ ký trực tiếp, gõ chữ ký kiểu viết tay nghệ thuật hoặc tải ảnh tự tách nền trắng.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Áp dụng chữ ký' },
-        { id: 'annotate_edit', icon: '🖍️', name: 'Chỉnh sửa & Chú thích PDF (Highlight / Khung)', badge: 'Edit & Markup', desc: 'Chèn văn bản mới, tô sáng Highlight, vẽ khung viền/mũi tên và dán ghi chú Sticky Note.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Chèn chỉnh sửa vào PDF' },
         { id: 'page_numbers', icon: '🔢', name: 'Đánh số trang & Đánh số hồ sơ Bates', badge: '6 vị trí · Bates Pro', desc: 'Đánh số tự động 6 góc, bỏ qua trang bìa hoặc gắn mã hồ sơ Bates (vd: HS-0001).', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Thêm số trang / Bates' },
         { id: 'header_footer', icon: '🏷️', name: 'Thêm Tiêu đề đầu & Chân trang', badge: 'Header & Footer', desc: 'Chèn hàng loạt tên tài liệu, ngày tháng, tác giả lên lề trên/dưới toàn bộ tệp PDF.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Chèn Header & Footer' },
         { id: 'watermark', icon: '💧', name: 'Đóng dấu chìm Chữ hoặc Logo ảnh', badge: 'Text & Logo PNG/JPG', desc: 'Đóng dấu bản quyền bằng chữ tiếng Việt hoặc logo ảnh mờ chìm, hỗ trợ lặp lưới toàn trang.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Đóng dấu ngay' },
@@ -72,50 +79,50 @@
       ],
     },
     {
-      id: 'media',
-      icon: '🖼️',
-      title: 'Cụm 4: Chuyển đổi Ảnh, Slide PowerPoint & Sách điện tử ↔ PDF',
+      id: 'forms',
+      icon: '📋',
+      title: 'Cụm 4: Biểu mẫu Tương tác (Điền AcroForm, Thiết kế Form & Trộn Excel Mail Merge)',
       accent: 'sky',
       tools: [
-        { id: 'pdf_to_img', icon: '🖼️', name: 'PDF → Ảnh sắc nét (JPG / PNG / WEBP)', badge: '72 – 300 DPI', desc: 'Xuất từng trang PDF thành ảnh siêu nét tùy chọn định dạng & độ phân giải DPI.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Xuất thành Ảnh' },
-        { id: 'img_to_pdf', icon: '📸', name: 'Ảnh (JPG / PNG / WEBP / BMP) → PDF', badge: 'ẢNH → PDF', desc: 'Gộp nhiều ảnh thành 1 cuốn PDF chuẩn khổ A4/Letter/Khít ảnh với tùy chỉnh lề gọn gàng.', accept: 'image/jpeg,image/png,image/webp,image/bmp,.jpg,.jpeg,.png,.webp,.bmp', multiple: true, minFiles: 1, actionLabel: 'Tạo PDF từ Ảnh' },
-        { id: 'pdf_pptx', icon: '📽️', name: 'PDF ↔ PowerPoint (.PPTX)', badge: '2 chiều PDF ↔ PPTX', desc: 'Đổi PDF thành bài chiếu PowerPoint 16:9 hoặc rút nội dung từ .PPTX sang PDF / TXT.', accept: '.pdf,.pptx', multiple: false, minFiles: 1, actionLabel: 'Chuyển đổi Slide' },
-        { id: 'epub_to_pdf', icon: '📚', name: 'Sách điện tử EPUB → PDF / Word / TXT', badge: 'EPUB → PDF/DOCX', desc: 'Giải nén cấu trúc XHTML trong sách .EPUB và dàn trang lại thành PDF tiếng Việt sắc nét.', accept: '.epub', multiple: false, minFiles: 1, actionLabel: 'Chuyển đổi EPUB' },
-        { id: 'pdf_to_epub', icon: '📱', name: 'PDF → Sách điện tử (.EPUB)', badge: 'PDF → EPUB Kindle/Phone', desc: 'Đóng gói nội dung văn bản PDF thành sách điện tử chuẩn .EPUB đọc mượt trên điện thoại.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Xuất sách .EPUB' },
-      ],
-    },
-    {
-      id: 'office',
-      icon: '📝',
-      title: 'Cụm 5: Chuyển đổi Word, Excel, Web & Dữ liệu ↔ PDF',
-      accent: 'violet',
-      tools: [
-        { id: 'docx_convert', icon: '📘', name: 'Word (.DOCX) → PDF / TXT / MD / HTML', badge: 'DOCX → PDF/TXT/MD', desc: 'Đổi file Word sang PDF chuẩn tiếng Việt, văn bản thuần, Markdown hoặc trang HTML.', accept: '.docx', multiple: false, minFiles: 1, actionLabel: 'Chuyển đổi file Word' },
-        { id: 'pdf_to_docx', icon: '📄', name: 'PDF → Word (.DOCX) / Markdown / TXT / JSON', badge: 'Kèm tọa độ & tiêu đề', desc: 'Xuất nội dung PDF sang Word chỉnh sửa được, Markdown phân cấp tiêu đề, TXT hoặc JSON.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Chuyển đổi PDF ngay' },
-        { id: 'pdf_to_excel', icon: '📈', name: 'PDF → Excel (.XLSX) / CSV (Quét bảng)', badge: 'Nhận diện hàng & cột', desc: 'Phân tích tọa độ X/Y văn bản trong PDF để tái tạo bảng tính Excel (.xlsx) hoặc CSV.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Quét bảng sang Excel' },
-        { id: 'sheet_convert', icon: '📊', name: 'Excel / CSV / JSON ↔ Qua lại & PDF', badge: '4 chiều không lỗi dấu', desc: 'Chuyển đổi nhanh giữa Excel (.xlsx), CSV UTF-8, JSON và bảng PDF in ấn gọn gàng.', accept: '.xlsx,.xls,.csv,.json', multiple: false, minFiles: 1, actionLabel: 'Chuyển đổi Bảng tính' },
-        { id: 'text_to_pdf_docx', icon: '🌐', name: 'HTML / Markdown / TXT → PDF / Word', badge: 'Web & Văn bản → PDF', desc: 'Đóng gói trang HTML, Markdown hoặc TXT sang PDF/DOCX hoặc in trực tiếp giữ nguyên CSS.', accept: '.txt,.md,.html,.htm', multiple: false, minFiles: 1, actionLabel: 'Xuất file ngay' },
+        { id: 'form_filler_builder', icon: '📝', name: 'Điền Biểu mẫu AcroForm & Tạo ô nhập liệu PDF', badge: 'AcroForm Filler & Builder', desc: 'Tự đọc & điền các ô AcroForm có sẵn, xuất JSON dữ liệu đã điền, hoặc tạo mới TextField/Checkbox vào PDF.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Áp dụng Biểu mẫu & Lưu' },
+        { id: 'pdf_mail_merge', icon: '📨', name: 'Trộn dữ liệu hàng loạt (PDF Mail Merge từ Excel/CSV)', badge: '1 PDF + Excel → Hàng trăm PDF', desc: 'Nạp 1 tệp mẫu PDF + 1 tệp Excel/CSV danh sách tên/mã số để xuất hàng loạt chứng nhận/hợp đồng vào 1 file .ZIP!', accept: '.pdf,.xlsx,.csv', multiple: true, minFiles: 2, actionLabel: 'Trộn hàng loạt ra .ZIP' },
       ],
     },
     {
       id: 'ocr_meta',
       icon: '👁️',
-      title: 'Cụm 6: Đọc chữ OCR 2 lớp, Tiền xử lý Scan & Quản lý Siêu dữ liệu',
+      title: 'Cụm 5: OCR 5 Bước Thông minh, Tiền xử lý Scan & Quản lý Siêu dữ liệu',
       accent: 'teal',
       tools: [
-        { id: 'ocr_pdf', icon: '👁️', name: 'OCR đọc chữ & Tạo PDF 2 lớp (Ctrl+F)', badge: 'TXT hoặc Searchable PDF', desc: 'Nhận diện chữ Tiếng Việt/Anh bằng CPU tại máy; xuất .TXT hoặc PDF 2 lớp tìm & bôi đen được.', accept: '.pdf,image/jpeg,image/png,image/webp', multiple: false, minFiles: 1, actionLabel: 'Chạy OCR ngay' },
+        { id: 'ocr_pdf', icon: '👁️', name: 'OCR 5 bước thông minh & Tạo PDF 2 lớp (Ctrl+F)', badge: 'Smart Skip · PDF/DOCX/MD/TXT', desc: 'Tự bỏ qua trang đã có chữ, tẩy bóng/làm nét ảnh scan, giữ thứ tự cột & xuất PDF 2 lớp tìm được hoặc Word/MD/TXT.', accept: '.pdf,image/jpeg,image/png,image/webp', multiple: false, minFiles: 1, actionLabel: 'Chạy OCR 5 bước ngay' },
         { id: 'deskew_denoise', icon: '🧹', name: 'Làm thẳng & Khử nhiễu trang Scan', badge: 'Deskew & Denoise', desc: 'Xoay thẳng trang giấy bị nghiêng, tăng độ tương phản & làm trắng nền scan ố vàng.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Làm sạch trang Scan' },
         { id: 'metadata_editor', icon: '🧾', name: 'Xem, Sửa & Xóa sạch Siêu dữ liệu (Metadata)', badge: 'Editor & Scrubber', desc: 'Đọc/sửa Tiêu đề, Tác giả, Từ khóa hoặc bấm 1 chạm xóa trắng toàn bộ dấu vết ẩn của tệp.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Lưu / Xóa Metadata' },
       ],
     },
     {
+      id: 'optimize',
+      icon: '⚡',
+      title: 'Cụm 6: Nén dung lượng, Sửa lỗi, Chế bản In ấn (Bleed/Crop Marks) & PDF/A',
+      accent: 'cyan',
+      tools: [
+        { id: 'compress', icon: '🗜️', name: 'Nén nhỏ PDF (3 cấp độ)', badge: 'Giảm dung lượng', desc: 'Làm nhẹ file PDF tức thì với 3 mức nén (Nhẹ, Vừa, Cực đại) tối ưu gửi Zalo/Email.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Nén PDF ngay' },
+        { id: 'repair_pdf', icon: '🔧', name: 'Sửa lỗi cấu trúc PDF (Repair)', badge: 'Dựng lại Xref & Stream', desc: 'Quét và dựng lại cấu trúc bảng tham chiếu bị hỏng khi tải lỗi hoặc mở không ổn định.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Sửa lỗi & Phục hồi PDF' },
+        { id: 'grayscale_pdf', icon: '🖨️', name: 'Chuyển Đen trắng / Thang độ xám', badge: 'Tối ưu in ấn', desc: 'Chuyển toàn bộ văn bản & hình ảnh sang xám mịn hoặc đen trắng sắc nét tiết kiệm mực.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Chuyển sang Đen trắng' },
+        { id: 'invert_dark_pdf', icon: '🌙', name: 'Đảo màu Đọc ban đêm (Dark Mode PDF)', badge: 'Dịu mắt ban đêm', desc: 'Đổi nền trắng chói thành nền tối dịu mắt để đọc sách/tài liệu PDF vào ban đêm.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Tạo bản PDF nền tối' },
+        { id: 'prepress_bleed_marks', icon: '🎯', name: 'Chế bản In ấn (Bleed, Dấu cắt xén & Thanh kiểm màu)', badge: 'Prepress Nhà In', desc: 'Thêm tự động vùng bù xén 3mm, dấu cắt xén 4 góc (Crop/Trim Marks) và thanh kiểm màu CMYK chuẩn nhà in.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Tạo bản chế bản in' },
+        { id: 'flatten', icon: '🔒', name: 'Làm phẳng & Khóa chỉnh sửa (Flatten)', badge: 'Khóa Form & Ghi chú', desc: 'Biến ô nhập liệu (AcroForms), chữ ký & ghi chú thành đồ họa tĩnh không thể sửa đổi.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Làm phẳng PDF' },
+        { id: 'pdf_a_archive', icon: '🏛️', name: 'Chuẩn hóa Lưu trữ PDF/A & Tải nhanh', badge: 'ISO 19005 / Fast View', desc: 'Loại bỏ mã động JavaScript, chuẩn hóa siêu dữ liệu & luồng đối tượng để lưu trữ bền vững.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Chuẩn hóa PDF/A' },
+      ],
+    },
+    {
       id: 'security_batch',
       icon: '🛡️',
-      title: 'Cụm 7: Bảo mật, Che đen vĩnh viễn, So sánh, Preflight & Xử lý hàng loạt',
+      title: 'Cụm 7: Bảo mật, Che đen Regex, Làm sạch dữ liệu ẩn, So sánh, Preflight & Hàng loạt',
       accent: 'rose',
       tools: [
         { id: 'protect_unlock_pdf', icon: '🔐', name: 'Đặt mật khẩu / Mở khóa PDF (Protect & Unlock)', badge: 'Khóa mở & Khóa quyền', desc: 'Đặt mật khẩu mở tệp / khóa in & copy ngay trên máy hoặc gỡ khóa khi có mật khẩu đúng.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Khóa / Mở khóa PDF' },
-        { id: 'true_redaction', icon: '⬛', name: 'Che đen bảo mật vĩnh viễn (True Redaction)', badge: 'Xóa chết lớp chữ gốc', desc: 'Xóa vĩnh viễn văn bản & pixel theo từ khóa nhạy cảm hoặc vùng chọn — không thể copy lại!', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Che đen vĩnh viễn' },
+        { id: 'true_redaction', icon: '⬛', name: 'Che đen bảo mật vĩnh viễn + Tự động quét SĐT/CCCD/Email', badge: 'True Redaction + Regex', desc: 'Xóa vĩnh viễn văn bản & pixel theo từ khóa, vùng chọn hoặc 1 chạm che sạch SĐT/CCCD/Email!', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Che đen vĩnh viễn' },
+        { id: 'deep_sanitize', icon: '🧼', name: 'Làm sạch dữ liệu ẩn toàn diện (Deep Forensics Sanitization)', badge: 'Xóa lịch sử ẩn & JS', desc: 'Xóa sạch XMP, lịch sử lưu tăng dần (Incremental Updates), JavaScript, lớp ẩn & phần thừa ngoài CropBox!', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Làm sạch toàn diện PDF' },
         { id: 'compare_pdf', icon: '⚖️', name: 'So sánh 2 tệp PDF (Text Diff + Soi Pixel)', badge: '2 PDF → Báo cáo Diff', desc: 'Đối chiếu 2 phiên bản hợp đồng/bản thảo: tô màu từng dòng thêm/xóa & chồng ảnh soi lệch từng pixel.', accept: '.pdf', multiple: true, minFiles: 2, actionLabel: 'So sánh 2 tệp PDF' },
         { id: 'preflight_inspect', icon: '🔬', name: 'Kiểm tra kỹ thuật trước khi in (Preflight)', badge: 'Báo cáo chuẩn in ấn', desc: 'Quét toàn bộ PDF kiểm tra khổ giấy lệch, mật độ chữ/ảnh, siêu dữ liệu & cảnh báo trước khi in.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Chạy kiểm tra Preflight' },
         { id: 'batch_workflow', icon: '🏭', name: 'Xử lý hàng loạt theo chuỗi (Batch Pipeline)', badge: 'Hàng chục PDF → 1 ZIP', desc: 'Nạp nhiều file PDF cùng lúc, tick chuỗi tác vụ liên hoàn (Đóng dấu → Số trang → Xóa Meta → Nén).', accept: '.pdf', multiple: true, minFiles: 1, actionLabel: 'Chạy chuỗi hàng loạt' },
@@ -379,24 +386,80 @@
 
     if (toolId === 'annotate_edit') {
       return `
-        <div class="grid grid-cols-2 gap-2">
-          <label class="space-y-1"><span class="font-bold">Trang số:</span><input id="opt-pro-ann-page" type="number" min="1" value="1" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
-          <label class="space-y-1"><span class="font-bold">Kiểu chèn:</span>
-            <select id="opt-pro-ann-type" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700">
-              <option value="sticky">Ghi chú Sticky Note</option>
-              <option value="highlight">Tô sáng Highlight</option>
-              <option value="text">Chèn đoạn chữ mới</option>
-              <option value="box">Khung nhấn viền đỏ</option>
-            </select>
-          </label>
-        </div>
-        <label class="block space-y-1"><span class="font-bold">Nội dung chữ / ghi chú:</span>
-          <input id="opt-pro-ann-text" type="text" value="Ghi chú quan trọng cần xem lại" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
+        <p class="text-emerald-300 font-bold leading-relaxed">✨ Bạn đang ở Trình Chỉnh sửa PDF Trực Quan (True PDF Editor)!</p>
+        <p class="text-zinc-300 leading-relaxed">Thao tác trực tiếp trên trang PDF ở khung lớn bên trái: <strong>Bấm thẳng vào chữ gốc để sửa</strong>, chèn chữ mới, tải ảnh, tô sáng, vẽ bút tự do, đo khoảng cách CAD, đóng con dấu động hoặc che đen bảo mật.</p>
+        <label class="block space-y-1"><span class="font-bold">Tỷ lệ đo bản vẽ CAD (1 cm = ? mét):</span>
+          <input id="opt-pro-cad-scale" type="number" step="0.5" min="0.1" value="5" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
         </label>
-        <div class="grid grid-cols-2 gap-2">
-          <label class="space-y-1"><span>Vị trí ngang (%):</span><input id="opt-pro-ann-x" type="number" min="5" max="85" value="15" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
-          <label class="space-y-1"><span>Vị trí từ trên (%):</span><input id="opt-pro-ann-y" type="number" min="5" max="90" value="20" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
-        </div>`;
+        <p class="text-[11px] text-zinc-400">Hỗ trợ Hoàn tác (Undo) / Làm lại (Redo) nhiều bước và sửa nhiều trang liên tiếp trước khi xuất file.</p>`;
+    }
+
+    if (toolId === 'pdf_viewer_pro') {
+      return `<p class="text-zinc-300 leading-relaxed">Bấm nút bên dưới để mở <strong>Trình Đọc PDF 4 Lớp</strong>: cột ảnh thu nhỏ, cây mục lục, bôi đen copy chữ thật, tìm kiếm <code>Ctrl+F</code> (hỗ trợ Regex), đọc 2 trang đối xứng &amp; chế độ ban đêm thông minh.</p>`;
+    }
+
+    if (toolId === 'split_smart_books') {
+      return `
+        <label class="block space-y-1"><span class="font-bold">Chế độ cắt/tách thông minh:</span>
+          <select id="opt-pro-smart-split" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
+            <option value="split_half_lr">Cắt đôi trang sách A3 → 2 trang A4 (Trái → Phải)</option>
+            <option value="split_half_rl">Cắt đôi truyện tranh/Manga (Phải → Trái)</option>
+            <option value="posterize_2x2">In Áp phích (Posterize — chia mỗi trang ra lưới 2×2 A4)</option>
+            <option value="split_blank">Tách tự động &amp; xóa trang trắng phân cách hồ sơ</option>
+            <option value="split_keyword">Tách tệp mỗi khi gặp từ khóa tiêu đề</option>
+          </select>
+        </label>
+        <label class="block space-y-1"><span class="font-bold">Từ khóa ngắt tệp (khi chọn Tách theo từ khóa):</span>
+          <input id="opt-pro-split-kw" type="text" placeholder="VD: HÓA ĐƠN GIÁ TRỊ GIA TĂNG" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
+        </label>`;
+    }
+
+    if (toolId === 'svg_eml_to_pdf') {
+      return `<p class="text-zinc-300 leading-relaxed">Hỗ trợ chuyển trực tiếp đồ họa vector <strong>.SVG</strong>, thư điện tử <strong>.EML</strong> (giữ người gửi/tiêu đề/nội dung) hoặc tập truyện tranh <strong>.CBZ</strong> sang file PDF chuẩn.</p>`;
+    }
+
+    if (toolId === 'form_filler_builder') {
+      return `
+        <label class="block space-y-1"><span class="font-bold">Chế độ Biểu mẫu (AcroForm):</span>
+          <select id="opt-pro-form-mode" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
+            <option value="add_fields">Thêm ô nhập liệu mới (TextField + Checkbox) vào trang 1</option>
+            <option value="fill_json">Điền nhanh các ô AcroForm có sẵn bằng danh sách (TênÔ=GiáTrị)</option>
+            <option value="export_json">Trích xuất danh sách trường &amp; dữ liệu Form ra .JSON</option>
+          </select>
+        </label>
+        <label class="block space-y-1"><span class="font-bold">Dữ liệu điền / Tên ô mới (mỗi dòng 1 mục):</span>
+          <textarea id="opt-pro-form-data" rows="4" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700 text-[11px]">HoTen=Nguyễn Văn An
+Email=an@example.com
+XacNhan=true</textarea>
+        </label>`;
+    }
+
+    if (toolId === 'pdf_mail_merge') {
+      return `
+        <p class="text-zinc-300 leading-relaxed">Nạp <strong>1 tệp mẫu .PDF</strong> và <strong>1 tệp .XLSX hoặc .CSV</strong> (mỗi dòng là 1 người). Hệ thống tự điền vào AcroForm cùng tên cột hoặc in gọn lên trang và xuất hàng loạt thành 1 gói <strong>.ZIP</strong>!</p>
+        <label class="block space-y-1"><span class="font-bold">Giới hạn số bản tối đa/lượt:</span>
+          <input id="opt-pro-merge-limit" type="number" min="1" max="500" value="100" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
+        </label>`;
+    }
+
+    if (toolId === 'prepress_bleed_marks') {
+      return `
+        <label class="block space-y-1"><span class="font-bold">Vùng bù xén nhà in (Bleed — mm):</span>
+          <input id="opt-pro-bleed-mm" type="number" min="2" max="15" value="5" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
+        </label>
+        <label class="flex items-center gap-2"><input id="opt-pro-crop-marks" type="checkbox" checked class="accent-cyan-400" /><span>Vẽ dấu cắt xén 4 góc (Crop/Trim Marks)</span></label>
+        <label class="flex items-center gap-2"><input id="opt-pro-color-bars" type="checkbox" checked class="accent-cyan-400" /><span>Thêm thanh kiểm màu CMYK ở lề trên</span></label>`;
+    }
+
+    if (toolId === 'deep_sanitize') {
+      return `
+        <p class="text-rose-200 font-bold">🧼 Làm sạch tận gốc chuẩn Forensics:</p>
+        <ul class="text-[11px] text-zinc-300 list-disc pl-4 space-y-1">
+          <li>Xóa sạch siêu dữ liệu XMP &amp; Document Info.</li>
+          <li>Loại bỏ lịch sử lưu tăng dần (Incremental Updates) bằng cách dựng cây đối tượng mới hoàn toàn.</li>
+          <li>Cắt hủy vĩnh viễn nội dung nằm ngoài vùng hiển thị CropBox.</li>
+          <li>Gỡ bỏ JavaScript nhúng, OpenAction &amp; làm phẳng ghi chú ẩn.</li>
+        </ul>`;
     }
 
     if (toolId === 'header_footer') {
@@ -487,6 +550,12 @@ Chương 3: Tổng kết | 12</textarea>
         <label class="block space-y-1"><span class="font-bold">Từ khóa nhạy cảm cần che đen vĩnh viễn (cách nhau bằng dấu phẩy):</span>
           <input id="opt-pro-redact-words" type="text" placeholder="Ví dụ: 0912345678, CCCD, bí mật" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
         </label>
+        <div class="p-2 rounded-xl bg-zinc-950 border border-zinc-800 space-y-1">
+          <div class="text-[11px] font-bold text-amber-300">🤖 Tự động quét &amp; che đen theo mẫu (Regex):</div>
+          <label class="flex items-center gap-2 text-[11px]"><input id="opt-pro-redact-phone" type="checkbox" class="accent-rose-500" /><span>Số điện thoại Việt Nam (03/05/07/08/09...)</span></label>
+          <label class="flex items-center gap-2 text-[11px]"><input id="opt-pro-redact-cccd" type="checkbox" class="accent-rose-500" /><span>Số CCCD / CMND (9–12 chữ số)</span></label>
+          <label class="flex items-center gap-2 text-[11px]"><input id="opt-pro-redact-email" type="checkbox" class="accent-rose-500" /><span>Địa chỉ Email cá nhân</span></label>
+        </div>
         <p class="text-[11px] text-zinc-400">Hoặc chọn vùng che đen theo phần trăm (tính từ góc trên-trái):</p>
         <div class="grid grid-cols-2 gap-2">
           <label class="space-y-1"><span>Trái (%):</span><input id="opt-pro-redact-x" type="number" min="0" max="95" value="0" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
@@ -547,8 +616,22 @@ Chương 3: Tổng kết | 12</textarea>
       splitMaxMb: Math.max(0.2, Number(document.getElementById('opt-mod46-split-maxmb')?.value || 5)),
       cropScope: document.getElementById('opt-crop-scope')?.value || 'all',
       batesPrefix: document.getElementById('opt-pn-bates-prefix')?.value?.trim() || '',
-      ocrOutFormat: document.getElementById('opt-ocr-out-fmt')?.value || 'txt',
+      ocrOutFormat: document.getElementById('opt-ocr-out-fmt')?.value || 'searchable_pdf',
+      ocrSmartSkip: Boolean(document.getElementById('opt-ocr-smart-skip')?.checked),
+      ocrDenoise: Boolean(document.getElementById('opt-ocr-denoise')?.checked),
       signTypedName: document.getElementById('opt-sign-typed-name')?.value?.trim() || '',
+      // Công cụ mới v121
+      smartSplitMode: document.getElementById('opt-pro-smart-split')?.value || 'split_half_lr',
+      smartSplitKw: document.getElementById('opt-pro-split-kw')?.value?.trim() || '',
+      formMode: document.getElementById('opt-pro-form-mode')?.value || 'add_fields',
+      formData: document.getElementById('opt-pro-form-data')?.value || '',
+      mergeLimit: Math.max(1, Math.min(500, Number(document.getElementById('opt-pro-merge-limit')?.value || 100))),
+      bleedMm: Math.max(2, Math.min(15, Number(document.getElementById('opt-pro-bleed-mm')?.value || 5))),
+      cropMarks: Boolean(document.getElementById('opt-pro-crop-marks')?.checked),
+      colorBars: Boolean(document.getElementById('opt-pro-color-bars')?.checked),
+      redactPhone: Boolean(document.getElementById('opt-pro-redact-phone')?.checked),
+      redactCccd: Boolean(document.getElementById('opt-pro-redact-cccd')?.checked),
+      redactEmail: Boolean(document.getElementById('opt-pro-redact-email')?.checked),
       // 22 công cụ Pro mới
       extractMode: document.getElementById('opt-pro-extract-mode')?.value || 'reverse',
       extractRange: document.getElementById('opt-pro-extract-range')?.value || '',
@@ -880,32 +963,340 @@ Chương 3: Tổng kết | 12</textarea>
       return outputs;
     }
 
-    // 10. CHỈNH SỬA & CHÚ THÍCH PDF (HIGHLIGHT / STICKY NOTE / TEXT / BOX)
+    // 10. TRÌNH CHỈNH SỬA PDF TRỰC QUAN (TRUE INTERACTIVE VISUAL EDITOR — MOD 46C)
     if (tool.id === 'annotate_edit') {
-      const { PDFDocument, rgb } = await ensurePdfLib();
-      const doc = await PDFDocument.load(ctrl.files[0].bytes, { ignoreEncryption: true });
-      const pages = doc.getPages();
-      const idx = Math.max(0, Math.min(pages.length - 1, pro.annPage - 1));
-      const pg = pages[idx];
-      const { width, height } = pg.getSize();
-      const x = (pro.annX / 100) * width;
-      const yFromTop = (pro.annY / 100) * height;
-      const y = Math.max(30, height - yFromTop - 36);
-      prog(60, `Đang áp dụng chú thích lên trang ${idx + 1}...`);
+      if (NS.dangLovePdfStudioPro?.editor?.exportToPdfBlob) {
+        const blob = await NS.dangLovePdfStudioPro.editor.exportToPdfBlob(ctrl.files[0], helpers);
+        outputs.push({ name: `${baseName}_DaChinhSua.pdf`, blob });
+        return outputs;
+      }
+      outputs.push({ name: `${baseName}_DaChinhSua.pdf`, blob: new Blob([ctrl.files[0].bytes], { type: 'application/pdf' }) });
+      return outputs;
+    }
 
-      if (pro.annType === 'highlight') {
-        pg.drawRectangle({ x, y, width: Math.min(width - x - 20, 260), height: 22, color: rgb(1, 0.95, 0.25), opacity: 0.45 });
-      } else if (pro.annType === 'box') {
-        pg.drawRectangle({ x, y, width: Math.min(width - x - 20, 260), height: 42, borderColor: rgb(0.9, 0.15, 0.2), borderWidth: 2.2, opacity: 0 });
-      } else if (pro.annType === 'sticky') {
-        pg.drawRectangle({ x, y: y - 16, width: 220, height: 52, color: rgb(1, 0.96, 0.72), borderColor: rgb(0.85, 0.65, 0.1), borderWidth: 1.4, opacity: 0.95 });
+    // 10B. TRÌNH ĐỌC & XEM TRƯỚC PDF 4 LỚP CHUYÊN NGHIỆP
+    if (tool.id === 'pdf_viewer_pro') {
+      const f0 = ctrl.files[0];
+      const blob = new Blob([f0.bytes], { type: 'application/pdf' });
+      const url = ctrl.trackUrl(blob);
+      if (NS.dangLovePdfStudioPro?.openProPdfViewer) {
+        NS.dangLovePdfStudioPro.openProPdfViewer({ name: f0.name, size: blob.size, blob, url }, ensurePdfJs);
       }
-      if (pro.annText) {
-        const rendered = renderVietnameseTextToPngBytes(pro.annText, { fontSize: 13, color: pro.annType === 'box' ? '#b91c1c' : '#0f172a', bold: true, padX: 6, padY: 4 });
-        const img = await doc.embedPng(rendered.bytes);
-        pg.drawImage(img, { x: x + 6, y: y + 2, width: Math.min(width - x - 24, rendered.widthPt), height: rendered.heightPt });
+      outputs.push({ name: f0.name, blob });
+      return outputs;
+    }
+
+    // 10C. CẮT ĐÔI TRANG SÁCH A3, IN ÁP PHÍCH (POSTERIZE) & TÁCH THEO TRANG TRẮNG/TỪ KHÓA
+    if (tool.id === 'split_smart_books') {
+      const { PDFDocument } = await ensurePdfLib();
+      const src = await PDFDocument.load(ctrl.files[0].bytes, { ignoreEncryption: true });
+      const srcPages = src.getPages();
+
+      if (pro.smartSplitMode === 'split_half_lr' || pro.smartSplitMode === 'split_half_rl') {
+        const out = await PDFDocument.create();
+        for (let i = 0; i < srcPages.length; i++) {
+          prog(15 + ((i + 1) / srcPages.length) * 75, `Đang cắt đôi trang ${i + 1}/${srcPages.length}...`);
+          const { width, height } = srcPages[i].getSize();
+          const halfW = width / 2;
+          const emb = await out.embedPage(srcPages[i]);
+          const order = pro.smartSplitMode === 'split_half_rl' ? [1, 0] : [0, 1];
+          for (const side of order) {
+            const p = out.addPage([halfW, height]);
+            p.drawPage(emb, { x: side === 0 ? 0 : -halfW, y: 0, width, height });
+          }
+        }
+        outputs.push({ name: `${baseName}_CatDoiTrang.pdf`, blob: new Blob([await out.save()], { type: 'application/pdf' }) });
+        return outputs;
       }
-      outputs.push({ name: `${baseName}_DaChuThich.pdf`, blob: new Blob([await doc.save()], { type: 'application/pdf' }) });
+
+      if (pro.smartSplitMode === 'posterize_2x2') {
+        const out = await PDFDocument.create();
+        for (let i = 0; i < srcPages.length; i++) {
+          prog(15 + ((i + 1) / srcPages.length) * 75, `Đang chia áp phích 2×2 trang ${i + 1}/${srcPages.length}...`);
+          const { width, height } = srcPages[i].getSize();
+          const emb = await out.embedPage(srcPages[i]);
+          const tileW = width / 2;
+          const tileH = height / 2;
+          // 4 mảnh: Trên-Trái, Trên-Phải, Dưới-Trái, Dưới-Phải
+          const offsets = [[0, -tileH], [-tileW, -tileH], [0, 0], [-tileW, 0]];
+          for (const [ox, oy] of offsets) {
+            const p = out.addPage([tileW, tileH]);
+            p.drawPage(emb, { x: ox, y: oy, width, height });
+          }
+        }
+        outputs.push({ name: `${baseName}_Posterize_2x2.pdf`, blob: new Blob([await out.save()], { type: 'application/pdf' }) });
+        return outputs;
+      }
+
+      // Tách theo trang trắng hoặc từ khóa
+      const pdfjsLib = await ensurePdfJs();
+      const pdf = await pdfjsLib.getDocument({ data: ctrl.files[0].bytes.slice() }).promise;
+      const groups = [];
+      let cur = [];
+      const kw = (pro.smartSplitKw || '').toLowerCase();
+      for (let i = 1; i <= pdf.numPages; i++) {
+        prog(15 + (i / pdf.numPages) * 55, `Đang phân tích nội dung trang ${i}/${pdf.numPages}...`);
+        const pg = await pdf.getPage(i);
+        const tc = await pg.getTextContent();
+        const txt = tc.items.map((x) => x.str).join(' ').trim();
+        if (pro.smartSplitMode === 'split_blank') {
+          if (txt.length < 3) {
+            if (cur.length) { groups.push(cur); cur = []; }
+          } else {
+            cur.push(i - 1);
+          }
+        } else {
+          if (kw && txt.toLowerCase().includes(kw) && cur.length) {
+            groups.push(cur);
+            cur = [i - 1];
+          } else {
+            cur.push(i - 1);
+          }
+        }
+      }
+      if (cur.length) groups.push(cur);
+      if (!groups.length) groups.push(src.getPageIndices());
+      for (let g = 0; g < groups.length; g++) {
+        const part = await PDFDocument.create();
+        (await part.copyPages(src, groups[g])).forEach((p) => part.addPage(p));
+        outputs.push({ name: `${baseName}_PhanThongMinh_${g + 1}.pdf`, blob: new Blob([await part.save()], { type: 'application/pdf' }) });
+      }
+      return outputs;
+    }
+
+    // 10D. CHUYỂN ĐỔI MỞ RỘNG: SVG / EMAIL (.EML) / TRUYỆN (.CBZ) → PDF
+    if (tool.id === 'svg_eml_to_pdf') {
+      const f = ctrl.files[0];
+      if (/\.svg$/i.test(f.name)) {
+        prog(40, 'Đang dựng đồ họa vector SVG sang PDF...');
+        const svgText = await f.file.text();
+        const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+        const svgUrl = ctrl.trackUrl(svgBlob);
+        const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = svgUrl; });
+        const c = document.createElement('canvas');
+        c.width = Math.max(400, img.naturalWidth || 800);
+        c.height = Math.max(400, img.naturalHeight || 600);
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        const { PDFDocument } = await ensurePdfLib();
+        const out = await PDFDocument.create();
+        const emb = await out.embedPng(dataUrlToUint8(c.toDataURL('image/png')));
+        const pg = out.addPage([c.width * 0.75, c.height * 0.75]);
+        pg.drawImage(emb, { x: 0, y: 0, width: c.width * 0.75, height: c.height * 0.75 });
+        outputs.push({ name: `${baseName}.pdf`, blob: new Blob([await out.save()], { type: 'application/pdf' }) });
+        return outputs;
+      }
+      if (/\.cbz$/i.test(f.name)) {
+        const JSZip = await ensureJsZip();
+        const { PDFDocument } = await ensurePdfLib();
+        const z = await JSZip.loadAsync(f.bytes);
+        const imgKeys = Object.keys(z.files).filter((k) => /\.(png|jpe?g|webp)$/i.test(k)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+        const out = await PDFDocument.create();
+        for (let i = 0; i < imgKeys.length; i++) {
+          prog(15 + ((i + 1) / Math.max(1, imgKeys.length)) * 75, `Đang ghép trang truyện ${i + 1}/${imgKeys.length}...`);
+          const b = await z.files[imgKeys[i]].async('blob');
+          const u = ctrl.trackUrl(b);
+          const im = await new Promise((res, rej) => { const el = new Image(); el.onload = () => res(el); el.onerror = rej; el.src = u; });
+          const c = document.createElement('canvas');
+          c.width = im.naturalWidth || im.width;
+          c.height = im.naturalHeight || im.height;
+          c.getContext('2d').drawImage(im, 0, 0);
+          const emb = await out.embedJpg(dataUrlToUint8(c.toDataURL('image/jpeg', 0.9)));
+          const pg = out.addPage([c.width, c.height]);
+          pg.drawImage(emb, { x: 0, y: 0, width: c.width, height: c.height });
+        }
+        outputs.push({ name: `${baseName}_Comic.pdf`, blob: new Blob([await out.save()], { type: 'application/pdf' }) });
+        return outputs;
+      }
+      // .EML Email -> PDF
+      prog(40, 'Đang phân tích nội dung Email (.EML)...');
+      const rawEml = await f.file.text();
+      const lines = rawEml.replace(/\r/g, '').split('\n').slice(0, 1200);
+      const pdfBlob = await renderLinesToVietnamesePdfBlob(`Email: ${baseName}`, lines, prog);
+      outputs.push({ name: `${baseName}_Email.pdf`, blob: pdfBlob });
+      return outputs;
+    }
+
+    // 10E. BIỂU MẪU TƯƠNG TÁC (ACROFORM FILLER & BUILDER)
+    if (tool.id === 'form_filler_builder') {
+      const { PDFDocument } = await ensurePdfLib();
+      const doc = await PDFDocument.load(ctrl.files[0].bytes, { ignoreEncryption: true });
+      const form = doc.getForm();
+      const entries = pro.formData
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((l) => {
+          const eq = l.indexOf('=');
+          return eq > 0 ? { key: l.slice(0, eq).trim(), val: l.slice(eq + 1).trim() } : { key: l, val: '' };
+        });
+
+      if (pro.formMode === 'export_json') {
+        prog(60, 'Đang trích xuất danh sách ô AcroForm...');
+        const data = form.getFields().map((fld) => {
+          let value = '';
+          try { value = fld.getText?.() ?? fld.isChecked?.() ?? fld.getSelected?.() ?? ''; } catch (_e) {}
+          return { name: fld.getName(), type: fld.constructor?.name || 'Field', value };
+        });
+        outputs.push({ name: `${baseName}_FormData.json`, blob: new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' }) });
+        return outputs;
+      }
+
+      if (pro.formMode === 'fill_json') {
+        prog(60, 'Đang điền dữ liệu vào các trường AcroForm...');
+        for (const e of entries) {
+          try {
+            const tf = form.getTextField(e.key);
+            tf.setText(e.val);
+          } catch (_e1) {
+            try {
+              const cb = form.getCheckBox(e.key);
+              if (/true|1|yes|x/i.test(e.val)) cb.check();
+              else cb.uncheck();
+            } catch (_e2) {}
+          }
+        }
+        outputs.push({ name: `${baseName}_DaDienForm.pdf`, blob: new Blob([await doc.save()], { type: 'application/pdf' }) });
+        return outputs;
+      }
+
+      // add_fields: tạo mới các ô nhập liệu AcroForm chuẩn vào trang 1
+      prog(55, 'Đang tạo mới các ô nhập liệu tương tác (AcroForm)...');
+      const pg = doc.getPages()[0];
+      const { height } = pg.getSize();
+      let curY = height - 90;
+      for (const e of entries) {
+        if (/true|false/i.test(e.val)) {
+          const cb = form.createCheckBox(e.key);
+          cb.addToPage(pg, { x: 48, y: curY, width: 16, height: 16 });
+          if (/true/i.test(e.val)) cb.check();
+        } else {
+          const tf = form.createTextField(e.key);
+          tf.setText(e.val);
+          tf.addToPage(pg, { x: 48, y: curY, width: 240, height: 22 });
+        }
+        curY -= 32;
+        if (curY < 48) break;
+      }
+      outputs.push({ name: `${baseName}_FormTuongTac.pdf`, blob: new Blob([await doc.save()], { type: 'application/pdf' }) });
+      return outputs;
+    }
+
+    // 10F. TRỘN DỮ LIỆU HÀNG LOẠT (PDF MAIL MERGE TỪ EXCEL/CSV)
+    if (tool.id === 'pdf_mail_merge') {
+      const pdfRec = ctrl.files.find((f) => /\.pdf$/i.test(f.name));
+      const sheetRec = ctrl.files.find((f) => /\.(xlsx|xls|csv)$/i.test(f.name));
+      if (!pdfRec || !sheetRec) {
+        throw new Error('Hãy nạp đủ 1 tệp mẫu .PDF và 1 tệp danh sách .XLSX hoặc .CSV để trộn hàng loạt!');
+      }
+      const { PDFDocument } = await ensurePdfLib();
+      const XLSX = await ensureXlsx();
+      const wb = XLSX.read(sheetRec.bytes, { type: 'array' });
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]).slice(0, pro.mergeLimit);
+      if (!rows.length) throw new Error('Tệp Excel/CSV không có dòng dữ liệu nào.');
+
+      for (let i = 0; i < rows.length; i++) {
+        if (ctrl.cancelled) return [];
+        prog(12 + ((i + 1) / rows.length) * 80, `Đang trộn bản ghi ${i + 1}/${rows.length}...`);
+        const row = rows[i];
+        const doc = await PDFDocument.load(pdfRec.bytes, { ignoreEncryption: true });
+        const form = doc.getForm();
+        let filledFormAny = false;
+        for (const [k, v] of Object.entries(row)) {
+          try {
+            form.getTextField(k).setText(String(v ?? ''));
+            filledFormAny = true;
+          } catch (_e) {}
+        }
+        if (!filledFormAny) {
+          // Nếu mẫu PDF tĩnh không có AcroForm -> in dòng dữ liệu gọn đẹp vào vùng trống trang 1
+          const pg = doc.getPages()[0];
+          const { height } = pg.getSize();
+          const summary = Object.entries(row).map(([k, v]) => `${k}: ${v}`).join('  |  ');
+          const png = renderVietnameseTextToPngBytes(summary, { fontSize: 13, color: '#0f172a', bold: true, padX: 8, padY: 5 });
+          const emb = await doc.embedPng(png.bytes);
+          pg.drawImage(emb, { x: 36, y: height - 56, width: Math.min(520, png.widthPt), height: png.heightPt });
+        }
+        const safeTag = String(Object.values(row)[0] || `Ban_${i + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 32);
+        outputs.push({ name: `${baseName}_${i + 1}_${safeTag}.pdf`, blob: new Blob([await doc.save()], { type: 'application/pdf' }) });
+      }
+      return outputs;
+    }
+
+    // 10G. CHẾ BẢN IN ẤN (BLEED + CROP MARKS + COLOR BARS CMYK)
+    if (tool.id === 'prepress_bleed_marks') {
+      const { PDFDocument, rgb } = await ensurePdfLib();
+      const src = await PDFDocument.load(ctrl.files[0].bytes, { ignoreEncryption: true });
+      const out = await PDFDocument.create();
+      const bleedPt = (pro.bleedMm || 5) * 2.83465;
+      const markPad = 24;
+      const srcPages = src.getPages();
+      for (let i = 0; i < srcPages.length; i++) {
+        prog(15 + ((i + 1) / srcPages.length) * 75, `Đang chế bản in trang ${i + 1}/${srcPages.length}...`);
+        const emb = await out.embedPage(srcPages[i]);
+        const newW = emb.width + (bleedPt + markPad) * 2;
+        const newH = emb.height + (bleedPt + markPad) * 2;
+        const pg = out.addPage([newW, newH]);
+        const ox = bleedPt + markPad;
+        const oy = bleedPt + markPad;
+        pg.drawPage(emb, { x: ox, y: oy, width: emb.width, height: emb.height });
+        if (pro.cropMarks) {
+          const col = rgb(0, 0, 0);
+          const len = 14;
+          const corners = [
+            [ox, oy],
+            [ox + emb.width, oy],
+            [ox, oy + emb.height],
+            [ox + emb.width, oy + emb.height],
+          ];
+          corners.forEach(([cx, cy], ci) => {
+            const dx = ci % 2 === 0 ? -1 : 1;
+            const dy = ci < 2 ? -1 : 1;
+            pg.drawLine({ start: { x: cx + dx * 4, y: cy }, end: { x: cx + dx * (4 + len), y: cy }, thickness: 0.6, color: col });
+            pg.drawLine({ start: { x: cx, y: cy + dy * 4 }, end: { x: cx, y: cy + dy * (4 + len) }, thickness: 0.6, color: col });
+          });
+        }
+        if (pro.colorBars) {
+          const swatches = [rgb(0, 0.7, 0.9), rgb(0.9, 0.1, 0.5), rgb(0.95, 0.85, 0), rgb(0.1, 0.1, 0.1)];
+          swatches.forEach((sc, si) => {
+            pg.drawRectangle({ x: ox + si * 22, y: newH - 16, width: 18, height: 8, color: sc });
+          });
+        }
+      }
+      outputs.push({ name: `${baseName}_Prepress_PrintReady.pdf`, blob: new Blob([await out.save()], { type: 'application/pdf' }) });
+      return outputs;
+    }
+
+    // 10H. LÀM SẠCH DỮ LIỆU ẨN TOÀN DIỆN (DEEP FORENSICS SANITIZATION)
+    if (tool.id === 'deep_sanitize') {
+      const pdfjsLib = await ensurePdfJs();
+      const { PDFDocument } = await ensurePdfLib();
+      const pdf = await pdfjsLib.getDocument({ data: ctrl.files[0].bytes.slice() }).promise;
+      const cleanDoc = await PDFDocument.create();
+      for (let i = 1; i <= pdf.numPages; i++) {
+        if (ctrl.cancelled) return [];
+        prog(15 + (i / pdf.numPages) * 75, `Đang loại bỏ dữ liệu ẩn & lịch sử trang ${i}/${pdf.numPages}...`);
+        const page = await pdf.getPage(i);
+        // Render đúng khung CropBox -> hủy vĩnh viễn mọi đối tượng nằm ngoài lề cắt, JS, lớp ẩn & lịch sử Incremental!
+        const baseVp = page.getViewport({ scale: 1 });
+        const vp = page.getViewport({ scale: 1.85 });
+        const c = document.createElement('canvas');
+        c.width = vp.width;
+        c.height = vp.height;
+        await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+        const emb = await cleanDoc.embedJpg(dataUrlToUint8(c.toDataURL('image/jpeg', 0.92)));
+        const pg = cleanDoc.addPage([baseVp.width, baseVp.height]);
+        pg.drawImage(emb, { x: 0, y: 0, width: baseVp.width, height: baseVp.height });
+      }
+      cleanDoc.setTitle('');
+      cleanDoc.setAuthor('');
+      cleanDoc.setSubject('');
+      cleanDoc.setKeywords([]);
+      cleanDoc.setCreator('');
+      cleanDoc.setProducer('');
+      outputs.push({ name: `${baseName}_Sanitized_Clean.pdf`, blob: new Blob([await cleanDoc.save()], { type: 'application/pdf' }) });
       return outputs;
     }
 
@@ -1235,14 +1626,21 @@ Chương 3: Tổng kết | 12</textarea>
         const ctx = c.getContext('2d');
         await page.render({ canvasContext: ctx, viewport: vp }).promise;
 
-        // Tự động tìm và xóa sạch từng từ khóa nhạy cảm theo tọa độ hộp văn bản
-        if (keywords.length) {
+        // Tự động tìm và xóa sạch từng từ khóa nhạy cảm + Regex SĐT/CCCD/Email theo tọa độ hộp văn bản
+        const regexList = [];
+        if (pro.redactPhone) regexList.push(/(?:\+84|0)(?:3|5|7|8|9)[0-9\s.-]{8,11}/);
+        if (pro.redactCccd) regexList.push(/\b\d{9,12}\b/);
+        if (pro.redactEmail) regexList.push(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
+        if (keywords.length || regexList.length) {
           const tc = await page.getTextContent();
           ctx.fillStyle = '#000000';
           for (const it of tc.items) {
-            const s = String(it.str || '').toLowerCase();
+            const rawStr = String(it.str || '');
+            const s = rawStr.toLowerCase();
             if (!s) continue;
-            if (keywords.some((kw) => s.includes(kw))) {
+            const hitKw = keywords.some((kw) => s.includes(kw));
+            const hitRe = regexList.some((re) => re.test(rawStr));
+            if (hitKw || hitRe) {
               const tx = it.transform[4] * scale;
               const ty = vp.height - it.transform[5] * scale;
               const h = Math.max(14, Math.abs(it.height || 12) * scale * 1.25);

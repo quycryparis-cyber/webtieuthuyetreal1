@@ -2371,6 +2371,9 @@
                   : alarm.repeatMode === 'weekdays'
                     ? 'Thứ 2 – Thứ 6'
                     : '1 lần';
+              const targetDateBadge = alarm.targetDate
+                ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 border border-amber-400/50 text-amber-700 dark:text-amber-300">📅 ${escapeHtml(alarm.targetDate.split('-').reverse().join('/'))}</span>`
+                : '';
               return `
                 <div class="p-3 rounded-xl border transition flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 ${
                   alarm.enabled
@@ -2381,6 +2384,7 @@
                     <div class="flex flex-wrap items-center gap-2">
                       <span class="text-lg font-black font-monoCode text-zinc-900 dark:text-white">${pad2(alarm.hour)}:${pad2(alarm.minute)}:${pad2(alarm.second)}</span>
                       <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/15 text-indigo-700 dark:text-indigo-300">${repeatLabel}</span>
+                      ${targetDateBadge}
                       ${
                         alarm.enabled
                           ? `<span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300" data-mod42-countdown="${escapeHtml(alarm.id)}">⏳ ${escapeHtml(countdown.label)}</span>`
@@ -2448,6 +2452,23 @@
                 <option value="weekdays" ${draft.repeatMode === 'weekdays' ? 'selected' : ''}>T2 – T6</option>
               </select>
             </div>
+          </div>
+
+          <!-- Chọn ngày báo thức cụ thể (Tùy chọn cho báo thức hẹn ngày) -->
+          <div class="flex flex-wrap items-center gap-2 p-2.5 rounded-xl border border-amber-500/35 bg-amber-500/10 text-[11px]">
+            <label for="mod42-alarm-date" class="font-extrabold text-amber-800 dark:text-amber-200 flex items-center gap-1">
+              <span>📅 Ngày báo thức:</span>
+            </label>
+            <input
+              id="mod42-alarm-date"
+              type="date"
+              value="${escapeHtml(draft.targetDate || '')}"
+              class="px-2.5 py-1 rounded-lg border border-amber-400/60 bg-white dark:bg-zinc-900 text-xs font-bold text-zinc-900 dark:text-white"
+            />
+            <button type="button" id="mod42-btn-date-today" class="px-2 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900 hover:border-emerald-500 text-[10.5px] font-bold cursor-pointer">Hôm nay</button>
+            <button type="button" id="mod42-btn-date-tomorrow" class="px-2 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900 hover:border-emerald-500 text-[10.5px] font-bold cursor-pointer">Ngày mai</button>
+            <button type="button" id="mod42-btn-date-clear" class="px-2 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900 hover:border-rose-500 text-[10.5px] font-bold cursor-pointer">Mọi ngày</button>
+            <span class="text-[10px] text-zinc-600 dark:text-zinc-400">(Chọn ngày cụ thể sẽ tự chuyển sang hẹn đúng ngày đó)</span>
           </div>
 
           <div class="flex flex-wrap items-center gap-2 text-[11px] text-zinc-600 dark:text-zinc-400">
@@ -2674,6 +2695,7 @@
             ? rawAlarm.repeatMode
             : 'daily',
         enabled: rawAlarm.enabled !== false,
+        targetDate: /^\d{4}-\d{2}-\d{2}$/.test(String(rawAlarm.targetDate || '')) ? String(rawAlarm.targetDate) : '',
         ringtoneMode: rawAlarm.ringtoneMode === 'custom_mp3' ? 'custom_mp3' : 'system',
         systemRingtoneId: SYSTEM_RINGTONES.some((s) => s.id === rawAlarm.systemRingtoneId)
           ? rawAlarm.systemRingtoneId
@@ -2878,13 +2900,15 @@
       if (secKey === this.lastTickKey) return;
       this.lastTickKey = secKey;
 
+      const currentDateKey = `${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}`;
       const isWeekday = parts.weekdayIndex >= 1 && parts.weekdayIndex <= 5;
       let stateChanged = false;
 
       for (let i = 0; i < alarms.length; i++) {
         const alarm = alarms[i];
         if (!alarm || !alarm.enabled) continue;
-        if (alarm.repeatMode === 'weekdays' && !isWeekday) continue;
+        if (alarm.targetDate && alarm.targetDate !== currentDateKey) continue;
+        if (!alarm.targetDate && alarm.repeatMode === 'weekdays' && !isWeekday) continue;
 
         if (
           Number(alarm.hour) === parts.hour &&
@@ -3008,11 +3032,12 @@
             <button type="button" id="${CLOSE_BTN_ID}" aria-label="Đóng cửa sổ" title="Đóng cửa sổ (có thể bấm lại dòng chữ trên đầu trang để mở lại bất kỳ lúc nào)" class="w-9 h-9 rounded-xl border border-rose-500/40 bg-rose-500/15 hover:bg-rose-600 hover:text-white text-rose-700 dark:text-rose-300 font-black text-base flex items-center justify-center transition shrink-0 cursor-pointer">✕</button>
           </div>
 
-          <!-- 3 Tab Chức Năng Trong Cửa Sổ -->
+          <!-- 4 Tab Chức Năng Trong Cửa Sổ -->
           <div id="mod42-modal-tabs-bar" class="px-4 py-2 border-b border-zinc-300/70 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/50 flex flex-wrap items-center gap-1.5 shrink-0">
             <button type="button" data-mod42-tab="timezone" class="mod42-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition">🕒 Múi Giờ &amp; Định Dạng</button>
             <button type="button" data-mod42-tab="weather" class="mod42-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition">🌤️ Xem Thời Tiết</button>
             <button type="button" data-mod42-tab="alarm" class="mod42-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition">⏰ Báo Thức &amp; Chuông MP3</button>
+            <button type="button" data-mod42-tab="market" class="mod42-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition inline-flex items-center gap-1.5"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg><span>Đầu tư hôm nay</span></button>
           </div>
 
           <!-- Nội dung cuộn -->
@@ -3057,7 +3082,7 @@
 
     openModal(initialTab) {
       this.ensureModalShellExists();
-      if (initialTab && ['timezone', 'weather', 'alarm'].includes(initialTab)) {
+      if (initialTab && ['timezone', 'weather', 'alarm', 'market'].includes(initialTab)) {
         this.activeModalTab = initialTab;
       }
       this.modalOpen = true;
@@ -3082,6 +3107,9 @@
       if (NS.weatherSkyEngine && typeof NS.weatherSkyEngine.onModalClosed === 'function') {
         NS.weatherSkyEngine.onModalClosed();
       }
+      if (NS.marketAdvisor && typeof NS.marketAdvisor.onModalClosed === 'function') {
+        NS.marketAdvisor.onModalClosed();
+      }
       return true;
     }
 
@@ -3093,9 +3121,15 @@
     }
 
     switchModalTab(tabKey) {
-      this.activeModalTab = ['timezone', 'weather', 'alarm'].includes(tabKey)
+      const prevTab = this.activeModalTab;
+      this.activeModalTab = ['timezone', 'weather', 'alarm', 'market'].includes(tabKey)
         ? tabKey
         : 'timezone';
+      if (prevTab === 'market' && this.activeModalTab !== 'market') {
+        if (NS.marketAdvisor && typeof NS.marketAdvisor.onModalClosed === 'function') {
+          NS.marketAdvisor.onModalClosed();
+        }
+      }
       this.renderModalBody();
       if (this.activeModalTab === 'weather') {
         const target = this.getEffectiveWeatherTarget();
@@ -3135,6 +3169,12 @@
       } else if (this.activeModalTab === 'alarm') {
         body.innerHTML = buildAlarmTabPanelHtml(this.state, this);
         this.bindAlarmTabEvents(body);
+      } else if (this.activeModalTab === 'market') {
+        body.innerHTML = '<div id="mod49-market-inline-mount"></div>';
+        const mHost = body.querySelector('#mod49-market-inline-mount');
+        if (mHost && NS.marketAdvisor?.mountIntoContainer) {
+          NS.marketAdvisor.mountIntoContainer(mHost);
+        }
       } else {
         body.innerHTML = buildTimezoneTabPanelHtml(this.state, this);
         this.bindTimezoneTabEvents(body);
@@ -3305,6 +3345,7 @@
       const secEl = container.querySelector('#mod42-alarm-second');
       const labelEl = container.querySelector('#mod42-alarm-label');
       const repeatEl = container.querySelector('#mod42-alarm-repeat');
+      const dateEl = container.querySelector('#mod42-alarm-date');
       const sysSelect = container.querySelector('#mod42-system-ringtone-select');
       const mp3Input = container.querySelector('#mod42-mp3-upload-input');
       const quickStrEl = container.querySelector('#mod42-alarm-quick-str');
@@ -3315,6 +3356,7 @@
         if (secEl) this.alarmDraft.second = secEl.value;
         if (labelEl) this.alarmDraft.label = labelEl.value;
         if (repeatEl) this.alarmDraft.repeatMode = repeatEl.value;
+        if (dateEl) this.alarmDraft.targetDate = dateEl.value;
         if (sysSelect) this.alarmDraft.systemRingtoneId = sysSelect.value;
         const checkedRadio = container.querySelector('input[name="mod42-ringtone-mode"]:checked');
         if (checkedRadio) {
@@ -3322,9 +3364,35 @@
         }
       };
 
-      [hourEl, minEl, secEl, labelEl, repeatEl, sysSelect].forEach((el) => {
+      [hourEl, minEl, secEl, labelEl, repeatEl, dateEl, sysSelect].forEach((el) => {
         el?.addEventListener('change', syncDraftFromDom);
         el?.addEventListener('input', syncDraftFromDom);
+      });
+
+      const formatIsoDateOffset = (daysOffset = 0) => {
+        const p = this.getCurrentZonedParts(new Date(Date.now() + daysOffset * 86400000));
+        return `${p.year}-${pad2(p.month)}-${pad2(p.day)}`;
+      };
+      dateEl?.addEventListener('change', () => {
+        if (dateEl.value && repeatEl) {
+          repeatEl.value = 'once';
+        }
+        syncDraftFromDom();
+      });
+      container.querySelector('#mod42-btn-date-today')?.addEventListener('click', () => {
+        if (dateEl) dateEl.value = formatIsoDateOffset(0);
+        if (repeatEl) repeatEl.value = 'once';
+        syncDraftFromDom();
+      });
+      container.querySelector('#mod42-btn-date-tomorrow')?.addEventListener('click', () => {
+        if (dateEl) dateEl.value = formatIsoDateOffset(1);
+        if (repeatEl) repeatEl.value = 'once';
+        syncDraftFromDom();
+      });
+      container.querySelector('#mod42-btn-date-clear')?.addEventListener('click', () => {
+        if (dateEl) dateEl.value = '';
+        if (repeatEl && repeatEl.value === 'once') repeatEl.value = 'daily';
+        syncDraftFromDom();
       });
 
       container.querySelectorAll('input[name="mod42-ringtone-mode"]').forEach((radio) => {
@@ -3461,6 +3529,7 @@
           second: this.alarmDraft.second,
           label: this.alarmDraft.label,
           repeatMode: this.alarmDraft.repeatMode,
+          targetDate: this.alarmDraft.targetDate,
           ringtoneMode: this.alarmDraft.ringtoneMode,
           systemRingtoneId: this.alarmDraft.systemRingtoneId,
         });
@@ -3470,8 +3539,8 @@
           this.renderModalBody();
           this.showAlarmFeedback(
             `✅ Đã lưu báo thức lúc ${res.alarm.hourText}:${res.alarm.minuteText}:${res.alarm.secondText}${
-              res.secondDefaulted ? ' (giây bỏ trống nên mặc định :00)' : ''
-            }.`,
+              res.alarm.targetDate ? ` ngày ${res.alarm.targetDate.split('-').reverse().join('/')}` : ''
+            }${res.secondDefaulted ? ' (giây bỏ trống nên mặc định :00)' : ''}.`,
             'success'
           );
         }
@@ -3721,9 +3790,12 @@
         secondText: pad2(check.second),
         label: String(spec?.label || 'Nhắc nhở từ Studio').trim() || 'Nhắc nhở từ Studio',
         repeatMode:
-          spec?.repeatMode === 'once' || spec?.repeatMode === 'weekdays'
-            ? spec.repeatMode
-            : 'daily',
+          spec?.targetDate && /^\d{4}-\d{2}-\d{2}$/.test(String(spec.targetDate))
+            ? 'once'
+            : spec?.repeatMode === 'once' || spec?.repeatMode === 'weekdays'
+              ? spec.repeatMode
+              : 'daily',
+        targetDate: /^\d{4}-\d{2}-\d{2}$/.test(String(spec?.targetDate || '')) ? String(spec.targetDate) : '',
         enabled: true,
         ringtoneMode: spec?.ringtoneMode === 'custom_mp3' ? 'custom_mp3' : 'system',
         systemRingtoneId: SYSTEM_RINGTONES.some((r) => r.id === spec?.systemRingtoneId)

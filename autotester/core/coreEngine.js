@@ -682,6 +682,29 @@
       }
     }
 
+    async verifyBlobMagicBytes(blob, expectedType = 'pdf') {
+      try {
+        if (!blob || blob.size === 0) {
+          return { ok: false, size: 0, reason: 'Tệp đầu ra 0 byte' };
+        }
+        const buf = await blob.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        const headAscii = String.fromCharCode(...bytes.slice(0, 8));
+        if (expectedType === 'pdf' && !headAscii.startsWith('%PDF')) {
+          return { ok: false, size: bytes.length, reason: `Sai chữ ký %PDF (thực tế: ${headAscii.slice(0, 5)})` };
+        }
+        if (expectedType === 'zip' && !(bytes[0] === 0x50 && bytes[1] === 0x4b)) {
+          return { ok: false, size: bytes.length, reason: 'Sai chữ ký ZIP/DOCX/EPUB (PK)' };
+        }
+        if (expectedType === 'png' && !(bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47)) {
+          return { ok: false, size: bytes.length, reason: 'Sai chữ ký PNG' };
+        }
+        return { ok: true, size: bytes.length, bytes };
+      } catch (err) {
+        return { ok: false, size: 0, reason: err?.message || 'Lỗi đọc Blob' };
+      }
+    }
+
     setNetworkSimulation(mode = 'normal') {
       this.networkMode = mode;
       if (mode === 'normal') {

@@ -14,4 +14,5 @@ contextBridge.exposeInMainWorld('NoirDesktopLocalEngine', {
   isDesktopElectron: true,
   detectEngines: () => ipcRenderer.invoke('danglovepdf:detect-engines'),
   runLocalTool: (payload) => ipcRenderer.invoke('danglovepdf:run-local-tool', payload),
+  investFetch: (payload) => ipcRenderer.invoke('invest:http-fetch', payload),
 });

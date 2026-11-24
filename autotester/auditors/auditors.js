@@ -21,6 +21,7 @@
       this.errors = [];
       this._active = false;
       this._origConsoleError = null;
+      this._origWorker = null;
       this._boundOnError = null;
       this._boundRejection = null;
     }
@@ -70,6 +71,27 @@
           return self._origConsoleError.apply(console, args);
         };
       }
+      // Bắt lỗi Web Worker ngầm (Spec §3.10 — Safari/Chrome an toàn)
+      try {
+        if (typeof globalScope.Worker === 'function' && !this._origWorker) {
+          this._origWorker = globalScope.Worker;
+          const OrigWorker = this._origWorker;
+          const self = this;
+          globalScope.Worker = function TrackedAutoTesterWorker(url, options) {
+            const w = new OrigWorker(url, options);
+            w.addEventListener('error', (ev) => {
+              self.errors.push({
+                source: 'Worker.onerror',
+                message: ev?.message || 'Web Worker gặp lỗi chạy ngầm',
+                file: String(url || '').split('/').pop(),
+                at: Date.now(),
+              });
+            });
+            return w;
+          };
+          globalScope.Worker.prototype = OrigWorker.prototype;
+        }
+      } catch (_eW) {}
     }
 
     stop() {
@@ -80,6 +102,10 @@
       if (this._origConsoleError) {
         console.error = this._origConsoleError;
         this._origConsoleError = null;
+      }
+      if (this._origWorker) {
+        globalScope.Worker = this._origWorker;
+        this._origWorker = null;
       }
       this._boundOnError = null;
       this._boundRejection = null;
@@ -288,7 +314,90 @@
   };
 
   // --------------------------------------------------------------------------
-  // 5. VISUAL, MOBILE & I18N AUDITOR
+  // 4B. INDUSTRY BENCHMARK AUDITOR (Đối chiếu chuẩn các nền tảng lớn)
+  // --------------------------------------------------------------------------
+  const BenchmarkComplianceAuditor = {
+    auditAppBenchmarks() {
+      const ns = globalScope.NoirStudio || {};
+      const checks = [
+        {
+          key: 'pdf_pro_41_tools',
+          label: 'Bộ công cụ PDF & File đầy đủ (>= 35 công cụ chuẩn iLovePDF/Smallpdf/Sejda)',
+          ok: (ns.dangLovePdfPro?.PRO_TOOL_GROUPS?.flatMap((g) => g.tools).length || 0) >= 35,
+        },
+        {
+          key: 'pdf_canvas_preview',
+          label: 'Xem trước PDF bằng Canvas PDF.js (không dùng iframe hay bị trắng trên Mobile)',
+          ok: typeof ns.dangLovePdf?.openInteractiveResultPreview === 'function',
+        },
+        {
+          key: 'pdf_guest_quick_entry',
+          label: 'Nút vào nhanh ĐăngLovePDF kèm icon ở Cổng kết nối Chế Độ Khách',
+          ok: Boolean(document.getElementById('btn-gate-quick-danglovepdf')),
+        },
+        {
+          key: 'book_exporter_mod26',
+          label: 'Xuất sách PDF / DOCX / TXT có xem thử trực tiếp tiếng Việt chuẩn (Mod 26)',
+          ok: Boolean(ns.bookExporter || document.getElementById('modal-s6-custom-exporter')),
+        },
+        {
+          key: 'story_bible_select_copy',
+          label: 'Story Bible & Đầu ra AI có nút Chọn tất cả + Sao chép tất cả 1 chạm',
+          ok: Boolean(document.querySelector('[data-v117-copy-all]') && document.querySelector('[data-v117-select-all]')),
+        },
+        {
+          key: 'youtube_pip_and_bg',
+          label: 'YouTube + Cửa sổ nổi Desktop + Nền video chuyển động đồng bộ 1 luồng tiếng',
+          ok: Boolean(ns.youtubeStudio && (ns.youtubeMotionBg || ns.mod40)),
+        },
+        {
+          key: 'scientific_calc_and_pomo',
+          label: 'Máy tính Casio FX-570 / Desmos + Pomodoro 2 chiều + Đồng hồ/Báo thức/Thời tiết',
+          ok: Boolean(ns.Fx570MathEngine && ns.pomodoro && ns.worldClockStudio),
+        },
+        {
+          key: 'chatbot_dual_mode',
+          label: 'Trợ lý AI Bi Số 8 hoạt động cả Chế Độ Khách & không đẩy qua lại 2 chế độ',
+          ok: Boolean(ns.mascotAndChat?.buildIntelligentLocalResponse),
+        },
+        {
+          key: 'ram_autosleep_mod47',
+          label: 'Quản lý RAM, Tự ngủ đồ họa & Công tắc tắt/bật từng chức năng (Mod 47)',
+          ok: Boolean(ns.perfManager && document.getElementById('tab6-acc-perf-ram-manager')),
+        },
+        {
+          key: 'pwa_i18n_6_langs',
+          label: 'Hỗ trợ Offline PWA Service Worker + 6 ngôn ngữ + Video hướng dẫn >= 30 mốc',
+          ok: Boolean((ns.TUTORIAL_CHAPTERS_V38?.length || 0) >= 30 && navigator.serviceWorker),
+        },
+      ];
+      const passedCount = checks.filter((c) => c.ok).length;
+      const missing = checks.filter((c) => !c.ok);
+      return { total: checks.length, passedCount, missing, checks };
+    },
+  };
+
+  // Hàm tính độ tương phản WCAG giữa 2 màu rgba()
+  function parseRgb(str) {
+    const m = String(str || '').match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/);
+    if (!m) return null;
+    return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]), a: m[4] === undefined ? 1 : Number(m[4]) };
+  }
+  function relLum(c) {
+    const f = (v) => {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+  }
+  function contrastRatio(c1, c2) {
+    const l1 = relLum(c1);
+    const l2 = relLum(c2);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  }
+
+  // --------------------------------------------------------------------------
+  // 5. VISUAL, MOBILE, CONTRAST & I18N AUDITOR
   // --------------------------------------------------------------------------
   const VisualAndMobileAuditor = {
     scanI18nKeyLeaks() {
@@ -382,6 +491,32 @@
         });
       }
 
+      // 3B. Kiểm tra độ tương phản chữ/nền tối thiểu trên nút bấm chính đang hiển thị (WCAG)
+      let lowContrastCount = 0;
+      let firstLowContrastSel = '';
+      const primaryEls = document.querySelectorAll('section:not(.hidden) button:not(.hidden)');
+      for (let i = 0; i < Math.min(primaryEls.length, 60); i++) {
+        const el = primaryEls[i];
+        if (el.closest('[data-autotester-ui="true"]') || el.closest('.hidden')) continue;
+        const st = getComputedStyle(el);
+        const fg = parseRgb(st.color);
+        const bg = parseRgb(st.backgroundColor);
+        if (fg && bg && bg.a >= 0.85) {
+          const ratio = contrastRatio(fg, bg);
+          if (ratio < 2.4) {
+            lowContrastCount += 1;
+            if (!firstLowContrastSel) firstLowContrastSel = el.id ? `#${el.id}` : (el.textContent || '').trim().slice(0, 24);
+          }
+        }
+      }
+      if (lowContrastCount >= 4) {
+        findings.push({
+          code: 'WARN_LOW_CONTRAST',
+          selector: firstLowContrastSel,
+          techDetail: `${screenLabel}: phát hiện ${lowContrastCount} nút có độ tương phản màu chữ/nền thấp (<2.4:1, vd: ${firstLowContrastSel}).`,
+        });
+      }
+
       // 4. Nút quá nhỏ trên màn hình điện thoại
       if (isMobile) {
         const tinyButtons = [];
@@ -449,5 +584,6 @@
   AT.smoothAuditor = new SmoothnessAndRamAuditor();
   AT.visualAuditor = VisualAndMobileAuditor;
   AT.browserMatrix = BrowserCapabilityMatrixAuditor;
+  AT.benchmarkAuditor = BenchmarkComplianceAuditor;
   AT.sampleCanvasHash = sampleCanvasHash;
 })(typeof window !== 'undefined' ? window : globalThis);

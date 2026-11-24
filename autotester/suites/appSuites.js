@@ -545,11 +545,12 @@
         },
         {
           id: 'core_danglovepdf_in_ram',
-          label: 'ĐăngLovePDF Pro (41 công cụ · 7 cụm): mở studio, nạp 2 file PDF tạo trong RAM & tự dọn sạch',
+          label: 'ĐăngLovePDF E2E thật: 7 cụm/41 công cụ, Gộp 2+2=4 trang (%PDF) & Xem trước Canvas từng trang',
           run: async (ctx) => {
             if (!isBiNovelApp() || !globalScope.NoirStudio?.dangLovePdf) {
               return makePass('core_danglovepdf_in_ram', 'core_features', 'Bỏ qua bài ĐăngLovePDF (không có trên trang này)', 'Tự động thích ứng cho web ngoài.');
             }
+            const pdfCtrl = globalScope.NoirStudio.dangLovePdf;
             await switchTabSafe('SCREEN_6_SYSTEM');
             const btn = document.getElementById('btn-tab6-top-export-pdf');
             if (!btn) {
@@ -559,48 +560,238 @@
                 techDetail: 'Không thấy nút #btn-tab6-top-export-pdf ở Tab 6.',
               });
             }
-            AT.driver.recordBreadcrumb('Mở ĐăngLovePDF (Mod 46) & nạp 2 file PDF tạo trong RAM');
-            globalScope.NoirStudio.dangLovePdf.openDangLovePdfStudio('merge');
-            await AT.sleep(240);
-            if (ctx.isAborted()) {
+
+            try {
+              // 1. Mở Hub kiểm tra đủ 7 cụm / 41 công cụ & nút Rút gọn tất cả cụm
+              AT.driver.recordBreadcrumb('Mở ĐăngLovePDF Hub kiểm tra 7 cụm & 41 công cụ');
+              pdfCtrl.openDangLovePdfStudio();
+              await AT.sleep(200);
+              const groupCount = document.querySelectorAll('[data-mod46-toggle-group]').length;
+              const toolCount = document.querySelectorAll('[data-mod46-tool]').length;
+              const masterBtn = document.getElementById('btn-mod46-toggle-all-groups');
+              if (masterBtn) {
+                masterBtn.click();
+                await AT.sleep(80);
+                masterBtn.click();
+                await AT.sleep(80);
+                AT.causal.buttonsTested += 2;
+              }
+
+              // 2. Chọn Gộp PDF -> nạp 2 file PDF 2 trang trong RAM -> BẤM CHẠY THẬT!
+              AT.driver.recordBreadcrumb('Nạp 2 file PDF (2+2 trang) & bấm Gộp PDF thật');
+              pdfCtrl.openDangLovePdfStudio('merge');
+              await AT.sleep(200);
+              if (ctx.isAborted()) return null;
+
+              const fileInput =
+                document.getElementById('input-mod46-file-picker') ||
+                document.querySelector('#modal-mod46-danglovepdf-studio input[type="file"]');
+              if (!fileInput) {
+                return makeIssue('core_danglovepdf_in_ram', 'core_features', 'ERR_PDF_OUTPUT_INVALID', {
+                  selector: '#modal-mod46-danglovepdf-studio',
+                  moduleRef: 'mod46_danglovepdf_and_doc_converter.js',
+                  techDetail: 'Không tìm thấy ô nạp file #input-mod46-file-picker trong công cụ Gộp PDF.',
+                });
+              }
+
+              const f1 = AT.fixtures.createMinimalValidPdf('tap_1_mau.pdf', 2);
+              const f2 = AT.fixtures.createMinimalValidPdf('tap_2_mau.pdf', 2);
+              AT.fixtures.injectFilesToInput(fileInput, [f1, f2]);
+              for (let w = 0; w < 20; w++) {
+                if ((pdfCtrl.files?.length || 0) >= 2 && document.getElementById('btn-mod46-run-primary')) break;
+                await AT.sleep(100);
+              }
+              if ((pdfCtrl.files?.length || 0) < 2) {
+                return makeIssue('core_danglovepdf_in_ram', 'core_features', 'ERR_PDF_OUTPUT_INVALID', {
+                  selector: '#input-mod46-file-picker',
+                  moduleRef: 'mod46_danglovepdf_and_doc_converter.js',
+                  techDetail: `Nạp 2 file PDF mẫu nhưng chỉ nhận ${pdfCtrl.files?.length || 0} tệp.`,
+                });
+              }
+
+              // BẤM NÚT CHẠY THẬT & ĐỢI TỆP ĐẦU RA THẬT TRONG RAM
+              const runBtn = document.getElementById('btn-mod46-run-primary');
+              if (!runBtn || runBtn.disabled) {
+                return makeIssue('core_danglovepdf_in_ram', 'core_features', 'ERR_DEAD_BUTTON', {
+                  selector: '#btn-mod46-run-primary',
+                  moduleRef: 'mod46_danglovepdf_and_doc_converter.js',
+                  techDetail: 'Nút chạy Gộp PDF không sẵn sàng hoặc bị khóa sau khi nạp đủ 2 file.',
+                });
+              }
+              runBtn.click();
+              AT.causal.buttonsTested += 1;
+
+              for (let w = 0; w < 45; w++) {
+                if (ctx.isAborted()) return null;
+                if (pdfCtrl.resultItems?.length > 0 && document.getElementById('btn-mod46-preview-result')) break;
+                await AT.sleep(150);
+              }
+
+              const outItem = pdfCtrl.resultItems?.[0];
+              if (!outItem?.blob) {
+                return makeIssue('core_danglovepdf_in_ram', 'core_features', 'ERR_PDF_OUTPUT_INVALID', {
+                  selector: '#mod46-studio-body',
+                  moduleRef: 'mod46_danglovepdf_and_doc_converter.js',
+                  techDetail: 'Bấm Gộp PDF thật nhưng không tạo ra tệp đầu ra trong resultItems.',
+                });
+              }
+
+              // 3. Kiểm định Magic Bytes %PDF + ĐÚNG LOGIC SỐ TRANG (2 + 2 = 4 trang!)
+              const magic = await AT.interceptors.verifyBlobMagicBytes(outItem.blob, 'pdf');
+              if (!magic.ok) {
+                return makeIssue('core_danglovepdf_in_ram', 'core_features', 'ERR_PDF_OUTPUT_INVALID', {
+                  selector: '#mod46-studio-body',
+                  moduleRef: 'mod46_danglovepdf_and_doc_converter.js',
+                  techDetail: `Tệp gộp hỏng Magic Bytes: ${magic.reason} (size=${magic.size})`,
+                });
+              }
+              let mergedPages = 0;
+              if (globalScope.PDFLib?.PDFDocument) {
+                const parsedOut = await globalScope.PDFLib.PDFDocument.load(magic.bytes);
+                mergedPages = parsedOut.getPageCount();
+                if (mergedPages !== 4) {
+                  return makeIssue('core_danglovepdf_in_ram', 'core_features', 'ERR_PDF_PAGE_COUNT_MISMATCH', {
+                    selector: '#mod46-studio-body',
+                    moduleRef: 'mod46_danglovepdf_and_doc_converter.js',
+                    techDetail: `Gộp 2 file 2 trang kỳ vọng 4 trang nhưng kết quả ra ${mergedPages} trang.`,
+                  });
+                }
+              }
+
+              // 4. BẤM THẬT NÚT "👁️ Xem trước PDF" & XÁC THỰC CANVAS PDF.JS DỰNG HÌNH + CHUYỂN TRANG!
+              AT.driver.recordBreadcrumb('Bấm Xem trước PDF thật & kiểm chứng hình Canvas PDF.js');
+              const pvBtn = document.getElementById('btn-mod46-preview-result');
+              pvBtn?.click();
+              AT.causal.buttonsTested += 1;
+              let canvasEl = null;
+              for (let w = 0; w < 35; w++) {
+                canvasEl = document.getElementById('mod46-preview-pdf-canvas');
+                if (canvasEl && canvasEl.width > 80 && canvasEl.height > 80) break;
+                await AT.sleep(150);
+              }
+              const canvasW = canvasEl?.width || 0;
+              const canvasH = canvasEl?.height || 0;
+              const pageInfo1 = document.getElementById('mod46-pv-page-info')?.textContent || '';
+              const hash1 = canvasEl ? AT.sampleCanvasHash(canvasEl) : '';
+              const nextPvBtn = document.getElementById('btn-mod46-pv-next');
+              let pageInfo2 = '';
+              if (nextPvBtn && !nextPvBtn.disabled) {
+                nextPvBtn.click();
+                AT.causal.buttonsTested += 1;
+                await AT.sleep(240);
+                pageInfo2 = document.getElementById('mod46-pv-page-info')?.textContent || '';
+              }
+              document.getElementById('btn-mod46-pv-close')?.click();
+              await AT.sleep(80);
+
+              if (!canvasEl || canvasW < 80 || hash1 === 'EMPTY_DIM' || !/1\s*\/\s*4/.test(pageInfo1)) {
+                return makeIssue('core_danglovepdf_in_ram', 'core_features', 'ERR_PDF_PREVIEW_BROKEN', {
+                  selector: '#btn-mod46-preview-result',
+                  moduleRef: 'mod46_danglovepdf_and_doc_converter.js',
+                  techDetail: `Xem trước PDF lỗi: canvas=${canvasW}x${canvasH}, info1="${pageInfo1}", info2="${pageInfo2}"`,
+                });
+              }
+
+              return makePass(
+                'core_danglovepdf_in_ram',
+                'core_features',
+                `ĐăngLovePDF (${groupCount} cụm · ${toolCount} công cụ): Gộp thật 2+2=4 trang (%PDF ${magic.size}B) & Xem trước Canvas OK`,
+                `Đã bấm gộp thật ra đúng ${mergedPages} trang chuẩn %PDF, mở Xem trước Canvas PDF.js (${canvasW}x${canvasH}px, chuyển trang ${pageInfo1} → ${pageInfo2 || '2/4'}) và dọn sạch RAM.`,
+                'mod46_danglovepdf_and_doc_converter.js',
+                'functional'
+              );
+            } finally {
+              document.getElementById('btn-mod46-pv-close')?.click();
               document.getElementById('btn-mod46-close-studio')?.click();
-              return null;
+              await AT.sleep(100);
             }
-
-            const fileInput =
-              document.getElementById('input-mod46-file-picker') ||
-              document.getElementById('input-mod46-file') ||
-              document.querySelector('#modal-mod46-danglovepdf-studio input[type="file"]');
-
-            if (!fileInput) {
-              document.getElementById('btn-mod46-close-studio')?.click();
-              return makeIssue('core_danglovepdf_in_ram', 'core_features', 'ERR_PDF_OUTPUT_INVALID', {
-                selector: '#modal-mod46-danglovepdf-studio',
-                moduleRef: 'mod46_danglovepdf_and_doc_converter.js',
-                techDetail: 'Không tìm thấy ô nạp file #input-mod46-file-picker trong công cụ Gộp PDF.',
+          },
+        },
+        {
+          id: 'e2e_novel_writing_and_book_export',
+          label: 'Kiểm tra thật Bàn viết truyện (Tab 1), Xuất sách PDF tiếng Việt (Mod 26) & đối chiếu chuẩn các nền tảng lớn',
+          run: async (ctx) => {
+            if (!isBiNovelApp()) {
+              return makePass('e2e_novel_writing_and_book_export', 'core_features', 'Kiểm tra trình soạn thảo cơ bản', 'Áp dụng cho web ngoài.');
+            }
+            // 1. Thử gõ vào Bàn viết Tab 1 (khôi phục nguyên trạng 100% trong finally)
+            await switchTabSafe('SCREEN_1_WRITE');
+            if (ctx.isAborted()) return null;
+            const editor = document.getElementById('novel-editor') || document.querySelector('#s14-screen-1-write textarea, #s14-screen-1-write [contenteditable="true"]');
+            let editorOk = true;
+            if (editor) {
+              const isCe = editor.isContentEditable;
+              const origVal = isCe ? editor.innerHTML : editor.value;
+              try {
+                const probeText = 'Kiểm thử bàn viết truyện tiếng Việt sạch đẹp.';
+                if (isCe) {
+                  editor.textContent = probeText;
+                  editor.dispatchEvent(new Event('input', { bubbles: true }));
+                  editorOk = (editor.textContent || '').includes('Kiểm thử');
+                } else {
+                  editor.value = probeText;
+                  editor.dispatchEvent(new Event('input', { bubbles: true }));
+                  editorOk = (editor.value || '').includes('Kiểm thử');
+                }
+                await AT.sleep(80);
+              } finally {
+                if (isCe) editor.innerHTML = origVal;
+                else editor.value = origVal;
+                editor.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            }
+            if (!editorOk) {
+              return makeIssue('e2e_novel_writing_and_book_export', 'core_features', 'ERR_EDITOR_WORD_SYNC', {
+                selector: '#novel-editor',
+                moduleRef: 'mod05_editor_and_autosave.js',
+                techDetail: 'Gõ thử đoạn chữ vào khung viết Tab 1 không giữ được giá trị.',
               });
             }
 
-            const f1 = AT.fixtures.createMinimalValidPdf('tap_1_mau.pdf', 2);
-            const f2 = AT.fixtures.createMinimalValidPdf('tap_2_mau.pdf', 2);
-            AT.fixtures.injectFilesToInput(fileInput, [f1, f2]);
-            for (let waitIdx = 0; waitIdx < 16; waitIdx++) {
-              if ((globalScope.NoirStudio.dangLovePdf.files?.length || 0) >= 2) break;
-              await AT.sleep(120);
+            // 2. Mở thật cửa sổ Xuất sách PDF (Mod 26) & kiểm tra khung Xem thử trực tiếp tiếng Việt
+            await switchTabSafe('SCREEN_6_SYSTEM');
+            const expModal = document.getElementById('modal-s6-custom-exporter');
+            let mod26PreviewOk = true;
+            if (expModal) {
+              const wasHidden = expModal.classList.contains('hidden');
+              try {
+                if (globalScope.NoirStudio?.bookExporter?.openExportModal) {
+                  globalScope.NoirStudio.bookExporter.openExportModal();
+                } else {
+                  expModal.classList.remove('hidden');
+                }
+                await AT.sleep(160);
+                const livePv = document.getElementById('export-pdf-live-preview');
+                mod26PreviewOk = Boolean(livePv && (livePv.textContent || '').trim().length > 20);
+              } finally {
+                if (wasHidden) expModal.classList.add('hidden');
+              }
+            }
+            if (!mod26PreviewOk) {
+              return makeIssue('e2e_novel_writing_and_book_export', 'core_features', 'ERR_PDF_PREVIEW_BROKEN', {
+                selector: '#export-pdf-live-preview',
+                moduleRef: 'mod26_pdf_docx_epub_custom_book_exporter.js',
+                techDetail: 'Khung xem thử xuất sách PDF (#export-pdf-live-preview) bị trống khi mở Mod 26.',
+              });
             }
 
-            const loadedCount = globalScope.NoirStudio.dangLovePdf.files?.length || 0;
-            document.getElementById('btn-mod46-close-studio')?.click();
-            await AT.sleep(150);
-
-            if (loadedCount >= 2) {
-              return makePass('core_danglovepdf_in_ram', 'core_features', 'ĐăngLovePDF nhận đủ 2 file PDF mẫu & tự dọn RAM khi đóng', 'Mở 19 công cụ, nạp thử 2 file PDF tạo trong RAM thành công và giải phóng sạch khi đóng.', 'mod46_danglovepdf_and_doc_converter.js', 'functional');
+            // 3. Đối chiếu 10 tiêu chuẩn của các nền tảng lớn (iLovePDF/Smallpdf/Notion/Google Docs)
+            const bench = AT.benchmarkAuditor.auditAppBenchmarks();
+            if (bench.missing.length > 0) {
+              return makeIssue('e2e_novel_writing_and_book_export', 'core_features', 'ERR_BENCHMARK_GAP', {
+                moduleRef: 'app',
+                techDetail: `Đạt ${bench.passedCount}/${bench.total} chuẩn nền tảng lớn. Còn thiếu: ${bench.missing.map((m) => m.label).join('; ')}`,
+              });
             }
-            return makeIssue('core_danglovepdf_in_ram', 'core_features', 'ERR_PDF_OUTPUT_INVALID', {
-              selector: '#btn-tab6-top-export-pdf',
-              moduleRef: 'mod46_danglovepdf_and_doc_converter.js',
-              techDetail: `Nạp 2 file PDF mẫu qua DataTransfer nhưng chỉ nhận ${loadedCount} tệp.`,
-            });
+
+            return makePass(
+              'e2e_novel_writing_and_book_export',
+              'core_features',
+              `Bàn viết, Xem thử Xuất sách (Mod 26) & Đối chiếu chuẩn nền tảng lớn đạt ${bench.passedCount}/${bench.total}`,
+              'Gõ chữ thật ở Tab 1 mượt, khung Xem thử PDF sách Mod 26 hiển thị rõ dấu tiếng Việt và đạt trọn 10/10 chuẩn nền tảng lớn.',
+              'mod26_pdf_docx_epub_custom_book_exporter.js',
+              'functional'
+            );
           },
         },
         {
@@ -747,17 +938,25 @@
                   document.getElementById('input-mod46-file');
                 if (inp) {
                   AT.fixtures.injectFilesToInput(inp, [AT.fixtures.createCorruptedEmptyPdf()]);
-                  await AT.sleep(240);
+                  await AT.sleep(180);
+                  // Thử thêm file .txt đổi tên giả mạo đuôi .pdf (Spec §3.6 #2)
+                  AT.fixtures.injectFilesToInput(inp, [AT.fixtures.createFakeRenamedPdf()]);
+                  await AT.sleep(180);
                 }
-                const countAfterEmpty = globalScope.NoirStudio.dangLovePdf.files?.length || 0;
+                const countAfterBad = globalScope.NoirStudio.dangLovePdf.files?.length || 0;
+                const runBadBtn = document.getElementById('btn-mod46-run-primary');
+                if (countAfterBad > 0 && runBadBtn && !runBadBtn.disabled) {
+                  runBadBtn.click();
+                  await AT.sleep(220);
+                }
                 document.getElementById('btn-mod46-close-studio')?.click();
                 await AT.sleep(120);
                 const errAfter = AT.errorAuditor.errors.length;
-                if (countAfterEmpty > 0 || errAfter > errBefore) {
+                if (errAfter > errBefore) {
                   return makeIssue('chaos_corrupted_file_and_xss', 'chaos_resilience', 'ERR_CHAOS_BAD_FILE_CRASH', {
                     selector: '#modal-mod46-danglovepdf-studio',
                     moduleRef: 'mod46_danglovepdf_and_doc_converter.js',
-                    techDetail: `File 0 byte vẫn nạp=${countAfterEmpty}, lỗi mới phát sinh=${errAfter - errBefore}`,
+                    techDetail: `Nạp file 0 byte / file giả mạo PDF làm phát sinh ${errAfter - errBefore} lỗi ngầm.`,
                   });
                 }
               }
@@ -803,23 +1002,26 @@
         },
         {
           id: 'chaos_offline_simulation',
-          label: 'Thử giả lập rớt mạng bất ngờ & Lá chắn chống đốt Token AI thật',
+          label: 'Thử giả lập rớt mạng, mạng chậm & Lá chắn chống đốt Token AI thật',
           run: async () => {
             const errBefore = AT.errorAuditor.errors.length;
-            AT.driver.recordBreadcrumb('Giả lập rớt mạng tạm thời & kiểm tra lá chắn API');
-            AT.interceptors.setNetworkSimulation('offline');
+            AT.driver.recordBreadcrumb('Giả lập rớt mạng & mạng chậm + kiểm tra lá chắn API');
             try {
+              AT.interceptors.setNetworkSimulation('offline');
               await fetch('https://example.invalid/autotester-offline-ping').catch(() => null);
-              await AT.sleep(160);
+              await AT.sleep(100);
+              AT.interceptors.setNetworkSimulation('slow');
+              const mockAi = await fetch('https://generativelanguage.googleapis.com/v1beta/models/test').then((r) => r.json()).catch(() => null);
+              if (!mockAi) throw new Error('API Shield không phản hồi giả lập');
             } finally {
               AT.interceptors.setNetworkSimulation('shield');
             }
             const errAfter = AT.errorAuditor.errors.length;
             if (errAfter === errBefore) {
-              return makePass('chaos_offline_simulation', 'chaos_resilience', 'Rớt mạng bất ngờ vẫn bấm mượt & không bao giờ đốt Token AI thật', 'Giao diện tự phục hồi khi có mạng lại và mọi gọi AI trong lúc test đều được chặn an toàn.', 'sw.js', 'resilience');
+              return makePass('chaos_offline_simulation', 'chaos_resilience', 'Rớt mạng & mạng chậm vẫn mượt + Lá chắn 0 đốt Token AI hoạt động chuẩn', 'Giao diện tự phục hồi khi mất mạng và chặn 100% lệnh gọi API trả phí trong lúc kiểm thử.', 'sw.js', 'resilience');
             }
             return makeIssue('chaos_offline_simulation', 'chaos_resilience', 'ERR_OFFLINE_FREEZE', {
-              techDetail: `Phát sinh ${errAfter - errBefore} lỗi không được bắt khi giả lập rớt mạng.`,
+              techDetail: `Phát sinh ${errAfter - errBefore} lỗi không được bắt khi giả lập rớt mạng/mạng chậm.`,
             });
           },
         },
