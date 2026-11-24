@@ -228,18 +228,82 @@
     return groups;
   }
 
+  const WORD_FONT_OPTIONS = [
+    { label: 'Segoe UI / Hiện đại (Không chân)', value: '"Segoe UI", Arial, sans-serif' },
+    { label: 'Times New Roman (Hành chính / Sách)', value: '"Times New Roman", Georgia, serif' },
+    { label: 'Arial / Helvetica (Rõ nét)', value: 'Arial, Helvetica, sans-serif' },
+    { label: 'Georgia (Văn học / Cổ điển)', value: 'Georgia, "Times New Roman", serif' },
+    { label: 'Tahoma / Verdana (Gọn gàng)', value: 'Tahoma, Verdana, sans-serif' },
+    { label: 'Courier New (Mã số / Bảng biểu)', value: '"Courier New", Consolas, monospace' },
+  ];
+
+  function buildWordStyleBarHtml(prefix, { fontSize = 14, color = '#1f2937', fontFamily = '"Times New Roman", Georgia, serif', bold = true, italic = false, underline = false, showBg = false, showAngle = false, angle = 35 } = {}) {
+    const fontOpts = WORD_FONT_OPTIONS.map(
+      (f) => `<option value="${escHtml(f.value)}" ${f.value === fontFamily ? 'selected' : ''}>${escHtml(f.label)}</option>`
+    ).join('');
+    return `
+      <div class="p-2.5 rounded-xl border border-sky-500/35 bg-zinc-950/90 space-y-2" data-word-style-bar="${prefix}">
+        <div class="text-[11px] font-black text-sky-300">🔤 Định dạng kiểu Word (Phông, Cỡ, Màu, B / I / U):</div>
+        <label class="block space-y-1">
+          <span class="text-[11px] text-zinc-300 font-bold">Phông chữ:</span>
+          <select id="opt-${prefix}-font" class="w-full px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-zinc-100">${fontOpts}</select>
+        </label>
+        <div class="grid grid-cols-3 gap-1.5 items-end">
+          <label class="space-y-1"><span class="text-[10.5px] text-zinc-300">Cỡ chữ (pt):</span><input id="opt-${prefix}-size" type="number" min="7" max="120" value="${fontSize}" class="w-full px-2 py-1 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-center font-bold" /></label>
+          <label class="space-y-1"><span class="text-[10.5px] text-zinc-300">Màu chữ:</span><input id="opt-${prefix}-color" type="color" value="${color}" class="w-full h-8 rounded-lg bg-zinc-900 border border-zinc-700 cursor-pointer" /></label>
+          <div class="flex items-center gap-1">
+            <label class="flex-1 flex items-center justify-center py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 cursor-pointer has-[:checked]:bg-sky-600 has-[:checked]:border-sky-400" title="In đậm (Bold)">
+              <input id="opt-${prefix}-bold" type="checkbox" ${bold ? 'checked' : ''} class="sr-only" /><span class="font-black text-xs">B</span>
+            </label>
+            <label class="flex-1 flex items-center justify-center py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 cursor-pointer has-[:checked]:bg-sky-600 has-[:checked]:border-sky-400" title="In nghiêng (Italic)">
+              <input id="opt-${prefix}-italic" type="checkbox" ${italic ? 'checked' : ''} class="sr-only" /><span class="italic font-serif font-bold text-xs">I</span>
+            </label>
+            <label class="flex-1 flex items-center justify-center py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 cursor-pointer has-[:checked]:bg-sky-600 has-[:checked]:border-sky-400" title="Gạch chân (Underline)">
+              <input id="opt-${prefix}-underline" type="checkbox" ${underline ? 'checked' : ''} class="sr-only" /><span class="underline font-bold text-xs">U</span>
+            </label>
+          </div>
+        </div>
+        ${showAngle ? `
+          <label class="block space-y-1"><span class="text-[10.5px] text-zinc-300">Góc xoay chữ (độ, -90 đến 90):</span>
+            <input id="opt-${prefix}-angle" type="number" min="-90" max="90" value="${angle}" class="w-full px-2 py-1 rounded-lg bg-zinc-900 border border-zinc-700 text-xs" />
+          </label>
+        ` : ''}
+        ${showBg ? `
+          <label class="flex items-center gap-2 text-[11px] text-zinc-300 cursor-pointer">
+            <input id="opt-${prefix}-whitebg" type="checkbox" class="accent-sky-400" />
+            <span>Tô nền trắng sau chữ/số (tự che gọn chữ cũ bên dưới)</span>
+          </label>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  function readWordStyleBar(prefix, fallback = {}) {
+    return {
+      fontFamily: document.getElementById(`opt-${prefix}-font`)?.value || fallback.fontFamily || '"Times New Roman", Georgia, serif',
+      fontSize: Math.max(7, Math.min(120, Number(document.getElementById(`opt-${prefix}-size`)?.value || fallback.fontSize || 14))),
+      color: document.getElementById(`opt-${prefix}-color`)?.value || fallback.color || '#1f2937',
+      bold: document.getElementById(`opt-${prefix}-bold`) ? Boolean(document.getElementById(`opt-${prefix}-bold`).checked) : Boolean(fallback.bold),
+      italic: document.getElementById(`opt-${prefix}-italic`) ? Boolean(document.getElementById(`opt-${prefix}-italic`).checked) : Boolean(fallback.italic),
+      underline: document.getElementById(`opt-${prefix}-underline`) ? Boolean(document.getElementById(`opt-${prefix}-underline`).checked) : Boolean(fallback.underline),
+      angle: Number(document.getElementById(`opt-${prefix}-angle`)?.value ?? fallback.angle ?? 35),
+      bgColor: document.getElementById(`opt-${prefix}-whitebg`)?.checked ? '#ffffff' : (fallback.bgColor || ''),
+    };
+  }
+
   /**
    * Vẽ chuỗi chữ tiếng Việt (Unicode 100% không vỡ dấu!) thành ảnh PNG trong suốt
-   * để nhúng trực tiếp lên trang PDF bằng pdf-lib (đánh số trang, watermark, ký tên, ghi chú).
+   * hỗ trợ đầy đủ định dạng kiểu Word: Font, Cỡ chữ, Màu, Đậm, Nghiêng, Gạch chân, Căn lề, Nền.
    */
-  function renderVietnameseTextToPngBytes(text, { fontSize = 28, color = '#111827', fontFamily = 'Segoe UI, Noto Sans, Arial, sans-serif', bold = false, italic = false, bgColor = '', padX = 12, padY = 8 } = {}) {
+  function renderVietnameseTextToPngBytes(text, { fontSize = 28, color = '#111827', fontFamily = 'Segoe UI, Noto Sans, Arial, sans-serif', bold = false, italic = false, underline = false, align = 'left', bgColor = '', padX = 12, padY = 8 } = {}) {
     const scale = 2;
     const tmpCanvas = document.createElement('canvas');
     const tmpCtx = tmpCanvas.getContext('2d');
     const fontStr = `${italic ? 'italic ' : ''}${bold ? '700 ' : '500 '}${fontSize * scale}px ${fontFamily}`;
     tmpCtx.font = fontStr;
     const lines = String(text || '').split(/\r?\n/);
-    const maxW = Math.max(24, ...lines.map((l) => Math.ceil(tmpCtx.measureText(l || ' ').width)));
+    const lineWidths = lines.map((l) => Math.ceil(tmpCtx.measureText(l || ' ').width));
+    const maxW = Math.max(24, ...lineWidths);
     const lineH = Math.ceil(fontSize * scale * 1.32);
     const w = maxW + padX * 2 * scale;
     const h = lines.length * lineH + padY * 2 * scale;
@@ -253,9 +317,23 @@
     }
     ctx.font = fontStr;
     ctx.fillStyle = color;
+    ctx.strokeStyle = color;
     ctx.textBaseline = 'top';
     lines.forEach((line, idx) => {
-      ctx.fillText(line, padX * scale, padY * scale + idx * lineH);
+      const lw = lineWidths[idx] || 0;
+      let drawX = padX * scale;
+      if (align === 'center') drawX = padX * scale + (maxW - lw) / 2;
+      else if (align === 'right') drawX = padX * scale + (maxW - lw);
+      const drawY = padY * scale + idx * lineH;
+      ctx.fillText(line, drawX, drawY);
+      if (underline && line.trim()) {
+        const uy = drawY + fontSize * scale * 1.06;
+        ctx.lineWidth = Math.max(1.5, fontSize * scale * 0.065);
+        ctx.beginPath();
+        ctx.moveTo(drawX, uy);
+        ctx.lineTo(drawX + lw, uy);
+        ctx.stroke();
+      }
     });
     const dataUrl = tmpCanvas.toDataURL('image/png');
     const bin = atob(dataUrl.split(',')[1]);
@@ -264,11 +342,18 @@
     return { bytes, widthPt: w / (scale * 1.35), heightPt: h / (scale * 1.35) };
   }
 
+  NS.dangLovePdfTextUtils = {
+    WORD_FONT_OPTIONS,
+    buildWordStyleBarHtml,
+    readWordStyleBar,
+    renderVietnameseTextToPngBytes,
+  };
+
   /**
    * Dựng các trang PDF A4 chuẩn tiếng Việt từ mảng đoạn văn/HTML sạch bằng Canvas + pdf-lib
-   * (100% hỗ trợ dấu Tiếng Việt, bảng đơn giản, không vỡ font trên mọi thiết bị).
+   * (100% hỗ trợ dấu Tiếng Việt, bảng đơn giản, không vỡ font trên mọi thiết bị + hỗ trợ định dạng kiểu Word).
    */
-  async function renderLinesToVietnamesePdfBlob(title, textLines, onProgress) {
+  async function renderLinesToVietnamesePdfBlob(title, textLines, onProgress, styleOpts = {}) {
     const { PDFDocument } = await ensurePdfLib();
     const outDoc = await PDFDocument.create();
     const pageW = 595.28;
@@ -279,7 +364,14 @@
     const marginTop = 100;
     const marginBottom = 100;
     const maxTextW = pxW - marginX * 2;
-    const lineH = 40;
+    const fam = styleOpts.fontFamily || '"Segoe UI", "Noto Sans", Arial, sans-serif';
+    const bodyPx = Math.round(Math.max(16, Math.min(54, (Number(styleOpts.fontSize) || 14) * 1.9)));
+    const headPx = Math.round(bodyPx * 1.28);
+    const bodyColor = styleOpts.color || '#18181b';
+    const headColor = styleOpts.titleColor || (styleOpts.color && styleOpts.color !== '#18181b' ? styleOpts.color : '#065f46');
+    const bodyWeight = styleOpts.bold ? '700' : '400';
+    const bodyStyle = styleOpts.italic ? 'italic ' : '';
+    const lineH = Math.round(bodyPx * 1.54);
 
     const canvas = document.createElement('canvas');
     canvas.width = pxW;
@@ -287,7 +379,7 @@
     const ctx = canvas.getContext('2d');
 
     const wrapped = [];
-    ctx.font = '400 26px "Segoe UI", "Noto Sans", Arial, sans-serif';
+    ctx.font = `${bodyStyle}${bodyWeight} ${bodyPx}px ${fam}`;
     if (title) {
       wrapped.push({ text: title, isHeading: true });
       wrapped.push({ text: '', isHeading: false });
@@ -301,8 +393,8 @@
       const isHeading = /^#{1,3}\s+/.test(line);
       const cleanLine = isHeading ? line.replace(/^#{1,3}\s+/, '') : line;
       ctx.font = isHeading
-        ? '700 32px "Segoe UI", "Noto Sans", Arial, sans-serif'
-        : '400 26px "Segoe UI", "Noto Sans", Arial, sans-serif';
+        ? `${bodyStyle}700 ${headPx}px ${fam}`
+        : `${bodyStyle}${bodyWeight} ${bodyPx}px ${fam}`;
       const words = cleanLine.split(/\s+/);
       let cur = '';
       for (const word of words) {
@@ -317,7 +409,7 @@
       if (cur) wrapped.push({ text: cur, isHeading });
     }
 
-    const linesPerPage = Math.max(10, Math.floor((pxH - marginTop - marginBottom) / lineH));
+    const linesPerPage = Math.max(8, Math.floor((pxH - marginTop - marginBottom) / lineH));
     const totalPages = Math.max(1, Math.ceil(wrapped.length / linesPerPage));
 
     for (let p = 0; p < totalPages; p++) {
@@ -328,13 +420,22 @@
       const slice = wrapped.slice(p * linesPerPage, (p + 1) * linesPerPage);
       for (const item of slice) {
         if (item.text) {
-          ctx.fillStyle = item.isHeading ? '#065f46' : '#18181b';
+          ctx.fillStyle = item.isHeading ? headColor : bodyColor;
           ctx.font = item.isHeading
-            ? '700 32px "Segoe UI", "Noto Sans", Arial, sans-serif'
-            : '400 26px "Segoe UI", "Noto Sans", Arial, sans-serif';
+            ? `${bodyStyle}700 ${headPx}px ${fam}`
+            : `${bodyStyle}${bodyWeight} ${bodyPx}px ${fam}`;
           ctx.fillText(item.text, marginX, y);
+          if (styleOpts.underline) {
+            const tw = ctx.measureText(item.text).width;
+            ctx.strokeStyle = ctx.fillStyle;
+            ctx.lineWidth = Math.max(1.5, (item.isHeading ? headPx : bodyPx) * 0.06);
+            ctx.beginPath();
+            ctx.moveTo(marginX, y + 6);
+            ctx.lineTo(marginX + tw, y + 6);
+            ctx.stroke();
+          }
         }
-        y += item.isHeading ? lineH + 8 : lineH;
+        y += item.isHeading ? lineH + 10 : lineH;
       }
       ctx.fillStyle = '#71717a';
       ctx.font = '400 20px "Segoe UI", Arial, sans-serif';
@@ -1088,6 +1189,43 @@
         `;
       }
 
+      if (['page_numbers', 'watermark', 'header_footer', 'bookmarks_toc'].includes(tool.id) && this.files.length) {
+        const isToc = tool.id === 'bookmarks_toc';
+        const isHf = tool.id === 'header_footer';
+        return `
+          <div class="rounded-2xl border border-sky-500/40 bg-zinc-950 p-3 space-y-2.5">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span class="font-black text-sky-300">📄 Mô phỏng trang giấy trực quan — ${isToc ? 'Xem trước trang Mục lục chuẩn A4' : 'Bấm / kéo thả chữ & số vào bất kỳ vị trí nào trên trang!'}</span>
+              <span id="mod46-papersim-badge" class="px-2 py-0.5 rounded-full bg-zinc-800 text-[10.5px] font-bold text-amber-300">Sẵn sàng</span>
+            </div>
+            ${!isToc ? `
+              <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+                <button type="button" id="btn-papersim-mode-place" class="px-2.5 py-1 rounded-lg bg-sky-600 text-white font-extrabold cursor-pointer">📍 Đặt / Kéo vị trí chữ &amp; số</button>
+                <button type="button" id="btn-papersim-mode-erase" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-rose-600 text-zinc-200 font-bold cursor-pointer">🧹 Kéo khung che xóa chữ/số cũ</button>
+                <button type="button" id="btn-papersim-undo-erase" class="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold cursor-pointer" title="Bỏ khung che vừa vẽ">↩️ Hoàn tác che</button>
+                <button type="button" id="btn-papersim-clear-erase" class="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold cursor-pointer" title="Xóa tất cả khung che trắng">🗑️ Xóa khung che</button>
+                <label class="ml-auto flex items-center gap-1 text-zinc-400">Xem trang mẫu:
+                  <input id="inp-papersim-page" type="number" min="1" value="1" class="w-12 px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-700 text-center text-amber-300 font-bold" />
+                </label>
+              </div>
+            ` : ''}
+            <div class="flex justify-center overflow-auto bg-zinc-900/70 rounded-xl p-2.5 border border-zinc-800">
+              <div id="mod46-paper-sim-stage" class="relative inline-block bg-white shadow-2xl select-none touch-none cursor-crosshair overflow-hidden">
+                <canvas id="canvas-mod46-paper-sim" class="block max-w-full"></canvas>
+                <div id="mod46-papersim-erase-layer" class="absolute inset-0 pointer-events-none"></div>
+                ${isHf ? `
+                  <div id="mod46-papersim-box-header" data-sim-drag="header" class="absolute border-2 border-dashed border-sky-500 bg-sky-500/10 rounded px-2 py-0.5 cursor-move whitespace-nowrap shadow" style="left:50%;top:4%;transform:translate(-50%,-50%);">Header</div>
+                  <div id="mod46-papersim-box-footer" data-sim-drag="footer" class="absolute border-2 border-dashed border-emerald-500 bg-emerald-500/10 rounded px-2 py-0.5 cursor-move whitespace-nowrap shadow" style="left:50%;top:95%;transform:translate(-50%,-50%);">Footer</div>
+                ` : !isToc ? `
+                  <div id="mod46-papersim-box-main" data-sim-drag="main" class="absolute border-2 border-dashed border-rose-500 bg-rose-500/10 rounded px-2 py-0.5 cursor-move whitespace-nowrap shadow" style="left:50%;top:${tool.id === 'watermark' ? '50%' : '94%'};transform:translate(-50%,-50%);">Mẫu xem trước</div>
+                ` : ''}
+              </div>
+            </div>
+            <p class="text-[11px] text-zinc-400">${isToc ? '💡 Mọi thay đổi về Phông chữ, Cỡ chữ, Màu, Đậm/Nghiêng/Gạch chân và Kiểu mục lục bên cột phải sẽ cập nhật trực tiếp ngay trên tờ A4 mẫu ở trên.' : '💡 Mẹo: Chọn chế độ <strong>🧹 Kéo khung che xóa chữ/số cũ</strong> để khoanh trắng xóa số trang/tiêu đề cũ của file gốc, sau đó đặt số mới chuẩn xác vào vị trí mong muốn!'}</p>
+          </div>
+        `;
+      }
+
       if (tool.noFileRequired && !this.files.length) {
         return `
           <div class="rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-6 text-center space-y-2">
@@ -1196,7 +1334,7 @@
       }
       if (id === 'page_numbers') {
         return `
-          <label class="block space-y-1"><span class="font-bold">Vị trí số trang:</span>
+          <label class="block space-y-1"><span class="font-bold">Vị trí nhanh (hoặc kéo tự do trên giấy):</span>
             <select id="opt-pn-pos" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
               <option value="bottom-center">Giữa dưới trang</option>
               <option value="bottom-right">Góc dưới bên phải</option>
@@ -1204,6 +1342,7 @@
               <option value="top-center">Giữa trên trang</option>
               <option value="top-right">Góc trên bên phải</option>
               <option value="top-left">Góc trên bên trái</option>
+              <option value="custom">🎯 Tự do (theo vị trí kéo trên mô phỏng)</option>
             </select>
           </label>
           <label class="block space-y-1"><span class="font-bold">Kiểu hiển thị:</span>
@@ -1211,6 +1350,7 @@
               <option value="Trang {n}/{total}">Trang 1/10</option>
               <option value="{n}">1, 2, 3...</option>
               <option value="{n} / {total}">1 / 10</option>
+              <option value="- {n} -">- 1 -</option>
             </select>
           </label>
           <div class="grid grid-cols-2 gap-2">
@@ -1219,7 +1359,8 @@
           </div>
           <label class="block space-y-1"><span class="font-bold">Tiền tố mã Bates (tùy chọn, vd: HS-):</span>
             <input id="opt-pn-bates-prefix" type="text" placeholder="Để trống nếu đánh số thường" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
-          </label>`;
+          </label>
+          ${buildWordStyleBarHtml('pn', { fontSize: 13, color: '#1f2937', fontFamily: '"Times New Roman", Georgia, serif', bold: true, showBg: true })}`;
       }
       if (id === 'watermark') {
         return `
@@ -1229,11 +1370,11 @@
           <label class="block space-y-1"><span class="font-bold">Hoặc tải Logo ảnh PNG/JPG (ưu tiên nếu có):</span>
             <input id="opt-wm-logo-file" type="file" accept="image/png,image/jpeg,image/webp" class="w-full text-[11px] text-zinc-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:bg-zinc-800 file:text-zinc-100" />
           </label>
+          ${buildWordStyleBarHtml('wm', { fontSize: 38, color: '#e11d48', fontFamily: '"Segoe UI", Arial, sans-serif', bold: true, showAngle: true, angle: 35 })}
           <div class="grid grid-cols-2 gap-2">
-            <label class="space-y-1"><span>Màu chữ:</span><input id="opt-wm-color" type="color" value="#e11d48" class="w-full h-8 rounded bg-zinc-950 border border-zinc-700" /></label>
             <label class="space-y-1"><span>Độ mờ (0.1 - 1):</span><input id="opt-wm-opacity" type="number" step="0.05" min="0.1" max="1" value="0.28" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
-          </div>
-          <label class="flex items-center gap-2"><input id="opt-wm-tile" type="checkbox" class="accent-rose-500" /><span>Lặp phủ chéo toàn trang (Chống chụp lén)</span></label>`;
+            <label class="flex items-center gap-2 pt-4"><input id="opt-wm-tile" type="checkbox" class="accent-rose-500" /><span>Lặp phủ toàn trang</span></label>
+          </div>`;
       }
       if (id === 'sign_edit') {
         return `
@@ -1253,7 +1394,8 @@
           </label>
           <label class="block space-y-1"><span class="font-bold">Ghi chú thêm (tùy chọn):</span>
             <input id="opt-sign-note" type="text" placeholder="Ví dụ: Đã ký xác nhận — Mai Hải Đăng" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
-          </label>`;
+          </label>
+          ${buildWordStyleBarHtml('sign', { fontSize: 14, color: '#0f172a', fontFamily: '"Times New Roman", Georgia, serif', bold: true, showBg: true })}`;
       }
       if (id === 'pdf_to_img') {
         return `
@@ -1670,6 +1812,283 @@
         }
       }
 
+      // Mô phỏng trang giấy trực quan (kéo thả vị trí chữ/số + vẽ khung che xóa chữ/số cũ) cho page_numbers, watermark, header_footer, bookmarks_toc
+      const simStage = body.querySelector('#mod46-paper-sim-stage');
+      const simCanvas = body.querySelector('#canvas-mod46-paper-sim');
+      if (simStage && simCanvas && this.files[0]) {
+        const tid = this.activeTool.id;
+        if (!this.paperSimState || this.paperSimState.toolId !== tid) {
+          this.paperSimState = {
+            toolId: tid,
+            mode: 'place', // 'place' | 'erase'
+            mainPos: tid === 'watermark' ? { xPct: 50, yPct: 50, custom: false } : { xPct: 50, yPct: 94, custom: false },
+            headerPos: { xPct: 50, yPct: 4.5, custom: false },
+            footerPos: { xPct: 50, yPct: 95.5, custom: false },
+            eraseRects: [], // [{ xPct, yPct, wPct, hPct }]
+          };
+        }
+        const simState = this.paperSimState;
+        const simBadge = body.querySelector('#mod46-papersim-badge');
+        const eraseLayer = body.querySelector('#mod46-papersim-erase-layer');
+        const mainBox = body.querySelector('#mod46-papersim-box-main');
+        const headerBox = body.querySelector('#mod46-papersim-box-header');
+        const footerBox = body.querySelector('#mod46-papersim-box-footer');
+        const btnPlace = body.querySelector('#btn-papersim-mode-place');
+        const btnErase = body.querySelector('#btn-papersim-mode-erase');
+        const pageInp = body.querySelector('#inp-papersim-page');
+
+        const paintEraseBoxes = () => {
+          if (!eraseLayer) return;
+          eraseLayer.innerHTML = simState.eraseRects
+            .map(
+              (r, idx) =>
+                `<div class="absolute bg-white/95 border-2 border-dashed border-rose-500 flex items-center justify-center text-[9px] font-black text-rose-600" style="left:${r.xPct}%;top:${r.yPct}%;width:${r.wPct}%;height:${r.hPct}%;">Che #${idx + 1}</div>`
+            )
+            .join('');
+        };
+
+        const renderTocPreviewSheet = () => {
+          const st = readWordStyleBar('toc', { fontSize: 14, color: '#18181b', fontFamily: '"Times New Roman", Georgia, serif', bold: false });
+          const tocTitle = body.querySelector('#opt-pro-toc-title')?.value?.trim() || 'MỤC LỤC TÀI LIỆU';
+          const tocStyle = body.querySelector('#opt-pro-toc-style')?.value || 'dots';
+          const rawLines = (body.querySelector('#opt-pro-toc-lines')?.value || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+          simCanvas.width = 460;
+          simCanvas.height = 650;
+          const c = simCanvas.getContext('2d');
+          c.fillStyle = '#ffffff';
+          c.fillRect(0, 0, simCanvas.width, simCanvas.height);
+          const headSize = Math.max(14, Math.round(st.fontSize * 1.25));
+          c.fillStyle = st.color === '#18181b' ? '#065f46' : st.color;
+          c.font = `${st.italic ? 'italic ' : ''}700 ${headSize}px ${st.fontFamily}`;
+          c.fillText(tocTitle, 36, 56);
+          if (st.underline) {
+            const hw = c.measureText(tocTitle).width;
+            c.strokeStyle = c.fillStyle;
+            c.lineWidth = 1.4;
+            c.beginPath(); c.moveTo(36, 60); c.lineTo(36 + hw, 60); c.stroke();
+          }
+          c.fillStyle = st.color;
+          c.font = `${st.italic ? 'italic ' : ''}${st.bold ? '700 ' : '400 '}${Math.max(10, st.fontSize)}px ${st.fontFamily}`;
+          let y = 96;
+          rawLines.slice(0, 18).forEach((l) => {
+            const parts = l.split('|');
+            const title = (parts[0] || l).trim();
+            const pgNum = (parts[1] || '').trim();
+            let row = title;
+            if (pgNum) {
+              if (tocStyle === 'space') row = `${title}     ${pgNum}`;
+              else if (tocStyle === 'dash') row = `${title} ————— ${pgNum}`;
+              else if (tocStyle === 'prefix') row = `[Trang ${pgNum}] · ${title}`;
+              else row = `${title} ${'.'.repeat(Math.max(5, 34 - Math.min(28, title.length)))} ${pgNum}`;
+            }
+            c.fillText(row, 36, y, simCanvas.width - 72);
+            if (st.underline) {
+              const rw = Math.min(simCanvas.width - 72, c.measureText(row).width);
+              c.strokeStyle = st.color;
+              c.lineWidth = 1;
+              c.beginPath(); c.moveTo(36, y + 3); c.lineTo(36 + rw, y + 3); c.stroke();
+            }
+            y += Math.max(18, Math.round(st.fontSize * 1.65));
+          });
+          if (simBadge) simBadge.textContent = `A4 · ${st.fontSize}pt · ${rawLines.length} mục`;
+        };
+
+        const syncVisualOverlays = () => {
+          if (tid === 'bookmarks_toc') {
+            renderTocPreviewSheet();
+            return;
+          }
+          const applyTextStyle = (el, st, text, pos, extra = {}) => {
+            if (!el) return;
+            el.textContent = text || ' ';
+            el.style.left = `${pos.xPct}%`;
+            el.style.top = `${pos.yPct}%`;
+            el.style.fontFamily = st.fontFamily;
+            el.style.fontSize = `${Math.max(10, Math.min(34, Math.round(st.fontSize * 0.82)))}px`;
+            el.style.color = st.color;
+            el.style.fontWeight = st.bold ? '700' : '400';
+            el.style.fontStyle = st.italic ? 'italic' : 'normal';
+            el.style.textDecoration = st.underline ? 'underline' : 'none';
+            el.style.backgroundColor = st.bgColor ? 'rgba(255,255,255,0.95)' : 'rgba(244,63,94,0.08)';
+            el.style.opacity = String(extra.opacity ?? 1);
+            el.style.transform = `translate(-50%, -50%) rotate(${-(extra.angle || 0)}deg)`;
+          };
+
+          if (tid === 'page_numbers') {
+            const st = readWordStyleBar('pn', { fontSize: 13, color: '#1f2937', bold: true });
+            const fmt = body.querySelector('#opt-pn-fmt')?.value || 'Trang {n}/{total}';
+            const startN = Number(body.querySelector('#opt-pn-start')?.value || 1);
+            const bates = body.querySelector('#opt-pn-bates-prefix')?.value?.trim() || '';
+            const totalPg = this.files[0]?.pageCount || 10;
+            const previewTxt = bates
+              ? `${bates}${String(startN).padStart(4, '0')}`
+              : fmt.replace('{n}', String(startN)).replace('{total}', String(totalPg));
+            applyTextStyle(mainBox, st, previewTxt, simState.mainPos);
+            if (simBadge) simBadge.textContent = `X:${Math.round(simState.mainPos.xPct)}% · Y:${Math.round(simState.mainPos.yPct)}% · ${st.fontSize}pt · ${simState.eraseRects.length} khung che`;
+          } else if (tid === 'watermark') {
+            const st = readWordStyleBar('wm', { fontSize: 38, color: '#e11d48', bold: true, angle: 35 });
+            const wmTxt = body.querySelector('#opt-wm-text')?.value?.trim() || 'BẢN QUYỀN TÁC GIẢ';
+            const op = Math.max(0.1, Math.min(1, Number(body.querySelector('#opt-wm-opacity')?.value || 0.28)));
+            applyTextStyle(mainBox, st, wmTxt, simState.mainPos, { opacity: Math.max(0.2, op), angle: st.angle });
+            if (simBadge) simBadge.textContent = `X:${Math.round(simState.mainPos.xPct)}% · Y:${Math.round(simState.mainPos.yPct)}% · Xoay ${st.angle}° · ${st.fontSize}pt`;
+          } else if (tid === 'header_footer') {
+            const st = readWordStyleBar('hf', { fontSize: 11, color: '#334155', bold: true });
+            const dateStr = new Date().toLocaleDateString('vi-VN');
+            const totalPg = this.files[0]?.pageCount || 10;
+            const fmtHf = (s) => String(s || '').replace(/\{page\}/g, '1').replace(/\{total\}/g, String(totalPg)).replace(/\{date\}/g, dateStr);
+            const hTxt = fmtHf(body.querySelector('#opt-pro-hf-header')?.value || '');
+            const fTxt = fmtHf(body.querySelector('#opt-pro-hf-footer')?.value || '');
+            if (headerBox) {
+              headerBox.style.display = hTxt.trim() ? 'block' : 'none';
+              applyTextStyle(headerBox, st, hTxt, simState.headerPos);
+            }
+            if (footerBox) {
+              footerBox.style.display = fTxt.trim() ? 'block' : 'none';
+              applyTextStyle(footerBox, st, fTxt, simState.footerPos);
+            }
+            if (simBadge) simBadge.textContent = `Đầu Y:${Math.round(simState.headerPos.yPct)}% · Chân Y:${Math.round(simState.footerPos.yPct)}% · ${st.fontSize}pt · ${simState.eraseRects.length} khung che`;
+          }
+          paintEraseBoxes();
+        };
+
+        const setSimMode = (m) => {
+          simState.mode = m;
+          btnPlace?.classList.toggle('bg-sky-600', m === 'place');
+          btnPlace?.classList.toggle('text-white', m === 'place');
+          btnPlace?.classList.toggle('bg-zinc-800', m !== 'place');
+          btnErase?.classList.toggle('bg-rose-600', m === 'erase');
+          btnErase?.classList.toggle('text-white', m === 'erase');
+          btnErase?.classList.toggle('bg-zinc-800', m !== 'erase');
+        };
+        btnPlace?.addEventListener('click', () => setSimMode('place'));
+        btnErase?.addEventListener('click', () => setSimMode('erase'));
+        body.querySelector('#btn-papersim-undo-erase')?.addEventListener('click', () => {
+          simState.eraseRects.pop();
+          syncVisualOverlays();
+        });
+        body.querySelector('#btn-papersim-clear-erase')?.addEventListener('click', () => {
+          simState.eraseRects = [];
+          syncVisualOverlays();
+        });
+
+        // Đồng bộ preset vị trí với mô phỏng
+        body.querySelector('#opt-pn-pos')?.addEventListener('change', (ev) => {
+          const v = ev.target.value;
+          if (v === 'custom') return;
+          const map = {
+            'bottom-center': { xPct: 50, yPct: 95 },
+            'bottom-right': { xPct: 86, yPct: 95 },
+            'bottom-left': { xPct: 14, yPct: 95 },
+            'top-center': { xPct: 50, yPct: 5 },
+            'top-right': { xPct: 86, yPct: 5 },
+            'top-left': { xPct: 14, yPct: 5 },
+          };
+          if (map[v]) {
+            simState.mainPos = { ...map[v], custom: false };
+            syncVisualOverlays();
+          }
+        });
+        body.querySelector('#opt-pro-hf-hpos')?.addEventListener('change', (ev) => {
+          const v = ev.target.value;
+          simState.headerPos.xPct = v === 'left' ? 18 : v === 'right' ? 82 : 50;
+          syncVisualOverlays();
+        });
+        body.querySelector('#opt-pro-hf-fpos')?.addEventListener('change', (ev) => {
+          const v = ev.target.value;
+          simState.footerPos.xPct = v === 'left' ? 18 : v === 'right' ? 82 : 50;
+          syncVisualOverlays();
+        });
+
+        // Bắt sự kiện thay đổi tất cả ô chữ, font, cỡ, màu, B/I/U ở cột phải để cập nhật mô phỏng tức thì
+        body.querySelectorAll('#mod46-tool-options-wrap input, #mod46-tool-options-wrap select, #mod46-tool-options-wrap textarea').forEach((el) => {
+          el.addEventListener('input', syncVisualOverlays);
+          el.addEventListener('change', syncVisualOverlays);
+        });
+
+        if (tid !== 'bookmarks_toc') {
+          let dragTarget = null;
+          let eraseDraft = null;
+          const getPct = (ev) => {
+            const rect = simStage.getBoundingClientRect();
+            return {
+              xPct: Math.max(2, Math.min(98, ((ev.clientX - rect.left) / Math.max(1, rect.width)) * 100)),
+              yPct: Math.max(2, Math.min(98, ((ev.clientY - rect.top) / Math.max(1, rect.height)) * 100)),
+            };
+          };
+          simStage.addEventListener('pointerdown', (ev) => {
+            simStage.setPointerCapture(ev.pointerId);
+            const pt = getPct(ev);
+            if (simState.mode === 'erase') {
+              eraseDraft = { startX: pt.xPct, startY: pt.yPct, rect: { xPct: pt.xPct, yPct: pt.yPct, wPct: 1, hPct: 1 } };
+              simState.eraseRects.push(eraseDraft.rect);
+              syncVisualOverlays();
+              return;
+            }
+            const hitAttr = ev.target?.closest?.('[data-sim-drag]')?.getAttribute('data-sim-drag');
+            if (tid === 'header_footer') {
+              dragTarget = hitAttr || (pt.yPct < 50 ? 'header' : 'footer');
+            } else {
+              dragTarget = 'main';
+            }
+            if (dragTarget === 'header') simState.headerPos = { xPct: pt.xPct, yPct: pt.yPct, custom: true };
+            else if (dragTarget === 'footer') simState.footerPos = { xPct: pt.xPct, yPct: pt.yPct, custom: true };
+            else {
+              simState.mainPos = { xPct: pt.xPct, yPct: pt.yPct, custom: true };
+              const pnPosSel = body.querySelector('#opt-pn-pos');
+              if (pnPosSel) pnPosSel.value = 'custom';
+            }
+            syncVisualOverlays();
+          });
+          simStage.addEventListener('pointermove', (ev) => {
+            if (!dragTarget && !eraseDraft) return;
+            const pt = getPct(ev);
+            if (eraseDraft) {
+              eraseDraft.rect.xPct = Math.min(eraseDraft.startX, pt.xPct);
+              eraseDraft.rect.yPct = Math.min(eraseDraft.startY, pt.yPct);
+              eraseDraft.rect.wPct = Math.max(2, Math.abs(pt.xPct - eraseDraft.startX));
+              eraseDraft.rect.hPct = Math.max(1.5, Math.abs(pt.yPct - eraseDraft.startY));
+              syncVisualOverlays();
+              return;
+            }
+            if (dragTarget === 'header') simState.headerPos = { xPct: pt.xPct, yPct: pt.yPct, custom: true };
+            else if (dragTarget === 'footer') simState.footerPos = { xPct: pt.xPct, yPct: pt.yPct, custom: true };
+            else simState.mainPos = { xPct: pt.xPct, yPct: pt.yPct, custom: true };
+            syncVisualOverlays();
+          });
+          const endSimPointer = () => { dragTarget = null; eraseDraft = null; };
+          simStage.addEventListener('pointerup', endSimPointer);
+          simStage.addEventListener('pointercancel', endSimPointer);
+
+          const renderSimPdfPage = async (pgNo) => {
+            try {
+              const pdfjsLib = await ensurePdfJs();
+              const pdf = await pdfjsLib.getDocument({ data: this.files[0].bytes.slice() }).promise;
+              const safePg = Math.max(1, Math.min(pdf.numPages, Number(pgNo) || 1));
+              if (pageInp) { pageInp.max = String(pdf.numPages); pageInp.value = String(safePg); }
+              const pg = await pdf.getPage(safePg);
+              const baseVp = pg.getViewport({ scale: 1 });
+              const targetW = Math.min(520, Math.max(260, (body.clientWidth || 620) * 0.56));
+              const vp = pg.getViewport({ scale: targetW / Math.max(1, baseVp.width) });
+              simCanvas.width = Math.round(vp.width);
+              simCanvas.height = Math.round(vp.height);
+              await pg.render({ canvasContext: simCanvas.getContext('2d'), viewport: vp }).promise;
+              syncVisualOverlays();
+            } catch (_eSim) {
+              simCanvas.width = 420;
+              simCanvas.height = 594;
+              const c = simCanvas.getContext('2d');
+              c.fillStyle = '#ffffff';
+              c.fillRect(0, 0, 420, 594);
+              syncVisualOverlays();
+            }
+          };
+          renderSimPdfPage(pageInp?.value || 1);
+          pageInp?.addEventListener('change', () => renderSimPdfPage(pageInp.value));
+        } else {
+          syncVisualOverlays();
+        }
+      }
+
       body.querySelector('#btn-mod46-run-primary')?.addEventListener('click', () => {
         this.executeActiveTool();
       });
@@ -1734,7 +2153,9 @@
         pnFmt: document.getElementById('opt-pn-fmt')?.value || 'Trang {n}/{total}',
         pnFrom: Math.max(1, Number(document.getElementById('opt-pn-from')?.value || 1)),
         pnStart: Math.max(1, Number(document.getElementById('opt-pn-start')?.value || 1)),
+        pnStyle: readWordStyleBar('pn', { fontSize: 13, color: '#1f2937', fontFamily: '"Times New Roman", Georgia, serif', bold: true }),
         wmText: document.getElementById('opt-wm-text')?.value?.trim() || 'BẢN QUYỀN TÁC GIẢ',
+        wmStyle: readWordStyleBar('wm', { fontSize: 38, color: '#e11d48', fontFamily: '"Segoe UI", Arial, sans-serif', bold: true, angle: 35 }),
         wmColor: document.getElementById('opt-wm-color')?.value || '#e11d48',
         wmOpacity: Math.max(0.08, Math.min(1, Number(document.getElementById('opt-wm-opacity')?.value || 0.28))),
         wmTile: Boolean(document.getElementById('opt-wm-tile')?.checked),
@@ -1742,6 +2163,7 @@
         signPage: Math.max(1, Number(document.getElementById('opt-sign-page')?.value || 1)),
         signPos: document.getElementById('opt-sign-pos')?.value || 'bottom-right',
         signNote: document.getElementById('opt-sign-note')?.value?.trim() || '',
+        signStyle: readWordStyleBar('sign', { fontSize: 14, color: '#0f172a', fontFamily: '"Times New Roman", Georgia, serif', bold: true }),
         imgFmt: document.getElementById('opt-img-fmt')?.value || 'image/jpeg',
         imgDpi: Number(document.getElementById('opt-img-dpi')?.value || 2.0),
         i2pSize: document.getElementById('opt-i2p-size')?.value || 'a4',
@@ -1898,32 +2320,62 @@
           }
           outputs.push({ name: `${baseName}_DaNen.pdf`, blob: new Blob([await outDoc.save()], { type: 'application/pdf' }) });
         } else if (tool.id === 'page_numbers') {
-          const { PDFDocument } = await ensurePdfLib();
+          const { PDFDocument, rgb } = await ensurePdfLib();
           const doc = await PDFDocument.load(this.files[0].bytes);
           const pages = doc.getPages();
           const total = pages.length;
+          const st = opts.pnStyle || {};
+          const simState = this.paperSimState?.toolId === 'page_numbers' ? this.paperSimState : null;
           for (let i = 0; i < total; i++) {
             if (i + 1 < opts.pnFrom) continue;
             prog(15 + ((i + 1) / total) * 75, `Đang đánh số trang ${i + 1}/${total}...`);
             const pg = pages[i];
             const { width, height } = pg.getSize();
+            // Che trắng các khung xóa số trang cũ người dùng đã khoanh trên mô phỏng trang giấy
+            if (simState?.eraseRects?.length) {
+              simState.eraseRects.forEach((r) => {
+                const rx = (r.xPct / 100) * width;
+                const rw = (r.wPct / 100) * width;
+                const rh = (r.hPct / 100) * height;
+                const ry = height - ((r.yPct + r.hPct) / 100) * height;
+                pg.drawRectangle({ x: rx, y: Math.max(0, ry), width: rw, height: rh, color: rgb(1, 1, 1) });
+              });
+            }
             const nVal = opts.pnStart + (i + 1 - opts.pnFrom);
             const label = pro.batesPrefix
               ? `${pro.batesPrefix}${String(nVal).padStart(4, '0')}`
               : opts.pnFmt.replace('{n}', String(nVal)).replace('{total}', String(total));
-            const rendered = renderVietnameseTextToPngBytes(label, { fontSize: 13, color: '#1f2937', bold: true, padX: 6, padY: 4 });
+            const rendered = renderVietnameseTextToPngBytes(label, {
+              fontSize: st.fontSize || 13,
+              color: st.color || '#1f2937',
+              fontFamily: st.fontFamily || '"Times New Roman", Georgia, serif',
+              bold: st.bold !== false,
+              italic: Boolean(st.italic),
+              underline: Boolean(st.underline),
+              bgColor: st.bgColor || '',
+              padX: 6,
+              padY: 4,
+            });
             const img = await doc.embedPng(rendered.bytes);
             let x = (width - rendered.widthPt) / 2;
             let y = 18;
-            if (opts.pnPos.includes('left')) x = 28;
-            if (opts.pnPos.includes('right')) x = width - rendered.widthPt - 28;
-            if (opts.pnPos.includes('top')) y = height - rendered.heightPt - 18;
+            if (opts.pnPos === 'custom' && simState?.mainPos) {
+              x = Math.max(4, Math.min(width - rendered.widthPt - 4, (simState.mainPos.xPct / 100) * width - rendered.widthPt / 2));
+              y = Math.max(4, Math.min(height - rendered.heightPt - 4, height - (simState.mainPos.yPct / 100) * height - rendered.heightPt / 2));
+            } else {
+              if (opts.pnPos.includes('left')) x = 28;
+              if (opts.pnPos.includes('right')) x = width - rendered.widthPt - 28;
+              if (opts.pnPos.includes('top')) y = height - rendered.heightPt - 18;
+            }
             pg.drawImage(img, { x, y, width: rendered.widthPt, height: rendered.heightPt });
           }
           outputs.push({ name: `${baseName}_DaDanhSo.pdf`, blob: new Blob([await doc.save()], { type: 'application/pdf' }) });
         } else if (tool.id === 'watermark') {
-          const { PDFDocument, degrees } = await ensurePdfLib();
+          const { PDFDocument, degrees, rgb } = await ensurePdfLib();
           const doc = await PDFDocument.load(this.files[0].bytes);
+          const st = opts.wmStyle || {};
+          const simState = this.paperSimState?.toolId === 'watermark' ? this.paperSimState : null;
+          const wmAngle = Number.isFinite(st.angle) ? st.angle : 35;
           let img = null;
           let wmW = 220;
           let wmH = 80;
@@ -1934,7 +2386,16 @@
             wmW = img.width * sc;
             wmH = img.height * sc;
           } else {
-            const rendered = renderVietnameseTextToPngBytes(opts.wmText, { fontSize: 38, color: opts.wmColor, bold: true, padX: 14, padY: 10 });
+            const rendered = renderVietnameseTextToPngBytes(opts.wmText, {
+              fontSize: st.fontSize || 38,
+              color: st.color || opts.wmColor || '#e11d48',
+              fontFamily: st.fontFamily || '"Segoe UI", Arial, sans-serif',
+              bold: st.bold !== false,
+              italic: Boolean(st.italic),
+              underline: Boolean(st.underline),
+              padX: 14,
+              padY: 10,
+            });
             img = await doc.embedPng(rendered.bytes);
             wmW = rendered.widthPt;
             wmH = rendered.heightPt;
@@ -1943,6 +2404,17 @@
           pages.forEach((pg, idx) => {
             prog(15 + ((idx + 1) / pages.length) * 75, `Đang đóng dấu trang ${idx + 1}/${pages.length}...`);
             const { width, height } = pg.getSize();
+            if (simState?.eraseRects?.length) {
+              simState.eraseRects.forEach((r) => {
+                pg.drawRectangle({
+                  x: (r.xPct / 100) * width,
+                  y: Math.max(0, height - ((r.yPct + r.hPct) / 100) * height),
+                  width: (r.wPct / 100) * width,
+                  height: (r.hPct / 100) * height,
+                  color: rgb(1, 1, 1),
+                });
+              });
+            }
             if (opts.wmTile) {
               for (let rx = 40; rx < width; rx += 260) {
                 for (let ry = 80; ry < height; ry += 220) {
@@ -1951,18 +2423,24 @@
                     y: ry,
                     width: wmW * 0.65,
                     height: wmH * 0.65,
-                    rotate: degrees(35),
+                    rotate: degrees(wmAngle),
                     opacity: opts.wmOpacity
                   });
                 }
               }
             } else {
+              const targetX = simState?.mainPos?.custom
+                ? Math.max(8, Math.min(width - wmW - 8, (simState.mainPos.xPct / 100) * width - wmW / 2))
+                : (width - wmW) / 2;
+              const targetY = simState?.mainPos?.custom
+                ? Math.max(8, Math.min(height - wmH - 8, height - (simState.mainPos.yPct / 100) * height - wmH / 2))
+                : (height - wmH) / 2;
               pg.drawImage(img, {
-                x: (width - wmW) / 2,
-                y: (height - wmH) / 2,
+                x: targetX,
+                y: targetY,
                 width: wmW,
                 height: wmH,
-                rotate: degrees(35),
+                rotate: degrees(wmAngle),
                 opacity: opts.wmOpacity
               });
             }
@@ -2003,7 +2481,16 @@
             pg.drawImage(sigImg, { x, y, width: sigW, height: sigH });
           }
           if (opts.signNote) {
-            const notePng = renderVietnameseTextToPngBytes(opts.signNote, { fontSize: 14, color: '#0f172a', bold: true });
+            const sSt = opts.signStyle || {};
+            const notePng = renderVietnameseTextToPngBytes(opts.signNote, {
+              fontSize: sSt.fontSize || 14,
+              color: sSt.color || '#0f172a',
+              fontFamily: sSt.fontFamily || '"Times New Roman", Georgia, serif',
+              bold: sSt.bold !== false,
+              italic: Boolean(sSt.italic),
+              underline: Boolean(sSt.underline),
+              bgColor: sSt.bgColor || '',
+            });
             const nImg = await doc.embedPng(notePng.bytes);
             pg.drawImage(nImg, { x, y: Math.max(14, y - notePng.heightPt - 4), width: notePng.widthPt, height: notePng.heightPt });
           }

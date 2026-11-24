@@ -7,7 +7,34 @@
   'use strict';
 
   const NS = (globalScope.NoirStudio = globalScope.NoirStudio || {});
-  NS.i18nPacks = NS.i18nPacks || {};
+  NS.i18nPacks = NS.i18nPacks || {
+    "Cuộn liên tục": "連続スクロール",
+    "1 trang đơn": "単一ページ",
+    "2 trang sách": "見開き2ページ",
+    "Định dạng kiểu Word (Phông, Cỡ, Màu, B / I / U):": "Word形式書式（フォント・サイズ・色・B/I/U）:",
+    "Tự khớp font gốc (Ưu tiên)": "元フォント自動一致（優先）",
+    "Đặt / Kéo vị trí chữ & số": "文字・番号の位置を配置/ドラッグ",
+    "Kéo khung che xóa chữ/số cũ": "旧文字/番号を白枠で消去",
+    "Chuyên gia 30 năm — Bình dân học vụ (6 phần chuẩn)": "30年熟練投資家・わかりやすい6部構成",
+    "Xuất File .MD": ".MDファイル出力",
+    "Copy 1 Chạm": "ワンクリックコピー",
+    "Kiểm tra sức khỏe các nguồn API ngay": "APIソース接続ヘルスチェック",
+
+    "Biểu đồ phân tích chuyên nghiệp": "プロ分析チャート",
+    "Biểu đồ phân tích chuyên nghiệp (Dễ đọc · Không dùng từ khó hiểu)": "プロ分析チャート（わかりやすい解説付き）",
+    "BƯỚC 1: TRA CỨU THÔNG TIN TOÀN DIỆN (0% BỊA ĐẶT · KHÓA NGUỒN SHA-256)": "ステップ1：包括的データ調査（ハルシネーション0%・SHA-256検証）",
+    "BƯỚC 2: TỔNG HỢP CÂU LỆNH ĐỒNG BỘ CODE & HỎI GEMINI": "ステップ2：コード同期プロンプト作成＆Geminiに質問",
+    "Tra cứu thông tin toàn diện, lọc chuẩn & tổng hợp": "包括的リサーチ・決定論フィルタ＆統合",
+    "Đồng bộ dữ liệu & Mở Biểu đồ chuyên nghiệp": "データを同期してプロチャートを開く",
+    "Đồng bộ & Vẽ biểu đồ": "同期してチャート描画",
+    "Dựng lại từ Code Bước 1": "ステップ1のデータから再描画",
+    "1. Biểu đồ Tròn — Gợi ý Chia Vốn An Toàn (%)": "1. ドーナツグラフ — 安全な資金配分 (%)",
+    "2. Biểu đồ Radar — Bản đồ 6 Mức Độ Rủi Ro (Càng rộng ra ngoài càng nguy hiểm)": "2. レーダーチャート — 6軸リスクマップ",
+    "3. Biểu đồ Cột — Mức Độ Hấp Dẫn 4 Kênh Đầu Tư (Thang 100)": "3. 棒グラフ — 4資産チャネル魅力度 (100点満点)",
+    "4. Biểu đồ Chấm Điểm 5 Trụ Cột Cốt Lõi (Thang 10)": "4. 5大重要柱スコア (10点満点)",
+    "6. Ma Trận Quyết Định Hành Động (Rõ ràng — Không nói nước đôi)": "6. アクション決定マトリクス",
+    "Autotester nội bộ": "内蔵オートテスター",
+};
 
   const exact = Object.freeze({
     "🌐 Địa chính trị, Chiến tranh, Lãnh đạo, Hiệp định & Tập đoàn lớn": "🌐 地政学・戦争・指導者・貿易協定・巨大企業",

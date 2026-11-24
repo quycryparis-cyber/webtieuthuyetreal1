@@ -1,8 +1,8 @@
 {
-  "schema_version": "3.0.0",
+  "schema_version": "5.0.0",
   "metadata": {
-    "title": "Cẩm Nang Toàn Diện Đánh Giá Và Ra Quyết Định Đầu Tư Vàng, Chứng Khoán, Bất Động Sản Và Hệ Điều Hành AI Thực Chiến",
-    "short_title": "Khung Phân Tích Đầu Tư Toàn Diện (7 chương + Địa chính trị, Lãnh đạo, Hiệp định & Tập đoàn lớn)",
+    "title": "Cẩm Nang Toàn Diện Đánh Giá Và Ra Quyết Định Đầu Tư Vàng, Chứng Khoán, Bất Động Sản (30 Năm Kinh Nghiệm + 3 Tầng Chống Ảo Giác)",
+    "short_title": "Khung Phân Tích 30 Năm + Khóa 0% Bịa Đặt SHA-256 (34 chỉ tiêu · 6 tầng · Đồng bộ Biểu đồ)",
     "source_file": "Khung Phân Tích Đầu Tư.docx",
     "chapters_count": 7,
     "compiled_as_of": "2026-11-24",
@@ -16,7 +16,17 @@
       "Chương 5: Cẩm Nang Chuyên Sâu Đầu Tư Bất Động Sản Và Đất Đai (Pháp Lý Mới, Định Giá Và Kiểm Định Dòng Tiền)",
       "Chương 6: Khung Tích Hợp Xuyên Tài Sản, Phân Bổ Vốn Và Quản Trị Rủi Ro",
       "Chương 7: Hệ Điều Hành Đầu Tư Ứng Dụng AI (Thu Thập Dữ Liệu, Thiết Kế Prompt Và Kiểm Toán)"
-    ]
+    ],
+    "deterministic_spec": {
+      "guardrails": [
+        "1. Verbatim Immutability (Nguyên văn từ nguồn gốc, không viết lại câu chữ)",
+        "2. Mandatory Provenance Lock (Bắt buộc canonical_url https:// & source_domain)",
+        "3. Strict Schema Validation & DOM Drift Protection (10–300 ký tự, ISO-8601)",
+        "4. SHA-256 Fingerprinting (record_id = SHA256(canonical_url|norm_title), 0% tin trùng)",
+        "5. Temporal Sanity Check (Loại tin tương lai & tin cũ quá hạn tươi mới)"
+      ],
+      "unified_sync_schema": "INVEST_INTEL_SYNC_V2"
+    }
   },
   "plain_dictionary": [
     {
@@ -117,7 +127,27 @@
       "unit": "sự kiện nóng",
       "freq": "Hàng ngày",
       "query_template": "global war conflict Middle East Iran Ukraine shipping oil crisis latest {MONTH_EN} {YEAR}",
-      "baseline_2026_11_24": "Xung đột địa chính trị & tuyến vận tải dầu khí là ngòi nổ trực tiếp cho giá dầu, lạm phát và vàng trú ẩn"
+      "baseline_2026_11_24": "Xung đột địa chính trị & tuyến vận tải dầu khí là ngòi nổ trực tiếp cho giá dầu, lạm phát và vàng trú ẩn",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "war",
+          "ukraine",
+          "russia",
+          "iran",
+          "israel",
+          "hormuz",
+          "chiến tranh",
+          "xung đột",
+          "drone",
+          "strike",
+          "middle east"
+        ],
+        "exclude": [
+          "game",
+          "movie"
+        ]
+      }
     },
     {
       "id": "geo_leaders_tariffs",
@@ -128,7 +158,23 @@
       "unit": "chính sách",
       "freq": "Hàng ngày",
       "query_template": "Trump US president tariff sanctions foreign policy decision market impact {MONTH_EN} {YEAR}",
-      "baseline_2026_11_24": "Tuyên bố thuế quan, trừng phạt, cắt thuế hay quyết định quân sự của lãnh đạo cường quốc đảo chiều tức thì USD, vàng và chứng khoán"
+      "baseline_2026_11_24": "Tuyên bố thuế quan, trừng phạt, cắt thuế hay quyết định quân sự của lãnh đạo cường quốc đảo chiều tức thì USD, vàng và chứng khoán",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "trump",
+          "tariff",
+          "sanction",
+          "white house",
+          "thuế quan",
+          "trừng phạt",
+          "biden",
+          "xi",
+          "putin",
+          "president"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "geo_trade_treaties",
@@ -139,7 +185,23 @@
       "unit": "hiệp định",
       "freq": "Hàng tuần",
       "query_template": "international trade agreement tariff deal semiconductor export control supply chain {MONTH_EN} {YEAR}",
-      "baseline_2026_11_24": "Hiệp định thương mại và xu hướng China+1 quyết định dòng vốn FDI, xuất khẩu và bất động sản khu công nghiệp"
+      "baseline_2026_11_24": "Hiệp định thương mại và xu hướng China+1 quyết định dòng vốn FDI, xuất khẩu và bất động sản khu công nghiệp",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "trade",
+          "treaty",
+          "fta",
+          "opec",
+          "hiệp định",
+          "thương mại",
+          "export",
+          "supply chain",
+          "wto",
+          "brics"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "geo_mega_corps_ai",
@@ -150,7 +212,26 @@
       "unit": "tin doanh nghiệp",
       "freq": "Hàng ngày",
       "query_template": "NVIDIA Apple Microsoft AI capex OPEC oil major bank corporate earnings shock {MONTH_EN} {YEAR}",
-      "baseline_2026_11_24": "Sức khỏe đầu tư hạ tầng AI (BIS cảnh báo rủi ro ổn định tài chính), sản lượng OPEC+ và vỡ nợ tập đoàn lớn dẫn dắt khẩu vị rủi ro toàn cầu"
+      "baseline_2026_11_24": "Sức khỏe đầu tư hạ tầng AI (BIS cảnh báo rủi ro ổn định tài chính), sản lượng OPEC+ và vỡ nợ tập đoàn lớn dẫn dắt khẩu vị rủi ro toàn cầu",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "nvidia",
+          "apple",
+          "microsoft",
+          "openai",
+          "anthropic",
+          "semiconductor",
+          "ai",
+          "chip",
+          "bank",
+          "tập đoàn",
+          "ipo"
+        ],
+        "exclude": [
+          "tutorial"
+        ]
+      }
     },
     {
       "id": "geo_us_debt_tga",
@@ -161,7 +242,20 @@
       "unit": "nghìn tỷ USD",
       "freq": "Hàng ngày (API chính thức)",
       "query_template": "US national debt fiscal deficit Treasury TGA balance {MONTH_EN} {YEAR}",
-      "baseline_2026_11_24": "Nợ công Mỹ ~100% GDP, chi trả lãi vay >21% thu ngân sách — lực đỡ cấu trúc dài hạn cho vàng"
+      "baseline_2026_11_24": "Nợ công Mỹ ~100% GDP, chi trả lãi vay >21% thu ngân sách — lực đỡ cấu trúc dài hạn cho vàng",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "debt",
+          "treasury",
+          "tga",
+          "nợ công",
+          "trái phiếu mỹ",
+          "deficit",
+          "fiscal"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "geo_risk_barometer",
@@ -172,7 +266,21 @@
       "unit": "tỷ số / USD",
       "freq": "Thời gian thực (API trực tiếp)",
       "query_template": "gold silver ratio bitcoin global liquidity risk sentiment {MONTH_EN} {YEAR}",
-      "baseline_2026_11_24": "Vàng/Bạc >80 phản ánh tâm lý phòng thủ (risk-off); BTC/USD phản ánh độ mở thanh khoản toàn cầu 24/7"
+      "baseline_2026_11_24": "Vàng/Bạc >80 phản ánh tâm lý phòng thủ (risk-off); BTC/USD phản ánh độ mở thanh khoản toàn cầu 24/7",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "bitcoin",
+          "btc",
+          "silver",
+          "gold",
+          "bạc",
+          "vàng",
+          "vix",
+          "risk"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "fed_rate",
@@ -183,7 +291,17 @@
       "unit": "%/năm",
       "freq": "Hàng tháng",
       "query_template": "lãi suất Fed mới nhất tháng {MONTH} {YEAR} federal reserve",
-      "baseline_2026_11_24": "3,75%–4,00% (tăng +25 bps T9/2026)"
+      "baseline_2026_11_24": "3,75%–4,00% (tăng +25 bps T9/2026)",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "suất",
+          "điều",
+          "hành",
+          "(fed)"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "us_10y_tips",
@@ -194,7 +312,17 @@
       "unit": "%/năm",
       "freq": "Hàng tuần",
       "query_template": "US 10 year Treasury yield TIPS real yield {MONTH_EN} {YEAR}",
-      "baseline_2026_11_24": "Danh nghĩa 5,07% · Thực TIPS 2,83%"
+      "baseline_2026_11_24": "Danh nghĩa 5,07% · Thực TIPS 2,83%",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "suất",
+          "thực",
+          "trái",
+          "phiếu"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "fed_net_liquidity",
@@ -205,7 +333,18 @@
       "unit": "nghìn tỷ USD",
       "freq": "Hàng tuần",
       "query_template": "Fed Net Liquidity WALCL TGA ON RRP {MONTH_EN} {YEAR}",
-      "baseline_2026_11_24": "5,82–5,85 nghìn tỷ USD (ON RRP gần cạn ~0,4 tỷ USD)"
+      "baseline_2026_11_24": "5,82–5,85 nghìn tỷ USD (ON RRP gần cạn ~0,4 tỷ USD)",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "lượng",
+          "tiền",
+          "thông",
+          "ngân",
+          "hàng"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "dxy_index",
@@ -216,7 +355,16 @@
       "unit": "điểm",
       "freq": "Hàng ngày",
       "query_template": "US Dollar Index DXY today {MONTH_EN} {YEAR}",
-      "baseline_2026_11_24": "103,2–103,8 điểm"
+      "baseline_2026_11_24": "103,2–103,8 điểm",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "mạnh",
+          "đồng",
+          "(dxy)"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "brent_oil",
@@ -227,7 +375,17 @@
       "unit": "USD/thùng",
       "freq": "Hàng ngày",
       "query_template": "giá dầu thô Brent thế giới hôm nay {MONTH}/{YEAR}",
-      "baseline_2026_11_24": "91,98 USD/thùng (BQ 2026 ~95,74 USD)"
+      "baseline_2026_11_24": "91,98 USD/thùng (BQ 2026 ~95,74 USD)",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "giới",
+          "căng",
+          "thẳng",
+          "chính"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "central_banks_global",
@@ -238,7 +396,18 @@
       "unit": "%/năm",
       "freq": "Hàng tháng",
       "query_template": "lãi suất ECB BoJ PBOC mới nhất {MONTH}/{YEAR}",
-      "baseline_2026_11_24": "ECB 2,50% · BoE 4,00% · BoJ 1,25% · PBOC LPR 1Y 3,00%"
+      "baseline_2026_11_24": "ECB 2,50% · BoE 4,00% · BoJ 1,25% · PBOC LPR 1Y 3,00%",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "động",
+          "thái",
+          "suất",
+          "châu",
+          "nhật"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "us_cpi_lei",
@@ -249,7 +418,19 @@
       "unit": "% YoY",
       "freq": "Hàng tháng",
       "query_template": "US CPI PPI inflation Conference Board LEI {MONTH_EN} {YEAR}",
-      "baseline_2026_11_24": "PPI Mỹ 6,3% YoY · LEI YoY +1,22%"
+      "baseline_2026_11_24": "PPI Mỹ 6,3% YoY · LEI YoY +1,22%",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "inflation",
+          "cpi",
+          "pce",
+          "lạm phát",
+          "recession",
+          "suy thoái"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "vn_gdp",
@@ -260,7 +441,17 @@
       "unit": "% YoY",
       "freq": "Hàng quý",
       "query_template": "tăng trưởng GDP Việt Nam mới nhất Cục Thống kê {YEAR}",
-      "baseline_2026_11_24": "Q3/2026 +9,95% · 9 tháng +9,01%"
+      "baseline_2026_11_24": "Q3/2026 +9,95% · 9 tháng +9,01%",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "gdp",
+          "tăng trưởng kinh tế",
+          "vietnam economy",
+          "grdp"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "vn_cpi",
@@ -271,7 +462,17 @@
       "unit": "% YoY",
       "freq": "Hàng tháng",
       "query_template": "CPI lạm phát Việt Nam tháng {MONTH} {YEAR} Cục Thống kê",
-      "baseline_2026_11_24": "Tháng 10/2026 +5,09% · BQ 10 tháng +4,57% (vượt mục tiêu 4,5%)"
+      "baseline_2026_11_24": "Tháng 10/2026 +5,09% · BQ 10 tháng +4,57% (vượt mục tiêu 4,5%)",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "cpi",
+          "lạm phát",
+          "giá tiêu dùng",
+          "inflation"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "vn_usd_vnd",
@@ -282,7 +483,15 @@
       "unit": "VNĐ/USD",
       "freq": "Hàng ngày",
       "query_template": "tỷ giá USD Vietcombank bán ra hôm nay {MONTH}/{YEAR}",
-      "baseline_2026_11_24": "VCB bán ra 25.990 đ · Tự do >26.000 đ"
+      "baseline_2026_11_24": "VCB bán ra 25.990 đ · Tự do >26.000 đ",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "ngân",
+          "hàng"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "vn_omo_interbank",
@@ -293,7 +502,18 @@
       "unit": "%/năm",
       "freq": "Hàng tuần",
       "query_template": "NHNN bơm hút OMO lãi suất liên ngân hàng qua đêm 3 tháng {MONTH}/{YEAR}",
-      "baseline_2026_11_24": "ON 4,50% · Kỳ hạn 3 tháng vọt 7,85% · Dự trữ ngoại hối ~87,6 tỷ USD"
+      "baseline_2026_11_24": "ON 4,50% · Kỳ hạn 3 tháng vọt 7,85% · Dự trữ ngoại hối ~87,6 tỷ USD",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "căng",
+          "thanh",
+          "khoản",
+          "ngân",
+          "hàng"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "vn_credit_npl",
@@ -304,7 +524,17 @@
       "unit": "%",
       "freq": "Hàng tháng",
       "query_template": "tăng trưởng tín dụng nợ xấu ngân hàng Việt Nam {MONTH}/{YEAR}",
-      "baseline_2026_11_24": "Tín dụng +11,9% · Nợ xấu ngành 2,3% · TT 50/2026 LDR 95% + LCR/NSFR"
+      "baseline_2026_11_24": "Tín dụng +11,9% · Nợ xấu ngành 2,3% · TT 50/2026 LDR 95% + LCR/NSFR",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "tăng",
+          "trưởng",
+          "ngân",
+          "hàng"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "vn_fdi_trade",
@@ -315,7 +545,18 @@
       "unit": "tỷ USD",
       "freq": "Hàng tháng",
       "query_template": "FDI giải ngân đầu tư công cán cân thương mại Việt Nam {MONTH}/{YEAR}",
-      "baseline_2026_11_24": "FDI đăng ký 9T 50,36 tỷ USD · Đầu tư công 75,3% · Q3 nhập siêu 2,42 tỷ USD"
+      "baseline_2026_11_24": "FDI đăng ký 9T 50,36 tỷ USD · Đầu tư công 75,3% · Q3 nhập siêu 2,42 tỷ USD",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "fdi",
+          "xuất khẩu",
+          "nhập khẩu",
+          "đầu tư nước ngoài",
+          "xuất siêu"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "gold_world_spot",
@@ -326,7 +567,20 @@
       "unit": "USD/oz",
       "freq": "Hàng ngày",
       "query_template": "giá vàng thế giới XAU USD hôm nay {MONTH}/{YEAR}",
-      "baseline_2026_11_24": "3.638–3.651 USD/oz (quy đổi thô ~114,00 tr/lượng)"
+      "baseline_2026_11_24": "3.638–3.651 USD/oz (quy đổi thô ~114,00 tr/lượng)",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "gold",
+          "xau",
+          "vàng thế giới",
+          "bullion",
+          "ounce"
+        ],
+        "exclude": [
+          "gold medal"
+        ]
+      }
     },
     {
       "id": "gold_vn_sjc_9999",
@@ -337,7 +591,19 @@
       "unit": "triệu đồng/lượng",
       "freq": "Hàng ngày",
       "query_template": "giá vàng SJC vàng nhẫn 9999 hôm nay mua vào bán ra chênh lệch thế giới",
-      "baseline_2026_11_24": "SJC 130–135 tr (+21 tr/+18,4% vs TG · Spread 5 tr/3,7%)"
+      "baseline_2026_11_24": "SJC 130–135 tr (+21 tr/+18,4% vs TG · Spread 5 tr/3,7%)",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "sjc",
+          "vàng miếng",
+          "vàng nhẫn",
+          "giá vàng",
+          "pnj",
+          "doji"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "gold_cb_etf_aisc",
@@ -348,18 +614,89 @@
       "unit": "tấn / USD/oz",
       "freq": "Hàng quý",
       "query_template": "World Gold Council central bank gold demand AISC Q{QUARTER} {YEAR}",
-      "baseline_2026_11_24": "NHTW mua 321,2 tấn Q3 (+42%) · ETF 4.256 tấn · AISC 1.930 USD/oz"
+      "baseline_2026_11_24": "NHTW mua 321,2 tấn Q3 (+42%) · ETF 4.256 tấn · AISC 1.930 USD/oz",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "central bank",
+          "world gold council",
+          "wgc",
+          "ngân hàng trung ương",
+          "etf",
+          "aisc"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "gold_policy_vn",
       "layer": "gold",
       "quick": false,
       "plain_label": "Chính sách quản lý vàng, nhập khẩu & thanh toán chuyển khoản",
-      "technical_label": "Decree 232/2025 & Decree 390/2026",
+      "technical_label": "Decree 24 / Decree 232/2025 & Decree 390/2026 + SBV Supply",
       "unit": "văn bản",
       "freq": "Khi ban hành",
-      "query_template": "Nghị định 390 2026 quản lý kinh doanh vàng thuế vàng miếng Việt Nam",
-      "baseline_2026_11_24": "NĐ 232 bỏ độc quyền SX · NĐ 390 giao dịch >=5 triệu/ngày chuyển khoản"
+      "query_template": "Nghị định 390 2026 quản lý kinh doanh vàng đấu thầu bình ổn NHNN Việt Nam",
+      "baseline_2026_11_24": "NĐ 232 bỏ độc quyền SX · NĐ 390 giao dịch >=5 triệu/ngày chuyển khoản · theo sát hạn mức nhập khẩu NHNN",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "nghị định 24",
+          "nghị định 232",
+          "nghị định 390",
+          "đấu thầu vàng",
+          "nhnn"
+        ],
+        "exclude": []
+      }
+    },
+    {
+      "id": "gold_sge_cot_etf",
+      "layer": "gold",
+      "quick": false,
+      "plain_label": "Sức mua vật chất Thượng Hải (SGE), vị thế đầu cơ COT & dòng tiền quỹ SPDR GLD",
+      "technical_label": "Shanghai Gold Exchange (SGE) Premium vs LBMA + CFTC COT Managed Money + SPDR GLD Tonnage",
+      "unit": "USD/oz / tấn",
+      "freq": "Hàng tuần",
+      "query_template": "Shanghai Gold Exchange premium LBMA CFTC COT gold managed money SPDR GLD flows {MONTH_EN} {YEAR}",
+      "baseline_2026_11_24": "SGE premium >$25/oz báo hiệu lực gom vàng vật chất châu Á mạnh; COT Long quá đông cảnh báo nhịp rũ ngắn hạn",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "shanghai",
+          "sge",
+          "lbma",
+          "cot",
+          "cftc",
+          "spdr",
+          "gld"
+        ],
+        "exclude": []
+      }
+    },
+    {
+      "id": "gold_fx_event_radar",
+      "layer": "gold",
+      "quick": false,
+      "plain_label": "Chênh lệch tỷ giá tự do – ngân hàng & Lịch sự kiện bom tấn (FOMC, CPI, PCE, NFP, OPEC+)",
+      "technical_label": "Free-Market vs VCB USD/VND Spread + Macro Event Calendar Radar",
+      "unit": "VND / lịch sự kiện",
+      "freq": "Hàng ngày",
+      "query_template": "tỷ giá USD chợ đen Vietcombank lịch họp FOMC Fed CPI PCE Mỹ {MONTH}/{YEAR}",
+      "baseline_2026_11_24": "Khi USD tự do nới rộng >2% so với VCB, giá vàng nội địa thường bật mạnh hơn thế giới; tránh mua đuổi sát giờ công bố CPI/FOMC",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "fomc",
+          "nfp",
+          "pce",
+          "cpi",
+          "chợ đen",
+          "vietcombank",
+          "opec"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "stock_vnindex_pe",
@@ -370,7 +707,19 @@
       "unit": "điểm / lần",
       "freq": "Hàng ngày",
       "query_template": "VN-Index hôm nay P/E định giá chứng khoán Việt Nam {MONTH}/{YEAR}",
-      "baseline_2026_11_24": "VN-Index 1.688–1.759 · P/E 10,8x (TB 10Y 14,0x) · EY 9,26% vs TPCP 4,57%"
+      "baseline_2026_11_24": "VN-Index 1.688–1.759 · P/E 10,8x (TB 10Y 14,0x) · EY 9,26% vs TPCP 4,57%",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "vn-index",
+          "vnindex",
+          "chứng khoán",
+          "cổ phiếu",
+          "hose",
+          "p/e"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "stock_margin_liquidity",
@@ -381,7 +730,18 @@
       "unit": "nghìn tỷ / phiên",
       "freq": "Hàng quý / tháng",
       "query_template": "dư nợ margin toàn thị trường chứng khoán Việt Nam thanh khoản phiên {YEAR}",
-      "baseline_2026_11_24": "Margin đỉnh 457,5 nghìn tỷ · Thanh khoản Q3 14,8 nghìn tỷ (~31 phiên — CỜ ĐỎ)"
+      "baseline_2026_11_24": "Margin đỉnh 457,5 nghìn tỷ · Thanh khoản Q3 14,8 nghìn tỷ (~31 phiên — CỜ ĐỎ)",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "margin",
+          "thanh khoản",
+          "dư nợ",
+          "call margin",
+          "giải chấp"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "stock_foreign_ftse",
@@ -392,7 +752,42 @@
       "unit": "nghìn tỷ / tỷ USD",
       "freq": "Hàng tuần",
       "query_template": "khối ngoại mua bán ròng chứng khoán Việt Nam nâng hạng FTSE {MONTH}/{YEAR}",
-      "baseline_2026_11_24": "Bán ròng 10T gần 122 nghìn tỷ · 90% vốn FTSE giải ngân 3 đợt T3–T6–T9/2027"
+      "baseline_2026_11_24": "Bán ròng 10T gần 122 nghìn tỷ · 90% vốn FTSE giải ngân 3 đợt T3–T6–T9/2027",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "khối ngoại",
+          "nâng hạng",
+          "ftse",
+          "msci",
+          "mua ròng",
+          "bán ròng"
+        ],
+        "exclude": []
+      }
+    },
+    {
+      "id": "stock_cfo_forensic_esop",
+      "layer": "stock",
+      "quick": false,
+      "plain_label": "Soi lãi thật hay lãi giấy (CFO vs LNST), giao dịch nội bộ & pha loãng ESOP",
+      "technical_label": "Operating Cash Flow Quality (CFO/NI), Receivables Growth, Insider Trades & ESOP Dilution",
+      "unit": "lần / %",
+      "freq": "Hàng quý",
+      "query_template": "báo cáo tài chính dòng tiền CFO giao dịch cổ đông nội bộ ESOP pha loãng {YEAR}",
+      "baseline_2026_11_24": "Cờ đỏ khi CFO < LNST liên tục 2 năm, Phải thu tăng nhanh hơn Doanh thu, lãnh đạo bán ròng hoặc phát hành thêm/ESOP dày đặc",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "cfo",
+          "dòng tiền",
+          "báo cáo tài chính",
+          "esop",
+          "pha loãng",
+          "cổ đông nội bộ"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "re_mortgage_rates",
@@ -403,7 +798,18 @@
       "unit": "%/năm",
       "freq": "Hàng tháng",
       "query_template": "lãi suất vay mua nhà thả nổi các ngân hàng Việt Nam tháng {MONTH} {YEAR}",
-      "baseline_2026_11_24": "Ưu đãi Big4 9,6%–13,5% · Thả nổi 12%–15%/năm · NOXH 5,4%–6,5%"
+      "baseline_2026_11_24": "Ưu đãi Big4 9,6%–13,5% · Thả nổi 12%–15%/năm · NOXH 5,4%–6,5%",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "lãi suất vay",
+          "vay mua nhà",
+          "thả nổi",
+          "mortgage",
+          "ngân hàng"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "re_rental_yield",
@@ -414,7 +820,18 @@
       "unit": "%/năm",
       "freq": "Hàng quý",
       "query_template": "tỷ suất lợi suất cho thuê căn hộ chung cư Hà Nội TP HCM Đà Nẵng {YEAR}",
-      "baseline_2026_11_24": "Căn hộ HN 2,32% · TP.HCM 3,30% · Đà Nẵng 4,34% (DSCR vay 70% chỉ 0,18x–0,30x)"
+      "baseline_2026_11_24": "Căn hộ HN 2,32% · TP.HCM 3,30% · Đà Nẵng 4,34% (DSCR vay 70% chỉ 0,18x–0,30x)",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "cho thuê",
+          "chung cư",
+          "căn hộ",
+          "rental yield",
+          "giá nhà"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "re_supply_industrial",
@@ -425,7 +842,18 @@
       "unit": "% / USD/m2",
       "freq": "Hàng quý",
       "query_template": "báo cáo thị trường bất động sản CBRE Savills khu công nghiệp quý {QUARTER} {YEAR}",
-      "baseline_2026_11_24": "Căn hộ HN sơ cấp 127 tr/m2 (-76% giao dịch) · KCN miền Nam lấp đầy 92%"
+      "baseline_2026_11_24": "Căn hộ HN sơ cấp 127 tr/m2 (-76% giao dịch) · KCN miền Nam lấp đầy 92%",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "bất động sản",
+          "khu công nghiệp",
+          "cbre",
+          "savills",
+          "đất nền"
+        ],
+        "exclude": []
+      }
     },
     {
       "id": "re_bonds_law2026",
@@ -436,7 +864,39 @@
       "unit": "nghìn tỷ đồng",
       "freq": "Hàng quý",
       "query_template": "trái phiếu doanh nghiệp bất động sản đáo hạn VIS Rating Luật Đất đai sửa đổi {YEAR}",
-      "baseline_2026_11_24": "235 nghìn tỷ TPDN đáo hạn 12T tới (đỉnh Q4/26 & Q2/27) · Bảng giá đất + Hệ số K từ 2028"
+      "baseline_2026_11_24": "235 nghìn tỷ TPDN đáo hạn 12T tới (đỉnh Q4/26 & Q2/27) · Bảng giá đất + Hệ số K từ 2028",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "trái phiếu",
+          "luật đất đai",
+          "bảng giá đất",
+          "đáo hạn"
+        ],
+        "exclude": []
+      }
+    },
+    {
+      "id": "re_auction_field_occupancy",
+      "layer": "real_estate",
+      "quick": false,
+      "plain_label": "Đấu giá đất địa phương, tiến độ hạ tầng 4 bước & tỷ lệ nhà sáng đèn thực địa",
+      "technical_label": "Local Land Auctions, 4-Stage Infrastructure Status & Night-Light Occupancy / Flood Risk",
+      "unit": "tr/m² / %",
+      "freq": "Khảo sát thực địa",
+      "query_template": "đấu giá đất bảng giá đất tiến độ hạ tầng quy hoạch ngập lụt {YEAR}",
+      "baseline_2026_11_24": "Tách bạch 4 bước hạ tầng (Chủ trương -> Duyệt vốn -> GPMB -> Đang thi công); kiểm tra tỷ lệ sáng đèn buổi tối & lịch sử ngập lụt",
+      "deterministic_rules": {
+        "must_all": [],
+        "any_of": [
+          "đấu giá đất",
+          "quy hoạch",
+          "hạ tầng",
+          "giải phóng mặt bằng",
+          "ngập lụt"
+        ],
+        "exclude": []
+      }
     }
   ],
   "scoring_rules": {
@@ -659,7 +1119,7 @@
       "detail": "Tự đi thử giờ cao điểm, xem tỷ lệ người ở thật bán kính 3–5 km, lượng giao dịch công chứng 6 tháng qua và bấm thử lãi vay tăng thêm +2%."
     }
   ],
-  "core_principles_digest": "KHUNG QUY TẮC CỐT LÕI (TỪ CẨM NANG 7 CHƯƠNG):\n1. CHUỖI TRUYỀN DẪN 4 TẦNG: Thanh khoản toàn cầu (Fed Net Liquidity = WALCL - TGA - ON RRP, lãi suất Fed/ECB/BoJ/PBOC, lợi suất thực TIPS 10Y, DXY, dầu Brent) -> Vĩ mô & tiền tệ Việt Nam (GDP, CPI mục tiêu 4,5%, tỷ giá VCB, bơm/hút OMO, lãi suất LNH qua đêm vs 3 tháng, tín dụng, nợ xấu, chuẩn Basel III TT 50/2026) -> Định giá vi mô từng tài sản -> Phân bổ vốn & Quản trị rủi ro.\n2. ĐỒNG HỒ CHU KỲ 4 PHA (Merrill Lynch & Ray Dalio All Weather): Pha I Tái lạm phát (ưu tiên tiền gửi dài/trái phiếu, gom dần vàng); Pha II Phục hồi (ưu tiên cổ phiếu tăng trưởng); Pha III Quá nhiệt (tăng tiền mặt sinh lãi, thận trọng đòn bẩy, chọn lọc cổ phiếu rẻ không margin); Pha IV Đình lạm (tiền mặt + vàng phòng thủ, tránh tuyệt đối vay nợ).\n3. QUY TẮC VÀNG (5 nhân tố: Chi phí cơ hội TIPS/DXY 30%, Mua ròng NHTW & ETF 25%, Rủi ro tài khóa & Giá sàn khai thác AISC 20%, Cấu trúc nội địa VN 15%, Vị thế COMEX COT 10%): Công thức quy đổi 1 lượng = 1,205653 troy oz; Landed Parity = [(XAU + phí VC&BH) * (1 + thuế NK) * 1,205653 * Tỷ giá bán VCB] + phí gia công. CHỐT CHẶN ĐỎ: KHÔNG mua đuổi vàng vật chất VN khi chênh lệch với thế giới > 10% hoặc khoảng cách mua–bán > 3%. Lưu ý NĐ 390/2026: mua bán vàng cộng dồn >= 5 triệu/ngày bắt buộc chuyển khoản.\n4. QUY TẮC CHỨNG KHOÁN: So sánh Tỷ suất thu nhập (Earnings Yield = 100/P/E) với TPCP 10Y và Chi phí vốn chuẩn Damodaran (Ke ~10,14% với Rf sạch + Total ERP 8,13%). Theo dõi dư nợ margin/thanh khoản phiên và khối ngoại + lộ trình FTSE. Phân tách theo ngành: (a) Sản xuất/Công nghệ/Tiêu dùng chạy Bộ tứ Pháp y (Beneish M > -1,78 cờ đỏ; Altman Z < 1,81 nguy cơ, > 2,99 an toàn; Piotroski F 7–9 khỏe, 0–2 yếu; Sloan Ratio > +10% báo động lãi giấy) + DuPont 5 nhân tố; (b) Ngân hàng KHÔNG dùng M/Z-Score mà soi P/B vs ROE, NIM, CASA, nợ xấu/LLR, CAR & sẵn sàng LCR/NSFR TT 50/2026; (c) BĐS niêm yết soi CFO thực, nợ/VCSH, lịch đáo hạn trái phiếu & RNAV.\n5. QUY TẮC BẤT ĐỘNG SẢN: Kiểm định dòng tiền cho thuê thực tế sau trừ 15% chi phí vận hành/trống phòng (NOI) chia cho tiền trả góp gốc+lãi (PMT) tại các kịch bản lãi suất thả nổi 10%–12%–14%–15%/năm. Chuẩn an toàn DSCR >= 1,2x (nếu < 1,0x là âm dòng tiền, kích hoạt chốt chặn đỏ không vay đòn bẩy cao). Bắt buộc kiểm tra đủ 7 bước pháp lý (Luật Đất đai & Luật KDBĐS sửa đổi 21/11/2026: bảng giá đất + hệ số K từ 2028, chế tài đất bỏ hoang, trần cọc 5%/đợt đầu 30%/trước bàn giao 70%/trước sổ 95%).\n6. QUẢN TRỊ VỐN & CHỐNG THIÊN KIẾN AI: Định cỡ vị thế tối đa Half-Kelly; tái cân bằng theo quy tắc 5/25 ưu tiên bằng dòng tiền mới; tư duy Quả tạ (Barbell) loại bỏ tài sản dễ vỡ. Áp dụng 5 Cầu chì Ngắt mạch: (1) Thương vụ >5% NAV hoặc BĐS phải tự thẩm định thực địa; (2) Dữ liệu thiếu/mâu thuẫn -> chờ xác minh; (3) Cấm vay margin khi sàn căng & cấm vay mua nhà DSCR < 1,2x; (4) Cấm mua đuổi vàng chênh >10% hoặc spread >3%; (5) Lưu Nhật ký Kiểm toán Quyết định. Khi phân tích bằng AI phải trình bày cân bằng hai chiều Phe Bò vs Phe Gấu, cấm bịa số liệu (ghi DATA_MISSING nếu thiếu) và luôn kết thúc bằng: 'Nhận xét chỉ mang tính tham khảo thôi.'\n7. MA TRẬN ĐỊA CHÍNH TRỊ, LÃNH ĐẠO, HIỆP ĐỊNH & TẬP ĐOÀN LỚN (PESTLE + EVENT-DRIVEN): Bắt buộc quét & phân tích 4 trụ cột sự kiện ngoài con số lãi suất thuần túy: (a) Chiến tranh, xung đột quân sự, điểm nghẽn năng lượng/hàng hải; (b) Quyết định của lãnh đạo cường quốc (như Tổng thống Mỹ/Trump về thuế quan, trừng phạt, chính sách đối ngoại/quân sự, hội nghị G7/BRICS); (c) Hiệp định thương mại (FTA), dịch chuyển chuỗi cung ứng & kiểm soát công nghệ; (d) Động thái các tập đoàn khổng lồ (Big Tech AI CapEx, OPEC+, sức khỏe ngân hàng & tập đoàn BĐS lớn). Luôn phân tích rõ chuỗi truyền dẫn: Sự kiện ➔ Dầu/Chuỗi cung ứng ➔ Lạm phát & Lãi suất ➔ DXY/Tỷ giá ➔ Tác động cụ thể lên Vàng, Chứng khoán và Nhà đất tại đúng quốc gia/khu vực của người dùng.",
+  "core_principles_digest": "KHUNG QUY TẮC CỐT LÕI (TỪ CẨM NANG 7 CHƯƠNG):\n1. CHUỖI TRUYỀN DẪN 4 TẦNG: Thanh khoản toàn cầu (Fed Net Liquidity = WALCL - TGA - ON RRP, lãi suất Fed/ECB/BoJ/PBOC, lợi suất thực TIPS 10Y, DXY, dầu Brent) -> Vĩ mô & tiền tệ Việt Nam (GDP, CPI mục tiêu 4,5%, tỷ giá VCB, bơm/hút OMO, lãi suất LNH qua đêm vs 3 tháng, tín dụng, nợ xấu, chuẩn Basel III TT 50/2026) -> Định giá vi mô từng tài sản -> Phân bổ vốn & Quản trị rủi ro.\n2. ĐỒNG HỒ CHU KỲ 4 PHA (Merrill Lynch & Ray Dalio All Weather): Pha I Tái lạm phát (ưu tiên tiền gửi dài/trái phiếu, gom dần vàng); Pha II Phục hồi (ưu tiên cổ phiếu tăng trưởng); Pha III Quá nhiệt (tăng tiền mặt sinh lãi, thận trọng đòn bẩy, chọn lọc cổ phiếu rẻ không margin); Pha IV Đình lạm (tiền mặt + vàng phòng thủ, tránh tuyệt đối vay nợ).\n3. QUY TẮC VÀNG (5 nhân tố: Chi phí cơ hội TIPS/DXY 30%, Mua ròng NHTW & ETF 25%, Rủi ro tài khóa & Giá sàn khai thác AISC 20%, Cấu trúc nội địa VN 15%, Vị thế COMEX COT 10%): Công thức quy đổi 1 lượng = 1,205653 troy oz; Landed Parity = [(XAU + phí VC&BH) * (1 + thuế NK) * 1,205653 * Tỷ giá bán VCB] + phí gia công. CHỐT CHẶN ĐỎ: KHÔNG mua đuổi vàng vật chất VN khi chênh lệch với thế giới > 10% hoặc khoảng cách mua–bán > 3%. Lưu ý NĐ 390/2026: mua bán vàng cộng dồn >= 5 triệu/ngày bắt buộc chuyển khoản.\n4. QUY TẮC CHỨNG KHOÁN: So sánh Tỷ suất thu nhập (Earnings Yield = 100/P/E) với TPCP 10Y và Chi phí vốn chuẩn Damodaran (Ke ~10,14% với Rf sạch + Total ERP 8,13%). Theo dõi dư nợ margin/thanh khoản phiên và khối ngoại + lộ trình FTSE. Phân tách theo ngành: (a) Sản xuất/Công nghệ/Tiêu dùng chạy Bộ tứ Pháp y (Beneish M > -1,78 cờ đỏ; Altman Z < 1,81 nguy cơ, > 2,99 an toàn; Piotroski F 7–9 khỏe, 0–2 yếu; Sloan Ratio > +10% báo động lãi giấy) + DuPont 5 nhân tố; (b) Ngân hàng KHÔNG dùng M/Z-Score mà soi P/B vs ROE, NIM, CASA, nợ xấu/LLR, CAR & sẵn sàng LCR/NSFR TT 50/2026; (c) BĐS niêm yết soi CFO thực, nợ/VCSH, lịch đáo hạn trái phiếu & RNAV.\n5. QUY TẮC BẤT ĐỘNG SẢN: Kiểm định dòng tiền cho thuê thực tế sau trừ 15% chi phí vận hành/trống phòng (NOI) chia cho tiền trả góp gốc+lãi (PMT) tại các kịch bản lãi suất thả nổi 10%–12%–14%–15%/năm. Chuẩn an toàn DSCR >= 1,2x (nếu < 1,0x là âm dòng tiền, kích hoạt chốt chặn đỏ không vay đòn bẩy cao). Bắt buộc kiểm tra đủ 7 bước pháp lý (Luật Đất đai & Luật KDBĐS sửa đổi 21/11/2026: bảng giá đất + hệ số K từ 2028, chế tài đất bỏ hoang, trần cọc 5%/đợt đầu 30%/trước bàn giao 70%/trước sổ 95%).\n6. QUẢN TRỊ VỐN & CHỐNG THIÊN KIẾN AI: Định cỡ vị thế tối đa Half-Kelly; tái cân bằng theo quy tắc 5/25 ưu tiên bằng dòng tiền mới; tư duy Quả tạ (Barbell) loại bỏ tài sản dễ vỡ. Áp dụng 5 Cầu chì Ngắt mạch: (1) Thương vụ >5% NAV hoặc BĐS phải tự thẩm định thực địa; (2) Dữ liệu thiếu/mâu thuẫn -> chờ xác minh; (3) Cấm vay margin khi sàn căng & cấm vay mua nhà DSCR < 1,2x; (4) Cấm mua đuổi vàng chênh >10% hoặc spread >3%; (5) Lưu Nhật ký Kiểm toán Quyết định. Khi phân tích bằng AI phải trình bày cân bằng hai chiều Phe Bò vs Phe Gấu, cấm bịa số liệu (ghi DATA_MISSING nếu thiếu) và luôn kết thúc bằng: 'Nhận xét chỉ mang tính tham khảo thôi.'\n7. MA TRẬN ĐỊA CHÍNH TRỊ, LÃNH ĐẠO, HIỆP ĐỊNH & TẬP ĐOÀN LỚN (PESTLE + EVENT-DRIVEN): Bắt buộc quét & phân tích 4 trụ cột sự kiện ngoài con số lãi suất thuần túy: (a) Chiến tranh, xung đột quân sự, điểm nghẽn năng lượng/hàng hải; (b) Quyết định của lãnh đạo cường quốc (như Tổng thống Mỹ/Trump về thuế quan, trừng phạt, chính sách đối ngoại/quân sự, hội nghị G7/BRICS); (c) Hiệp định thương mại (FTA), dịch chuyển chuỗi cung ứng & kiểm soát công nghệ; (d) Động thái các tập đoàn khổng lồ (Big Tech AI CapEx, OPEC+, sức khỏe ngân hàng & tập đoàn BĐS lớn). Luôn phân tích rõ chuỗi truyền dẫn: Sự kiện ➔ Dầu/Chuỗi cung ứng ➔ Lạm phát & Lãi suất ➔ DXY/Tỷ giá ➔ Tác động cụ thể lên Vàng, Chứng khoán và Nhà đất tại đúng quốc gia/khu vực của người dùng.\n- KHÓA BỊA ĐẶT 0% (Deterministic Extraction): Mọi tin tức đều qua 5 chốt Fail-Closed (Nguyên văn bất biến, URL gốc https://, kiểm định lược đồ, mã băm SHA-256 chống trùng, kiểm tra tính thời điểm) và khớp quy tắc Boolean/Regex giải thích rõ từ khóa kích hoạt. Câu trả lời Gemini bắt buộc kết thúc bằng khối JSON chuẩn hóa INVEST_INTEL_SYNC_V2 để web đồng bộ tất cả biểu đồ (Tròn, Cột, Đường, Radar, Ma trận Quyết định).",
   "event_transmission_matrix": [
     {
       "catalyst": "Chiến tranh / Xung đột quân sự / Phong tỏa eo biển (Hormuz, Biển Đỏ, Đài Loan)",

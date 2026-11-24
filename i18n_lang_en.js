@@ -7,7 +7,44 @@
   'use strict';
 
   const NS = (globalScope.NoirStudio = globalScope.NoirStudio || {});
-  NS.i18nPacks = NS.i18nPacks || {};
+  NS.i18nPacks = NS.i18nPacks || {
+    "Cuộn liên tục": "Continuous Scroll",
+    "1 trang đơn": "Single Page",
+    "2 trang sách": "Two-Page Spread",
+    "Định dạng kiểu Word (Phông, Cỡ, Màu, B / I / U):": "Word-Style Formatting (Font, Size, Color, B / I / U):",
+    "Tự khớp font gốc (Ưu tiên)": "Auto-Match Surrounding Font (Priority)",
+    "Đặt / Kéo vị trí chữ & số": "Place / Drag Text & Numbers",
+    "Kéo khung che xóa chữ/số cũ": "Draw Whiteout Box to Erase Old Text/Numbers",
+    "Chuyên gia 30 năm — Bình dân học vụ (6 phần chuẩn)": "30-Year Veteran — Plain-Language 6-Part Analysis",
+    "Xuất File .MD": "Export .MD Report",
+    "Copy 1 Chạm": "1-Click Copy",
+    "Mục tiêu & Khẩu vị đầu tư của bạn": "Your Investment Goal & Risk Appetite",
+    "Dán thêm số liệu BCTC / Khảo sát thực địa": "Paste Financial Data / Field Survey Notes",
+    "Kiểm tra sức khỏe các nguồn API ngay": "Check Live API Source Health",
+    "Lưu khảo sát vào lịch sử khu vực & đưa vào Prompt": "Save Field Survey & Add to Prompt",
+    "Hỏi sâu chuyên gia 30 năm về Vàng": "Ask 30-Year Veteran AI about Gold",
+    "Hỏi sâu chuyên gia 30 năm về khu vực này": "Ask 30-Year Veteran AI about This Area",
+
+    "Biểu đồ phân tích chuyên nghiệp": "Pro Analytics Charts",
+    "Biểu đồ phân tích chuyên nghiệp (Dễ đọc · Không dùng từ khó hiểu)": "Pro Analytics Charts (Plain & Easy to Read)",
+    "BƯỚC 1: TRA CỨU THÔNG TIN TOÀN DIỆN (0% BỊA ĐẶT · KHÓA NGUỒN SHA-256)": "STEP 1: COMPREHENSIVE SCAN (0% HALLUCINATION · SHA-256 PROVENANCE)",
+    "BƯỚC 2: TỔNG HỢP CÂU LỆNH ĐỒNG BỘ CODE & HỎI GEMINI": "STEP 2: COMPILE SYNCED PROMPT & ASK GEMINI",
+    "BƯỚC 3 (Tùy chọn): Dán câu trả lời Gemini vào đây → Web tự cập nhật mọi ô dữ liệu & vẽ 6 Biểu đồ chuyên nghiệp": "STEP 3 (Optional): Paste Gemini reply here → Auto-sync all data cards & draw 6 Pro Charts",
+    "Tra cứu thông tin toàn diện, lọc chuẩn & tổng hợp": "Comprehensive Scan, Deterministic Filter & Summary",
+    "Đồng bộ dữ liệu & Mở Biểu đồ chuyên nghiệp": "Sync Data & Open Pro Charts",
+    "Đồng bộ & Vẽ biểu đồ": "Sync & Draw Charts",
+    "Dựng lại từ Code Bước 1": "Rebuild from Step 1 Code",
+    "Hỏi Gemini lấy dữ liệu biểu đồ": "Ask Gemini for Chart Data",
+    "1. Biểu đồ Tròn — Gợi ý Chia Vốn An Toàn (%)": "1. Donut Chart — Safe Capital Allocation (%)",
+    "2. Biểu đồ Radar — Bản đồ 6 Mức Độ Rủi Ro (Càng rộng ra ngoài càng nguy hiểm)": "2. Radar Chart — 6-Axis Risk Map (Wider = Higher Risk)",
+    "3. Biểu đồ Cột — Mức Độ Hấp Dẫn 4 Kênh Đầu Tư (Thang 100)": "3. Bar Chart — 4-Channel Attractiveness Score (/100)",
+    "4. Biểu đồ Chấm Điểm 5 Trụ Cột Cốt Lõi (Thang 10)": "4. 5 Core Pillars Scoreboard (/10)",
+    "5. Biểu đồ Đường Theo Thời Gian": "5. Time-Series Trend Line Chart",
+    "6. Ma Trận Quyết Định Hành Động (Rõ ràng — Không nói nước đôi)": "6. Action Decision Matrix (Clear & Direct)",
+    "Mô phỏng trang giấy trực quan": "Visual Paper Page Simulator",
+    "Trạm Đóng Gói Câu Lệnh Đầu Tư (30 Năm Kinh Nghiệm) & Mở Gemini": "30-Year Veteran Investment Prompt Station & Gemini Split",
+    "Autotester nội bộ": "Internal AutoTester",
+};
 
   const exact = Object.freeze({
     "🌐 Địa chính trị, Chiến tranh, Lãnh đạo, Hiệp định & Tập đoàn lớn": "🌐 Geopolitics, Wars, World Leaders, Treaties & Mega-Corps",

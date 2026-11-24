@@ -7,7 +7,34 @@
   'use strict';
 
   const NS = (globalScope.NoirStudio = globalScope.NoirStudio || {});
-  NS.i18nPacks = NS.i18nPacks || {};
+  NS.i18nPacks = NS.i18nPacks || {
+    "Cuộn liên tục": "연속 스크롤",
+    "1 trang đơn": "단일 페이지",
+    "2 trang sách": "두 페이지 보기",
+    "Định dạng kiểu Word (Phông, Cỡ, Màu, B / I / U):": "Word 스타일 서식 (글꼴, 크기, 색상, B/I/U):",
+    "Tự khớp font gốc (Ưu tiên)": "주변 원본 글꼴 자동 일치 (우선)",
+    "Đặt / Kéo vị trí chữ & số": "텍스트/번호 위치 배치 및 드래그",
+    "Kéo khung che xóa chữ/số cũ": "기존 텍스트/번호 흰색 덮어 지우기",
+    "Chuyên gia 30 năm — Bình dân học vụ (6 phần chuẩn)": "30년 베테랑 투자자 — 쉬운 6단계 분석",
+    "Xuất File .MD": ".MD 보고서 내보내기",
+    "Copy 1 Chạm": "원클릭 복사",
+    "Kiểm tra sức khỏe các nguồn API ngay": "실시간 API 상태 점검",
+
+    "Biểu đồ phân tích chuyên nghiệp": "전문 분석 차트",
+    "Biểu đồ phân tích chuyên nghiệp (Dễ đọc · Không dùng từ khó hiểu)": "전문 분석 차트 (쉬운 설명 포함)",
+    "BƯỚC 1: TRA CỨU THÔNG TIN TOÀN DIỆN (0% BỊA ĐẶT · KHÓA NGUỒN SHA-256)": "1단계: 종합 데이터 조회 (환각 0% · SHA-256 출처 검증)",
+    "BƯỚC 2: TỔNG HỢP CÂU LỆNH ĐỒNG BỘ CODE & HỎI GEMINI": "2단계: 코드 동기화 프롬프트 생성 및 Gemini 질문",
+    "Tra cứu thông tin toàn diện, lọc chuẩn & tổng hợp": "종합 정보 조회 · 결정론적 필터 및 요약",
+    "Đồng bộ dữ liệu & Mở Biểu đồ chuyên nghiệp": "데이터 동기화 및 전문 차트 열기",
+    "Đồng bộ & Vẽ biểu đồ": "동기화 및 차트 그리기",
+    "Dựng lại từ Code Bước 1": "1단계 코드 데이터로 다시 그리기",
+    "1. Biểu đồ Tròn — Gợi ý Chia Vốn An Toàn (%)": "1. 도넛 차트 — 안전 자산 배분 (%)",
+    "2. Biểu đồ Radar — Bản đồ 6 Mức Độ Rủi Ro (Càng rộng ra ngoài càng nguy hiểm)": "2. 레이더 차트 — 6축 리스크 지도",
+    "3. Biểu đồ Cột — Mức Độ Hấp Dẫn 4 Kênh Đầu Tư (Thang 100)": "3. 막대 차트 — 4대 투자 채널 매력도 (100점)",
+    "4. Biểu đồ Chấm Điểm 5 Trụ Cột Cốt Lõi (Thang 10)": "4. 5대 핵심 기둥 점수 (10점)",
+    "6. Ma Trận Quyết Định Hành Động (Rõ ràng — Không nói nước đôi)": "6. 행동 결정 매트릭스",
+    "Autotester nội bộ": "내장 자동 테스터",
+};
 
   const exact = Object.freeze({
     "🌐 Địa chính trị, Chiến tranh, Lãnh đạo, Hiệp định & Tập đoàn lớn": "🌐 지정학, 전쟁, 지도자, 무역협정 및 대기업",

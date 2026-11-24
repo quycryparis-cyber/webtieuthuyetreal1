@@ -446,6 +446,11 @@
         url: `https://www.google.com/maps/search/${qMaps}`,
       },
       {
+        title: `Kiểm tra bản đồ Quy hoạch sử dụng đất trực tiếp (Guland)`,
+        source: 'Guland.vn Quy hoạch',
+        url: `https://guland.vn/soi-quy-hoach`,
+      },
+      {
         title: `Tin tức thị trường bất động sản & bảng giá đất mới nhất`,
         source: 'VnExpress Bất động sản',
         url: `https://vnexpress.net/bat-dong-san`,
@@ -909,6 +914,8 @@
           { name: 'VietstockFinance (Chỉ số)', url: `https://finance.vietstock.vn/${sym}/tai-chinh.htm` },
           { name: 'VNDirect DStock', url: `https://dstock.vndirect.com.vn/tong-quan/${sym}` },
           { name: 'CafeF Hồ sơ DN', url: `https://s.cafef.vn/hose/${sym}.chn` },
+          { name: 'Simplize (BCTC 5 năm)', url: `https://simplize.vn/co-phieu/${sym}` },
+          { name: 'TradingView Biểu đồ', url: `https://www.tradingview.com/symbols/HOSE-${sym}/` },
         ]
       : [
           { name: 'Yahoo Finance', url: `https://finance.yahoo.com/quote/${encodeURIComponent(yahooSymbol)}` },
@@ -938,7 +945,244 @@
     return { ...payload, fromCache: false, ageMinutes: 0 };
   }
 
-  INV.goldEngine = { calculateGoldMetrics, fetchLiveGoldSnapshot, computeLiveDxyFromRates, OUNCE_PER_TAEL };
+  // ==========================================================================
+  // 4. BỘ BỔ SUNG CHUYÊN GIA 30 NĂM: LỊCH SỬ VÀNG 30 NGÀY (CORS=*), FRED API,
+  //    CHỈ BÁO MA/RSI, RSS NGUYÊN BẢN (VERBATIM) & KIỂM TRA SỨC KHỎE NGUỒN
+  // ==========================================================================
+  function computeTechnicalIndicators(closes) {
+    const arr = (Array.isArray(closes) ? closes : []).map(Number).filter(Number.isFinite);
+    if (!arr.length) return { ma7: NaN, ma20: NaN, ma50: NaN, rsi14: NaN, high: NaN, low: NaN };
+    const avgLast = (n) => (arr.length >= n ? arr.slice(-n).reduce((s, v) => s + v, 0) / n : NaN);
+    let rsi14 = NaN;
+    if (arr.length >= 15) {
+      let gains = 0, losses = 0;
+      for (let i = arr.length - 14; i < arr.length; i++) {
+        const diff = arr[i] - arr[i - 1];
+        if (diff >= 0) gains += diff;
+        else losses += Math.abs(diff);
+      }
+      const avgG = gains / 14;
+      const avgL = losses / 14;
+      rsi14 = avgL === 0 ? 100 : 100 - 100 / (1 + avgG / avgL);
+    }
+    return {
+      ma7: avgLast(7),
+      ma20: avgLast(20),
+      ma50: avgLast(50),
+      rsi14,
+      high: Math.max(...arr),
+      low: Math.min(...arr),
+      latest: arr[arr.length - 1],
+      changePeriodPct: arr[0] > 0 ? ((arr[arr.length - 1] - arr[0]) / arr[0]) * 100 : NaN,
+    };
+  }
+
+  async function fetchGoldHistory30d(signal) {
+    const cacheKey = 'gold_hist_30d_v1';
+    const cached = INV.storageAdapter.getSession(cacheKey, TTL_MARKET_MS);
+    if (cached?.data) return cached.data;
+    try {
+      const res = await INV.networkAdapter.fetchJson(
+        'https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=1d&limit=30',
+        { signal, timeoutMs: 7500, preferDirect: true }
+      );
+      const rows = Array.isArray(res?.data) ? res.data : [];
+      const points = rows
+        .map((r) => ({
+          date: new Date(Number(r[0])).toISOString().slice(0, 10),
+          open: Number(r[1]),
+          high: Number(r[2]),
+          low: Number(r[3]),
+          close: Number(r[4]),
+          volume: Number(r[5]),
+        }))
+        .filter((p) => Number.isFinite(p.close) && p.close > 0);
+      if (!points.length) return null;
+      const indicators = computeTechnicalIndicators(points.map((p) => p.close));
+      const out = {
+        status: 'ok',
+        sourceName: 'Binance PAXG/USDT Daily Klines (CORS=*)',
+        sourceUrl: 'https://www.binance.com/en/trade/PAXG_USDT',
+        points,
+        indicators,
+        fetchedAt: Date.now(),
+      };
+      INV.storageAdapter.setSession(cacheKey, out);
+      return out;
+    } catch (_e) {
+      return { status: 'unavailable', points: [], indicators: null };
+    }
+  }
+
+  async function fetchFredKeySeriesIfConfigured(signal) {
+    const key = String(INV.storageAdapter.getPrefs()?.fredApiKey || '').trim();
+    if (!key) {
+      return {
+        status: 'no_key',
+        tips10y: null,
+        fedFunds: null,
+        dgs10: null,
+        note: 'Chưa gắn FRED API Key (miễn phí tại fred.stlouisfed.org). Hệ thống đang dùng US Treasury Fiscal Data API chính thức thay thế không cần key.',
+      };
+    }
+    const fetchOne = async (seriesId) => {
+      const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${encodeURIComponent(key)}&file_type=json&sort_order=desc&limit=5`;
+      const res = await INV.networkAdapter.fetchJson(url, { signal, timeoutMs: 8000 });
+      const obs = (res?.data?.observations || []).find((o) => o.value && o.value !== '.' && Number.isFinite(Number(o.value)));
+      return obs ? { value: Number(obs.value), date: obs.date, url: `https://fred.stlouisfed.org/series/${seriesId}` } : null;
+    };
+    const [tipsRes, fedRes, dgsRes] = await Promise.allSettled([
+      fetchOne('DFII10'),
+      fetchOne('FEDFUNDS'),
+      fetchOne('DGS10'),
+    ]);
+    return {
+      status: tipsRes.status === 'fulfilled' && tipsRes.value ? 'ok' : 'unavailable',
+      tips10y: tipsRes.status === 'fulfilled' ? tipsRes.value : null,
+      fedFunds: fedRes.status === 'fulfilled' ? fedRes.value : null,
+      dgs10: dgsRes.status === 'fulfilled' ? dgsRes.value : null,
+    };
+  }
+
+  function buildGoldDeepLinks() {
+    return [
+      { label: '🏛️ World Gold Council (NHTW mua vàng)', url: 'https://www.gold.org/goldhub/data/gold-demand-trends' },
+      { label: '📈 Lãi suất thực Mỹ TIPS 10Y (FRED DFII10)', url: 'https://fred.stlouisfed.org/series/DFII10' },
+      { label: '📊 Vị thế đầu cơ CFTC COT (Vàng)', url: 'https://www.cftc.gov/MarketReports/CommitmentsofTraders/index.htm' },
+      { label: '🏦 Dòng tiền quỹ SPDR Gold (GLD)', url: 'https://www.spdrgoldshares.com/usa/historical-data/' },
+      { label: '🥇 Bảng giá vàng miếng SJC chính thức', url: 'https://sjc.com.vn/gia-vang-online' },
+      { label: '💱 Tỷ giá Vietcombank chính thức', url: 'https://portal.vietcombank.com.vn/Personal/tg/Pages/ty-gia.aspx' },
+    ];
+  }
+
+  function parseRssXmlVerbatim(xmlText, category) {
+    const items = [];
+    const strip = (s) =>
+      String(s || '')
+        .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;|&apos;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const matches = String(xmlText || '').match(/<item[\s\S]*?<\/item>/gi) || [];
+    matches.slice(0, 6).forEach((block, idx) => {
+      const getTag = (tag) => {
+        const m = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'));
+        return m ? strip(m[1]) : '';
+      };
+      const title = getTag('title');
+      const link = getTag('link');
+      const desc = getTag('description');
+      const pubDate = getTag('pubDate');
+      const sourceTag = getTag('source');
+      if (title && link) {
+        let isoDate = INV.utils.todayIso();
+        try {
+          if (pubDate) {
+            const d = new Date(pubDate);
+            if (!Number.isNaN(d.getTime())) isoDate = d.toISOString().slice(0, 10);
+          }
+        } catch (_e) {}
+        items.push({
+          id: `rss_${category}_${idx}_${title.slice(0, 14)}`,
+          category,
+          title,
+          snippet: desc.slice(0, 220),
+          source: sourceTag || 'RSS Chính thống (Nguyên bản)',
+          url: link,
+          date: isoDate,
+          selected_for_prompt: true,
+        });
+      }
+    });
+    return items;
+  }
+
+  async function fetchVerbatimRssStreams(streams, signal) {
+    const canBypassCors = Boolean(
+      INV.networkAdapter.hasElectronBridge?.() || INV.storageAdapter.getPrefs()?.proxyUrl
+    );
+    if (!canBypassCors) return [];
+    const settled = await Promise.allSettled(
+      streams.map(async (st) => {
+        const res = await INV.networkAdapter.fetchText(st.url, { signal, timeoutMs: 7000 });
+        return parseRssXmlVerbatim(res?.text || '', st.category);
+      })
+    );
+    const seen = new Set();
+    const out = [];
+    settled.forEach((s) => {
+      if (s.status !== 'fulfilled') return;
+      (s.value || []).forEach((it) => {
+        const key = it.url || it.title.toLowerCase().slice(0, 50);
+        if (!seen.has(key)) {
+          seen.add(key);
+          out.push(it);
+        }
+      });
+    });
+    return out;
+  }
+
+  async function fetchRealEstate5StreamNews(areaLabel, signal) {
+    const qArea = String(areaLabel || 'Việt Nam').trim();
+    const mkGNews = (q) => `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=vi&gl=VN&ceid=VN:vi`;
+    const streams = [
+      { category: 'quy_hoach', url: mkGNews(`"${qArea}" ("quy hoạch" OR "sử dụng đất" OR "phân khu")`) },
+      { category: 'ha_tang', url: mkGNews(`"${qArea}" ("hạ tầng" OR "đầu tư công" OR "giải phóng mặt bằng" OR "khởi công")`) },
+      { category: 'dau_gia', url: mkGNews(`"${qArea}" ("đấu giá đất" OR "bảng giá đất" OR "tách thửa")`) },
+      { category: 'thi_truong', url: mkGNews(`"${qArea}" ("bất động sản" OR "nhà đất" OR "cắt lỗ" OR "chung cư")`) },
+      { category: 'kinh_te_fdi', url: mkGNews(`"${qArea}" ("GRDP" OR "FDI" OR "khu công nghiệp" OR "ngập lụt")`) },
+    ];
+    return fetchVerbatimRssStreams(streams, signal);
+  }
+
+  async function checkSourcesHealth(signal) {
+    const ping = async (name, url, opts = {}) => {
+      const t0 = Date.now();
+      try {
+        await INV.networkAdapter.fetchJson(url, { signal, timeoutMs: 5500, ...opts });
+        return { name, status: 'ok', ms: Date.now() - t0 };
+      } catch (err) {
+        return { name, status: 'unavailable', ms: Date.now() - t0, error: String(err?.message || 'CORS/Timeout') };
+      }
+    };
+    const prefs = INV.storageAdapter.getPrefs();
+    const checks = await Promise.all([
+      ping('Vàng thế giới 24/7 (Binance PAXG)', 'https://api.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT', { preferDirect: true }),
+      ping('Tỷ giá 160 đồng tiền & DXY (ExchangeRate)', 'https://open.er-api.com/v6/latest/USD', { preferDirect: true }),
+      ping('Bộ Tài chính Mỹ (US Treasury API)', 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny?sort=-record_date&page[size]=1', { preferDirect: true }),
+      ping('Ngân hàng Thế giới (World Bank API)', 'https://api.worldbank.org/v2/country/VN/indicator/NY.GDP.MKTP.KD.ZG?format=json&mrv=1', { preferDirect: true }),
+      ping('Tin địa chính trị sống (HN Algolia)', 'https://hn.algolia.com/api/v1/search_by_date?query=Trump&tags=story&hitsPerPage=1', { preferDirect: true }),
+      ping('SSI iBoard VN-Index (Desktop/Worker)', 'https://iboard-query.ssi.com.vn/exchange-index/VNINDEX'),
+    ]);
+    checks.push({
+      name: 'Cầu nối RSS / SJC / Chợ Tốt / FRED',
+      status: INV.networkAdapter.hasElectronBridge?.() || prefs.proxyUrl ? 'ok' : 'partial',
+      ms: 0,
+      note: INV.networkAdapter.hasElectronBridge?.()
+        ? 'Đang bật Electron Native IPC (không bị CORS!)'
+        : prefs.proxyUrl
+        ? `Đang dùng Cloudflare Worker: ${prefs.proxyUrl}`
+        : 'Đang chạy Web tĩnh (dùng 10+ API CORS=* + mở link kiểm chứng trực tiếp)',
+    });
+    return checks;
+  }
+
+  INV.goldEngine = {
+    calculateGoldMetrics,
+    fetchLiveGoldSnapshot,
+    fetchGoldHistory30d,
+    fetchFredKeySeriesIfConfigured,
+    buildGoldDeepLinks,
+    computeLiveDxyFromRates,
+    OUNCE_PER_TAEL,
+  };
   INV.realEstateEngine = {
     calculatePmt,
     calculateMortgageStressTest,
@@ -946,11 +1190,18 @@
     resolveManualArea,
     enrichRealEstateLiveMetrics,
     inferCityRentalBenchmark,
+    fetchRealEstate5StreamNews,
   };
   INV.stockEngine = {
     detectSector,
     calculateVnIndexValuation,
     calculateForensicSuite,
     lookupStockTicker,
+    computeTechnicalIndicators,
+  };
+  INV.intelHelpers = {
+    parseRssXmlVerbatim,
+    fetchVerbatimRssStreams,
+    checkSourcesHealth,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

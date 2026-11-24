@@ -7,7 +7,34 @@
   'use strict';
 
   const NS = (globalScope.NoirStudio = globalScope.NoirStudio || {});
-  NS.i18nPacks = NS.i18nPacks || {};
+  NS.i18nPacks = NS.i18nPacks || {
+    "Cuộn liên tục": "连续滚动",
+    "1 trang đơn": "单页模式",
+    "2 trang sách": "双页对开",
+    "Định dạng kiểu Word (Phông, Cỡ, Màu, B / I / U):": "Word 样式排版（字体、字号、颜色、B/I/U）：",
+    "Tự khớp font gốc (Ưu tiên)": "自动匹配周边原字体（优先）",
+    "Đặt / Kéo vị trí chữ & số": "放置/拖动文字与页码位置",
+    "Kéo khung che xóa chữ/số cũ": "框选白底涂改旧文字/旧页码",
+    "Chuyên gia 30 năm — Bình dân học vụ (6 phần chuẩn)": "30年资深投资人 — 通俗6段式分析",
+    "Xuất File .MD": "导出 .MD 报告",
+    "Copy 1 Chạm": "一键复制",
+    "Kiểm tra sức khỏe các nguồn API ngay": "立即检测 API 数据源健康状态",
+
+    "Biểu đồ phân tích chuyên nghiệp": "专业分析图表",
+    "Biểu đồ phân tích chuyên nghiệp (Dễ đọc · Không dùng từ khó hiểu)": "专业分析图表（通俗易懂）",
+    "BƯỚC 1: TRA CỨU THÔNG TIN TOÀN DIỆN (0% BỊA ĐẶT · KHÓA NGUỒN SHA-256)": "步骤 1：全面信息检索（0% 编造 · SHA-256 溯源锁定）",
+    "BƯỚC 2: TỔNG HỢP CÂU LỆNH ĐỒNG BỘ CODE & HỎI GEMINI": "步骤 2：生成代码同步指令并询问 Gemini",
+    "Tra cứu thông tin toàn diện, lọc chuẩn & tổng hợp": "全面检索、确定性过滤与汇总",
+    "Đồng bộ dữ liệu & Mở Biểu đồ chuyên nghiệp": "同步数据并打开专业图表",
+    "Đồng bộ & Vẽ biểu đồ": "同步并绘制图表",
+    "Dựng lại từ Code Bước 1": "从步骤 1 代码数据重新生成",
+    "1. Biểu đồ Tròn — Gợi ý Chia Vốn An Toàn (%)": "1. 环形图 — 安全资金配置建议 (%)",
+    "2. Biểu đồ Radar — Bản đồ 6 Mức Độ Rủi Ro (Càng rộng ra ngoài càng nguy hiểm)": "2. 雷达图 — 六维风险分布图",
+    "3. Biểu đồ Cột — Mức Độ Hấp Dẫn 4 Kênh Đầu Tư (Thang 100)": "3. 柱状图 — 四大投资渠道吸引力（满分100）",
+    "4. Biểu đồ Chấm Điểm 5 Trụ Cột Cốt Lõi (Thang 10)": "4. 五大核心支柱评分（满分10）",
+    "6. Ma Trận Quyết Định Hành Động (Rõ ràng — Không nói nước đôi)": "6. 行动决策矩阵",
+    "Autotester nội bộ": "内置自动测试器",
+};
 
   const exact = Object.freeze({
     "🌐 Địa chính trị, Chiến tranh, Lãnh đạo, Hiệp định & Tập đoàn lớn": "🌐 地缘政治、战争、领导人、贸易协定与大企业",

@@ -239,6 +239,47 @@
   background: rgba(245, 158, 11, 0.1);
 }
 
+@keyframes invWorkflowGlowPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.55), 0 0 20px rgba(16, 185, 129, 0.22), 0 0 36px rgba(99, 102, 241, 0.14);
+    border-color: rgba(16, 185, 129, 0.72);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.85), 0 0 32px rgba(16, 185, 129, 0.42), 0 0 48px rgba(124, 58, 237, 0.28);
+    border-color: rgba(56, 189, 248, 0.92);
+  }
+}
+
+.inv-workflow-glow-card {
+  position: relative;
+  border-width: 2px;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.08), rgba(79, 70, 229, 0.06));
+  animation: invWorkflowGlowPulse 2.8s ease-in-out infinite;
+}
+
+.dark .inv-workflow-glow-card {
+  background: linear-gradient(180deg, rgba(6, 78, 59, 0.26), rgba(30, 27, 75, 0.34));
+}
+
+.inv-step-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  background: rgba(16, 185, 129, 0.18);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+}
+
+.dark .inv-step-badge {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.22);
+}
+
 @media (max-width: 640px) {
   .inv-card {
     padding: 13px;

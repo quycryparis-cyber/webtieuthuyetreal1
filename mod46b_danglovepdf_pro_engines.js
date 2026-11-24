@@ -474,11 +474,14 @@ XacNhan=true</textarea>
     }
 
     if (toolId === 'header_footer') {
+      const wordBar = NS.dangLovePdfTextUtils?.buildWordStyleBarHtml
+        ? NS.dangLovePdfTextUtils.buildWordStyleBarHtml('hf', { fontSize: 11, color: '#334155', fontFamily: '"Times New Roman", Georgia, serif', bold: true, showBg: true })
+        : '';
       return `
         <label class="block space-y-1"><span class="font-bold">Tiêu đề đầu trang (Header — hỗ trợ {date}, {page}, {total}):</span>
           <input id="opt-pro-hf-header" type="text" value="Tài liệu biên soạn • {date}" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
         </label>
-        <label class="block space-y-1"><span class="font-bold">Vị trí tiêu đề đầu trang:</span>
+        <label class="block space-y-1"><span class="font-bold">Vị trí tiêu đề đầu trang (hoặc kéo trực tiếp trên giấy):</span>
           <select id="opt-pro-hf-hpos" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
             <option value="left">Căn trái đầu trang</option>
             <option value="center" selected>Căn giữa đầu trang</option>
@@ -489,7 +492,7 @@ XacNhan=true</textarea>
         <label class="block space-y-1"><span class="font-bold">Chân trang (Footer):</span>
           <input id="opt-pro-hf-footer" type="text" value="Trang {page} / {total}" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
         </label>
-        <label class="block space-y-1"><span class="font-bold">Vị trí chân trang:</span>
+        <label class="block space-y-1"><span class="font-bold">Vị trí chân trang (hoặc kéo trực tiếp trên giấy):</span>
           <select id="opt-pro-hf-fpos" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
             <option value="left">Căn trái chân trang</option>
             <option value="center" selected>Căn giữa chân trang</option>
@@ -497,10 +500,14 @@ XacNhan=true</textarea>
           </select>
         </label>
         <label class="flex items-center gap-2"><input id="opt-pro-hf-fline" type="checkbox" checked class="accent-amber-400" /><span>Kẻ đường phân cách trên chân trang</span></label>
-        <label class="flex items-center gap-2"><input id="opt-pro-hf-skip1" type="checkbox" class="accent-amber-400" /><span>Bỏ qua trang bìa (Trang 1)</span></label>`;
+        <label class="flex items-center gap-2"><input id="opt-pro-hf-skip1" type="checkbox" class="accent-amber-400" /><span>Bỏ qua trang bìa (Trang 1)</span></label>
+        ${wordBar}`;
     }
 
     if (toolId === 'bookmarks_toc') {
+      const wordBar = NS.dangLovePdfTextUtils?.buildWordStyleBarHtml
+        ? NS.dangLovePdfTextUtils.buildWordStyleBarHtml('toc', { fontSize: 14, color: '#18181b', fontFamily: '"Times New Roman", Georgia, serif', bold: false })
+        : '';
       return `
         <label class="block space-y-1"><span class="font-bold">Tiêu đề trang Mục lục:</span>
           <input id="opt-pro-toc-title" type="text" value="MỤC LỤC TÀI LIỆU" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
@@ -517,7 +524,8 @@ XacNhan=true</textarea>
           <textarea id="opt-pro-toc-lines" rows="4" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700 text-[11.5px]">Chương 1: Khởi đầu | 1
 Chương 2: Diễn biến chính | 5
 Chương 3: Tổng kết | 12</textarea>
-        </label>`;
+        </label>
+        ${wordBar}`;
     }
 
     if (toolId === 'epub_to_pdf') {
@@ -694,9 +702,15 @@ Chương 3: Tổng kết | 12</textarea>
       hfHLine: Boolean(document.getElementById('opt-pro-hf-hline')?.checked),
       hfFLine: Boolean(document.getElementById('opt-pro-hf-fline')?.checked),
       hfSkip1: Boolean(document.getElementById('opt-pro-hf-skip1')?.checked),
+      hfStyle: NS.dangLovePdfTextUtils?.readWordStyleBar
+        ? NS.dangLovePdfTextUtils.readWordStyleBar('hf', { fontSize: 11, color: '#334155', fontFamily: '"Times New Roman", Georgia, serif', bold: true })
+        : {},
       tocTitle: document.getElementById('opt-pro-toc-title')?.value?.trim() || 'MỤC LỤC TÀI LIỆU',
       tocStyle: document.getElementById('opt-pro-toc-style')?.value || 'dots',
       tocLines: document.getElementById('opt-pro-toc-lines')?.value || '',
+      tocStyleWord: NS.dangLovePdfTextUtils?.readWordStyleBar
+        ? NS.dangLovePdfTextUtils.readWordStyleBar('toc', { fontSize: 14, color: '#18181b', fontFamily: '"Times New Roman", Georgia, serif', bold: false })
+        : {},
       epubOut: document.getElementById('opt-pro-epub-out')?.value || 'pdf',
       epubTitle: document.getElementById('opt-pro-epub-title')?.value?.trim() || '',
       p2xOut: document.getElementById('opt-pro-p2x-out')?.value || 'xlsx',
@@ -1362,13 +1376,15 @@ Chương 3: Tổng kết | 12</textarea>
       return outputs;
     }
 
-    // 11. THÊM TIÊU ĐỀ ĐẦU & CHÂN TRANG (HEADER & FOOTER)
+    // 11. THÊM TIÊU ĐỀ ĐẦU & CHÂN TRANG (HEADER & FOOTER — HỖ TRỢ ĐỊNH DẠNG WORD + KÉO THẢ + CHE XÓA CŨ)
     if (tool.id === 'header_footer') {
       const { PDFDocument, rgb } = await ensurePdfLib();
       const doc = await PDFDocument.load(ctrl.files[0].bytes, { ignoreEncryption: true });
       const pages = doc.getPages();
       const total = pages.length;
       const dateStr = new Date().toLocaleDateString('vi-VN');
+      const st = pro.hfStyle || {};
+      const simState = ctrl.paperSimState?.toolId === 'header_footer' ? ctrl.paperSimState : null;
       const alignX = (pos, pageW, imgW) => {
         if (pos === 'left') return 32;
         if (pos === 'right') return Math.max(32, pageW - imgW - 32);
@@ -1379,21 +1395,62 @@ Chương 3: Tổng kết | 12</textarea>
         prog(15 + ((i + 1) / total) * 75, `Đang gắn Header/Footer trang ${i + 1}/${total}...`);
         const pg = pages[i];
         const { width, height } = pg.getSize();
+        if (simState?.eraseRects?.length) {
+          simState.eraseRects.forEach((r) => {
+            pg.drawRectangle({
+              x: (r.xPct / 100) * width,
+              y: Math.max(0, height - ((r.yPct + r.hPct) / 100) * height),
+              width: (r.wPct / 100) * width,
+              height: (r.hPct / 100) * height,
+              color: rgb(1, 1, 1),
+            });
+          });
+        }
         const fmt = (tpl) => String(tpl || '').replace(/\{page\}/g, String(i + 1)).replace(/\{total\}/g, String(total)).replace(/\{date\}/g, dateStr);
         if (pro.hfHeader.trim()) {
-          const hPng = renderVietnameseTextToPngBytes(fmt(pro.hfHeader), { fontSize: 11, color: '#334155', bold: true, padX: 6, padY: 3 });
+          const hPng = renderVietnameseTextToPngBytes(fmt(pro.hfHeader), {
+            fontSize: st.fontSize || 11,
+            color: st.color || '#334155',
+            fontFamily: st.fontFamily || '"Times New Roman", Georgia, serif',
+            bold: st.bold !== false,
+            italic: Boolean(st.italic),
+            underline: Boolean(st.underline),
+            bgColor: st.bgColor || '',
+            padX: 6,
+            padY: 3,
+          });
           const emb = await doc.embedPng(hPng.bytes);
-          const hy = height - hPng.heightPt - 14;
-          pg.drawImage(emb, { x: alignX(pro.hfHPos, width, hPng.widthPt), y: hy, width: hPng.widthPt, height: hPng.heightPt });
+          const hx = simState?.headerPos?.custom
+            ? Math.max(8, Math.min(width - hPng.widthPt - 8, (simState.headerPos.xPct / 100) * width - hPng.widthPt / 2))
+            : alignX(pro.hfHPos, width, hPng.widthPt);
+          const hy = simState?.headerPos?.custom
+            ? Math.max(8, Math.min(height - hPng.heightPt - 8, height - (simState.headerPos.yPct / 100) * height - hPng.heightPt / 2))
+            : height - hPng.heightPt - 14;
+          pg.drawImage(emb, { x: hx, y: hy, width: hPng.widthPt, height: hPng.heightPt });
           if (pro.hfHLine) {
-            pg.drawLine({ start: { x: 32, y: hy - 4 }, end: { x: width - 32, y: hy - 4 }, thickness: 0.75, color: rgb(0.55, 0.6, 0.68) });
+            pg.drawLine({ start: { x: 32, y: Math.max(4, hy - 4) }, end: { x: width - 32, y: Math.max(4, hy - 4) }, thickness: 0.75, color: rgb(0.55, 0.6, 0.68) });
           }
         }
         if (pro.hfFooter.trim()) {
-          const fPng = renderVietnameseTextToPngBytes(fmt(pro.hfFooter), { fontSize: 11, color: '#475569', bold: false, padX: 6, padY: 3 });
+          const fPng = renderVietnameseTextToPngBytes(fmt(pro.hfFooter), {
+            fontSize: st.fontSize || 11,
+            color: st.color || '#475569',
+            fontFamily: st.fontFamily || '"Times New Roman", Georgia, serif',
+            bold: Boolean(st.bold),
+            italic: Boolean(st.italic),
+            underline: Boolean(st.underline),
+            bgColor: st.bgColor || '',
+            padX: 6,
+            padY: 3,
+          });
           const emb = await doc.embedPng(fPng.bytes);
-          const fy = 14;
-          pg.drawImage(emb, { x: alignX(pro.hfFPos, width, fPng.widthPt), y: fy, width: fPng.widthPt, height: fPng.heightPt });
+          const fx = simState?.footerPos?.custom
+            ? Math.max(8, Math.min(width - fPng.widthPt - 8, (simState.footerPos.xPct / 100) * width - fPng.widthPt / 2))
+            : alignX(pro.hfFPos, width, fPng.widthPt);
+          const fy = simState?.footerPos?.custom
+            ? Math.max(8, Math.min(height - fPng.heightPt - 8, height - (simState.footerPos.yPct / 100) * height - fPng.heightPt / 2))
+            : 14;
+          pg.drawImage(emb, { x: fx, y: fy, width: fPng.widthPt, height: fPng.heightPt });
           if (pro.hfFLine) {
             pg.drawLine({ start: { x: 32, y: fy + fPng.heightPt + 4 }, end: { x: width - 32, y: fy + fPng.heightPt + 4 }, thickness: 0.75, color: rgb(0.55, 0.6, 0.68) });
           }
@@ -1403,7 +1460,7 @@ Chương 3: Tổng kết | 12</textarea>
       return outputs;
     }
 
-    // 12. TẠO TRANG MỤC LỤC TỰ ĐỘNG (AUTO TOC — ĐA KIỂU TRÌNH BÀY)
+    // 12. TẠO TRANG MỤC LỤC TỰ ĐỘNG (AUTO TOC — ĐA KIỂU TRÌNH BÀY + ĐỊNH DẠNG WORD)
     if (tool.id === 'bookmarks_toc') {
       const { PDFDocument } = await ensurePdfLib();
       const src = await PDFDocument.load(ctrl.files[0].bytes, { ignoreEncryption: true });
@@ -1424,7 +1481,7 @@ Chương 3: Tổng kết | 12</textarea>
           return `${title} ${'.'.repeat(dotCount)} ${pgNum}`;
         });
       prog(40, 'Đang dựng trang Mục lục & ghép vào đầu sách...');
-      const tocBlob = await renderLinesToVietnamesePdfBlob(pro.tocTitle, [`# ${pro.tocTitle}`, '', ...tocRows], () => {});
+      const tocBlob = await renderLinesToVietnamesePdfBlob(pro.tocTitle, [`# ${pro.tocTitle}`, '', ...tocRows], () => {}, pro.tocStyleWord || {});
       const tocDoc = await PDFDocument.load(await tocBlob.arrayBuffer());
       const out = await PDFDocument.create();
       (await out.copyPages(tocDoc, tocDoc.getPageIndices())).forEach((p) => out.addPage(p));

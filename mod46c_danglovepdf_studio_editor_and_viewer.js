@@ -111,6 +111,7 @@
       </div>
     `;
     document.body.appendChild(pv);
+    NS.i18n?.translateElement?.(pv);
 
     let pdfDoc = null;
     let isClosed = false;
@@ -729,7 +730,12 @@
       this.totalPages = 1;
       this.activeMode = 'edit_text'; // edit_text | add_text | highlight | ink | rect | arrow | measure | stamp | redact | image | select
       this.color = '#dc2626';
+      this.colorTouched = false;
       this.fontSize = 14;
+      this.fontFamily = 'auto'; // Ưu tiên tự động khớp font gốc xung quanh!
+      this.bold = false;
+      this.italic = false;
+      this.underline = false;
       this.measureScale = 5; // 1 cm = 5 m
       this.stampLabel = 'ĐÃ DUYỆT';
       this.pendingImgDataUrl = '';
@@ -803,11 +809,25 @@
             <button type="button" id="btn-mod46-ed-clear-page" class="px-2 py-1.5 rounded-xl bg-rose-900/70 hover:bg-rose-600 text-rose-100 font-bold cursor-pointer">🧹 Xóa trang này</button>
           </div>
 
-          <!-- Thanh thuộc tính nhanh + Điều hướng trang -->
+          <!-- Thanh thuộc tính kiểu Word + Điều hướng trang -->
           <div class="flex flex-wrap items-center justify-between gap-2 px-2 py-1.5 rounded-xl bg-zinc-900/90 border border-zinc-800 text-[11px]">
-            <div class="flex flex-wrap items-center gap-2">
-              <label class="flex items-center gap-1">Màu: <input id="inp-mod46-ed-color" type="color" value="#dc2626" class="w-6 h-6 rounded bg-transparent border border-zinc-600" /></label>
-              <label class="flex items-center gap-1">Cỡ chữ: <input id="inp-mod46-ed-fsize" type="number" min="8" max="48" value="14" class="w-12 px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-700 text-center" /></label>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <label class="flex items-center gap-1">Phông:
+                <select id="sel-mod46-ed-font" class="px-1.5 py-0.5 rounded bg-zinc-950 border border-emerald-500/50 text-emerald-200 font-bold max-w-[175px]" title="Mặc định ưu tiên khớp phông chữ gốc xung quanh trong PDF">
+                  <option value="auto" selected>🎯 Tự khớp font gốc (Ưu tiên)</option>
+                  <option value='"Times New Roman", Georgia, serif'>Times New Roman</option>
+                  <option value='Arial, Helvetica, sans-serif'>Arial / Helvetica</option>
+                  <option value='"Segoe UI", Arial, sans-serif'>Segoe UI / Hiện đại</option>
+                  <option value='Georgia, "Times New Roman", serif'>Georgia (Sách)</option>
+                  <option value='Tahoma, Verdana, sans-serif'>Tahoma / Verdana</option>
+                  <option value='"Courier New", Consolas, monospace'>Courier New (Mã số)</option>
+                </select>
+              </label>
+              <label class="flex items-center gap-1">Cỡ: <input id="inp-mod46-ed-fsize" type="number" min="7" max="72" value="14" class="w-12 px-1 py-0.5 rounded bg-zinc-950 border border-zinc-700 text-center font-bold" /></label>
+              <label class="flex items-center gap-1">Màu: <input id="inp-mod46-ed-color" type="color" value="#dc2626" class="w-6 h-6 rounded bg-transparent border border-zinc-600 cursor-pointer" /></label>
+              <button type="button" id="btn-mod46-ed-bold" class="px-2 py-0.5 rounded border border-zinc-700 bg-zinc-950 hover:bg-zinc-800 font-black cursor-pointer" title="In đậm (Bold)">B</button>
+              <button type="button" id="btn-mod46-ed-italic" class="px-2 py-0.5 rounded border border-zinc-700 bg-zinc-950 hover:bg-zinc-800 italic font-serif font-bold cursor-pointer" title="In nghiêng (Italic)">I</button>
+              <button type="button" id="btn-mod46-ed-underline" class="px-2 py-0.5 rounded border border-zinc-700 bg-zinc-950 hover:bg-zinc-800 underline font-bold cursor-pointer" title="Gạch chân (Underline)">U</button>
               <label class="flex items-center gap-1">Dấu:
                 <select id="sel-mod46-ed-stamp" class="px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-700">
                   <option value="ĐÃ DUYỆT">ĐÃ DUYỆT</option>
@@ -816,7 +836,7 @@
                   <option value="ĐÃ KIỂM TRA">ĐÃ KIỂM TRA</option>
                 </select>
               </label>
-              <span id="mod46-ed-hint" class="text-emerald-300 font-bold">💡 Bấm trực tiếp vào bất kỳ dòng chữ gốc nào (viền nét đứt xanh) để sửa ngay!</span>
+              <span id="mod46-ed-hint" class="text-emerald-300 font-bold">💡 Bấm trực tiếp vào bất kỳ dòng chữ gốc nào (viền nét đứt xanh) để sửa — tự ưu tiên khớp phông &amp; màu chữ xung quanh!</span>
             </div>
             <div class="flex items-center gap-1.5">
               <button type="button" id="btn-mod46-ed-prev" class="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 font-bold cursor-pointer">◀</button>
@@ -870,17 +890,33 @@
 
         for (const o of objs) {
           if (o.type === 'replace_text') {
+            const fam = o.fontFamily || '"Times New Roman", Georgia, serif';
+            const fPx = Math.max(9, (o.fontSize || 12) * sc);
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(o.x * sc - 2, o.y * sc - 2, o.w * sc + 4, o.h * sc + 4);
+            ctx.fillRect(o.x * sc - 2, o.y * sc - 2, o.w * sc + 6, o.h * sc + 4);
             ctx.fillStyle = o.color || '#0f172a';
-            ctx.font = `600 ${Math.max(10, o.fontSize * sc)}px "Segoe UI", Arial, sans-serif`;
+            ctx.font = `${o.italic ? 'italic ' : ''}${o.bold ? '700 ' : '400 '}${fPx}px ${fam}`;
             ctx.textBaseline = 'top';
             ctx.fillText(o.text, o.x * sc, o.y * sc);
+            if (o.underline && o.text) {
+              const tw = ctx.measureText(o.text).width;
+              ctx.strokeStyle = o.color || '#0f172a';
+              ctx.lineWidth = Math.max(1, fPx * 0.07);
+              ctx.beginPath(); ctx.moveTo(o.x * sc, o.y * sc + fPx * 1.05); ctx.lineTo(o.x * sc + tw, o.y * sc + fPx * 1.05); ctx.stroke();
+            }
           } else if (o.type === 'add_text') {
+            const fam = o.fontFamily || '"Times New Roman", Georgia, serif';
+            const fPx = Math.max(9, (o.fontSize || 14) * sc);
             ctx.fillStyle = o.color || '#dc2626';
-            ctx.font = `700 ${Math.max(10, o.fontSize * sc)}px "Segoe UI", Arial, sans-serif`;
+            ctx.font = `${o.italic ? 'italic ' : ''}${o.bold ? '700 ' : '500 '}${fPx}px ${fam}`;
             ctx.textBaseline = 'top';
             ctx.fillText(o.text, o.x * sc, o.y * sc);
+            if (o.underline && o.text) {
+              const tw = ctx.measureText(o.text).width;
+              ctx.strokeStyle = o.color || '#dc2626';
+              ctx.lineWidth = Math.max(1, fPx * 0.07);
+              ctx.beginPath(); ctx.moveTo(o.x * sc, o.y * sc + fPx * 1.05); ctx.lineTo(o.x * sc + tw, o.y * sc + fPx * 1.05); ctx.stroke();
+            }
           } else if (o.type === 'highlight') {
             ctx.fillStyle = 'rgba(250, 204, 21, 0.42)';
             ctx.fillRect(o.x * sc, o.y * sc, o.w * sc, o.h * sc);
@@ -943,8 +979,49 @@
         updateSummary();
       };
 
-      // Bộ gõ trực tiếp NGAY TRÊN TRANG PDF (KHÔNG bật popup window.prompt!)
-      const openInlinePdfTextEditor = ({ x, y, w, h, initialText, fontSize, onCommit }) => {
+      // Nhận diện phông chữ gốc xung quanh (Times/Serif, Arial/Sans, Courier/Mono, Bold, Italic)
+      const detectPdfFontMeta = (fontName, styleObj) => {
+        const raw = `${fontName || ''} ${styleObj?.fontFamily || ''}`.toLowerCase();
+        const isBold = /bold|black|heavy|semibold|demi|700|800|-b\b/i.test(raw);
+        const isItalic = /italic|oblique|slant|-i\b/i.test(raw);
+        let family = '"Times New Roman", Georgia, serif';
+        if (/courier|consolas|mono|code|menlo/i.test(raw)) {
+          family = '"Courier New", Consolas, monospace';
+        } else if (/arial|helvetica|roboto|inter|segoe|calibri|tahoma|verdana|sans|open\s*sans|noto\s*sans/i.test(raw)) {
+          family = 'Arial, Helvetica, sans-serif';
+        } else if (/georgia|palatino|garamond|cambria|minion|times|serif/i.test(raw)) {
+          family = '"Times New Roman", Georgia, serif';
+        }
+        return { fontFamily: family, bold: isBold, italic: isItalic };
+      };
+
+      // Lấy mẫu màu mực chữ thực tế từ trang PDF gốc để đồng bộ màu chữ xung quanh
+      const sampleBlockInkColor = (ctx, bx, by, bw, bh, sc) => {
+        try {
+          const sx = Math.max(0, Math.floor(bx * sc));
+          const sy = Math.max(0, Math.floor(by * sc));
+          const sw = Math.max(4, Math.min(ctx.canvas.width - sx, Math.ceil(bw * sc)));
+          const sh = Math.max(4, Math.min(ctx.canvas.height - sy, Math.ceil(bh * sc)));
+          if (sw <= 0 || sh <= 0) return '#0f172a';
+          const data = ctx.getImageData(sx, sy, sw, sh).data;
+          let rSum = 0, gSum = 0, bSum = 0, cnt = 0;
+          for (let i = 0; i < data.length; i += 16) {
+            const r = data[i], g = data[i + 1], b = data[i + 2];
+            const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+            if (lum < 190) {
+              rSum += r; gSum += g; bSum += b; cnt++;
+            }
+          }
+          if (cnt < 3) return '#0f172a';
+          const toHex = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+          return `#${toHex(rSum / cnt)}${toHex(gSum / cnt)}${toHex(bSum / cnt)}`;
+        } catch (_eCol) {
+          return '#0f172a';
+        }
+      };
+
+      // Bộ gõ trực tiếp NGAY TRÊN TRANG PDF (KHÔNG bật popup window.prompt, tự khớp font/màu gốc!)
+      const openInlinePdfTextEditor = ({ x, y, w, h, initialText, fontSize, fontFamily, bold, italic, underline, color, onCommit }) => {
         stage.querySelectorAll('.mod46-inline-pdf-editor-box').forEach((el) => el.remove());
         const sc = this.pageScale;
         const inp = document.createElement('input');
@@ -959,16 +1036,19 @@
           `max-width:${Math.max(160, Math.round(stage.clientWidth - x * sc - 6))}px`,
           `height:${Math.max(22, (h || fontSize * 1.45) * sc + 6)}px`,
           `font-size:${Math.max(11, Math.round((fontSize || 12) * sc))}px`,
+          `font-family:${fontFamily || '"Times New Roman", Georgia, serif'}`,
+          `font-weight:${bold ? '700' : '400'}`,
+          `font-style:${italic ? 'italic' : 'normal'}`,
+          `text-decoration:${underline ? 'underline' : 'none'}`,
+          `color:${color || '#0f172a'}`,
           'line-height:1.25',
           'padding:1px 5px',
           'background:#ffffff',
-          'color:#0f172a',
           'border:2px solid #10b981',
           'border-radius:4px',
           'box-shadow:0 4px 16px rgba(16,185,129,0.35)',
           'outline:none',
           'z-index:40',
-          'font-family:"Segoe UI",Arial,sans-serif',
         ].join(';');
         stage.appendChild(inp);
         let settled = false;
@@ -1021,13 +1101,25 @@
               .reverse()
               .find((o) => o.type === 'replace_text' && Math.abs(o.x - blk.x) < 3 && Math.abs(o.y - blk.y) < 3);
             const startText = existingReplaced ? existingReplaced.text : blk.text;
+            const autoMatch = this.fontFamily === 'auto';
+            const useFont = autoMatch ? (blk.fontFamily || '"Times New Roman", Georgia, serif') : this.fontFamily;
+            const useBold = autoMatch ? (this.bold || Boolean(blk.bold)) : this.bold;
+            const useItalic = autoMatch ? (this.italic || Boolean(blk.italic)) : this.italic;
+            const useUnderline = this.underline;
+            const useSize = Math.max(8, Math.round(blk.fontSize || this.fontSize || 12));
+            const useColor = this.colorTouched ? this.color : (blk.inkColor || '#0f172a');
             openInlinePdfTextEditor({
               x: blk.x,
               y: blk.y,
               w: blk.w,
               h: blk.h,
               initialText: startText,
-              fontSize: Math.max(9, Math.round(blk.fontSize || 12)),
+              fontSize: useSize,
+              fontFamily: useFont,
+              bold: useBold,
+              italic: useItalic,
+              underline: useUnderline,
+              color: useColor,
               onCommit: (edited) => {
                 if (edited === startText) return;
                 this._pushUndo();
@@ -1038,8 +1130,12 @@
                   w: blk.w,
                   h: blk.h,
                   text: edited,
-                  fontSize: Math.max(9, Math.round(blk.fontSize || 12)),
-                  color: this.color === '#dc2626' ? '#0f172a' : this.color,
+                  fontSize: useSize,
+                  fontFamily: useFont,
+                  bold: useBold,
+                  italic: useItalic,
+                  underline: useUnderline,
+                  color: useColor,
                 });
                 redrawOverlay();
               },
@@ -1076,7 +1172,7 @@
         pCtx.fillRect(0, 0, pdfCanvas.width, pdfCanvas.height);
         await page.render({ canvasContext: pCtx, viewport: vp }).promise;
 
-        // Trích xuất & gom cụm các dòng chữ gốc thành khối có thể bấm sửa trực tiếp
+        // Trích xuất & gom cụm các dòng chữ gốc kèm nhận diện phông chữ & màu mực xung quanh
         if (!this.extractedBlocksByPage[this.currentPage]) {
           const tc = await page.getTextContent();
           const lineMap = new Map();
@@ -1088,8 +1184,19 @@
             const fSize = Math.max(8, Math.hypot(it.transform[0], it.transform[1]));
             const yTop = this.baseHeight - yPdf - fSize * 0.9;
             const bucket = Math.round(yTop / 7) * 7;
+            const meta = detectPdfFontMeta(it.fontName, tc.styles?.[it.fontName]);
             if (!lineMap.has(bucket)) lineMap.set(bucket, []);
-            lineMap.get(bucket).push({ x, y: yTop, w: it.width || s.length * fSize * 0.55, h: fSize * 1.25, text: s, fontSize: fSize });
+            lineMap.get(bucket).push({
+              x,
+              y: yTop,
+              w: it.width || s.length * fSize * 0.55,
+              h: fSize * 1.25,
+              text: s,
+              fontSize: fSize,
+              fontFamily: meta.fontFamily,
+              bold: meta.bold,
+              italic: meta.italic,
+            });
           }
           const blocks = [];
           lineMap.forEach((arr) => {
@@ -1098,12 +1205,18 @@
             const minY = Math.min(...arr.map((a) => a.y));
             const maxX = Math.max(...arr.map((a) => a.x + a.w));
             const maxH = Math.max(...arr.map((a) => a.h));
+            const bw = Math.max(30, maxX - minX);
+            const inkColor = sampleBlockInkColor(pCtx, minX, minY, bw, maxH, this.pageScale);
             blocks.push({
               x: minX,
               y: minY,
-              w: Math.max(30, maxX - minX),
+              w: bw,
               h: maxH,
               fontSize: arr[0].fontSize,
+              fontFamily: arr[0].fontFamily,
+              bold: arr[0].bold,
+              italic: arr[0].italic,
+              inkColor,
               text: arr.map((a) => a.text).join(' '),
             });
           });
@@ -1126,6 +1239,18 @@
       overlayCanvas.addEventListener('pointerdown', (ev) => {
         const p = ptOf(ev);
         if (this.activeMode === 'add_text') {
+          // Khi ở chế độ Tự khớp font gốc, lấy font của khối chữ gần vị trí click nhất làm mặc định
+          const nearby = (this.extractedBlocksByPage[this.currentPage] || []).reduce(
+            (best, b) => {
+              const d = Math.hypot(b.x - p.x, b.y - p.y);
+              return d < best.d ? { d, b } : best;
+            },
+            { d: Infinity, b: null }
+          ).b;
+          const addFont = this.fontFamily === 'auto'
+            ? (nearby?.fontFamily || '"Times New Roman", Georgia, serif')
+            : this.fontFamily;
+          const addColor = this.colorTouched ? this.color : (nearby?.inkColor || this.color);
           openInlinePdfTextEditor({
             x: p.x,
             y: p.y,
@@ -1133,10 +1258,26 @@
             h: this.fontSize * 1.5,
             initialText: '',
             fontSize: this.fontSize,
+            fontFamily: addFont,
+            bold: this.bold,
+            italic: this.italic,
+            underline: this.underline,
+            color: addColor,
             onCommit: (txt) => {
               if (!txt || !txt.trim()) return;
               this._pushUndo();
-              this.getPageObjects(this.currentPage).push({ type: 'add_text', x: p.x, y: p.y, text: txt, fontSize: this.fontSize, color: this.color });
+              this.getPageObjects(this.currentPage).push({
+                type: 'add_text',
+                x: p.x,
+                y: p.y,
+                text: txt,
+                fontSize: this.fontSize,
+                fontFamily: addFont,
+                bold: this.bold,
+                italic: this.italic,
+                underline: this.underline,
+                color: addColor,
+              });
               redrawOverlay();
             },
           });
@@ -1244,8 +1385,21 @@
         rdr.readAsDataURL(f);
       });
 
-      container.querySelector('#inp-mod46-ed-color')?.addEventListener('input', (ev) => { this.color = ev.target.value; });
-      container.querySelector('#inp-mod46-ed-fsize')?.addEventListener('change', (ev) => { this.fontSize = Math.max(8, Number(ev.target.value) || 14); });
+      container.querySelector('#sel-mod46-ed-font')?.addEventListener('change', (ev) => { this.fontFamily = ev.target.value; });
+      container.querySelector('#inp-mod46-ed-color')?.addEventListener('input', (ev) => { this.color = ev.target.value; this.colorTouched = true; });
+      container.querySelector('#inp-mod46-ed-fsize')?.addEventListener('change', (ev) => { this.fontSize = Math.max(7, Math.min(72, Number(ev.target.value) || 14)); });
+      const bindToggle = (id, key) => {
+        const el = container.querySelector(id);
+        el?.addEventListener('click', () => {
+          this[key] = !this[key];
+          el.classList.toggle('bg-sky-600', this[key]);
+          el.classList.toggle('text-white', this[key]);
+          el.classList.toggle('bg-zinc-950', !this[key]);
+        });
+      };
+      bindToggle('#btn-mod46-ed-bold', 'bold');
+      bindToggle('#btn-mod46-ed-italic', 'italic');
+      bindToggle('#btn-mod46-ed-underline', 'underline');
       container.querySelector('#sel-mod46-ed-stamp')?.addEventListener('change', (ev) => { this.stampLabel = ev.target.value; });
       container.querySelector('#btn-mod46-ed-prev')?.addEventListener('click', () => renderPage(this.currentPage - 1));
       container.querySelector('#btn-mod46-ed-next')?.addEventListener('click', () => renderPage(this.currentPage + 1));
@@ -1274,6 +1428,7 @@
       });
 
       await renderPage(1);
+      NS.i18n?.translateElement?.(container);
     }
 
     async exportToPdfBlob(fileRec, helpers) {
@@ -1303,12 +1458,30 @@
           if (o.type === 'replace_text') {
             pg.drawRectangle({ x: o.x - 2, y: height - o.y - o.h - 2, width: o.w + 6, height: o.h + 4, color: rgb(1, 1, 1) });
             if (o.text.trim()) {
-              const png = renderVietnameseTextToPngBytes(o.text, { fontSize: o.fontSize || 12, color: o.color || '#0f172a', bold: false, padX: 2, padY: 1 });
+              const png = renderVietnameseTextToPngBytes(o.text, {
+                fontSize: o.fontSize || 12,
+                color: o.color || '#0f172a',
+                fontFamily: o.fontFamily || '"Times New Roman", Georgia, serif',
+                bold: Boolean(o.bold),
+                italic: Boolean(o.italic),
+                underline: Boolean(o.underline),
+                padX: 2,
+                padY: 1,
+              });
               const img = await doc.embedPng(png.bytes);
               pg.drawImage(img, { x: o.x, y: height - o.y - png.heightPt, width: png.widthPt, height: png.heightPt });
             }
           } else if (o.type === 'add_text') {
-            const png = renderVietnameseTextToPngBytes(o.text, { fontSize: o.fontSize || 14, color: o.color || '#dc2626', bold: true, padX: 4, padY: 2 });
+            const png = renderVietnameseTextToPngBytes(o.text, {
+              fontSize: o.fontSize || 14,
+              color: o.color || '#dc2626',
+              fontFamily: o.fontFamily || '"Times New Roman", Georgia, serif',
+              bold: Boolean(o.bold),
+              italic: Boolean(o.italic),
+              underline: Boolean(o.underline),
+              padX: 4,
+              padY: 2,
+            });
             const img = await doc.embedPng(png.bytes);
             pg.drawImage(img, { x: o.x, y: height - o.y - png.heightPt, width: png.widthPt, height: png.heightPt });
           } else if (o.type === 'highlight') {

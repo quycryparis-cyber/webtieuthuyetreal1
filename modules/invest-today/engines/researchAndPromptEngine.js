@@ -761,16 +761,57 @@ ${checklistLines}`;
             'Giữ tiền mặt sinh lãi cao, tránh vay mượn mua đuổi và ưu tiên tài sản có dòng tiền thật.',
         };
 
+        const rawHeadlines = [
+          ...(bundle.geoHeadlines || []).slice(0, 8).map((h, idx) => ({ ...h, id: h.id || `geo_${idx}`, source_type: 'API', category: h.category || 'dia_chinh_tri', selected_for_prompt: true })),
+          ...(bundle.corpHeadlines || []).slice(0, 6).map((h, idx) => ({ ...h, id: h.id || `corp_${idx}`, source_type: 'API', category: h.category || 'vi_mo_tap_doan', selected_for_prompt: true })),
+        ];
+
+        // Chạy 5 chốt Khóa Bịa Đặt 0% (Deterministic Extraction + SHA-256 + Boolean/Regex Checklist Matcher)
+        let validatedHeadlines = rawHeadlines;
+        let guardrailStats = { scanned: rawHeadlines.length, acceptedCount: rawHeadlines.length, rejectedCount: 0, staleCount: 0, duplicateCount: 0, schemaBrokenCount: 0 };
+        let deterministicChecklist = null;
+        if (INV.deterministicExtractor) {
+          const valRes = await INV.deterministicExtractor.validateAndFreezeRecords(rawHeadlines, { maxAgeDays: 45 });
+          validatedHeadlines = valRes.accepted;
+          guardrailStats = valRes.stats;
+          deterministicChecklist = INV.deterministicExtractor.matchRecordsToChecklist(kb.search_checklist || [], validatedHeadlines, { minScore: 3 });
+          // Gắn lý do khớp từ khóa (matched_triggers) trực tiếp lên từng tin đã xác thực
+          const trigMap = new Map();
+          (deterministicChecklist.checklist_items || []).forEach((ci) => {
+            (ci.matched_records || []).forEach((mr) => {
+              const prev = trigMap.get(mr.record_id) || [];
+              prev.push({
+                checklist_id: ci.checklist_id,
+                checklist_name: ci.checklist_name,
+                score: mr.relevance_score,
+                triggers: [...(mr.matched_triggers?.in_title || []), ...(mr.matched_triggers?.in_excerpt || [])],
+              });
+              trigMap.set(mr.record_id, prev);
+            });
+          });
+          validatedHeadlines = validatedHeadlines.map((h) => ({
+            ...h,
+            matched_checklists: trigMap.get(h.record_id) || [],
+          }));
+        }
+
+        const goldHist30d = INV.goldEngine?.fetchGoldHistory30d
+          ? await INV.goldEngine.fetchGoldHistory30d(signal).catch(() => null)
+          : null;
+
         const report = {
           generated_at: new Date().toISOString(),
           as_of_date: today,
-          knowledge_source_name: kb.metadata?.short_title || 'Khung Phân Tích Đầu Tư Toàn Diện',
+          knowledge_source_name: kb.metadata?.short_title || 'Khung Phân Tích 30 Năm + Khóa 0% Bịa Đặt SHA-256',
           depth,
           used_gemini_search: usedGeminiSearch,
           live_count: liveCount,
           benchmark_count: benchmarkCount,
           missing_count: missingItems.length,
-          live_headlines: [...(bundle.geoHeadlines || []).slice(0, 5), ...(bundle.corpHeadlines || []).slice(0, 5)],
+          guardrail_stats: guardrailStats,
+          deterministic_checklist: deterministicChecklist,
+          live_headlines: validatedHeadlines,
+          gold_history_30d: goldHist30d,
           cycle_phase: cyclePhase,
           channel_scores: channelScores,
           triggered_breakers: triggeredBreakers,
@@ -794,7 +835,20 @@ ${checklistLines}`;
           disclaimer: MANDATORY_DISCLAIMER,
         };
 
-        emit(100, 'Bước 6/6: Hoàn tất tổng hợp dữ liệu trực tiếp & đánh giá!');
+        // Tự động tạo khối dữ liệu thống nhất INVEST_INTEL_SYNC_V2 để đồng bộ trực tiếp vào Tab Biểu đồ phân tích chuyên nghiệp!
+        if (INV.deterministicExtractor?.buildUnifiedAnalyticsFromCode) {
+          INV.stateManager.unifiedAnalytics = INV.deterministicExtractor.buildUnifiedAnalyticsFromCode({
+            report,
+            goldSnap,
+            goldHist30d,
+            stockData: INV.stateManager.stockData,
+            reData: INV.stateManager.realEstateData,
+            surveys: INV.storageAdapter.getRealEstateSurveys ? INV.storageAdapter.getRealEstateSurveys() : [],
+          });
+        }
+        INV.stateManager.deterministicMatches = deterministicChecklist;
+
+        emit(100, 'Bước 6/6: Hoàn tất lọc tất định 0% bịa đặt & tổng hợp biểu đồ!');
         INV.stateManager.evaluationReport = report;
         INV.stateManager.lastRunAt = Date.now();
         INV.storageAdapter.setSession(cacheKey, report);
@@ -863,46 +917,245 @@ ${checklistLines}`;
   }
 
   const promptComposer = {
-    buildGeminiPrompt({ mode = 'plain', focus = 'general', targetStock = null, stressResult = null, anonymize = false } = {}) {
+    buildGeminiPrompt({ mode = 'veteran30', focus = 'general', targetStock = null, stressResult = null, anonymize = false, userGoal = '', fieldNotes = '' } = {}) {
       const kb = INV.stateManager.activeKnowledge;
       const report = INV.stateManager.evaluationReport;
       const gold = INV.stateManager.goldData;
       const stock = targetStock || INV.stateManager.stockData;
       const reData = INV.stateManager.realEstateData;
       const reg = INV.stateManager.userRegion || resolveCountryProfile('VN', 'Việt Nam', 'Việt Nam', 'default');
+      const prefs = INV.storageAdapter.getPrefs();
+      const goalText = String(userGoal || prefs.userGoal || '').trim() || 'Chưa khai báo cụ thể (mặc định: ưu tiên bảo vệ vốn, tránh vay đòn bẩy rủi ro cao, tầm nhìn 1–3 năm).';
+      const customNotes = String(fieldNotes || prefs.fieldNotes || '').trim();
+      const savedSurveys = INV.storageAdapter.getRealEstateSurveys ? INV.storageAdapter.getRealEstateSurveys(reData?.benchmark?.city || '') : [];
 
       const asOfDate = INV.utils.todayIso();
       const geoSnap = formatLayerSnapshot(report?.items, 'geopolitics_events');
-      const liveHeadlinesText = (report?.live_headlines || []).length
-        ? report.live_headlines.map((h) => `- [${h.date}] ${h.title} (Nguồn: ${h.source} - ${h.url})`).join('\n')
-        : '- Yêu cầu Gemini quét thêm tin tức thời sự chiến tranh, thuế quan, lãnh đạo lớn (như Tổng thống Mỹ/Trump, G7, BRICS), hiệp định thương mại & tập đoàn lớn mới nhất trong ngày.';
+      const selectedHeadlines = (report?.live_headlines || []).filter((h) => h.selected_for_prompt !== false);
+      const extraReNews = (reData?.rssNews || []).filter((h) => h.selected_for_prompt !== false);
+      const mergedHeadlines = [...selectedHeadlines, ...extraReNews];
+      const liveHeadlinesText = mergedHeadlines.length
+        ? mergedHeadlines
+            .map((h) => `- [${h.date || asOfDate}] ${h.title}${h.snippet ? ` — "${h.snippet.slice(0, 160)}"` : ''} (Nguồn: ${h.source} | Link gốc: ${h.url})`)
+            .join('\n')
+        : '- [CHƯA CÓ DỮ LIỆU TIN TỨC TRONG PHIÊN] — Yêu cầu chỉ rõ các tin tức cần người dùng tự kiểm tra thêm.';
       const globalSnap = formatLayerSnapshot(report?.items, 'global_macro');
       const vnSnap = formatLayerSnapshot(report?.items, 'vn_macro');
       const goldText = buildPrecomputedGoldText(gold);
       const stockText = buildPrecomputedStockText(stock, mode === 'audit' && anonymize);
       const reText = buildPrecomputedRealEstateText(reData, stressResult);
+      const surveyText = savedSurveys.length
+        ? savedSurveys
+            .slice(0, 4)
+            .map(
+              (s) =>
+                `- [${s.date}] ${s.area}: Giá rao ${s.pricePerM2} tr/m² | Thuê ${s.rentPerMonth} tr/tháng | Đường ${s.roadWidthM}m | Pháp lý: ${s.legalStatus} | Sáng đèn tối: ${s.nightLightPct}% | Hạ tầng: ${s.infraStage}${s.floodNote ? ` | Ghi chú: ${s.floodNote}` : ''}`
+            )
+            .join('\n')
+        : '';
+      const fieldSurveyBlock = [
+        surveyText ? `Khảo sát thực địa Nhà đất người dùng đã ghi nhận:\n${surveyText}` : '',
+        customNotes ? `Ghi chú bổ sung / Số liệu người dùng dán thêm:\n${customNotes}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n') || '- Người dùng chưa nhập thêm ghi chú khảo sát thực địa.';
+
       const missingList =
         (report?.items || [])
           .filter((it) => it.status === 'DATA_MISSING')
           .map((it) => it.plain_label)
-          .join('; ') || (report ? 'Không có mục thiếu lớn' : 'Chưa chạy bước tìm tin tự động trước khi copy');
+          .join('; ') || (report ? 'Không có mục thiếu trong bộ chỉ tiêu lõi (các mục tầng C chưa có API mở vẫn cần kiểm chứng bản PDF/quy hoạch gốc)' : 'Chưa chạy bước tìm tin tự động trước khi copy');
 
       const knowledgeDigest = kb?.core_principles_digest || 'Sử dụng đầy đủ khung phân tích 7 chương Vàng, Chứng khoán, Bất động sản và 5 chốt chặn an toàn.';
       const focusInstructions = {
-        general: 'Đánh giá toàn diện cả 4 kênh (Tiền mặt/Tiết kiệm, Vàng, Chứng khoán, Bất động sản) bám sát thị trường tại ' + reg.countryName + ' và vĩ mô toàn cầu theo đúng dàn ý 5 mục.',
-        gold: `TẬP TRUNG CHUYÊN SÂU KÊNH VÀNG tại ${reg.countryName} (${reg.goldMarket}): Phân tích 5 nhân tố (TIPS 10Y & DXY 30%, Mua ròng NHTW & ETF 25%, Nợ công & Giá sàn AISC 20%, Cấu trúc nội địa & Chênh lệch quy đổi/Spread 15%, Vị thế COMEX COT 10%), kiểm tra Chốt chặn 4 (>10% chênh lệch / >3% spread) và khuyến nghị chiến thuật mua/chờ/nắm giữ cụ thể.`,
-        real_estate: `TẬP TRUNG CHUYÊN SÂU NHÀ ĐẤT tại khu vực ${reData?.areaLabel || reg.areaLabel} (${reg.countryName}): Đánh giá mặt bằng giá, tỷ suất cho thuê so với lãi suất vay thả nổi, kết quả Stress Test DSCR (chuẩn ≥ 1,2x), kiểm tra Chốt chặn 1 & 3, rà soát đủ 7 bước pháp lý và phân hóa phân khúc (nhà ở / đất nền / KCN).`,
-        stock: `TẬP TRUNG CHUYÊN SÂU CHỨNG KHOÁN (${stock?.symbol ? (mode === 'audit' && anonymize ? 'TÀI SẢN X' : stock.symbol) : reg.stockIndex}) tại ${reg.countryName}: Phân tích định giá P/E, Earnings Yield vs Trái phiếu 10Y & Chi phí vốn Damodaran, áp lực margin & khối ngoại, và chạy đúng bộ lọc sức khỏe theo đặc thù ngành (Sản xuất: M/Z/F-Score, Sloan, DuPont 5 nhân tố; Ngân hàng: P/B-ROE, NIM, CASA, NPL/LLR, CAR; BĐS: CFO, nợ/VCSH, TPDN, RNAV).`,
+        general: 'Đánh giá toàn diện cả 4 kênh (Tiền mặt/Tiết kiệm, Vàng, Chứng khoán, Bất động sản) bám sát thị trường tại ' + reg.countryName + ' và vĩ mô toàn cầu.',
+        gold: `TẬP TRUNG CHUYÊN SÂU KÊNH VÀNG tại ${reg.countryName} (${reg.goldMarket}): Soi đầy đủ mọi yếu tố vĩ mô/vi mô/khu vực (Lãi suất thực TIPS 10Y & Fed, DXY, Chiến tranh & Địa chính trị, NHTW mua vàng WGC, SGE Thượng Hải vs LBMA, CFTC COT & ETF GLD, Nợ công & AISC, Chính sách vàng nội địa NĐ24/NĐ232/NĐ390, Chênh lệch SJC/Nhẫn 9999 vs Thế giới quy đổi & Spread mua–bán, Tỷ giá tự do vs ngân hàng).`,
+        real_estate: `TẬP TRUNG CHUYÊN SÂU NHÀ ĐẤT tại khu vực ${reData?.areaLabel || reg.areaLabel} (${reg.countryName}): Soi vĩ mô lãi suất vay thả nổi & Luật Đất đai mới, GRDP/FDI/dân số cơ học, quy hoạch 1/2000–1/500 & 4 bước tiến độ hạ tầng, mặt bằng giá/m², Tỷ suất cho thuê (Rental Yield) vs Tiết kiệm, Stress Test DSCR, đấu giá đất, tỷ lệ nhà sáng đèn & rủi ro ngập lụt.`,
+        stock: `TẬP TRUNG CHUYÊN SÂU CHỨNG KHOÁN (${stock?.symbol ? (mode === 'audit' && anonymize ? 'TÀI SẢN X' : stock.symbol) : reg.stockIndex}) tại ${reg.countryName}: Soi bối cảnh vĩ mô & chu kỳ ngành, Lãi thật hay Lãi trên giấy (CFO vs LNST, Phải thu, Hàng tồn kho, D/E, Người mua trả tiền trước, M/Z/F-Score, DuPont), Ban lãnh đạo/Giao dịch nội bộ/Pha loãng ESOP, Định giá P/E–P/B–EV/EBITDA vs TB 5 năm & dòng tiền khối ngoại/margin.`,
       };
       const focusDirective = focusInstructions[focus] || focusInstructions.general;
       const assetLabel =
         mode === 'audit' && anonymize
           ? 'TÀI SẢN X'
           : focus === 'gold'
-          ? `Kênh Vàng (${reg.goldMarket})`
+          ? `Vàng (${reg.goldMarket} & XAU/USD)`
           : focus === 'real_estate'
           ? `Nhà đất khu vực ${reData?.areaLabel || reg.areaLabel}`
-          : stock?.symbol || `Danh mục 4 kênh tại ${reg.countryName}`;
+          : focus === 'stock'
+          ? `Cổ phiếu ${stock?.symbol || reg.stockIndex}`
+          : `Danh mục 3 tài sản (Vàng – Chứng khoán – Nhà đất) tại ${reg.countryName}`;
+
+      const UNIFIED_JSON_SYNC_CONTRACT = `
+
+---
+
+# BẮT BUỘC CUỐI CÂU TRẢ LỜI — KHỐI DỮ LIỆU ĐỒNG BỘ CODE & VẼ BIỂU ĐỒ TỰ ĐỘNG (INVEST_INTEL_SYNC_V2)
+Ngay sau phần trình bày bình dân ở trên, hãy xuất thêm **DUY NHẤT 01 khối mã JSON hợp lệ** nằm trong thẻ \`\`\`json ... \`\`\` theo đúng 100% cấu trúc dưới đây (không ghi chú thích // bên trong JSON, điền toàn bộ điểm số thật từ dữ liệu đã cung cấp, tổng allocation_pct = 100) để ứng dụng của tôi tự bóc tách, cập nhật toàn bộ ô dữ liệu và tự động vẽ 6 biểu đồ (Tròn, Cột, Đường, Radar rủi ro, Ma trận Quyết định):
+
+\`\`\`json
+{
+  "schema": "INVEST_INTEL_SYNC_V2",
+  "as_of_date": "${asOfDate}",
+  "cycle_phase": {
+    "label": "Tên giai đoạn chu kỳ kinh tế hiện tại",
+    "plain_advice": "Lời khuyên hành động cốt lõi trong 1 câu dễ hiểu"
+  },
+  "verdict_summary": {
+    "headline": "Kết luận nhanh trong 1–2 câu chốt thẳng quan điểm",
+    "action": "QUAN_SAT | TICH_LUY | NAM_GIU | TRANH_XA",
+    "opportunities": ["Cơ hội 1", "Cơ hội 2", "Cơ hội 3"],
+    "risks": ["Rủi ro lớn nhất 1", "Rủi ro 2", "Rủi ro 3"],
+    "current_outlook": "Nhận định ngắn gọn giai đoạn hiện tại",
+    "upcoming_outlook": "Nhận định ngắn gọn 6–12 tháng tới"
+  },
+  "channel_scores": {
+    "cash": 80,
+    "gold": 60,
+    "stock": 70,
+    "real_estate": 50
+  },
+  "allocation_pct": [
+    { "label": "Tiền mặt / Gửi tiết kiệm", "value": 35, "color": "#38bdf8" },
+    { "label": "Chứng khoán (không margin)", "value": 30, "color": "#10b981" },
+    { "label": "Vàng vật chất", "value": 15, "color": "#f59e0b" },
+    { "label": "Nhà đất / Quỹ dự phòng", "value": 20, "color": "#a855f7" }
+  ],
+  "five_pillars": [
+    { "name": "Trụ cột 1", "score": 7.0, "note": "Giải thích 1 dòng bình dân" },
+    { "name": "Trụ cột 2", "score": 6.5, "note": "Giải thích 1 dòng bình dân" },
+    { "name": "Trụ cột 3", "score": 7.2, "note": "Giải thích 1 dòng bình dân" },
+    { "name": "Trụ cột 4", "score": 5.5, "note": "Giải thích 1 dòng bình dân" },
+    { "name": "Trụ cột 5", "score": 8.0, "note": "Giải thích 1 dòng bình dân" }
+  ],
+  "risk_radar": [
+    { "label": "Địa chính trị & Thuế quan", "level": 80 },
+    { "label": "Áp lực Lãi suất cao", "level": 75 },
+    { "label": "Độ đắt Vàng nội địa", "level": 70 },
+    { "label": "Đòn bẩy Margin CK", "level": 72 },
+    { "label": "Âm dòng tiền vay BĐS", "level": 80 },
+    { "label": "Rủi ro Thanh khoản", "level": 45 }
+  ],
+  "decision_matrix": [
+    { "channel": "Tiền mặt / Tiết kiệm", "decision": "NẮM GIỮ ƯU TIÊN", "signal": "positive", "score": 80, "reason": "Lý do 1 câu bình dân" },
+    { "channel": "Chứng khoán", "decision": "TÍCH LŨY CHẬM", "signal": "caution", "score": 70, "reason": "Lý do 1 câu bình dân" },
+    { "channel": "Vàng", "decision": "CHỜ GIẢM CHÊNH LỆCH", "signal": "caution", "score": 60, "reason": "Lý do 1 câu bình dân" },
+    { "channel": "Nhà đất", "decision": "TRÁNH VAY LỚN", "signal": "danger", "score": 50, "reason": "Lý do 1 câu bình dân" }
+  ],
+  "time_series": {
+    "title": "Kịch bản xu hướng 4 mốc gần nhất / dự phóng tham khảo",
+    "unit": "điểm",
+    "points": [
+      { "label": "Hiện tại", "value": 65 },
+      { "label": "3 tháng", "value": 68 },
+      { "label": "6 tháng", "value": 72 },
+      { "label": "12 tháng", "value": 78 }
+    ]
+  },
+  "red_flags": [
+    { "title": "Cờ đỏ 1", "detail": "Giải thích ngắn gọn dựa trên số liệu thật" }
+  ],
+  "missing_to_verify": [
+    "Mục còn thiếu dữ liệu người dùng cần tự kiểm tra thêm"
+  ]
+}
+\`\`\``;
+
+      if (mode === 'veteran30') {
+        const pillarsByFocus = {
+          gold: '(1) Lãi suất thực TIPS 10Y & Fed, (2) Địa chính trị, Chiến tranh, Thuế quan & NHTW mua vàng, (3) Dòng tiền ETF/SGE Thượng Hải & Cung cầu AISC, (4) Chênh lệch SJC/Nhẫn 9999 nội địa & Tỷ giá VND, (5) Vị thế đầu cơ COT & Rủi ro mua đuổi ngắn hạn.',
+          stock: '(1) Bối cảnh vĩ mô & Chu kỳ Ngành, (2) Chất lượng lợi nhuận & Tiền thật CFO (lãi thật hay lãi giấy), (3) An toàn nợ vay & Sức khỏe tài sản, (4) Động lực tăng trưởng, Ban lãnh đạo & Rủi ro pha loãng ESOP, (5) Độ rẻ/đắt của Định giá hiện tại.',
+          real_estate: '(1) Vĩ mô lãi suất thả nổi & Pháp lý, (2) Nội lực kinh tế GRDP/FDI & Sức hút dân cư thật, (3) Quy hoạch & Tiến độ hạ tầng làm thật (4 bước), (4) Giá bán so với dòng tiền cho thuê (Rental Yield & DSCR), (5) Thanh khoản thực, Đấu giá & Rủi ro chôn vốn/ngập lụt.',
+          general: '(1) Bối cảnh Địa chính trị, Chiến tranh, Lãnh đạo & Vĩ mô toàn cầu, (2) Kênh Vàng (Thế giới & Nội địa), (3) Kênh Chứng khoán (Định giá & Dòng tiền), (4) Kênh Nhà đất (Lãi vay & Dòng tiền thuê), (5) Mức độ an toàn đòn bẩy & Quản trị rủi ro danh mục.',
+        };
+        return `# VAI TRÒ & PHONG CÁCH PHÂN TÍCH
+Hãy đóng vai một nhà đầu tư thực chiến có 30 năm kinh nghiệm trên thị trường tài chính và bất động sản tại ${reg.countryName} lẫn quốc tế. Bạn cực kỳ tỉ mỉ, cẩn trọng, đa nghi trước các con số đẹp, nhạy cảm với mọi tín hiệu rủi ro dù là nhỏ nhất và luôn đặt nguyên tắc GIỮ TIỀN lên trước KIẾM TIỀN.
+
+**YÊU CẦU TUYỆT ĐỐI VỀ CÁCH DIỄN ĐẠT (PHONG CÁCH BÌNH DÂN HỌC VỤ):**
+1. Giải thích mọi vấn đề sâu sắc như chuyên gia 30 năm kinh nghiệm nhưng bằng ngôn ngữ đời thường, dễ hiểu nhất.
+2. Mỗi khi buộc phải dùng thuật ngữ tài chính (ví dụ: lãi suất thực TIPS, biên lợi nhuận gộp, dòng tiền CFO, P/E, pha loãng ESOP, tỷ suất cho thuê Rental Yield, DSCR, đòn bẩy, spread...), hãy giải thích ngay bằng một phép so sánh nôm na dễ hình dung (như mở quán phở, gửi tiết kiệm ngân hàng, cho thuê phòng trọ).
+3. Không nói nước đôi, không dùng ngôn từ sáo rỗng hay hô hào. Chỉ ra thẳng điểm sáng và điểm đáng ngờ.
+
+**QUY TẮC TRUNG THỰC DỮ LIỆU (ZERO-HALLUCINATION — CHỐNG SUY DIỄN):**
+1. Chỉ được phép phân tích dựa trên DỮ LIỆU THỰC TẾ được cung cấp bên dưới. Tuyệt đối KHÔNG tự bịa ra con số, giá cả hay sự kiện không có trong dữ liệu.
+2. Mục nào trong dữ liệu có trạng thái \`[CHƯA CÓ DỮ LIỆU]\` hoặc \`DATA_MISSING\`, bạn phải ghi rõ: "Thiếu dữ liệu mục này, chưa thể kết luận, cần tự kiểm tra thêm" — không được tự suy đoán.
+3. Khi nhắc tới một tin tức hoặc sự kiện cụ thể, hãy trích dẫn rõ tên nguồn, ngày đăng và đường link gốc từ danh sách tin kèm theo.
+
+---
+
+# THÔNG TIN ĐỐI TƯỢNG PHÂN TÍCH
+- **Đối tượng cụ thể:** ${assetLabel}
+- **Quốc gia / Khu vực:** ${reg.areaLabel} (${reg.countryName} · Tiền tệ ${reg.currency})
+- **Thời điểm trích xuất dữ liệu:** ${asOfDate}
+- **Trọng tâm yêu cầu:** ${focusDirective}
+- **Mục tiêu & Khẩu vị người đầu tư:** ${goalText}
+
+---
+
+# DỮ LIỆU ĐỊNH LƯỢNG THỰC TẾ (TRÍCH XUẤT NGUYÊN BẢN TỪ NGUỒN)
+### 1. Địa chính trị, Chiến tranh, Lãnh đạo, Hiệp định & Tập đoàn lớn
+${geoSnap}
+
+### 2. Vĩ mô & Thanh khoản Toàn cầu
+${globalSnap}
+
+### 3. Vĩ mô, Tiền tệ & Pháp lý tại ${reg.countryName}
+${vnSnap}
+
+### 4. Dữ liệu Vàng (đã tính sẵn bằng code)
+${goldText}
+
+### 5. Dữ liệu Chứng khoán (đã tính sẵn bằng code)
+${stockText}
+
+### 6. Dữ liệu Nhà đất khu vực ${reData?.areaLabel || reg.areaLabel}
+${reText}
+
+### 7. Các chỉ tiêu đang thiếu nguồn tự động ([CHƯA CÓ DỮ LIỆU] / DATA_MISSING)
+- ${missingList}
+
+---
+
+# TỔNG HỢP TIN TỨC & SỰ KIỆN MỚI NHẤT (NGUYÊN BẢN TIÊU ĐỀ, TÓM TẮT & LINK GỐC)
+${liveHeadlinesText}
+
+---
+
+# DỮ LIỆU KHẢO SÁT THỰC ĐỊA & GHI CHÚ BỔ SUNG CỦA NGƯỜI DÙNG
+${fieldSurveyBlock}
+
+---
+
+# KHUNG LUẬT CHUYÊN GIA ĐÍNH KÈM (CẨM NANG 7 CHƯƠNG + 5 CHỐT CHẶN AN TOÀN)
+${knowledgeDigest}
+
+---
+
+# YÊU CẦU CẤU TRÚC BÀI PHÂN TÍCH ĐẦU RA (ĐÚNG 6 PHẦN)
+
+## 1. Kết luận nhanh trong 3 câu (Chốt thẳng quan điểm)
+- Trạng thái hiện tại của tài sản này là gì? (Rẻ hấp dẫn / Đúng giá trị / Đắt & nhiều rủi ro / Đang có dấu hiệu bong bóng).
+- Hành động ưu tiên lúc này: Quan sát thêm, Mua tích lũy từng phần, Nắm giữ hay Tránh xa? Vì sao?
+
+## 2. Chấm điểm 5 Trụ cột (Thang điểm 10 kèm giải thích 1 dòng bình dân)
+Chấm điểm rõ ràng theo đúng 5 trụ cột sau: ${pillarsByFocus[focus] || pillarsByFocus.general}
+
+## 3. Mổ xẻ chi tiết từ Vĩ mô xuống Vi mô (Lối viết bình dân học vụ)
+- Bức tranh lớn (Địa chính trị, chiến tranh, quyết định lãnh đạo lớn như thuế quan Mỹ/Trump, lãi suất, khu vực) đang ủng hộ hay đè nén tài sản này?
+- Soi sâu vào bên trong (Vi mô): Đọc vị mối liên hệ giữa các con số thực tế (ví dụ: doanh thu tăng nhưng tiền mặt CFO không về thì tiền kẹt ở đâu; giá vàng nội địa lệch quá xa thế giới + spread rộng thì rủi ro gì; giá đất tăng mà giá thuê đứng yên thì chuyện gì đang xảy ra).
+
+## 4. Soi "Cờ Đỏ" — Những cái bẫy dễ mất tiền nhất
+- Liệt kê ít nhất 3 rủi ro lớn nhất hoặc dấu hiệu bất thường rút ra từ dữ liệu, 5 Chốt chặn an toàn và tin tức đính kèm.
+- Kịch bản xấu nhất có thể xảy ra là gì và sự kiện nào sẽ kích hoạt kịch bản đó?
+
+## 5. Danh sách những lỗ hổng dữ liệu cần kiểm chứng thêm
+- Liệt kê rõ các mục đang thiếu dữ liệu hoặc ở trạng thái \`DATA_MISSING\` và hướng dẫn ngắn gọn, thực tế cách người dùng tự đi kiểm tra trước khi xuống tiền.
+
+## 6. Chiến lược & Kịch bản hành động cụ thể
+- **Kịch bản tích cực:** Điều kiện cụ thể nào xuất hiện thì đáng để giải ngân? Chia vốn ra sao (quy tắc 5/25 & không all-in)?
+- **Kịch bản phòng thủ:** Tín hiệu cảnh báo / mốc con số nào bị phá vỡ thì phải dừng lại hoặc hạ tỷ trọng ngay?
+
+*(Bắt buộc kết thúc bài phân tích bằng đúng dòng nguyên văn: "${MANDATORY_DISCLAIMER}.")*${UNIFIED_JSON_SYNC_CONTRACT}`;
+      }
 
       if (mode === 'audit') {
         return `[VAI TRÒ] Bạn là Giám đốc Quản trị Rủi ro Danh mục (Chief Risk Officer) chuyên thị trường vốn tại ${reg.countryName} (${reg.stockIndex}, ${reg.centralBank}, đồng tiền ${reg.currency}) và vĩ mô toàn cầu. Mục tiêu tối thượng của bạn là bảo vệ vốn và đánh giá khách quan xác suất rủi ro/lợi nhuận, KHÔNG phải khuyến khích giao dịch.
@@ -943,7 +1196,7 @@ ${knowledgeDigest}
 4. Ba Kịch bản (Cơ sở / Tích cực / Căng thẳng đuôi): Nêu rõ giả định định lượng và hành động tương ứng.
 5. Điều kiện Hủy bỏ Luận điểm (Invalidation Triggers — If/Then): Các mốc con số cụ thể bị phá vỡ sẽ buộc dừng mua hoặc hạ tỷ trọng.
 6. Cổng Chặn Quyết định: Chọn rõ một trạng thái cho từng kênh hoặc cho ${assetLabel}: [TỪ CHỐI] / [THEO DÕI — CHỜ KÍCH HOẠT] / [ĐỦ ĐIỀU KIỆN ĐƯA LÊN CỔNG DUYỆT CON NGƯỜI] kèm lý do cốt lõi ngắn gọn.
-7. Dòng kết thúc bắt buộc nguyên văn: "${MANDATORY_DISCLAIMER}."`;
+7. Dòng kết thúc bắt buộc nguyên văn: "${MANDATORY_DISCLAIMER}."${UNIFIED_JSON_SYNC_CONTRACT}`;
       }
 
       return `Bạn hãy đóng vai một người cố vấn quản lý rủi ro tài chính cá nhân am hiểu thị trường tại ${reg.countryName} (${reg.centralBank}, ${reg.stockIndex}, đồng tiền ${reg.currency}) và kinh tế thế giới. Hãy giải thích thật rõ ràng, bằng tiếng Việt đời thường, hạn chế tối đa từ chuyên ngành khó hiểu (nếu buộc phải nhắc đến thuật ngữ chuyên môn, hãy giải thích ngắn gọn trong ngoặc bằng ví dụ bình dân).
@@ -985,7 +1238,7 @@ ${knowledgeDigest}
    - Mục 4: Gợi ý hướng phân bổ tiền và hành động thực tế cho giai đoạn hiện tại và 6–12 tháng tới (chia rõ cho người thích an toàn và người chấp nhận rủi ro vừa phải, áp dụng quy tắc 5/25 & Half-Kelly).
    - Mục 5: Ba kịch bản (Cơ sở / Tích cực / Rủi ro đuôi khi xung đột hoặc thuế quan leo thang).
    - Mục 6: Những dấu hiệu & sự kiện cụ thể cần theo dõi trong thời gian tới (nếu sự kiện nào xảy ra thì đổi chiến lược ra sao).
-5. BẮT BUỘC kết thúc toàn bộ câu trả lời bằng đúng dòng chữ nguyên văn: "${MANDATORY_DISCLAIMER}."`;
+5. BẮT BUỘC kết thúc toàn bộ câu trả lời bằng đúng dòng chữ nguyên văn: "${MANDATORY_DISCLAIMER}."${UNIFIED_JSON_SYNC_CONTRACT}`;
     },
 
     async safeCopyText(text) {
@@ -1046,12 +1299,15 @@ ${knowledgeDigest}
 
     async openGeminiConfirmModal(initialOptions = {}) {
       document.getElementById('inv-gemini-confirm-modal')?.remove();
+      const prefs = INV.storageAdapter.getPrefs();
       const opts = {
-        mode: initialOptions.mode || 'plain',
+        mode: initialOptions.mode || prefs.promptMode || 'veteran30',
         focus: initialOptions.focus || (initialOptions.targetStock ? 'stock' : 'general'),
         targetStock: initialOptions.targetStock || null,
         stressResult: initialOptions.stressResult || null,
         anonymize: Boolean(initialOptions.anonymize),
+        userGoal: prefs.userGoal || '',
+        fieldNotes: prefs.fieldNotes || '',
       };
 
       const modal = document.createElement('div');
@@ -1063,11 +1319,11 @@ ${knowledgeDigest}
       const tr = (s) => NS.i18n?.translateText?.(s) || s;
 
       modal.innerHTML = `
-        <div class="w-full max-w-3xl max-h-[90dvh] rounded-2xl border-2 border-emerald-500/50 bg-zinc-950 text-zinc-100 shadow-2xl flex flex-col overflow-hidden">
+        <div class="w-full max-w-3xl max-h-[92dvh] rounded-2xl border-2 border-emerald-500/50 bg-zinc-950 text-zinc-100 shadow-2xl flex flex-col overflow-hidden">
           <div class="px-4 py-3 border-b border-zinc-800 bg-emerald-950/35 flex items-center justify-between gap-2 shrink-0">
             <div class="min-w-0">
-              <h3 class="text-sm sm:text-base font-black text-emerald-300">✅ ${tr('Xác Nhận Câu Lệnh Phân Tích Đầu Tư & Mở Gemini')}</h3>
-              <p class="text-[11px] text-zinc-400">${tr('Đã tự động chèn khung phân tích chuẩn 7 chương + số liệu thực tế + khu vực của bạn.')}</p>
+              <h3 class="text-sm sm:text-base font-black text-emerald-300">✅ ${tr('Trạm Đóng Gói Câu Lệnh Đầu Tư (30 Năm Kinh Nghiệm) & Mở Gemini')}</h3>
+              <p class="text-[11px] text-zinc-400">${tr('Đã tự động ghép số liệu sống, tin tức bạn đã tick, khảo sát thực địa & khung chống suy diễn 6 phần.')}</p>
             </div>
             <button type="button" id="inv-gconf-close" class="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-rose-600 text-zinc-100 font-black cursor-pointer">✕</button>
           </div>
@@ -1075,32 +1331,48 @@ ${knowledgeDigest}
           <div class="p-4 overflow-y-auto flex-1 space-y-3">
             <!-- Thanh trạng thái đã copy -->
             <div id="inv-gconf-copy-banner" class="px-3 py-2 rounded-xl border border-amber-400/50 bg-amber-500/15 flex flex-wrap items-center justify-between gap-2 text-xs">
-              <span class="font-extrabold text-amber-200">✅ ${tr('Đã tự động sao chép toàn bộ câu lệnh vào bộ nhớ tạm! Bạn có thể xem/chỉnh thêm rồi bấm nút xanh bên dưới để chuyển qua Gemini.')}</span>
-              <button type="button" id="inv-gconf-recopy" class="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-[11px] cursor-pointer shrink-0">📋 ${tr('Copy Toàn Bộ Câu Lệnh')}</button>
+              <span class="font-extrabold text-amber-200">✅ ${tr('Đã tự động sao chép toàn bộ câu lệnh vào bộ nhớ tạm! Bạn có thể thêm mục tiêu/ghi chú rồi bấm mở Gemini hoặc xuất file .MD.')}</span>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <button type="button" id="inv-gconf-recopy" class="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-[11px] cursor-pointer">📋 ${tr('Copy 1 Chạm')}</button>
+                <button type="button" id="inv-gconf-export-md" class="px-3 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-black text-[11px] cursor-pointer">📥 ${tr('Xuất File .MD')}</button>
+              </div>
             </div>
 
             <!-- Chọn chủ đề & chế độ phân tích -->
             <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
               <div class="flex flex-wrap items-center gap-1.5">
                 <span class="text-zinc-400 font-bold">${tr('Trọng tâm')}:</span>
-                <button type="button" data-gconf-focus="general" class="inv-gconf-focus-btn px-2.5 py-1 rounded-lg border font-bold cursor-pointer">🧭 ${tr('Tổng quát 4 kênh')}</button>
+                <button type="button" data-gconf-focus="general" class="inv-gconf-focus-btn px-2.5 py-1 rounded-lg border font-bold cursor-pointer">🧭 ${tr('Tổng quát 3 tài sản')}</button>
                 <button type="button" data-gconf-focus="gold" class="inv-gconf-focus-btn px-2.5 py-1 rounded-lg border font-bold cursor-pointer">🥇 ${tr('Vàng')}</button>
                 <button type="button" data-gconf-focus="real_estate" class="inv-gconf-focus-btn px-2.5 py-1 rounded-lg border font-bold cursor-pointer">🏘️ ${tr('Nhà đất')}</button>
                 <button type="button" data-gconf-focus="stock" class="inv-gconf-focus-btn px-2.5 py-1 rounded-lg border font-bold cursor-pointer">📊 ${tr('Chứng khoán')}</button>
               </div>
               <select id="inv-gconf-mode-sel" class="px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-700 text-xs font-bold text-zinc-100">
-                <option value="plain">${tr('Chế độ Phổ thông dễ hiểu')}</option>
-                <option value="audit">${tr('Chế độ Kiểm toán 2 chiều (Phe Bò vs Phe Gấu)')}</option>
+                <option value="veteran30">🏆 ${tr('Chuyên gia 30 năm — Bình dân học vụ (6 phần chuẩn)')}</option>
+                <option value="audit">⚖️ ${tr('Kiểm toán 2 chiều (Phe Bò vs Phe Gấu & 5 Cầu chì)')}</option>
+                <option value="plain">📘 ${tr('Phổ thông tóm gọn')}</option>
               </select>
+            </div>
+
+            <!-- Mục tiêu & Ghi chú dán thêm (Live update Prompt!) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <label class="space-y-1">
+                <span class="font-bold text-zinc-300">🎯 ${tr('Mục tiêu & Khẩu vị đầu tư của bạn')}:</span>
+                <input id="inv-gconf-goal" type="text" value="${INV.utils.escapeHtml(opts.userGoal)}" placeholder="VD: Vốn 500tr, cầm 3 năm, không vay nợ..." class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100" />
+              </label>
+              <label class="space-y-1">
+                <span class="font-bold text-zinc-300">📝 ${tr('Dán thêm số liệu BCTC / Khảo sát thực địa')}:</span>
+                <input id="inv-gconf-notes" type="text" value="${INV.utils.escapeHtml(opts.fieldNotes)}" placeholder="VD: Đã xem đất đường 7m5, sổ hồng sẵn, khu sáng đèn 80%..." class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100" />
+              </label>
             </div>
 
             <!-- Toàn văn câu lệnh đã tổng hợp -->
             <div class="space-y-1">
               <div class="flex items-center justify-between text-[11px]">
-                <span class="font-extrabold text-amber-300">📜 ${tr('TOÀN VĂN CÂU LỆNH ĐẦU TƯ ĐÃ TỔNG HỢP (CÓ THỂ CHỈNH SỬA THÊM)')}:</span>
+                <span class="font-extrabold text-amber-300">📜 ${tr('TOÀN VĂN CÂU LỆNH ĐẦU TƯ ĐÃ TỔNG HỢP (LIVE PREVIEW — SỬA ĐƯỢC)')}:</span>
                 <span id="inv-gconf-stats" class="text-zinc-400 font-mono"></span>
               </div>
-              <textarea id="inv-gconf-textarea" rows="12" class="w-full rounded-xl bg-black/80 border border-zinc-700 p-3 text-xs font-mono text-zinc-100 leading-relaxed focus:outline-none focus:border-emerald-400"></textarea>
+              <textarea id="inv-gconf-textarea" rows="11" class="w-full rounded-xl bg-black/80 border border-zinc-700 p-3 text-xs font-mono text-zinc-100 leading-relaxed focus:outline-none focus:border-emerald-400"></textarea>
             </div>
           </div>
 
@@ -1117,33 +1389,53 @@ ${knowledgeDigest}
       const ta = modal.querySelector('#inv-gconf-textarea');
       const statsEl = modal.querySelector('#inv-gconf-stats');
       const modeSel = modal.querySelector('#inv-gconf-mode-sel');
+      const goalInp = modal.querySelector('#inv-gconf-goal');
+      const notesInp = modal.querySelector('#inv-gconf-notes');
       if (modeSel) modeSel.value = opts.mode;
 
-      const rebuildAndCopy = async () => {
+      const rebuildAndCopy = async (doCopy = true) => {
+        opts.userGoal = goalInp?.value?.trim() || '';
+        opts.fieldNotes = notesInp?.value?.trim() || '';
+        INV.storageAdapter.savePrefs({ promptMode: opts.mode, userGoal: opts.userGoal, fieldNotes: opts.fieldNotes });
         const text = this.buildGeminiPrompt(opts);
         if (ta) ta.value = text;
         const words = text.trim().split(/\s+/).filter(Boolean).length;
-        if (statsEl) statsEl.textContent = `${words.toLocaleString('vi-VN')} ${tr('từ')} (~${Math.round(words * 1.45).toLocaleString('vi-VN')} tokens)`;
+        if (statsEl) statsEl.textContent = `${text.length.toLocaleString('vi-VN')} ký tự · ${words.toLocaleString('vi-VN')} ${tr('từ')} (~${Math.round(words * 1.45).toLocaleString('vi-VN')} tokens)`;
         modal.querySelectorAll('.inv-gconf-focus-btn').forEach((b) => {
           const active = b.getAttribute('data-gconf-focus') === opts.focus;
           b.className = active
             ? 'inv-gconf-focus-btn px-2.5 py-1 rounded-lg border border-emerald-400 bg-emerald-600 text-white font-extrabold cursor-pointer'
             : 'inv-gconf-focus-btn px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-emerald-500 font-bold cursor-pointer';
         });
-        await this.safeCopyText(text);
+        if (doCopy) await this.safeCopyText(text);
       };
 
-      await rebuildAndCopy();
+      await rebuildAndCopy(true);
 
       modal.querySelectorAll('.inv-gconf-focus-btn').forEach((b) => {
         b.addEventListener('click', () => {
           opts.focus = b.getAttribute('data-gconf-focus') || 'general';
-          rebuildAndCopy();
+          rebuildAndCopy(true);
         });
       });
       modeSel?.addEventListener('change', () => {
         opts.mode = modeSel.value;
-        rebuildAndCopy();
+        rebuildAndCopy(true);
+      });
+      goalInp?.addEventListener('input', () => rebuildAndCopy(false));
+      notesInp?.addEventListener('input', () => rebuildAndCopy(false));
+      modal.querySelector('#inv-gconf-export-md')?.addEventListener('click', () => {
+        const mdText = ta?.value || this.buildGeminiPrompt(opts);
+        const blob = new Blob([mdText], { type: 'text/markdown;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `BaoCaoDauTu_${opts.focus}_${INV.utils.todayIso()}.md`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        NS.utils?.showToast?.('📥 Đã tải xuống file Báo cáo thô (.MD) — có thể lưu trữ hoặc gửi thẳng lên Gemini!', 'success', 3500);
       });
       modal.querySelector('#inv-gconf-recopy')?.addEventListener('click', async () => {
         const ok = await this.safeCopyText(ta?.value || '');

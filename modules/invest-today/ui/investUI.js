@@ -77,6 +77,18 @@
     anonymizeGemini: true,
     auditLogs: null,
     showChecklistModal: false,
+    goldHistory30d: null,
+    healthChecks: null,
+    healthLoading: false,
+    surveyDraft: {
+      pricePerM2: '',
+      rentPerMonth: '',
+      roadWidthM: '5.5',
+      legalStatus: 'Sổ hồng/đỏ riêng',
+      nightLightPct: '75',
+      infraStage: 'Đang thi công',
+      floodNote: '',
+    },
   };
 
   function resetUiState() {
@@ -120,6 +132,18 @@
       anonymizeGemini: true,
       auditLogs: null,
       showChecklistModal: false,
+      goldHistory30d: null,
+      healthChecks: null,
+      healthLoading: false,
+      surveyDraft: {
+        pricePerM2: '',
+        rentPerMonth: '',
+        roadWidthM: '5.5',
+        legalStatus: 'Sổ hồng/đỏ riêng',
+        nightLightPct: '75',
+        infraStage: 'Đang thi công',
+        floodNote: '',
+      },
     };
   }
 
@@ -218,23 +242,41 @@
               : ''
           }
 
-          <!-- Tin tức nóng Địa chính trị, Lãnh đạo, Thuế quan & Tập đoàn lớn trực tiếp -->
+          <!-- Trạm Tin tức Nguyên bản (có Checkbox chọn đưa vào Prompt + Link bài báo gốc) -->
           ${
             (report.live_headlines || []).length
               ? `<div class="inv-card space-y-2">
-                  <div class="text-xs font-extrabold text-sky-700 dark:text-sky-300">🌐 Tin nóng Địa chính trị, Lãnh đạo, Thuế quan &amp; Tập đoàn lớn (Cập nhật trực tiếp)</div>
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="text-xs font-extrabold text-sky-700 dark:text-sky-300">🌐 Tin nóng Địa chính trị, Lãnh đạo, Thuế quan &amp; Vĩ mô Nguyên bản (${report.live_headlines.filter((x) => x.selected_for_prompt !== false).length}/${report.live_headlines.length} tin đang đưa vào Prompt)</div>
+                    ${
+                      report.guardrail_stats
+                        ? `<span class="text-[10.5px] font-bold text-emerald-600 dark:text-emerald-400">🛡️ Khóa 0% bịa đặt SHA-256: Hợp lệ ${report.guardrail_stats.acceptedCount}/${report.guardrail_stats.scanned} · Loại ${report.guardrail_stats.rejectedCount} tin trùng/lỗi</span>`
+                        : '<span class="text-[10.5px] text-zinc-500">Tick chọn bài báo muốn AI đọc kỹ</span>'
+                    }
+                  </div>
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                     ${report.live_headlines
-                      .slice(0, 6)
+                      .slice(0, 8)
                       .map(
-                        (h) => `
-                      <a href="${esc(h.url)}" target="_blank" rel="noopener noreferrer" class="p-2 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/60 hover:border-emerald-500 transition text-xs block space-y-0.5">
-                        <div class="font-bold line-clamp-2">${esc(h.title)}</div>
-                        <div class="text-[10.5px] text-zinc-500 flex justify-between gap-2">
-                          <span>${esc(h.source)}</span>
-                          <span class="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">Đọc ↗</span>
-                        </div>
-                      </a>`
+                        (h, idx) => {
+                          const topMatch = Array.isArray(h.matched_checklists) && h.matched_checklists[0];
+                          return `
+                      <div class="p-2 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/60 hover:border-emerald-500 transition text-xs flex items-start gap-2">
+                        <input type="checkbox" data-inv-news-chk="${idx}" ${h.selected_for_prompt !== false ? 'checked' : ''} class="mt-0.5 accent-emerald-600 cursor-pointer shrink-0" title="Đưa bài báo này vào câu lệnh Gemini" />
+                        <a href="${esc(h.url)}" target="_blank" rel="noopener noreferrer" class="min-w-0 flex-1 space-y-0.5 block">
+                          <div class="font-bold line-clamp-2">${esc(h.title)}</div>
+                          ${
+                            topMatch
+                              ? `<div class="text-[10px] font-bold text-amber-600 dark:text-amber-300 truncate">🎯 Khớp: ${esc(topMatch.checklist_name)} [${esc((topMatch.triggers || []).slice(0, 3).join(', '))}] (+${topMatch.score}đ)</div>`
+                              : ''
+                          }
+                          <div class="text-[10.5px] text-zinc-500 flex justify-between gap-2">
+                            <span class="truncate">${esc(h.source)} · ${esc(h.date || '')}</span>
+                            <span class="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">Nguồn gốc ↗</span>
+                          </div>
+                        </a>
+                      </div>`;
+                        }
                       )
                       .join('')}
                   </div>
@@ -339,31 +381,37 @@
           ${checklistPreviewHtml}
         </div>
 
-        <!-- Khối 2: Khu vực hành động trung tâm (2 nút rõ ràng, không rối) -->
-        <div class="inv-card text-center space-y-3">
-          <div class="flex flex-wrap items-center justify-center gap-2 text-xs">
-            <span class="text-zinc-500 dark:text-zinc-400">Mức độ quét tin:</span>
-            <label class="inline-flex items-center gap-1 cursor-pointer font-bold">
-              <input type="radio" name="inv-depth" value="quick" ${prefs.scanDepth !== 'full' ? 'checked' : ''} /> Nhanh (15 mục chính)
-            </label>
-            <label class="inline-flex items-center gap-1 cursor-pointer font-bold">
-              <input type="radio" name="inv-depth" value="full" ${prefs.scanDepth === 'full' ? 'checked' : ''} /> Toàn diện (24 mục)
-            </label>
-          </div>
+        <!-- Khối 2: KHUNG NỔI BẬT SÁNG NHẤP NHÁY — BƯỚC 1 (TRA CỨU TOÀN DIỆN) -> BƯỚC 2 (GỬI GEMINI) -> BƯỚC 3 (DÁN ĐỒNG BỘ BIỂU ĐỒ) -->
+        <div class="inv-card inv-workflow-glow-card text-center space-y-3.5">
+          <!-- BƯỚC 1 -->
+          <div class="space-y-2">
+            <div class="flex flex-wrap items-center justify-center gap-2">
+              <span class="inv-step-badge">⚡ BƯỚC 1: TRA CỨU THÔNG TIN TOÀN DIỆN (0% BỊA ĐẶT · KHÓA NGUỒN SHA-256)</span>
+            </div>
+            <div class="flex flex-wrap items-center justify-center gap-3 text-xs">
+              <span class="text-zinc-500 dark:text-zinc-400 font-semibold">Mức độ quét tin:</span>
+              <label class="inline-flex items-center gap-1 cursor-pointer font-extrabold text-emerald-700 dark:text-emerald-300">
+                <input type="radio" name="inv-depth" value="full" ${(prefs.scanDepth || 'full') === 'full' ? 'checked' : ''} /> Toàn diện (${(kb?.search_checklist || []).length || 34} mục — Mặc định)
+              </label>
+              <label class="inline-flex items-center gap-1 cursor-pointer font-bold">
+                <input type="radio" name="inv-depth" value="quick" ${prefs.scanDepth === 'quick' ? 'checked' : ''} /> Nhanh (15 mục chính)
+              </label>
+            </div>
 
-          <div class="flex flex-wrap items-center justify-center gap-3">
-            <button type="button" id="inv-btn-run-eval" class="inv-primary-btn" ${isRunning ? 'disabled' : ''}>
-              ${isRunning ? '⏳ Đang tìm tin &amp; tổng hợp...' : '🔍 Tìm kiếm thông tin, tổng hợp và đánh giá'}
-            </button>
-            ${
-              isRunning
-                ? '<button type="button" id="inv-btn-stop-eval" class="inv-secondary-btn text-rose-600 border-rose-500/40">⏹ Dừng lại</button>'
-                : ''
-            }
+            <div class="flex flex-wrap items-center justify-center gap-3">
+              <button type="button" id="inv-btn-run-eval" class="inv-primary-btn shadow-lg" ${isRunning ? 'disabled' : ''}>
+                ${isRunning ? '⏳ Đang quét nguồn chính thống &amp; lọc 0% bịa đặt...' : '🔍 Tra cứu thông tin toàn diện, lọc chuẩn &amp; tổng hợp'}
+              </button>
+              ${
+                isRunning
+                  ? '<button type="button" id="inv-btn-stop-eval" class="inv-secondary-btn text-rose-600 border-rose-500/40">⏹ Dừng lại</button>'
+                  : ''
+              }
+            </div>
+            <p class="text-[11.5px] text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto">
+              Trích xuất nguyên văn từ các nguồn chính thống (Bộ Tài chính Mỹ, World Bank, Binance/Coinbase, ExchangeRate DXY, báo tài chính &amp; RSS) qua <strong>5 chốt khóa bịa đặt 0%</strong> rồi tự động đổ vào bảng số liệu &amp; Tab <strong>Biểu đồ phân tích chuyên nghiệp</strong>.
+            </p>
           </div>
-          <p class="text-[11.5px] text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto">
-            Bấm để tự động tìm số liệu mới nhất, tính toán bằng code thuần theo file kiến thức và chấm điểm 4 kênh cho hiện tại &amp; sắp tới.
-          </p>
 
           ${
             isRunning && prog
@@ -379,46 +427,91 @@
               : ''
           }
 
-          <div class="pt-2 border-t border-zinc-200/80 dark:border-zinc-800 flex flex-col items-center gap-2">
+          <!-- BƯỚC 2 -->
+          <div class="pt-3 border-t border-emerald-500/25 flex flex-col items-center gap-2">
+            <span class="inv-step-badge" style="background:rgba(124,58,237,0.18);color:#c4b5fd;border-color:rgba(139,92,246,0.45);">🤖 BƯỚC 2: TỔNG HỢP CÂU LỆNH ĐỒNG BỘ CODE &amp; HỎI GEMINI</span>
             <div class="flex flex-wrap items-center justify-center gap-2 text-xs">
               <span class="text-zinc-500 dark:text-zinc-400">Chế độ hỏi Gemini:</span>
               <label class="inline-flex items-center gap-1 cursor-pointer font-bold">
-                <input type="radio" name="inv-prompt-mode" value="plain" ${prefs.promptMode !== 'audit' ? 'checked' : ''} /> Phổ thông dễ hiểu
+                <input type="radio" name="inv-prompt-mode" value="veteran30" ${(prefs.promptMode || 'veteran30') === 'veteran30' ? 'checked' : ''} /> 🏆 Chuyên gia 30 năm (Bình dân 6 phần)
               </label>
               <label class="inline-flex items-center gap-1 cursor-pointer font-bold">
-                <input type="radio" name="inv-prompt-mode" value="audit" ${prefs.promptMode === 'audit' ? 'checked' : ''} /> Kiểm toán 2 chiều (Phe Bò vs Phe Gấu)
+                <input type="radio" name="inv-prompt-mode" value="audit" ${prefs.promptMode === 'audit' ? 'checked' : ''} /> ⚖️ Kiểm toán 2 chiều (Bò vs Gấu)
+              </label>
+              <label class="inline-flex items-center gap-1 cursor-pointer font-bold">
+                <input type="radio" name="inv-prompt-mode" value="plain" ${prefs.promptMode === 'plain' ? 'checked' : ''} /> 📘 Tóm gọn
               </label>
             </div>
             <button type="button" id="inv-btn-gemini-split" class="inv-gemini-btn">
               🪟 Tự động sao chép &amp; Chia đôi màn hình với Gemini
             </button>
-            <span class="text-[11px] text-zinc-500 dark:text-zinc-400">
-              100% miễn phí không tốn API — tự gói dữ liệu mới + khung kiến thức vào bộ nhớ tạm, mở sẵn Gemini bên cạnh để bạn bấm dán (Ctrl + V).
+            <span class="text-[11px] text-zinc-500 dark:text-zinc-400 max-w-xl">
+              100% miễn phí — câu lệnh yêu cầu Gemini trả lời dễ hiểu kèm khối cấu trúc chuẩn <code>INVEST_INTEL_SYNC_V2</code> để Web đọc hiểu &amp; vẽ trọn bộ 6 biểu đồ chuyên nghiệp!
             </span>
           </div>
+
+          <!-- BƯỚC 3 -->
+          <details class="inv-details pt-2.5 border-t border-emerald-500/20 text-left">
+            <summary class="flex flex-wrap items-center justify-center gap-2 text-xs font-extrabold text-sky-600 dark:text-sky-300 cursor-pointer">
+              <span>📥 BƯỚC 3 (Tùy chọn): Dán câu trả lời Gemini vào đây → Web tự cập nhật mọi ô dữ liệu &amp; vẽ 6 Biểu đồ chuyên nghiệp</span>
+              <span class="underline">▼ Mở ô dán</span>
+            </summary>
+            <div class="mt-2.5 space-y-2 max-w-2xl mx-auto">
+              <textarea id="inv-inp-gemini-paste-ov" rows="4" placeholder="Dán nguyên câu trả lời của Gemini (có đoạn mã JSON cuối bài) vào đây rồi bấm nút Đồng bộ bên dưới..." class="w-full p-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white/90 dark:bg-zinc-950 text-xs font-mono"></textarea>
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="text-[11px] text-zinc-500">Web chỉ đọc đúng cấu trúc chuẩn <code>INVEST_INTEL_SYNC_V2</code> — an toàn, không làm sai lệch số liệu.</span>
+                <button type="button" id="inv-btn-sync-gemini-ov" class="inv-primary-btn py-1.5 px-3.5 text-xs">⚡ Đồng bộ dữ liệu &amp; Mở Biểu đồ chuyên nghiệp</button>
+              </div>
+            </div>
+          </details>
         </div>
 
         <!-- Khối 3: Báo cáo kết quả -->
         ${reportHtml}
 
-        <!-- Cài đặt nâng cao & Nhật ký kiểm toán (đóng gọn mặc định) -->
+        <!-- Cài đặt Nguồn API, Kiểm tra Sức khỏe Hệ thống & Nhật ký Kiểm toán (đóng gọn mặc định) -->
         <details class="inv-details inv-card-soft">
           <summary class="flex items-center justify-between text-xs font-extrabold">
-            <span>⚙️ Nhật ký theo dõi quyết định (IndexedDB) &amp; Cài đặt nguồn mạng Web</span>
+            <span>⚙️ Cài đặt Nguồn Dữ liệu (API Keys / Worker), Sức khỏe API &amp; Nhật ký Quyết định</span>
             <span class="text-zinc-500">▼ Mở rộng</span>
           </summary>
           <div class="mt-3 space-y-3 text-xs">
-            <div class="space-y-1.5">
+            <div class="space-y-2">
               <div class="font-bold">🌐 Trạng thái kết nối dữ liệu: ${
                 INV.networkAdapter.isDesktopElectron()
-                  ? '<span class="text-emerald-600 dark:text-emerald-400">Bản Desktop Electron (Gọi trực tiếp không bị chặn CORS)</span>'
-                  : '<span>Bản Web trình duyệt (Hỗ trợ gắn thêm Cloudflare Worker miễn phí để đọc trực tiếp SJC/VNDirect)</span>'
+                  ? '<span class="text-emerald-600 dark:text-emerald-400">Bản Desktop Electron (Gọi trực tiếp RSS / SJC / SSI / Chợ Tốt không bị chặn CORS)</span>'
+                  : '<span>Bản Web trình duyệt (10+ API CORS=* chạy thẳng; gắn thêm Cloudflare Worker miễn phí để mở khóa thêm RSS/SJC/SSI)</span>'
               }</div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <label class="space-y-1">
+                  <span class="text-[11px] text-zinc-500">Cloudflare Worker URL (tùy chọn bản Web):</span>
+                  <input type="url" id="inv-inp-proxy-url" value="${esc(prefs.proxyUrl || '')}" placeholder="https://your-worker.workers.dev" class="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs" />
+                </label>
+                <label class="space-y-1">
+                  <span class="text-[11px] text-zinc-500">FRED API Key (tùy chọn — TIPS 10Y DFII10):</span>
+                  <input type="password" id="inv-inp-fred-key" value="${esc(prefs.fredApiKey || '')}" placeholder="Miễn phí tại fred.stlouisfed.org" class="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs" />
+                </label>
+                <label class="space-y-1">
+                  <span class="text-[11px] text-zinc-500">TCBS OpenAPI Key (tùy chọn):</span>
+                  <input type="password" id="inv-inp-tcbs-key" value="${esc(prefs.tcbsApiKey || '')}" placeholder="Khóa cá nhân TCBS (nếu có)" class="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs" />
+                </label>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" id="inv-btn-save-proxy" class="inv-secondary-btn text-xs font-extrabold">💾 Lưu cấu hình nguồn API</button>
+                <button type="button" id="inv-btn-check-health" class="inv-secondary-btn text-xs font-extrabold" ${uiState.healthLoading ? 'disabled' : ''}>${uiState.healthLoading ? '⏳ Đang đo các nguồn API...' : '🩺 Kiểm tra sức khỏe các nguồn API ngay'}</button>
+              </div>
               ${
-                !INV.networkAdapter.isDesktopElectron()
-                  ? `<div class="flex flex-wrap gap-2">
-                      <input type="url" id="inv-inp-proxy-url" value="${esc(prefs.proxyUrl || '')}" placeholder="Tùy chọn: https://your-worker.workers.dev" class="flex-1 min-w-[200px] px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs" />
-                      <button type="button" id="inv-btn-save-proxy" class="inv-secondary-btn text-xs">Lưu đường dẫn</button>
+                Array.isArray(uiState.healthChecks)
+                  ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                      ${uiState.healthChecks
+                        .map(
+                          (c) => `
+                        <div class="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/60 flex items-center justify-between gap-2 text-[11px]">
+                          <span class="font-bold truncate">${c.status === 'ok' ? '🟢' : c.status === 'partial' ? '🟡' : '🔴'} ${esc(c.name)}</span>
+                          <span class="text-zinc-500 shrink-0">${c.ms ? `${c.ms}ms` : esc(c.note || c.error || '')}</span>
+                        </div>`
+                        )
+                        .join('')}
                     </div>`
                   : ''
               }
@@ -597,6 +690,28 @@
             </div>
           </details>
 
+          <!-- Biểu đồ Trực quan Vàng 30 ngày + So sánh Thế giới quy đổi vs Nội địa -->
+          ${INV.charts?.renderGoldChartsHtml ? INV.charts.renderGoldChartsHtml(g, uiState.goldHistory30d) : ''}
+
+          <!-- Bộ nguồn đối chiếu 30 năm kinh nghiệm cho Vàng (Tầng C) -->
+          <div class="inv-card space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="text-xs font-extrabold text-amber-600 dark:text-amber-300">🧭 Nguồn đối chiếu gốc chuyên gia 30 năm cho Vàng (NHTW · TIPS 10Y · COT · ETF GLD · SJC)</div>
+              <button type="button" id="inv-btn-gold-to-gemini" class="inv-gemini-btn text-xs py-1 px-3">🪟 Hỏi sâu chuyên gia 30 năm về Vàng</button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 text-xs">
+              ${(INV.goldEngine.buildGoldDeepLinks ? INV.goldEngine.buildGoldDeepLinks() : [])
+                .map(
+                  (lk) => `
+                <a href="${esc(lk.url)}" target="_blank" rel="noopener noreferrer" class="p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/60 hover:border-amber-500 transition flex items-center justify-between gap-2">
+                  <span class="font-bold truncate">${esc(lk.label)}</span>
+                  <span class="text-amber-600 dark:text-amber-400 font-extrabold shrink-0">Mở ↗</span>
+                </a>`
+                )
+                .join('')}
+            </div>
+          </div>
+
           <div class="text-[11.5px] px-3 py-2 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-800 dark:text-sky-200">
             ⚖️ <strong>Nhắc nhở pháp lý (Nghị định 390/2026/NĐ-CP):</strong> Giao dịch mua bán vàng cộng dồn từ <strong>5 triệu đồng/ngày</strong> trở lên bắt buộc thanh toán chuyển khoản không dùng tiền mặt (không chia nhỏ hóa đơn để tránh bị xử phạt).
           </div>`
@@ -757,6 +872,7 @@
                                       ? `<div><strong>DuPont 5 nhân tố:</strong> ROE ${fRes.dupont.roePct.toFixed(1)}% = Biên EBIT ${fRes.dupont.ebitMarginPct.toFixed(1)}% × Vòng quay TS ${fRes.dupont.assetTurnover.toFixed(2)}x × Đòn bẩy ${fRes.dupont.leverage.toFixed(2)}x.</div>`
                                       : ''
                                   }
+                                  ${INV.charts?.renderStockForensicChartHtml ? INV.charts.renderStockForensicChartHtml(uiState.forensicInputs) : ''}
                                 </div>`
                               : ''
                           }
@@ -971,6 +1087,69 @@
           </div>
         </details>
 
+        <!-- Biểu đồ Lợi suất Cho thuê vs Tiết kiệm vs Vay thả nổi + Lịch sử khảo sát thực địa -->
+        ${(() => {
+          const surveys = INV.storageAdapter.getRealEstateSurveys ? INV.storageAdapter.getRealEstateSurveys(re?.benchmark?.city || '') : [];
+          const estYield = re?.benchmark?.aptYield || (mIn.priceBillion > 0 ? ((mIn.grossRentMillion * 12) / (mIn.priceBillion * 1000)) * 100 : 3.3);
+          const chartsHtml = INV.charts?.renderRealEstateChartsHtml ? INV.charts.renderRealEstateChartsHtml(estYield, mIn.ratePct, surveys) : '';
+          const sd = uiState.surveyDraft;
+          return `
+            ${chartsHtml}
+            <details class="inv-details inv-card">
+              <summary class="flex items-center justify-between text-sm font-extrabold">
+                <span>📝 Khảo sát Thực địa 6 chỉ số &amp; Lưu lịch sử giá khu vực (${surveys.length} mốc đã lưu)</span>
+                <span class="text-emerald-600 dark:text-emerald-400 text-xs">▼ Mở rộng</span>
+              </summary>
+              <div class="mt-3 space-y-3 text-xs">
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <label class="space-y-1"><span class="text-[11px] text-zinc-500">Giá rao thực tế (triệu/m²):</span><input id="inv-srv-price" type="number" step="0.5" value="${esc(sd.pricePerM2)}" placeholder="VD: 85" class="inv-num w-full px-2.5 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900" /></label>
+                  <label class="space-y-1"><span class="text-[11px] text-zinc-500">Giá cho thuê (triệu/tháng):</span><input id="inv-srv-rent" type="number" step="0.5" value="${esc(sd.rentPerMonth)}" placeholder="VD: 12" class="inv-num w-full px-2.5 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900" /></label>
+                  <label class="space-y-1"><span class="text-[11px] text-zinc-500">Độ rộng đường trước nhà (m):</span><input id="inv-srv-road" type="number" step="0.5" value="${esc(sd.roadWidthM)}" placeholder="VD: 5.5" class="inv-num w-full px-2.5 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900" /></label>
+                  <label class="space-y-1"><span class="text-[11px] text-zinc-500">Tình trạng pháp lý:</span>
+                    <select id="inv-srv-legal" class="w-full px-2 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900">
+                      <option value="Sổ hồng/đỏ riêng" ${sd.legalStatus === 'Sổ hồng/đỏ riêng' ? 'selected' : ''}>Sổ hồng/đỏ riêng</option>
+                      <option value="Hợp đồng mua bán (chờ sổ)" ${sd.legalStatus === 'Hợp đồng mua bán (chờ sổ)' ? 'selected' : ''}>Hợp đồng mua bán (chờ sổ)</option>
+                      <option value="Đất nông nghiệp / Vi bằng (Rủi ro cao)" ${sd.legalStatus === 'Đất nông nghiệp / Vi bằng (Rủi ro cao)' ? 'selected' : ''}>Đất nông nghiệp / Vi bằng (Rủi ro)</option>
+                    </select>
+                  </label>
+                  <label class="space-y-1"><span class="text-[11px] text-zinc-500">Tỷ lệ nhà sáng đèn buổi tối (%):</span><input id="inv-srv-light" type="number" min="0" max="100" value="${esc(sd.nightLightPct)}" class="inv-num w-full px-2.5 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900" /></label>
+                  <label class="space-y-1"><span class="text-[11px] text-zinc-500">Tiến độ hạ tầng khu vực (4 bước):</span>
+                    <select id="inv-srv-infra" class="w-full px-2 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900">
+                      <option value="Mới đề xuất chủ trương" ${sd.infraStage === 'Mới đề xuất chủ trương' ? 'selected' : ''}>1. Mới đề xuất chủ trương</option>
+                      <option value="Đã duyệt vốn" ${sd.infraStage === 'Đã duyệt vốn' ? 'selected' : ''}>2. Đã duyệt vốn</option>
+                      <option value="Đang giải phóng mặt bằng" ${sd.infraStage === 'Đang giải phóng mặt bằng' ? 'selected' : ''}>3. Đang giải phóng mặt bằng</option>
+                      <option value="Đang thi công / Sắp thông xe" ${sd.infraStage === 'Đang thi công / Sắp thông xe' ? 'selected' : ''}>4. Đang thi công / Sắp thông xe</option>
+                    </select>
+                  </label>
+                </div>
+                <input id="inv-srv-flood" type="text" value="${esc(sd.floodNote)}" placeholder="Ghi chú thực địa: ngập lụt mùa mưa, tiện ích chợ/trường, có tin cắt lỗ, đấu giá đất..." class="w-full px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs" />
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <button type="button" id="inv-btn-save-survey" class="inv-primary-btn py-1.5 px-3 text-xs">💾 Lưu khảo sát vào lịch sử khu vực &amp; đưa vào Prompt</button>
+                  <button type="button" id="inv-btn-re-to-gemini" class="inv-gemini-btn py-1.5 px-3 text-xs">🪟 Hỏi sâu chuyên gia 30 năm về khu vực này</button>
+                </div>
+                ${
+                  surveys.length
+                    ? `<div class="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                        ${surveys
+                          .slice(0, 6)
+                          .map(
+                            (s) => `
+                          <div class="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/60 flex items-center justify-between gap-2 text-[11px]">
+                            <div class="min-w-0">
+                              <strong>[${esc(s.date)}] ${esc(s.area)}</strong> — ${s.pricePerM2} tr/m² · Thuê ${s.rentPerMonth} tr/th · Đường ${s.roadWidthM}m · Sáng đèn ${s.nightLightPct}% · ${esc(s.infraStage)}
+                              ${s.floodNote ? `<div class="text-zinc-500 truncate">${esc(s.floodNote)}</div>` : ''}
+                            </div>
+                            <button type="button" data-inv-del-survey="${esc(s.id)}" class="text-rose-500 font-bold shrink-0">Xóa</button>
+                          </div>`
+                          )
+                          .join('')}
+                      </div>`
+                    : ''
+                }
+              </div>
+            </details>`;
+        })()}
+
         <!-- 7 bước pháp lý bắt buộc trước khi đặt cọc -->
         <details class="inv-details inv-card">
           <summary class="flex items-center justify-between text-sm font-extrabold">
@@ -992,6 +1171,73 @@
               .join('')}
           </div>
         </details>
+
+        ${disclaimerFooterHtml()}
+      </div>`;
+  }
+
+  // --------------------------------------------------------------------------
+  // TAB 5: BIỂU ĐỒ PHÂN TÍCH CHUYÊN NGHIỆP (NGÔN NGỮ BÌNH DÂN DỄ HIỂU)
+  // --------------------------------------------------------------------------
+  function renderChartsTab() {
+    const esc = INV.utils.escapeHtml;
+    const report = INV.stateManager.evaluationReport;
+    const goldSnap = INV.stateManager.goldData;
+    const goldHist30d = uiState.goldHistory30d || report?.gold_history_30d || null;
+    const re = INV.stateManager.realEstateData;
+    const mIn = uiState.mortgageInputs;
+    const surveys = INV.storageAdapter.getRealEstateSurveys ? INV.storageAdapter.getRealEstateSurveys(re?.benchmark?.city || '') : [];
+    const reYieldPct = re?.benchmark?.aptYield || (mIn.priceBillion > 0 ? ((mIn.grossRentMillion * 12) / (mIn.priceBillion * 1000)) * 100 : 3.3);
+
+    // Tự dựng dữ liệu thống nhất nếu người dùng mở thẳng Tab Biểu đồ sau khi đã quét
+    if (!INV.stateManager.unifiedAnalytics && report && INV.deterministicExtractor?.buildUnifiedAnalyticsFromCode) {
+      INV.stateManager.unifiedAnalytics = INV.deterministicExtractor.buildUnifiedAnalyticsFromCode({
+        report,
+        goldSnap,
+        goldHist30d,
+        stockData: INV.stateManager.stockData,
+        reData: re,
+        surveys,
+      });
+    }
+    const unified = INV.stateManager.unifiedAnalytics;
+
+    return `
+      <div class="space-y-4">
+        <!-- Thanh đồng bộ 2 nguồn (Code Tự động & Dán Câu trả lời Gemini) -->
+        <div class="inv-card space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="text-sm font-black">📈 Biểu đồ phân tích chuyên nghiệp (Dễ đọc · Không dùng từ khó hiểu)</div>
+              <div class="text-[11.5px] text-zinc-500 dark:text-zinc-400">Hiển thị đồng bộ 6 loại biểu đồ (Tròn, Radar rủi ro, Cột, 5 Trụ cột, Đường thời gian, Ma trận Quyết định) từ dữ liệu quét Bước 1 hoặc câu trả lời bạn dán từ Gemini.</div>
+            </div>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button type="button" id="inv-btn-charts-rebuild-code" class="inv-secondary-btn text-xs">🔄 Dựng lại từ Code Bước 1</button>
+              <button type="button" id="inv-btn-charts-to-gemini" class="inv-gemini-btn text-xs py-1.5 px-3">🪟 Hỏi Gemini lấy dữ liệu biểu đồ</button>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-zinc-200/80 dark:border-zinc-800 space-y-1.5">
+            <label class="text-xs font-extrabold text-sky-600 dark:text-sky-300 block">📥 Dán câu trả lời từ Gemini vào đây để tự cập nhật tất cả ô dữ liệu &amp; 6 biểu đồ bên dưới:</label>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <textarea id="inv-inp-gemini-paste-ch" rows="2" placeholder="Dán toàn bộ câu trả lời của Gemini (kèm khối JSON INVEST_INTEL_SYNC_V2 ở cuối) rồi bấm Đồng bộ..." class="flex-1 p-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs font-mono"></textarea>
+              <button type="button" id="inv-btn-sync-gemini-ch" class="inv-primary-btn text-xs shrink-0 self-stretch sm:self-center">⚡ Đồng bộ &amp; Vẽ biểu đồ</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Toàn bộ 6 Biểu đồ Chuyên nghiệp -->
+        ${
+          INV.charts?.renderProAnalyticsDashboardHtml
+            ? INV.charts.renderProAnalyticsDashboardHtml(unified, {
+                goldSnap,
+                goldHist30d,
+                reYieldPct,
+                reMortgagePct: mIn.ratePct,
+                surveys,
+              })
+            : ''
+        }
 
         ${disclaimerFooterHtml()}
       </div>`;
@@ -1065,6 +1311,7 @@
     if (tab === 'gold') bodyHtml = renderGoldTab();
     else if (tab === 'stock') bodyHtml = renderStockTab();
     else if (tab === 'realestate') bodyHtml = renderRealEstateTab();
+    else if (tab === 'charts') bodyHtml = renderChartsTab();
     else bodyHtml = renderOverviewTab();
 
     host.innerHTML = `
@@ -1085,12 +1332,13 @@
           </button>
         </div>
 
-        <!-- 4 Thẻ điều hướng lớn -->
+        <!-- 5 Thẻ điều hướng lớn (Tab Biểu đồ phân tích chuyên nghiệp nằm ngay bên phải Nhà đất quanh đây) -->
         <div class="inv-tab-bar" role="tablist">
           <button type="button" data-inv-tab="overview" class="inv-tab-btn ${tab === 'overview' ? 'is-active' : ''}">🧭 Tổng quan &amp; Đánh giá</button>
           <button type="button" data-inv-tab="gold" class="inv-tab-btn ${tab === 'gold' ? 'is-active' : ''}">🥇 Giá vàng</button>
           <button type="button" data-inv-tab="stock" class="inv-tab-btn ${tab === 'stock' ? 'is-active' : ''}">📊 Chứng khoán</button>
           <button type="button" data-inv-tab="realestate" class="inv-tab-btn ${tab === 'realestate' ? 'is-active' : ''}">🏘️ Nhà đất quanh đây</button>
+          <button type="button" data-inv-tab="charts" class="inv-tab-btn ${tab === 'charts' ? 'is-active' : ''}">📈 Biểu đồ phân tích chuyên nghiệp</button>
         </div>
 
         <!-- Nội dung thẻ hiện tại -->
@@ -1113,7 +1361,7 @@
     }
     try {
       await INV.researchEvaluator.runEvaluation({
-        depth: INV.storageAdapter.getPrefs().scanDepth || 'quick',
+        depth: INV.storageAdapter.getPrefs().scanDepth || 'full',
         force: false,
         onProgress: (p) => {
           uiState.gateStatus = p.label;
@@ -1171,9 +1419,13 @@
     render();
     const { controller, signal } = INV.stateManager.createSignal();
     try {
-      const data = await INV.goldEngine.fetchLiveGoldSnapshot({ force, signal });
+      const [data, hist30d] = await Promise.all([
+        INV.goldEngine.fetchLiveGoldSnapshot({ force, signal }),
+        INV.goldEngine.fetchGoldHistory30d ? INV.goldEngine.fetchGoldHistory30d(signal) : Promise.resolve(null),
+      ]);
       if (!signal.aborted) {
         INV.stateManager.goldData = data;
+        if (hist30d) uiState.goldHistory30d = hist30d;
       }
     } catch (err) {
       if (err?.name !== 'AbortError') {
@@ -1349,10 +1601,44 @@
       render();
     });
 
+    host.querySelectorAll('[data-inv-news-chk]').forEach((chk) => {
+      chk.addEventListener('change', () => {
+        const idx = Number(chk.getAttribute('data-inv-news-chk'));
+        const list = INV.stateManager.evaluationReport?.live_headlines;
+        if (Array.isArray(list) && list[idx]) {
+          list[idx].selected_for_prompt = Boolean(chk.checked);
+          render();
+        }
+      });
+    });
+
     host.querySelector('#inv-btn-save-proxy')?.addEventListener('click', () => {
-      const val = host.querySelector('#inv-inp-proxy-url')?.value || '';
-      INV.storageAdapter.savePrefs({ proxyUrl: val.trim() });
-      NS.utils?.showToast?.('✅ Đã lưu đường dẫn cổng trung chuyển CORS.', 'success', 2800);
+      const proxyUrl = (host.querySelector('#inv-inp-proxy-url')?.value || '').trim();
+      const fredApiKey = (host.querySelector('#inv-inp-fred-key')?.value || '').trim();
+      const tcbsApiKey = (host.querySelector('#inv-inp-tcbs-key')?.value || '').trim();
+      INV.storageAdapter.savePrefs({ proxyUrl, fredApiKey, tcbsApiKey });
+      NS.utils?.showToast?.('✅ Đã lưu cấu hình Worker & khóa API cá nhân cục bộ trên máy.', 'success', 3000);
+    });
+
+    host.querySelector('#inv-btn-check-health')?.addEventListener('click', async () => {
+      if (!INV.intelHelpers?.checkSourcesHealth) return;
+      uiState.healthLoading = true;
+      render();
+      const { controller, signal } = INV.stateManager.createSignal();
+      try {
+        uiState.healthChecks = await INV.intelHelpers.checkSourcesHealth(signal);
+      } finally {
+        INV.stateManager.releaseController(controller);
+        uiState.healthLoading = false;
+        render();
+      }
+    });
+
+    host.querySelector('#inv-btn-gold-to-gemini')?.addEventListener('click', () => {
+      INV.promptComposer.copyAndLaunchGeminiSplit({
+        mode: INV.storageAdapter.getPrefs().promptMode || 'veteran30',
+        focus: 'gold',
+      });
     });
 
     host.querySelector('#inv-btn-load-logs')?.addEventListener('click', async () => {
@@ -1504,6 +1790,125 @@
       });
     });
 
+    // Khảo sát Thực địa Nhà đất 6 chỉ số (lưu lịch sử & đưa vào Prompt)
+    host.querySelector('#inv-btn-save-survey')?.addEventListener('click', () => {
+      const areaLabel = INV.stateManager.realEstateData?.areaLabel || INV.stateManager.userRegion?.areaLabel || 'Khu vực của tôi';
+      const draft = {
+        pricePerM2: host.querySelector('#inv-srv-price')?.value || '',
+        rentPerMonth: host.querySelector('#inv-srv-rent')?.value || '',
+        roadWidthM: host.querySelector('#inv-srv-road')?.value || '5.5',
+        legalStatus: host.querySelector('#inv-srv-legal')?.value || 'Sổ hồng/đỏ riêng',
+        nightLightPct: host.querySelector('#inv-srv-light')?.value || '75',
+        infraStage: host.querySelector('#inv-srv-infra')?.value || 'Đang thi công / Sắp thông xe',
+        floodNote: host.querySelector('#inv-srv-flood')?.value || '',
+      };
+      uiState.surveyDraft = draft;
+      if (!Number(draft.pricePerM2)) {
+        NS.utils?.showToast?.('⚠️ Vui lòng nhập ít nhất Giá rao thực tế (triệu/m²) trước khi lưu khảo sát.', 'warning', 2800);
+        return;
+      }
+      INV.storageAdapter.saveRealEstateSurvey({ ...draft, area: areaLabel });
+      NS.utils?.showToast?.('💾 Đã lưu mốc khảo sát thực địa vào lịch sử khu vực & tự động nạp vào Prompt Gemini!', 'success', 3400);
+      render();
+    });
+    host.querySelectorAll('[data-inv-del-survey]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        INV.storageAdapter.deleteRealEstateSurvey(btn.getAttribute('data-inv-del-survey'));
+        render();
+      });
+    });
+    host.querySelector('#inv-btn-re-to-gemini')?.addEventListener('click', () => {
+      const mIn = uiState.mortgageInputs;
+      const stress = INV.realEstateEngine.calculateMortgageStressTest({
+        priceVnd: mIn.priceBillion * 1e9,
+        loanVnd: mIn.loanBillion * 1e9,
+        years: mIn.years,
+        grossMonthlyRentVnd: mIn.grossRentMillion * 1e6,
+        annualRatePct: mIn.ratePct,
+      });
+      INV.promptComposer.copyAndLaunchGeminiSplit({
+        mode: INV.storageAdapter.getPrefs().promptMode || 'veteran30',
+        focus: 'real_estate',
+        stressResult: stress,
+      });
+    });
+
+    // Đồng bộ câu trả lời Gemini (INVEST_INTEL_SYNC_V2) -> Cập nhật toàn bộ ô dữ liệu & vẽ 6 biểu đồ!
+    const handleSyncGeminiReply = (rawText, jumpToCharts = false) => {
+      if (!INV.deterministicExtractor?.parseGeminiStructuredReply) return;
+      const res = INV.deterministicExtractor.parseGeminiStructuredReply(rawText);
+      if (!res.ok) {
+        NS.utils?.showToast?.(`⚠️ ${res.error}`, 'warning', 5200);
+        return;
+      }
+      const synced = res.data;
+      INV.stateManager.unifiedAnalytics = synced;
+      // Cập nhật đồng bộ các ô điểm số, nhận xét & pha chu kỳ ngay trên báo cáo Tổng quan!
+      const prevRep = INV.stateManager.evaluationReport || { items: [], triggered_breakers: [], live_headlines: [], as_of_date: synced.as_of_date };
+      const mkChannel = (key, name, fb) => {
+        const dm = (synced.decision_matrix || []).find((d) => d.channel.toLowerCase().includes(fb)) || {};
+        const sc = synced.channel_scores?.[key] ?? 60;
+        return {
+          name,
+          score: sc,
+          signal: dm.signal || (sc >= 72 ? 'positive' : sc <= 48 ? 'danger' : 'caution'),
+          badge: dm.decision || (sc >= 72 ? 'Thuận lợi' : sc <= 48 ? 'Thận trọng cao' : 'Theo dõi'),
+          reason: dm.reason || prevRep.channel_scores?.[key]?.reason || '',
+        };
+      };
+      INV.stateManager.evaluationReport = {
+        ...prevRep,
+        as_of_date: synced.as_of_date || prevRep.as_of_date,
+        cycle_phase: synced.cycle_phase || prevRep.cycle_phase,
+        channel_scores: {
+          cash: mkChannel('cash', 'Tiền mặt / Tiết kiệm', 'tiền'),
+          gold: mkChannel('gold', 'Vàng', 'vàng'),
+          stock: mkChannel('stock', 'Chứng khoán', 'chứng'),
+          real_estate: mkChannel('real_estate', 'Nhà đất', 'đất'),
+        },
+        narrative_summary: {
+          opportunities: synced.verdict_summary?.opportunities?.length ? synced.verdict_summary.opportunities : prevRep.narrative_summary?.opportunities || [],
+          risks: synced.verdict_summary?.risks?.length ? synced.verdict_summary.risks : prevRep.narrative_summary?.risks || [],
+          current_outlook: synced.verdict_summary?.current_outlook || prevRep.narrative_summary?.current_outlook || '',
+          upcoming_outlook: synced.verdict_summary?.upcoming_outlook || prevRep.narrative_summary?.upcoming_outlook || '',
+        },
+      };
+      if (jumpToCharts) INV.stateManager.activeTab = 'charts';
+      NS.utils?.showToast?.('✅ Đã đồng bộ cấu trúc Gemini (INVEST_INTEL_SYNC_V2) vào toàn bộ bảng dữ liệu & 6 biểu đồ chuyên nghiệp!', 'success', 4200);
+      render();
+    };
+
+    host.querySelector('#inv-btn-sync-gemini-ov')?.addEventListener('click', () => {
+      handleSyncGeminiReply(host.querySelector('#inv-inp-gemini-paste-ov')?.value || '', true);
+    });
+    host.querySelector('#inv-btn-sync-gemini-ch')?.addEventListener('click', () => {
+      handleSyncGeminiReply(host.querySelector('#inv-inp-gemini-paste-ch')?.value || '', false);
+    });
+    host.querySelector('#inv-btn-charts-rebuild-code')?.addEventListener('click', () => {
+      if (!INV.stateManager.evaluationReport) {
+        INV.stateManager.activeTab = 'overview';
+        render();
+        NS.utils?.showToast?.('💡 Hãy bấm Bước 1: Tra cứu thông tin toàn diện trước để có dữ liệu mới nhất!', 'info', 3400);
+        return;
+      }
+      INV.stateManager.unifiedAnalytics = INV.deterministicExtractor.buildUnifiedAnalyticsFromCode({
+        report: INV.stateManager.evaluationReport,
+        goldSnap: INV.stateManager.goldData,
+        goldHist30d: uiState.goldHistory30d || INV.stateManager.evaluationReport?.gold_history_30d,
+        stockData: INV.stateManager.stockData,
+        reData: INV.stateManager.realEstateData,
+        surveys: INV.storageAdapter.getRealEstateSurveys ? INV.storageAdapter.getRealEstateSurveys() : [],
+      });
+      NS.utils?.showToast?.('🔄 Đã dựng lại toàn bộ 6 biểu đồ từ số liệu API sống của Code Bước 1!', 'success', 3000);
+      render();
+    });
+    host.querySelector('#inv-btn-charts-to-gemini')?.addEventListener('click', () => {
+      INV.promptComposer.copyAndLaunchGeminiSplit({
+        mode: INV.storageAdapter.getPrefs().promptMode || 'veteran30',
+        focus: 'general',
+      });
+    });
+
     // Checklist 7 bước pháp lý
     host.querySelectorAll('[data-inv-legal-chk]').forEach((chk) => {
       chk.addEventListener('change', () => {
@@ -1529,7 +1934,7 @@
       INV.stateManager.userRegion = cachedRegion.data;
     }
     const prefs = INV.storageAdapter.getPrefs();
-    const cachedRep = INV.storageAdapter.getSession(`eval_report_${prefs.scanDepth || 'quick'}`, 30 * 60 * 1000);
+    const cachedRep = INV.storageAdapter.getSession(`eval_report_${prefs.scanDepth || 'full'}`, 30 * 60 * 1000);
     if (cachedRep?.data) {
       INV.stateManager.evaluationReport = cachedRep.data;
     }

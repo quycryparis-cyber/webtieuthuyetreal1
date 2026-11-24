@@ -73,6 +73,8 @@
     vnIndexData: null,
     realEstateData: null,
     evaluationReport: null,
+    unifiedAnalytics: null, // Hợp đồng dữ liệu thống nhất INVEST_INTEL_SYNC_V2 (từ Code Bước 1 hoặc Gemini Bước 3)
+    deterministicMatches: null, // Kết quả khớp Boolean/Regex + Guardrail stats
     lastRunAt: 0,
     runningEval: false,
     _controllers: new Set(),
@@ -115,6 +117,8 @@
       this.vnIndexData = null;
       this.realEstateData = null;
       this.evaluationReport = null;
+      this.unifiedAnalytics = null;
+      this.deterministicMatches = null;
       this.defaultKnowledge = null;
       this.activeKnowledge = null;
       this.userRegion = null;
@@ -159,14 +163,18 @@
       } catch (_e) {}
     },
 
-    // Tier 3: tiny localStorage prefs
+    // Tier 3: tiny localStorage prefs + lịch sử khảo sát thực địa Nhà đất (nhẹ, không tốn RAM nhàn rỗi)
     getPrefs() {
       const defaults = {
         recentStocks: ['FPT', 'VCB', 'HPG', 'VNM', 'VHM'],
         proxyUrl: '',
+        fredApiKey: '',
+        tcbsApiKey: '',
+        userGoal: '',
+        fieldNotes: '',
         legalChecks: {},
-        promptMode: 'plain',
-        scanDepth: 'quick',
+        promptMode: 'veteran30',
+        scanDepth: 'full', // Mặc định tra cứu Toàn diện 34 mục
         showAdvanced: false,
       };
       try {
@@ -182,6 +190,51 @@
       const next = { ...this.getPrefs(), ...patch };
       try {
         localStorage.setItem(LOCAL_PREFS_KEY, JSON.stringify(next));
+      } catch (_e) {}
+      return next;
+    },
+
+    getRealEstateSurveys(areaFilter = '') {
+      const KEY = 'noir_inv_re_surveys_v1';
+      try {
+        const list = JSON.parse(localStorage.getItem(KEY) || '[]');
+        if (!Array.isArray(list)) return [];
+        const needle = String(areaFilter || '').trim().toLowerCase();
+        if (!needle) return list;
+        return list.filter((x) => String(x.area || '').toLowerCase().includes(needle));
+      } catch (_e) {
+        return [];
+      }
+    },
+
+    saveRealEstateSurvey(entry) {
+      const KEY = 'noir_inv_re_surveys_v1';
+      const list = this.getRealEstateSurveys();
+      const rec = {
+        id: `srv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        date: entry?.date || todayIso(),
+        area: String(entry?.area || 'Chưa rõ khu vực').trim(),
+        pricePerM2: Number(entry?.pricePerM2) || 0,
+        rentPerMonth: Number(entry?.rentPerMonth) || 0,
+        roadWidthM: Number(entry?.roadWidthM) || 0,
+        legalStatus: String(entry?.legalStatus || 'Sổ hồng/đỏ riêng').trim(),
+        nightLightPct: Math.max(0, Math.min(100, Number(entry?.nightLightPct) || 0)),
+        infraStage: String(entry?.infraStage || 'Đang thi công').trim(),
+        floodNote: String(entry?.floodNote || '').trim(),
+      };
+      list.unshift(rec);
+      const trimmed = list.slice(0, 60);
+      try {
+        localStorage.setItem(KEY, JSON.stringify(trimmed));
+      } catch (_e) {}
+      return rec;
+    },
+
+    deleteRealEstateSurvey(id) {
+      const KEY = 'noir_inv_re_surveys_v1';
+      const next = this.getRealEstateSurveys().filter((x) => x.id !== id);
+      try {
+        localStorage.setItem(KEY, JSON.stringify(next));
       } catch (_e) {}
       return next;
     },
