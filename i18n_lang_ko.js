@@ -10,6 +10,12 @@
   NS.i18nPacks = NS.i18nPacks || {};
 
   const exact = Object.freeze({
+    "🌐 Địa chính trị, Chiến tranh, Lãnh đạo, Hiệp định & Tập đoàn lớn": "🌐 지정학, 전쟁, 지도자, 무역협정 및 대기업",
+    "🌐 Tin nóng Địa chính trị, Lãnh đạo, Thuế quan & Tập đoàn lớn (Cập nhật trực tiếp)": "🌐 실시간 지정학·지도자·관세·대기업 속보",
+    "Mặt bằng giá bán tham chiếu": "참고 매매 가격대",
+    "Mặt bằng giá thuê & Tỷ suất": "임대 시세 및 수익률",
+    "Mặt bằng lãi suất vay mua nhà": "주택담보대출 금리 현황",
+    "🏘️ Tin rao thực tế mới quét quanh khu vực:": "🏘️ 주변 실시간 부동산 매물:",
     "Chỉnh múi giờ, xem thời tiết, đặt báo thức và đi đầu tư :D": "시간대, 날씨, 알람 및 오늘의 투자 :D",
     "🔄 Làm tệp mới": "🔄 새 파일 작업",
     "Làm tệp mới": "새 파일 작업",

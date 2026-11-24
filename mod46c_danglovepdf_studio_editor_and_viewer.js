@@ -63,15 +63,20 @@
         <!-- Điều hướng trang & Zoom -->
         <div class="flex items-center gap-1 flex-wrap">
           <button type="button" id="btn-mod46-pv-prev" class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer">◀ Trước</button>
-          <span id="mod46-pv-page-info" class="px-2 py-1 text-xs font-extrabold text-amber-300 whitespace-nowrap">Đang dựng...</span>
+          <span id="mod46-pv-page-info" class="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-zinc-950/90 border border-zinc-700 text-xs font-extrabold text-amber-300 whitespace-nowrap" title="Bấm vào số trang để nhập và nhảy thẳng tới trang bất kỳ">
+            <span>Trang</span>
+            <input id="inp-mod46-pv-page" type="number" min="1" max="1" value="1" inputmode="numeric" aria-label="Số trang hiện tại" class="w-12 px-1 py-0.5 rounded-lg bg-zinc-900 border border-amber-400/50 text-center text-xs font-black text-amber-300 focus:outline-none focus:border-amber-300 focus:ring-1 focus:ring-amber-400" />
+            <span id="mod46-pv-page-total" class="text-zinc-300 font-bold">/ ...</span>
+          </span>
           <button type="button" id="btn-mod46-pv-next" class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer">Sau ▶</button>
           <button type="button" id="btn-mod46-pv-zoom-out" class="px-2 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-black cursor-pointer" title="Thu nhỏ">➖</button>
           <span id="mod46-pv-zoom-val" class="text-[11px] font-bold text-zinc-300 w-10 text-center">100%</span>
           <button type="button" id="btn-mod46-pv-zoom-in" class="px-2 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-black cursor-pointer" title="Phóng to">➕</button>
           <button type="button" id="btn-mod46-pv-rotate" class="px-2 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer" title="Xoay góc nhìn 90°">↻</button>
-          <select id="sel-mod46-pv-layout" class="px-2 py-1.5 rounded-xl bg-zinc-800 border border-zinc-700 text-[11px] font-bold text-zinc-100">
-            <option value="single">📄 1 trang</option>
+          <select id="sel-mod46-pv-layout" class="px-2 py-1.5 rounded-xl bg-zinc-800 border border-zinc-700 text-[11px] font-bold text-zinc-100" title="Chọn chế độ hiển thị trang">
+            <option value="scroll" selected>📜 Cuộn liên tục</option>
             <option value="spread">📖 2 trang sách</option>
+            <option value="single">📄 1 trang đơn</option>
           </select>
           <button type="button" id="btn-mod46-pv-dark" class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-indigo-600 text-xs font-bold cursor-pointer" title="Đảo màu đọc ban đêm thông minh">🌙</button>
         </div>
@@ -113,15 +118,86 @@
     let currentPage = 1;
     let zoomFactor = 1.0;
     let viewRot = 0;
-    let layoutMode = 'single';
+    let layoutMode = 'scroll'; // Mặc định cuộn liên tục mượt mà như trình đọc PDF chuẩn
     let darkInvert = false;
     let searchMatches = [];
     let searchIdx = -1;
+    let scrollObserver = null;
+    let scrollRafId = 0;
+    let resizeDebounceTimer = null;
+    let isProgrammaticScroll = false;
+    let programmaticScrollTimer = null;
+    const MAX_LIVE_CANVASES = 12;
+    const renderedSlots = new Map(); // pageNo -> { slotEl, lastTouched }
+    const renderingSlots = new Set(); // pageNo currently rendering
+    const slotMap = new Map(); // pageNo -> slotEl
+
+    const stage = pv.querySelector('#mod46-pv-stage');
+    const sidebar = pv.querySelector('#mod46-pv-sidebar');
+    const thumbsList = pv.querySelector('#mod46-pv-thumbs-list');
+    const outlineList = pv.querySelector('#mod46-pv-outline-list');
+    const pageInputEl = pv.querySelector('#inp-mod46-pv-page');
+    const pageTotalEl = pv.querySelector('#mod46-pv-page-total');
+    const zoomValEl = pv.querySelector('#mod46-pv-zoom-val');
+    const prevBtn = pv.querySelector('#btn-mod46-pv-prev');
+    const nextBtn = pv.querySelector('#btn-mod46-pv-next');
+    const searchInput = pv.querySelector('#inp-mod46-pv-search');
+    const regexChk = pv.querySelector('#chk-mod46-pv-regex');
+    const searchStat = pv.querySelector('#mod46-pv-search-stat');
+
+    const cleanupScrollTracking = () => {
+      if (scrollObserver) {
+        try { scrollObserver.disconnect(); } catch (_e) {}
+        scrollObserver = null;
+      }
+      if (scrollRafId) {
+        cancelAnimationFrame(scrollRafId);
+        scrollRafId = 0;
+      }
+      renderedSlots.clear();
+      renderingSlots.clear();
+      slotMap.clear();
+    };
+
+    const syncPageIndicator = (pageNo) => {
+      if (!pdfDoc) return;
+      const total = pdfDoc.numPages;
+      currentPage = Math.max(1, Math.min(total, Number(pageNo) || 1));
+      if (pageInputEl) {
+        pageInputEl.max = String(total);
+        if (document.activeElement !== pageInputEl) {
+          pageInputEl.value = String(currentPage);
+        }
+      }
+      if (pageTotalEl) {
+        pageTotalEl.textContent =
+          layoutMode === 'spread' && currentPage < total
+            ? `–${currentPage + 1} / ${total}`
+            : `/ ${total}`;
+      }
+      if (zoomValEl) zoomValEl.textContent = `${Math.round(zoomFactor * 100)}%`;
+      if (prevBtn) prevBtn.disabled = currentPage <= 1;
+      if (nextBtn) nextBtn.disabled = currentPage >= total;
+      // Tô sáng ảnh thu nhỏ đang xem ở cột trái
+      if (thumbsList) {
+        thumbsList.querySelectorAll('[data-thumb-page]').forEach((btn) => {
+          const isCur = Number(btn.getAttribute('data-thumb-page')) === currentPage;
+          btn.classList.toggle('border-amber-400', isCur);
+          btn.classList.toggle('ring-1', isCur);
+          btn.classList.toggle('ring-amber-400', isCur);
+          btn.classList.toggle('border-zinc-700', !isCur);
+        });
+      }
+    };
 
     const closePreview = () => {
       if (isClosed) return;
       isClosed = true;
       renderToken += 1;
+      if (resizeDebounceTimer) clearTimeout(resizeDebounceTimer);
+      if (programmaticScrollTimer) clearTimeout(programmaticScrollTimer);
+      cleanupScrollTracking();
+      stage?.removeEventListener('scroll', onStageScroll);
       document.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('resize', onResizeViewer);
       pv.querySelectorAll('canvas').forEach((c) => { c.width = 0; c.height = 0; });
@@ -133,40 +209,35 @@
         if (p && typeof p.catch === 'function') p.catch(() => {});
       } catch (_e) {}
     };
+
     const onKeyDown = (ev) => {
+      const tag = String(ev.target?.tagName || '').toLowerCase();
+      const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select';
       if ((ev.ctrlKey || ev.metaKey) && String(ev.key || '').toLowerCase() === 'f') {
         ev.preventDefault();
-        pv.querySelector('#inp-mod46-pv-search')?.focus();
+        searchInput?.focus();
       } else if (ev.key === 'Escape') {
         closePreview();
-      } else if (ev.key === 'ArrowRight') {
-        renderCurrentView(currentPage + (layoutMode === 'spread' ? 2 : 1));
-      } else if (ev.key === 'ArrowLeft') {
-        renderCurrentView(currentPage - (layoutMode === 'spread' ? 2 : 1));
+      } else if (!isTyping && ev.key === 'ArrowRight') {
+        goToPage(currentPage + (layoutMode === 'spread' ? 2 : 1));
+      } else if (!isTyping && ev.key === 'ArrowLeft') {
+        goToPage(currentPage - (layoutMode === 'spread' ? 2 : 1));
       }
     };
     document.addEventListener('keydown', onKeyDown);
     pv.querySelector('#btn-mod46-pv-close')?.addEventListener('click', closePreview);
 
-    const stage = pv.querySelector('#mod46-pv-stage');
-    const sidebar = pv.querySelector('#mod46-pv-sidebar');
-    const thumbsList = pv.querySelector('#mod46-pv-thumbs-list');
-    const outlineList = pv.querySelector('#mod46-pv-outline-list');
-    const pageInfoEl = pv.querySelector('#mod46-pv-page-info');
-    const zoomValEl = pv.querySelector('#mod46-pv-zoom-val');
-    const prevBtn = pv.querySelector('#btn-mod46-pv-prev');
-    const nextBtn = pv.querySelector('#btn-mod46-pv-next');
-    const searchInput = pv.querySelector('#inp-mod46-pv-search');
-    const regexChk = pv.querySelector('#chk-mod46-pv-regex');
-    const searchStat = pv.querySelector('#mod46-pv-search-stat');
-
     pv.querySelector('#btn-mod46-pv-sidebar')?.addEventListener('click', () => {
       sidebar?.classList.toggle('hidden');
       sidebar?.classList.toggle('flex');
-      setTimeout(() => renderCurrentView(currentPage), 40);
+      setTimeout(() => rebuildCurrentLayout(currentPage), 50);
     });
     const onResizeViewer = () => {
-      if (!isClosed && pdfDoc) renderCurrentView(currentPage);
+      if (isClosed || !pdfDoc) return;
+      if (resizeDebounceTimer) clearTimeout(resizeDebounceTimer);
+      resizeDebounceTimer = setTimeout(() => {
+        if (!isClosed && pdfDoc) rebuildCurrentLayout(currentPage);
+      }, 160);
     };
     window.addEventListener('resize', onResizeViewer);
     pv.querySelectorAll('[data-pv-stab]').forEach((b) => {
@@ -179,9 +250,7 @@
       });
     });
 
-    async function renderSinglePageCard(pageNo, isFirstPrimary) {
-      const page = await pdfDoc.getPage(pageNo);
-      const baseVp = page.getViewport({ scale: 1, rotation: (page.rotate + viewRot) % 360 });
+    function computePageDimensions(baseVp) {
       const sidebarOpen = sidebar && !sidebar.classList.contains('hidden');
       const fallbackWinW = Math.max(320, (window.innerWidth || 1024) - (sidebarOpen ? 228 : 0));
       const measuredW = Math.max(stage.clientWidth || 0, fallbackWinW);
@@ -197,13 +266,22 @@
       const renderScale = Math.max(0.55, Math.min(3.5, fitScale * zoomFactor));
       const cssW = Math.round(baseVp.width * renderScale);
       const cssH = Math.round(baseVp.height * renderScale);
-      const vp = page.getViewport({ scale: renderScale * dpr, rotation: (page.rotate + viewRot) % 360 });
+      return { renderScale, dpr, cssW, cssH };
+    }
 
-      const wrap = document.createElement('div');
-      wrap.className = 'relative rounded-xl shadow-2xl border border-zinc-700 bg-white overflow-hidden shrink-0';
+    async function paintPageIntoContainer(pageNo, wrap, isFirstPrimary, expectedToken) {
+      if (isClosed || !pdfDoc || expectedToken !== renderToken) return;
+      const page = await pdfDoc.getPage(pageNo);
+      if (isClosed || !pdfDoc || expectedToken !== renderToken) return;
+      const rot = (page.rotate + viewRot) % 360;
+      const baseVp = page.getViewport({ scale: 1, rotation: rot });
+      const { renderScale, dpr, cssW, cssH } = computePageDimensions(baseVp);
+      const vp = page.getViewport({ scale: renderScale * dpr, rotation: rot });
+
       wrap.style.width = `${cssW}px`;
       wrap.style.height = `${cssH}px`;
-      if (darkInvert) wrap.style.filter = 'invert(0.9) hue-rotate(180deg) contrast(0.95)';
+      wrap.style.filter = darkInvert ? 'invert(0.9) hue-rotate(180deg) contrast(0.95)' : '';
+      wrap.innerHTML = '';
 
       // Layer 1: HiDPI Bitmap Canvas
       const canvas = document.createElement('canvas');
@@ -221,9 +299,9 @@
       try {
         await page.render({ canvasContext: ctx, viewport: vp }).promise;
       } catch (_eRender) {
-        return wrap;
+        return;
       }
-      if (isClosed || !pdfDoc) return wrap;
+      if (isClosed || !pdfDoc || expectedToken !== renderToken) return;
 
       // Layer 2 & 3: Lớp chọn chữ trong suốt (Text Selection Layer) + Highlight Tìm kiếm Ctrl+F
       const textLayer = document.createElement('div');
@@ -240,7 +318,8 @@
 
       try {
         const tc = await page.getTextContent();
-        const cssVp = page.getViewport({ scale: renderScale, rotation: (page.rotate + viewRot) % 360 });
+        if (isClosed || !pdfDoc || expectedToken !== renderToken) return;
+        const cssVp = page.getViewport({ scale: renderScale, rotation: rot });
         for (const it of tc.items) {
           if (!it.str) continue;
           const tx = global.pdfjsLib.Util.transform(cssVp.transform, it.transform);
@@ -269,23 +348,147 @@
       badge.className = 'absolute bottom-1.5 right-2 px-2 py-0.5 rounded bg-black/70 text-[10px] font-bold text-white pointer-events-none';
       badge.textContent = `Trang ${pageNo}`;
       wrap.appendChild(badge);
+    }
+
+    async function renderSinglePageCard(pageNo, isFirstPrimary, expectedToken) {
+      const wrap = document.createElement('div');
+      wrap.className = 'relative rounded-xl shadow-2xl border border-zinc-700 bg-white overflow-hidden shrink-0';
+      wrap.dataset.pvPage = String(pageNo);
+      await paintPageIntoContainer(pageNo, wrap, isFirstPrimary, expectedToken);
       return wrap;
     }
 
-    async function renderCurrentView(targetPageNo) {
+    function evictDistantScrollCanvases() {
+      if (renderedSlots.size <= MAX_LIVE_CANVASES) return;
+      const entries = Array.from(renderedSlots.entries())
+        .filter(([pNo]) => Math.abs(pNo - currentPage) > 4)
+        .sort((a, b) => Math.abs(b[0] - currentPage) - Math.abs(a[0] - currentPage));
+      while (renderedSlots.size > MAX_LIVE_CANVASES && entries.length) {
+        const [evictNo, info] = entries.shift();
+        info.slotEl.querySelectorAll('canvas').forEach((c) => { c.width = 0; c.height = 0; });
+        info.slotEl.innerHTML = `<div class="w-full h-full flex items-center justify-center text-xs font-bold text-zinc-400 select-none">Trang ${evictNo}</div>`;
+        renderedSlots.delete(evictNo);
+      }
+    }
+
+    async function ensureScrollSlotRendered(pageNo, expectedToken) {
+      if (isClosed || !pdfDoc || expectedToken !== renderToken) return;
+      if (renderedSlots.has(pageNo) || renderingSlots.has(pageNo)) return;
+      const slot = slotMap.get(pageNo);
+      if (!slot || !slot.isConnected) return;
+      renderingSlots.add(pageNo);
+      try {
+        await paintPageIntoContainer(pageNo, slot, pageNo === 1, expectedToken);
+        if (!isClosed && expectedToken === renderToken) {
+          renderedSlots.set(pageNo, { slotEl: slot, lastTouched: Date.now() });
+          evictDistantScrollCanvases();
+        }
+      } catch (_eSlot) {
+      } finally {
+        renderingSlots.delete(pageNo);
+      }
+    }
+
+    function detectVisiblePageOnScroll() {
+      if (isClosed || !pdfDoc || layoutMode !== 'scroll' || !slotMap.size) return;
+      const stageRect = stage.getBoundingClientRect();
+      const anchorY = stageRect.top + stageRect.height * 0.32;
+      let bestPage = currentPage;
+      let bestDist = Infinity;
+      slotMap.forEach((slot, pNo) => {
+        const r = slot.getBoundingClientRect();
+        const mid = (r.top + r.bottom) / 2;
+        const dist = Math.abs(mid - anchorY);
+        if (r.top <= anchorY && r.bottom >= anchorY) {
+          bestPage = pNo;
+          bestDist = -1;
+        } else if (bestDist >= 0 && dist < bestDist) {
+          bestDist = dist;
+          bestPage = pNo;
+        }
+      });
+      if (bestPage !== currentPage) {
+        syncPageIndicator(bestPage);
+      }
+    }
+
+    function onStageScroll() {
+      if (isClosed || layoutMode !== 'scroll' || isProgrammaticScroll) return;
+      if (scrollRafId) return;
+      scrollRafId = requestAnimationFrame(() => {
+        scrollRafId = 0;
+        detectVisiblePageOnScroll();
+      });
+    }
+    stage?.addEventListener('scroll', onStageScroll, { passive: true });
+
+    async function rebuildContinuousScrollLayout(targetPageNo) {
       if (isClosed || !pdfDoc || !pv.isConnected) return;
       const myToken = ++renderToken;
+      cleanupScrollTracking();
       const total = pdfDoc.numPages;
-      currentPage = Math.max(1, Math.min(total, targetPageNo));
-      if (pageInfoEl) {
-        pageInfoEl.textContent =
-          layoutMode === 'spread' && currentPage < total
-            ? `Trang ${currentPage}–${currentPage + 1} / ${total}`
-            : `Trang ${currentPage} / ${total}`;
+      const startPage = Math.max(1, Math.min(total, Number(targetPageNo) || 1));
+      syncPageIndicator(startPage);
+
+      // Dọn canvas cũ giải phóng RAM ngay lập tức
+      stage.querySelectorAll('canvas').forEach((c) => { c.width = 0; c.height = 0; });
+      stage.innerHTML = '';
+
+      // Đo kích thước chuẩn từ trang 1 để dựng sẵn khung cuộn mượt không bị nhảy trang
+      const p1 = await pdfDoc.getPage(1);
+      if (isClosed || myToken !== renderToken) return;
+      const rot1 = (p1.rotate + viewRot) % 360;
+      const baseVp1 = p1.getViewport({ scale: 1, rotation: rot1 });
+      const { cssW: estW, cssH: estH } = computePageDimensions(baseVp1);
+
+      const frag = document.createDocumentFragment();
+      for (let i = 1; i <= total; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'mod46-pv-page-slot relative rounded-xl shadow-2xl border border-zinc-700 bg-zinc-900 overflow-hidden shrink-0';
+        slot.dataset.pvPage = String(i);
+        slot.style.width = `${estW}px`;
+        slot.style.height = `${estH}px`;
+        if (darkInvert) slot.style.filter = 'invert(0.9) hue-rotate(180deg) contrast(0.95)';
+        slot.innerHTML = `<div class="w-full h-full flex items-center justify-center text-xs font-bold text-zinc-400 select-none">⏳ Đang dựng trang ${i} / ${total}...</div>`;
+        slotMap.set(i, slot);
+        frag.appendChild(slot);
       }
-      if (zoomValEl) zoomValEl.textContent = `${Math.round(zoomFactor * 100)}%`;
-      if (prevBtn) prevBtn.disabled = currentPage <= 1;
-      if (nextBtn) nextBtn.disabled = currentPage >= total;
+      stage.appendChild(frag);
+
+      // Quan sát cuộn (tải trước vùng đệm 900px trên & dưới để lướt không bị khựng!)
+      scrollObserver = new IntersectionObserver(
+        (entries) => {
+          if (isClosed || myToken !== renderToken) return;
+          entries.forEach((en) => {
+            if (en.isIntersecting) {
+              const pNo = Number(en.target.getAttribute('data-pv-page'));
+              if (pNo) ensureScrollSlotRendered(pNo, myToken);
+            }
+          });
+        },
+        { root: stage, rootMargin: '900px 0px', threshold: 0.01 }
+      );
+      slotMap.forEach((slot) => scrollObserver.observe(slot));
+
+      // Cuộn ngay tới trang mục tiêu và vẽ ưu tiên trang mục tiêu + trang kế cận
+      const targetSlot = slotMap.get(startPage);
+      if (targetSlot) {
+        isProgrammaticScroll = true;
+        stage.scrollTop = Math.max(0, targetSlot.offsetTop - 12);
+        if (programmaticScrollTimer) clearTimeout(programmaticScrollTimer);
+        programmaticScrollTimer = setTimeout(() => { isProgrammaticScroll = false; }, 180);
+      }
+      await ensureScrollSlotRendered(startPage, myToken);
+      if (startPage + 1 <= total) ensureScrollSlotRendered(startPage + 1, myToken);
+      if (startPage - 1 >= 1) ensureScrollSlotRendered(startPage - 1, myToken);
+    }
+
+    async function renderPagedView(targetPageNo) {
+      if (isClosed || !pdfDoc || !pv.isConnected) return;
+      const myToken = ++renderToken;
+      cleanupScrollTracking();
+      const total = pdfDoc.numPages;
+      syncPageIndicator(targetPageNo);
 
       // Dọn canvas cũ giải phóng RAM ngay lập tức (LRU cleanup)
       stage.querySelectorAll('canvas').forEach((c) => { c.width = 0; c.height = 0; });
@@ -294,18 +497,82 @@
       const row = document.createElement('div');
       row.className = layoutMode === 'spread' ? 'flex flex-wrap justify-center items-start gap-3' : 'flex flex-col items-center';
       stage.appendChild(row);
+      stage.scrollTop = 0;
 
       try {
-        const card1 = await renderSinglePageCard(currentPage, true);
+        const card1 = await renderSinglePageCard(currentPage, true, myToken);
         if (isClosed || myToken !== renderToken) return;
         row.appendChild(card1);
         if (layoutMode === 'spread' && currentPage + 1 <= total) {
-          const card2 = await renderSinglePageCard(currentPage + 1, false);
+          const card2 = await renderSinglePageCard(currentPage + 1, false, myToken);
           if (isClosed || myToken !== renderToken) return;
           row.appendChild(card2);
         }
       } catch (_eView) {}
     }
+
+    async function rebuildCurrentLayout(targetPageNo) {
+      if (layoutMode === 'scroll') {
+        await rebuildContinuousScrollLayout(targetPageNo);
+      } else {
+        await renderPagedView(targetPageNo);
+      }
+    }
+
+    async function goToPage(targetPageNo, { smooth = false } = {}) {
+      if (isClosed || !pdfDoc || !pv.isConnected) return;
+      const total = pdfDoc.numPages;
+      const clamped = Math.max(1, Math.min(total, Math.round(Number(targetPageNo) || 1)));
+      if (layoutMode === 'scroll' && slotMap.size === total) {
+        syncPageIndicator(clamped);
+        const slot = slotMap.get(clamped);
+        if (slot) {
+          isProgrammaticScroll = true;
+          const topPos = Math.max(0, slot.offsetTop - 12);
+          try {
+            stage.scrollTo({ top: topPos, behavior: smooth ? 'smooth' : 'auto' });
+          } catch (_eScr) {
+            stage.scrollTop = topPos;
+          }
+          if (programmaticScrollTimer) clearTimeout(programmaticScrollTimer);
+          programmaticScrollTimer = setTimeout(() => { isProgrammaticScroll = false; }, smooth ? 420 : 120);
+        }
+        const myToken = renderToken;
+        await ensureScrollSlotRendered(clamped, myToken);
+        if (clamped + 1 <= total) ensureScrollSlotRendered(clamped + 1, myToken);
+        if (clamped - 1 >= 1) ensureScrollSlotRendered(clamped - 1, myToken);
+      } else {
+        await rebuildCurrentLayout(clamped);
+      }
+    }
+
+    // Cho phép bấm trực tiếp vào số trang (ví dụ 14) sửa thành số khác rồi Enter để nhảy thẳng tới trang đó!
+    const commitPageInputJump = () => {
+      if (!pdfDoc || !pageInputEl) return;
+      const raw = parseInt(String(pageInputEl.value || '').trim(), 10);
+      if (!Number.isFinite(raw)) {
+        pageInputEl.value = String(currentPage);
+        return;
+      }
+      const clamped = Math.max(1, Math.min(pdfDoc.numPages, raw));
+      pageInputEl.value = String(clamped);
+      pageInputEl.blur();
+      goToPage(clamped, { smooth: true });
+    };
+    pageInputEl?.addEventListener('focus', () => {
+      try { pageInputEl.select(); } catch (_e) {}
+    });
+    pageInputEl?.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        commitPageInputJump();
+      } else if (ev.key === 'Escape') {
+        ev.stopPropagation();
+        pageInputEl.value = String(currentPage);
+        pageInputEl.blur();
+      }
+    });
+    pageInputEl?.addEventListener('change', commitPageInputJump);
 
     async function runSearchAcrossPdf() {
       if (!pdfDoc) return;
@@ -314,7 +581,7 @@
       searchIdx = -1;
       if (!q) {
         if (searchStat) searchStat.textContent = '';
-        await renderCurrentView(currentPage);
+        await rebuildCurrentLayout(currentPage);
         return;
       }
       let re;
@@ -336,10 +603,10 @@
       if (searchMatches.length) {
         searchIdx = 0;
         if (searchStat) searchStat.textContent = `1/${searchMatches.length}`;
-        await renderCurrentView(searchMatches[0]);
+        await rebuildCurrentLayout(searchMatches[0]);
       } else {
         if (searchStat) searchStat.textContent = '0 kết quả';
-        await renderCurrentView(currentPage);
+        await rebuildCurrentLayout(currentPage);
       }
     }
 
@@ -348,28 +615,29 @@
       const bytes = new Uint8Array(await resItem.blob.arrayBuffer());
       pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
 
-      prevBtn?.addEventListener('click', () => renderCurrentView(currentPage - (layoutMode === 'spread' ? 2 : 1)));
-      nextBtn?.addEventListener('click', () => renderCurrentView(currentPage + (layoutMode === 'spread' ? 2 : 1)));
+      prevBtn?.addEventListener('click', () => goToPage(currentPage - (layoutMode === 'spread' ? 2 : 1), { smooth: true }));
+      nextBtn?.addEventListener('click', () => goToPage(currentPage + (layoutMode === 'spread' ? 2 : 1), { smooth: true }));
       pv.querySelector('#btn-mod46-pv-zoom-out')?.addEventListener('click', () => {
         zoomFactor = Math.max(0.5, Number((zoomFactor - 0.2).toFixed(2)));
-        renderCurrentView(currentPage);
+        rebuildCurrentLayout(currentPage);
       });
       pv.querySelector('#btn-mod46-pv-zoom-in')?.addEventListener('click', () => {
         zoomFactor = Math.min(3.0, Number((zoomFactor + 0.2).toFixed(2)));
-        renderCurrentView(currentPage);
+        rebuildCurrentLayout(currentPage);
       });
       pv.querySelector('#btn-mod46-pv-rotate')?.addEventListener('click', () => {
         viewRot = (viewRot + 90) % 360;
-        renderCurrentView(currentPage);
+        rebuildCurrentLayout(currentPage);
       });
       pv.querySelector('#sel-mod46-pv-layout')?.addEventListener('change', (ev) => {
         layoutMode = ev.target.value;
-        renderCurrentView(currentPage);
+        rebuildCurrentLayout(currentPage);
       });
       pv.querySelector('#btn-mod46-pv-dark')?.addEventListener('click', (ev) => {
         darkInvert = !darkInvert;
         ev.currentTarget.classList.toggle('bg-indigo-600', darkInvert);
-        renderCurrentView(currentPage);
+        const filterVal = darkInvert ? 'invert(0.9) hue-rotate(180deg) contrast(0.95)' : '';
+        stage.querySelectorAll('[data-pv-page]').forEach((el) => { el.style.filter = filterVal; });
       });
       searchInput?.addEventListener('keydown', (ev) => {
         if (ev.key === 'Enter') runSearchAcrossPdf();
@@ -378,12 +646,12 @@
         if (!searchMatches.length) return runSearchAcrossPdf();
         searchIdx = (searchIdx + 1) % searchMatches.length;
         if (searchStat) searchStat.textContent = `${searchIdx + 1}/${searchMatches.length}`;
-        renderCurrentView(searchMatches[searchIdx]);
+        goToPage(searchMatches[searchIdx], { smooth: true });
       });
 
-      await renderCurrentView(1);
+      await rebuildCurrentLayout(1);
 
-      // Nạp bất đồng bộ Ảnh thu nhỏ (tối đa 30 trang đầu) & Cây mục lục (Outlines)
+      // Nạp bất đồng bộ Ảnh thu nhỏ (tối đa 50 trang đầu) & Cây mục lục (Outlines)
       (async () => {
         if (!pdfDoc || !pv.isConnected) return;
         try {
@@ -400,7 +668,7 @@
                     const dest = typeof item.dest === 'string' ? await pdfDoc.getDestination(item.dest) : item.dest;
                     if (dest?.[0]) {
                       const pIdx = await pdfDoc.getPageIndex(dest[0]);
-                      renderCurrentView(pIdx + 1);
+                      goToPage(pIdx + 1, { smooth: true });
                     }
                   } catch (_eDest) {}
                 });
@@ -413,7 +681,7 @@
 
         if (thumbsList) {
           thumbsList.innerHTML = '';
-          const limit = Math.min(pdfDoc.numPages, 30);
+          const limit = Math.min(pdfDoc.numPages, 50);
           for (let i = 1; i <= limit; i++) {
             if (isClosed || !pdfDoc || !pv.isConnected) break;
             try {
@@ -427,10 +695,12 @@
               if (isClosed || !pv.isConnected) { tc.width = tc.height = 0; break; }
               const itemBtn = document.createElement('button');
               itemBtn.type = 'button';
-              itemBtn.className = 'w-full p-1.5 rounded-xl border border-zinc-700 hover:border-emerald-400 bg-zinc-950 flex flex-col items-center gap-1 cursor-pointer';
+              itemBtn.setAttribute('data-thumb-page', String(i));
+              const isCur = i === currentPage;
+              itemBtn.className = `w-full p-1.5 rounded-xl border ${isCur ? 'border-amber-400 ring-1 ring-amber-400' : 'border-zinc-700'} hover:border-emerald-400 bg-zinc-950 flex flex-col items-center gap-1 cursor-pointer`;
               itemBtn.innerHTML = `<img src="${tc.toDataURL('image/jpeg', 0.7)}" class="w-full rounded bg-white" /><span class="text-[10px] font-bold text-zinc-300">Trang ${i}</span>`;
               tc.width = tc.height = 0;
-              itemBtn.addEventListener('click', () => renderCurrentView(i));
+              itemBtn.addEventListener('click', () => goToPage(i, { smooth: true }));
               thumbsList.appendChild(itemBtn);
             } catch (_eThumbCancel) {
               break;
@@ -550,7 +820,11 @@
             </div>
             <div class="flex items-center gap-1.5">
               <button type="button" id="btn-mod46-ed-prev" class="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 font-bold cursor-pointer">◀</button>
-              <span id="mod46-ed-pg-info" class="font-extrabold text-amber-300">Trang 1/1</span>
+              <span id="mod46-ed-pg-info" class="inline-flex items-center gap-1 font-extrabold text-amber-300" title="Bấm vào số trang để nhập và nhảy thẳng tới trang muốn sửa">
+                <span>Trang</span>
+                <input id="inp-mod46-ed-page" type="number" min="1" max="1" value="1" inputmode="numeric" class="w-11 px-1 py-0.5 rounded bg-zinc-950 border border-amber-400/50 text-center text-[11px] font-black text-amber-300 focus:outline-none focus:border-amber-300" />
+                <span id="mod46-ed-pg-total" class="text-zinc-300">/ 1</span>
+              </span>
               <button type="button" id="btn-mod46-ed-next" class="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 font-bold cursor-pointer">▶</button>
             </div>
           </div>
@@ -777,7 +1051,13 @@
 
       const renderPage = async (pageNo) => {
         this.currentPage = Math.max(1, Math.min(this.totalPages, pageNo));
-        if (pgInfoEl) pgInfoEl.textContent = `Trang ${this.currentPage}/${this.totalPages}`;
+        const edPageInp = container.querySelector('#inp-mod46-ed-page');
+        const edPageTotal = container.querySelector('#mod46-ed-pg-total');
+        if (edPageInp) {
+          edPageInp.max = String(this.totalPages);
+          if (document.activeElement !== edPageInp) edPageInp.value = String(this.currentPage);
+        }
+        if (edPageTotal) edPageTotal.textContent = `/ ${this.totalPages}`;
         const page = await this.pdfDoc.getPage(this.currentPage);
         const baseVp = page.getViewport({ scale: 1 });
         this.baseWidth = baseVp.width;
@@ -969,6 +1249,22 @@
       container.querySelector('#sel-mod46-ed-stamp')?.addEventListener('change', (ev) => { this.stampLabel = ev.target.value; });
       container.querySelector('#btn-mod46-ed-prev')?.addEventListener('click', () => renderPage(this.currentPage - 1));
       container.querySelector('#btn-mod46-ed-next')?.addEventListener('click', () => renderPage(this.currentPage + 1));
+      const edPageInput = container.querySelector('#inp-mod46-ed-page');
+      const jumpEdPage = () => {
+        if (!edPageInput) return;
+        const n = parseInt(String(edPageInput.value || '').trim(), 10);
+        if (!Number.isFinite(n)) { edPageInput.value = String(this.currentPage); return; }
+        const clamped = Math.max(1, Math.min(this.totalPages, n));
+        edPageInput.value = String(clamped);
+        edPageInput.blur();
+        renderPage(clamped);
+      };
+      edPageInput?.addEventListener('focus', () => { try { edPageInput.select(); } catch (_e) {} });
+      edPageInput?.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') { ev.preventDefault(); jumpEdPage(); }
+        else if (ev.key === 'Escape') { edPageInput.value = String(this.currentPage); edPageInput.blur(); }
+      });
+      edPageInput?.addEventListener('change', jumpEdPage);
       container.querySelector('#btn-mod46-ed-undo')?.addEventListener('click', () => this.undo(redrawOverlay));
       container.querySelector('#btn-mod46-ed-redo')?.addEventListener('click', () => this.redo(redrawOverlay));
       container.querySelector('#btn-mod46-ed-clear-page')?.addEventListener('click', () => {

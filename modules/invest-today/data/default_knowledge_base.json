@@ -1,8 +1,8 @@
 {
-  "schema_version": "2.0.0",
+  "schema_version": "3.0.0",
   "metadata": {
     "title": "Cẩm Nang Toàn Diện Đánh Giá Và Ra Quyết Định Đầu Tư Vàng, Chứng Khoán, Bất Động Sản Và Hệ Điều Hành AI Thực Chiến",
-    "short_title": "Khung Phân Tích Đầu Tư (7 chương — Vàng, Chứng khoán, Nhà đất)",
+    "short_title": "Khung Phân Tích Đầu Tư Toàn Diện (7 chương + Địa chính trị, Lãnh đạo, Hiệp định & Tập đoàn lớn)",
     "source_file": "Khung Phân Tích Đầu Tư.docx",
     "chapters_count": 7,
     "compiled_as_of": "2026-11-24",
@@ -108,6 +108,72 @@
     "vnexpress.net"
   ],
   "search_checklist": [
+    {
+      "id": "geo_wars_chokepoints",
+      "layer": "geopolitics_events",
+      "quick": true,
+      "plain_label": "Chiến tranh, xung đột quân sự & điểm nghẽn vận tải toàn cầu",
+      "technical_label": "Geopolitical Conflicts, Wars & Maritime Chokepoints (Hormuz / Red Sea / Ukraine / Taiwan)",
+      "unit": "sự kiện nóng",
+      "freq": "Hàng ngày",
+      "query_template": "global war conflict Middle East Iran Ukraine shipping oil crisis latest {MONTH_EN} {YEAR}",
+      "baseline_2026_11_24": "Xung đột địa chính trị & tuyến vận tải dầu khí là ngòi nổ trực tiếp cho giá dầu, lạm phát và vàng trú ẩn"
+    },
+    {
+      "id": "geo_leaders_tariffs",
+      "layer": "geopolitics_events",
+      "quick": true,
+      "plain_label": "Quyết định của lãnh đạo lớn (Tổng thống Mỹ/Trump, G7, BRICS) & thuế quan",
+      "technical_label": "World Leaders Policy Shifts, US Presidential Orders, Tariffs & Sanctions",
+      "unit": "chính sách",
+      "freq": "Hàng ngày",
+      "query_template": "Trump US president tariff sanctions foreign policy decision market impact {MONTH_EN} {YEAR}",
+      "baseline_2026_11_24": "Tuyên bố thuế quan, trừng phạt, cắt thuế hay quyết định quân sự của lãnh đạo cường quốc đảo chiều tức thì USD, vàng và chứng khoán"
+    },
+    {
+      "id": "geo_trade_treaties",
+      "layer": "geopolitics_events",
+      "quick": true,
+      "plain_label": "Hiệp định thương mại (FTA), dịch chuyển chuỗi cung ứng & kiểm soát công nghệ",
+      "technical_label": "Bilateral Trade Deals, FTAs, Supply Chain Realignment & Export Controls",
+      "unit": "hiệp định",
+      "freq": "Hàng tuần",
+      "query_template": "international trade agreement tariff deal semiconductor export control supply chain {MONTH_EN} {YEAR}",
+      "baseline_2026_11_24": "Hiệp định thương mại và xu hướng China+1 quyết định dòng vốn FDI, xuất khẩu và bất động sản khu công nghiệp"
+    },
+    {
+      "id": "geo_mega_corps_ai",
+      "layer": "geopolitics_events",
+      "quick": true,
+      "plain_label": "Động thái các tập đoàn khổng lồ (Big Tech AI, OPEC+, Ngân hàng & Tập đoàn BĐS)",
+      "technical_label": "Mega-Corp Catalysts (NVIDIA/Big Tech AI CapEx, OPEC+ Supply, Systemic Banks/Developers)",
+      "unit": "tin doanh nghiệp",
+      "freq": "Hàng ngày",
+      "query_template": "NVIDIA Apple Microsoft AI capex OPEC oil major bank corporate earnings shock {MONTH_EN} {YEAR}",
+      "baseline_2026_11_24": "Sức khỏe đầu tư hạ tầng AI (BIS cảnh báo rủi ro ổn định tài chính), sản lượng OPEC+ và vỡ nợ tập đoàn lớn dẫn dắt khẩu vị rủi ro toàn cầu"
+    },
+    {
+      "id": "geo_us_debt_tga",
+      "layer": "geopolitics_events",
+      "quick": true,
+      "plain_label": "Nợ công Mỹ, Tài khoản Kho bạc (TGA) & Áp đảo tài khóa",
+      "technical_label": "US National Debt (Debt to the Penny), Treasury TGA & Sovereign Fiscal Risk",
+      "unit": "nghìn tỷ USD",
+      "freq": "Hàng ngày (API chính thức)",
+      "query_template": "US national debt fiscal deficit Treasury TGA balance {MONTH_EN} {YEAR}",
+      "baseline_2026_11_24": "Nợ công Mỹ ~100% GDP, chi trả lãi vay >21% thu ngân sách — lực đỡ cấu trúc dài hạn cho vàng"
+    },
+    {
+      "id": "geo_risk_barometer",
+      "layer": "geopolitics_events",
+      "quick": true,
+      "plain_label": "Nhiệt kế rủi ro & thanh khoản toàn cầu 24/7 (Vàng/Bạc & Bitcoin)",
+      "technical_label": "Gold/Silver Ratio & 24/7 Global Liquidity Barometer (BTC/USD)",
+      "unit": "tỷ số / USD",
+      "freq": "Thời gian thực (API trực tiếp)",
+      "query_template": "gold silver ratio bitcoin global liquidity risk sentiment {MONTH_EN} {YEAR}",
+      "baseline_2026_11_24": "Vàng/Bạc >80 phản ánh tâm lý phòng thủ (risk-off); BTC/USD phản ánh độ mở thanh khoản toàn cầu 24/7"
+    },
     {
       "id": "fed_rate",
       "layer": "global_macro",
@@ -376,7 +442,7 @@
   "scoring_rules": {
     "gold": {
       "ounce_per_tael": 1.205653,
-      "default_shipping_insurance_usd": 1.0,
+      "default_shipping_insurance_usd": 1,
       "default_import_tax_rate": 0.01,
       "default_processing_fee_vnd": 40000,
       "weights": {
@@ -393,8 +459,8 @@
       },
       "spread_thresholds_pct": {
         "green_max": 1.5,
-        "yellow_max": 3.0,
-        "red_breaker": 3.0
+        "yellow_max": 3,
+        "red_breaker": 3
       }
     },
     "stock": {
@@ -405,7 +471,7 @@
       "damodaran_vn_crp_pct": 3.9,
       "damodaran_total_erp_pct": 8.13,
       "damodaran_cost_of_equity_pct": 10.14,
-      "vnindex_pe_10y_avg": 14.0,
+      "vnindex_pe_10y_avg": 14,
       "margin_sessions_caution": 15,
       "margin_sessions_danger": 25,
       "forensic_thresholds": {
@@ -419,15 +485,63 @@
         "sloan_healthy_pct": -10
       },
       "sector_tickers": {
-        "bank": ["VCB", "BID", "CTG", "TCB", "MBB", "ACB", "VPB", "STB", "HDB", "TPB", "VIB", "SHB", "SSB", "EIB", "OCB", "LPB", "MSB", "NAB", "BAB", "ABB"],
-        "real_estate": ["VHM", "VIC", "VRE", "NVL", "KDH", "NLG", "DXG", "PDR", "DIG", "CEO", "TCH", "HDC", "AGG", "NTL", "KBC", "IDC", "SZC", "VGC", "BCM", "SIP", "PHR"]
+        "bank": [
+          "VCB",
+          "BID",
+          "CTG",
+          "TCB",
+          "MBB",
+          "ACB",
+          "VPB",
+          "STB",
+          "HDB",
+          "TPB",
+          "VIB",
+          "SHB",
+          "SSB",
+          "EIB",
+          "OCB",
+          "LPB",
+          "MSB",
+          "NAB",
+          "BAB",
+          "ABB"
+        ],
+        "real_estate": [
+          "VHM",
+          "VIC",
+          "VRE",
+          "NVL",
+          "KDH",
+          "NLG",
+          "DXG",
+          "PDR",
+          "DIG",
+          "CEO",
+          "TCH",
+          "HDC",
+          "AGG",
+          "NTL",
+          "KBC",
+          "IDC",
+          "SZC",
+          "VGC",
+          "BCM",
+          "SIP",
+          "PHR"
+        ]
       }
     },
     "real_estate": {
       "operating_vacancy_deduction_rate": 0.15,
       "dscr_safe_min": 1.2,
-      "dscr_strong_min": 2.0,
-      "stress_test_rates_pct": [10, 12, 14, 15],
+      "dscr_strong_min": 2,
+      "stress_test_rates_pct": [
+        10,
+        12,
+        14,
+        15
+      ],
       "city_yield_benchmarks_pct": {
         "hanoi_apt": 2.32,
         "hcm_apt": 3.3,
@@ -545,5 +659,23 @@
       "detail": "Tự đi thử giờ cao điểm, xem tỷ lệ người ở thật bán kính 3–5 km, lượng giao dịch công chứng 6 tháng qua và bấm thử lãi vay tăng thêm +2%."
     }
   ],
-  "core_principles_digest": "KHUNG QUY TẮC CỐT LÕI (TỪ CẨM NANG 7 CHƯƠNG):\n1. CHUỖI TRUYỀN DẪN 4 TẦNG: Thanh khoản toàn cầu (Fed Net Liquidity = WALCL - TGA - ON RRP, lãi suất Fed/ECB/BoJ/PBOC, lợi suất thực TIPS 10Y, DXY, dầu Brent) -> Vĩ mô & tiền tệ Việt Nam (GDP, CPI mục tiêu 4,5%, tỷ giá VCB, bơm/hút OMO, lãi suất LNH qua đêm vs 3 tháng, tín dụng, nợ xấu, chuẩn Basel III TT 50/2026) -> Định giá vi mô từng tài sản -> Phân bổ vốn & Quản trị rủi ro.\n2. ĐỒNG HỒ CHU KỲ 4 PHA (Merrill Lynch & Ray Dalio All Weather): Pha I Tái lạm phát (ưu tiên tiền gửi dài/trái phiếu, gom dần vàng); Pha II Phục hồi (ưu tiên cổ phiếu tăng trưởng); Pha III Quá nhiệt (tăng tiền mặt sinh lãi, thận trọng đòn bẩy, chọn lọc cổ phiếu rẻ không margin); Pha IV Đình lạm (tiền mặt + vàng phòng thủ, tránh tuyệt đối vay nợ).\n3. QUY TẮC VÀNG (5 nhân tố: Chi phí cơ hội TIPS/DXY 30%, Mua ròng NHTW & ETF 25%, Rủi ro tài khóa & Giá sàn khai thác AISC 20%, Cấu trúc nội địa VN 15%, Vị thế COMEX COT 10%): Công thức quy đổi 1 lượng = 1,205653 troy oz; Landed Parity = [(XAU + phí VC&BH) * (1 + thuế NK) * 1,205653 * Tỷ giá bán VCB] + phí gia công. CHỐT CHẶN ĐỎ: KHÔNG mua đuổi vàng vật chất VN khi chênh lệch với thế giới > 10% hoặc khoảng cách mua–bán > 3%. Lưu ý NĐ 390/2026: mua bán vàng cộng dồn >= 5 triệu/ngày bắt buộc chuyển khoản.\n4. QUY TẮC CHỨNG KHOÁN: So sánh Tỷ suất thu nhập (Earnings Yield = 100/P/E) với TPCP 10Y và Chi phí vốn chuẩn Damodaran (Ke ~10,14% với Rf sạch + Total ERP 8,13%). Theo dõi dư nợ margin/thanh khoản phiên và khối ngoại + lộ trình FTSE. Phân tách theo ngành: (a) Sản xuất/Công nghệ/Tiêu dùng chạy Bộ tứ Pháp y (Beneish M > -1,78 cờ đỏ; Altman Z < 1,81 nguy cơ, > 2,99 an toàn; Piotroski F 7–9 khỏe, 0–2 yếu; Sloan Ratio > +10% báo động lãi giấy) + DuPont 5 nhân tố; (b) Ngân hàng KHÔNG dùng M/Z-Score mà soi P/B vs ROE, NIM, CASA, nợ xấu/LLR, CAR & sẵn sàng LCR/NSFR TT 50/2026; (c) BĐS niêm yết soi CFO thực, nợ/VCSH, lịch đáo hạn trái phiếu & RNAV.\n5. QUY TẮC BẤT ĐỘNG SẢN: Kiểm định dòng tiền cho thuê thực tế sau trừ 15% chi phí vận hành/trống phòng (NOI) chia cho tiền trả góp gốc+lãi (PMT) tại các kịch bản lãi suất thả nổi 10%–12%–14%–15%/năm. Chuẩn an toàn DSCR >= 1,2x (nếu < 1,0x là âm dòng tiền, kích hoạt chốt chặn đỏ không vay đòn bẩy cao). Bắt buộc kiểm tra đủ 7 bước pháp lý (Luật Đất đai & Luật KDBĐS sửa đổi 21/11/2026: bảng giá đất + hệ số K từ 2028, chế tài đất bỏ hoang, trần cọc 5%/đợt đầu 30%/trước bàn giao 70%/trước sổ 95%).\n6. QUẢN TRỊ VỐN & CHỐNG THIÊN KIẾN AI: Định cỡ vị thế tối đa Half-Kelly; tái cân bằng theo quy tắc 5/25 ưu tiên bằng dòng tiền mới; tư duy Quả tạ (Barbell) loại bỏ tài sản dễ vỡ. Áp dụng 5 Cầu chì Ngắt mạch: (1) Thương vụ >5% NAV hoặc BĐS phải tự thẩm định thực địa; (2) Dữ liệu thiếu/mâu thuẫn -> chờ xác minh; (3) Cấm vay margin khi sàn căng & cấm vay mua nhà DSCR < 1,2x; (4) Cấm mua đuổi vàng chênh >10% hoặc spread >3%; (5) Lưu Nhật ký Kiểm toán Quyết định. Khi phân tích bằng AI phải trình bày cân bằng hai chiều Phe Bò vs Phe Gấu, cấm bịa số liệu (ghi DATA_MISSING nếu thiếu) và luôn kết thúc bằng: 'Nhận xét chỉ mang tính tham khảo thôi.'"
+  "core_principles_digest": "KHUNG QUY TẮC CỐT LÕI (TỪ CẨM NANG 7 CHƯƠNG):\n1. CHUỖI TRUYỀN DẪN 4 TẦNG: Thanh khoản toàn cầu (Fed Net Liquidity = WALCL - TGA - ON RRP, lãi suất Fed/ECB/BoJ/PBOC, lợi suất thực TIPS 10Y, DXY, dầu Brent) -> Vĩ mô & tiền tệ Việt Nam (GDP, CPI mục tiêu 4,5%, tỷ giá VCB, bơm/hút OMO, lãi suất LNH qua đêm vs 3 tháng, tín dụng, nợ xấu, chuẩn Basel III TT 50/2026) -> Định giá vi mô từng tài sản -> Phân bổ vốn & Quản trị rủi ro.\n2. ĐỒNG HỒ CHU KỲ 4 PHA (Merrill Lynch & Ray Dalio All Weather): Pha I Tái lạm phát (ưu tiên tiền gửi dài/trái phiếu, gom dần vàng); Pha II Phục hồi (ưu tiên cổ phiếu tăng trưởng); Pha III Quá nhiệt (tăng tiền mặt sinh lãi, thận trọng đòn bẩy, chọn lọc cổ phiếu rẻ không margin); Pha IV Đình lạm (tiền mặt + vàng phòng thủ, tránh tuyệt đối vay nợ).\n3. QUY TẮC VÀNG (5 nhân tố: Chi phí cơ hội TIPS/DXY 30%, Mua ròng NHTW & ETF 25%, Rủi ro tài khóa & Giá sàn khai thác AISC 20%, Cấu trúc nội địa VN 15%, Vị thế COMEX COT 10%): Công thức quy đổi 1 lượng = 1,205653 troy oz; Landed Parity = [(XAU + phí VC&BH) * (1 + thuế NK) * 1,205653 * Tỷ giá bán VCB] + phí gia công. CHỐT CHẶN ĐỎ: KHÔNG mua đuổi vàng vật chất VN khi chênh lệch với thế giới > 10% hoặc khoảng cách mua–bán > 3%. Lưu ý NĐ 390/2026: mua bán vàng cộng dồn >= 5 triệu/ngày bắt buộc chuyển khoản.\n4. QUY TẮC CHỨNG KHOÁN: So sánh Tỷ suất thu nhập (Earnings Yield = 100/P/E) với TPCP 10Y và Chi phí vốn chuẩn Damodaran (Ke ~10,14% với Rf sạch + Total ERP 8,13%). Theo dõi dư nợ margin/thanh khoản phiên và khối ngoại + lộ trình FTSE. Phân tách theo ngành: (a) Sản xuất/Công nghệ/Tiêu dùng chạy Bộ tứ Pháp y (Beneish M > -1,78 cờ đỏ; Altman Z < 1,81 nguy cơ, > 2,99 an toàn; Piotroski F 7–9 khỏe, 0–2 yếu; Sloan Ratio > +10% báo động lãi giấy) + DuPont 5 nhân tố; (b) Ngân hàng KHÔNG dùng M/Z-Score mà soi P/B vs ROE, NIM, CASA, nợ xấu/LLR, CAR & sẵn sàng LCR/NSFR TT 50/2026; (c) BĐS niêm yết soi CFO thực, nợ/VCSH, lịch đáo hạn trái phiếu & RNAV.\n5. QUY TẮC BẤT ĐỘNG SẢN: Kiểm định dòng tiền cho thuê thực tế sau trừ 15% chi phí vận hành/trống phòng (NOI) chia cho tiền trả góp gốc+lãi (PMT) tại các kịch bản lãi suất thả nổi 10%–12%–14%–15%/năm. Chuẩn an toàn DSCR >= 1,2x (nếu < 1,0x là âm dòng tiền, kích hoạt chốt chặn đỏ không vay đòn bẩy cao). Bắt buộc kiểm tra đủ 7 bước pháp lý (Luật Đất đai & Luật KDBĐS sửa đổi 21/11/2026: bảng giá đất + hệ số K từ 2028, chế tài đất bỏ hoang, trần cọc 5%/đợt đầu 30%/trước bàn giao 70%/trước sổ 95%).\n6. QUẢN TRỊ VỐN & CHỐNG THIÊN KIẾN AI: Định cỡ vị thế tối đa Half-Kelly; tái cân bằng theo quy tắc 5/25 ưu tiên bằng dòng tiền mới; tư duy Quả tạ (Barbell) loại bỏ tài sản dễ vỡ. Áp dụng 5 Cầu chì Ngắt mạch: (1) Thương vụ >5% NAV hoặc BĐS phải tự thẩm định thực địa; (2) Dữ liệu thiếu/mâu thuẫn -> chờ xác minh; (3) Cấm vay margin khi sàn căng & cấm vay mua nhà DSCR < 1,2x; (4) Cấm mua đuổi vàng chênh >10% hoặc spread >3%; (5) Lưu Nhật ký Kiểm toán Quyết định. Khi phân tích bằng AI phải trình bày cân bằng hai chiều Phe Bò vs Phe Gấu, cấm bịa số liệu (ghi DATA_MISSING nếu thiếu) và luôn kết thúc bằng: 'Nhận xét chỉ mang tính tham khảo thôi.'\n7. MA TRẬN ĐỊA CHÍNH TRỊ, LÃNH ĐẠO, HIỆP ĐỊNH & TẬP ĐOÀN LỚN (PESTLE + EVENT-DRIVEN): Bắt buộc quét & phân tích 4 trụ cột sự kiện ngoài con số lãi suất thuần túy: (a) Chiến tranh, xung đột quân sự, điểm nghẽn năng lượng/hàng hải; (b) Quyết định của lãnh đạo cường quốc (như Tổng thống Mỹ/Trump về thuế quan, trừng phạt, chính sách đối ngoại/quân sự, hội nghị G7/BRICS); (c) Hiệp định thương mại (FTA), dịch chuyển chuỗi cung ứng & kiểm soát công nghệ; (d) Động thái các tập đoàn khổng lồ (Big Tech AI CapEx, OPEC+, sức khỏe ngân hàng & tập đoàn BĐS lớn). Luôn phân tích rõ chuỗi truyền dẫn: Sự kiện ➔ Dầu/Chuỗi cung ứng ➔ Lạm phát & Lãi suất ➔ DXY/Tỷ giá ➔ Tác động cụ thể lên Vàng, Chứng khoán và Nhà đất tại đúng quốc gia/khu vực của người dùng.",
+  "event_transmission_matrix": [
+    {
+      "catalyst": "Chiến tranh / Xung đột quân sự / Phong tỏa eo biển (Hormuz, Biển Đỏ, Đài Loan)",
+      "transmission": "Giá dầu & cước vận tải bật mạnh ➔ Lạm phát chi phí đẩy quay lại ➔ NHTW khó hạ lãi suất ➔ Cổ phiếu đòn bẩy & BĐS vay nợ chịu áp lực, Vàng quốc tế hút dòng tiền trú ẩn (nhưng cẩn thận nhiễu ngắn hạn nếu USD tăng sốc)."
+    },
+    {
+      "catalyst": "Quyết định lãnh đạo cường quốc (Tổng thống Mỹ/Trump áp thuế quan, trừng phạt, chiến tranh thương mại)",
+      "transmission": "Thuế quan đẩy lạm phát nhập khẩu Mỹ & làm đồng USD (DXY) biến động mạnh ➔ Dòng vốn ngoại rút khỏi thị trường mới nổi ➔ Các nước xuất siêu lớn chịu sức ép tỷ giá, doanh nghiệp xuất khẩu phân hóa mạnh theo mức thuế đối ứng."
+    },
+    {
+      "catalyst": "Hiệp định thương mại (FTA), nâng hạng thị trường, cải cách luật nội địa",
+      "transmission": "Mở rộng dòng vốn FDI & vốn quỹ chỉ số quốc tế ➔ Tích cực trung–dài hạn cho chứng khoán đầu ngành, hạ tầng và bất động sản khu công nghiệp."
+    },
+    {
+      "catalyst": "Tập đoàn khổng lồ (Big Tech AI CapEx, OPEC+ cắt sản lượng, ngân hàng/tập đoàn BĐS vỡ nợ)",
+      "transmission": "Thay đổi kỳ vọng lợi nhuận toàn ngành & tạo hiệu ứng lan tỏa tín dụng ➔ Nếu tín dụng thắt chặt đột ngột, tiền mặt và tài sản không đòn bẩy là vua."
+    }
+  ]
 }

@@ -135,8 +135,9 @@
     const prog = uiState.evalProgress;
 
     const layersMeta = [
-      { key: 'global_macro', title: '🌍 Tình hình thế giới (Dòng tiền, Lãi suất & Giá dầu)' },
-      { key: 'vn_macro', title: '🇻🇳 Tình hình Việt Nam (Tăng trưởng, Lạm phát, Tỷ giá & Ngân hàng)' },
+      { key: 'geopolitics_events', title: '🌐 Địa chính trị, Chiến tranh, Lãnh đạo, Hiệp định & Tập đoàn lớn' },
+      { key: 'global_macro', title: '🌍 Tình hình thế giới (Dòng tiền, Lãi suất, Nợ công & DXY)' },
+      { key: 'vn_macro', title: '🏳️ Tình hình kinh tế & tiền tệ tại Quốc gia của bạn (GDP, CPI, Tỷ giá & FDI)' },
       { key: 'gold', title: '🥇 Kênh Vàng (Thế giới, SJC/9999 & Chính sách)' },
       { key: 'stock', title: '📊 Kênh Chứng khoán (Định giá, Margin & Khối ngoại)' },
       { key: 'real_estate', title: '🏘️ Kênh Nhà đất (Lãi vay, Tiền thuê, KCN & Luật mới)' },
@@ -171,7 +172,7 @@
           <div class="inv-card inv-sig-neutral">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <div class="text-xs font-extrabold uppercase tracking-wide">🧭 Giai đoạn kinh tế hiện tại</div>
-              <div class="text-[11px] opacity-80">Ngày chốt: ${esc(report.as_of_date)} · ${report.live_count} mục live / ${report.missing_count} mục cần đối chiếu thêm</div>
+              <div class="text-[11px] opacity-80">Ngày chốt: ${esc(report.as_of_date)} · ✅ ${report.live_count} nguồn API trực tiếp${report.benchmark_count ? ` · 📘 ${report.benchmark_count} mốc Cẩm nang` : ''}</div>
             </div>
             <div class="text-sm font-extrabold mt-1">${esc(report.cycle_phase?.label || '')}</div>
             <p class="text-xs mt-1 opacity-90">${esc(report.cycle_phase?.plain_advice || '')}</p>
@@ -213,6 +214,30 @@
                     </div>`
                     )
                     .join('')}
+                </div>`
+              : ''
+          }
+
+          <!-- Tin tức nóng Địa chính trị, Lãnh đạo, Thuế quan & Tập đoàn lớn trực tiếp -->
+          ${
+            (report.live_headlines || []).length
+              ? `<div class="inv-card space-y-2">
+                  <div class="text-xs font-extrabold text-sky-700 dark:text-sky-300">🌐 Tin nóng Địa chính trị, Lãnh đạo, Thuế quan &amp; Tập đoàn lớn (Cập nhật trực tiếp)</div>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    ${report.live_headlines
+                      .slice(0, 6)
+                      .map(
+                        (h) => `
+                      <a href="${esc(h.url)}" target="_blank" rel="noopener noreferrer" class="p-2 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/60 hover:border-emerald-500 transition text-xs block space-y-0.5">
+                        <div class="font-bold line-clamp-2">${esc(h.title)}</div>
+                        <div class="text-[10.5px] text-zinc-500 flex justify-between gap-2">
+                          <span>${esc(h.source)}</span>
+                          <span class="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">Đọc ↗</span>
+                        </div>
+                      </a>`
+                      )
+                      .join('')}
+                  </div>
                 </div>`
               : ''
           }
@@ -819,6 +844,46 @@
                   </div>
                   <span class="inv-pill inv-sig-neutral">Tỷ suất thuê tham chiếu: ${re.benchmark?.aptYield || 3.05}%/năm</span>
                 </div>
+
+                <!-- Số liệu mặt bằng giá & lãi suất hiển thị TRỰC TIẾP trên màn hình -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                  <div class="inv-card-soft space-y-0.5">
+                    <div class="text-[11px] text-zinc-500">${re.liveStats ? `Giá rao thực tế (${re.liveStats.sampleCount} tin gần đây)` : 'Mặt bằng giá bán tham chiếu'}</div>
+                    <div class="inv-num font-black text-emerald-700 dark:text-emerald-400">
+                      ${re.liveStats ? `TB ${re.liveStats.medianPpm2.toFixed(1)} tr/m² (${re.liveStats.minPpm2.toFixed(0)}–${re.liveStats.maxPpm2.toFixed(0)} tr/m²)` : esc(re.benchmark?.priceRangeM2 || '45 – 95 triệu/m²')}
+                    </div>
+                  </div>
+                  <div class="inv-card-soft space-y-0.5">
+                    <div class="text-[11px] text-zinc-500">Mặt bằng giá thuê &amp; Tỷ suất</div>
+                    <div class="inv-num font-black text-sky-700 dark:text-sky-400">
+                      ${re.liveStats && Number.isFinite(re.liveStats.avgRentMo) ? `~${(re.liveStats.avgRentMo / 1e6).toFixed(1)} tr/tháng` : esc(re.benchmark?.rentRangeMo || '10 – 18 triệu/tháng')} · ${re.benchmark?.aptYield || 3.05}%/năm
+                    </div>
+                  </div>
+                  <div class="inv-card-soft space-y-0.5">
+                    <div class="text-[11px] text-zinc-500">Mặt bằng lãi suất vay mua nhà</div>
+                    <div class="inv-num font-black text-rose-600 dark:text-rose-400">${esc(re.benchmark?.mortgageRange || '12%–15%/năm (thả nổi)')}</div>
+                  </div>
+                </div>
+
+                ${
+                  (re.liveAds || []).length
+                    ? `<div class="space-y-1.5">
+                        <div class="text-xs font-extrabold text-emerald-700 dark:text-emerald-400">🏘️ Tin rao thực tế mới quét quanh khu vực:</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          ${re.liveAds
+                            .map(
+                              (ad) => `
+                            <a href="${esc(ad.url)}" target="_blank" rel="noopener noreferrer" class="p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/60 hover:border-emerald-500 text-xs block">
+                              <div class="font-bold truncate">${esc(ad.title)}</div>
+                              <div class="text-[11px] text-emerald-700 dark:text-emerald-400 font-extrabold">${esc(ad.price)} ${ad.size ? `· ${esc(ad.size)}` : ''} ${ad.ppm2 ? `(${esc(ad.ppm2)})` : ''}</div>
+                            </a>`
+                            )
+                            .join('')}
+                        </div>
+                      </div>`
+                    : ''
+                }
+
                 <p class="text-xs ${re.benchmark?.sparseWarning ? 'inv-sig-caution p-2.5 rounded-xl border' : 'text-zinc-600 dark:text-zinc-300'}">${esc(re.benchmark?.note || '')}</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   ${(re.links || [])
@@ -1391,12 +1456,23 @@
     });
 
     const manualAreaInp = host.querySelector('#inv-inp-manual-area');
-    const applyManualArea = () => {
+    const applyManualArea = async () => {
       try {
         uiState.reError = '';
         uiState.reManualInput = manualAreaInp?.value || '';
-        INV.stateManager.realEstateData = INV.realEstateEngine.resolveManualArea(uiState.reManualInput);
+        const base = INV.realEstateEngine.resolveManualArea(uiState.reManualInput);
+        INV.stateManager.realEstateData = base;
         render();
+        const { controller, signal } = INV.stateManager.createSignal();
+        try {
+          const enriched = await INV.realEstateEngine.enrichRealEstateLiveMetrics(base, signal);
+          if (!signal.aborted) {
+            INV.stateManager.realEstateData = enriched;
+            render();
+          }
+        } finally {
+          INV.stateManager.releaseController(controller);
+        }
       } catch (err) {
         uiState.reError = err?.message || '';
         render();

@@ -10,6 +10,12 @@
   NS.i18nPacks = NS.i18nPacks || {};
 
   const exact = Object.freeze({
+    "🌐 Địa chính trị, Chiến tranh, Lãnh đạo, Hiệp định & Tập đoàn lớn": "🌐 地缘政治、战争、领导人、贸易协定与大企业",
+    "🌐 Tin nóng Địa chính trị, Lãnh đạo, Thuế quan & Tập đoàn lớn (Cập nhật trực tiếp)": "🌐 实时地缘政治、领导人、关税与巨头快讯",
+    "Mặt bằng giá bán tham chiếu": "参考售价区间",
+    "Mặt bằng giá thuê & Tỷ suất": "租金区间与收益率",
+    "Mặt bằng lãi suất vay mua nhà": "当前房贷利率水平",
+    "🏘️ Tin rao thực tế mới quét quanh khu vực:": "🏘️ 附近最新抓取的真实房源:",
     "Chỉnh múi giờ, xem thời tiết, đặt báo thức và đi đầu tư :D": "时区、天气、闹钟与今日投资 :D",
     "🔄 Làm tệp mới": "🔄 处理新文件",
     "Làm tệp mới": "处理新文件",
