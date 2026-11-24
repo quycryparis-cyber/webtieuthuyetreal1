@@ -552,6 +552,7 @@
             </div>
             <div class="flex items-center gap-2 flex-wrap">
               <button type="button" id="btn-mod46-back-hub" class="hidden px-3 py-1.5 rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer">← Danh mục công cụ</button>
+              <button type="button" id="btn-mod46-header-new-file" class="hidden px-3 py-1.5 rounded-xl border border-emerald-500/60 bg-emerald-500/15 hover:bg-emerald-600 text-emerald-200 hover:text-white text-xs font-extrabold cursor-pointer">🔄 Làm tệp mới</button>
               <button type="button" id="btn-mod46-close-studio" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
             </div>
           </div>
@@ -566,11 +567,17 @@
           this.resetWorkspaceState();
           modal.classList.add('hidden');
         });
+        modal.querySelector('#btn-mod46-header-new-file')?.addEventListener('click', () => {
+          if (!this.activeTool) return;
+          this.cancelled = true;
+          this.resetWorkspaceState();
+          this.renderUploadOrWorkspaceScreen();
+        });
         modal.querySelector('#btn-mod46-back-hub')?.addEventListener('click', () => {
           this.cancelled = true;
           this.activeTool = null;
           this.resetWorkspaceState();
-          this.renderHubScreen();
+          this.renderHubScreen('', true);
         });
       }
       modal.classList.remove('hidden');
@@ -590,11 +597,13 @@
     // ------------------------------------------------------------------------
     // MÀN HÌNH 1: TRANG CHỦ DANH MỤC CÔNG CỤ (7 CỤM RÚT GỌN + NÚT RÚT GỌN TỔNG)
     // ------------------------------------------------------------------------
-    renderHubScreen(searchQuery = '') {
+    renderHubScreen(searchQuery = '', restoreScroll = false) {
       const body = document.getElementById('mod46-studio-body');
       const backBtn = document.getElementById('btn-mod46-back-hub');
+      const newFileBtn = document.getElementById('btn-mod46-header-new-file');
       if (!body) return;
       backBtn?.classList.add('hidden');
+      newFileBtn?.classList.add('hidden');
 
       const q = String(searchQuery || '').trim().toLowerCase();
       const activeGroups = getActiveToolGroups();
@@ -610,12 +619,13 @@
         rose: 'border-rose-500/40 bg-rose-950/20'
       };
 
-      const clustersHtml = activeGroups.map((grp) => {
+      const clustersHtml = activeGroups.map((grp, grpIdx) => {
+        const visibleGroupTools = grp.tools.filter((t) => t.id !== 'preflight_inspect');
         const filteredTools = q
-          ? grp.tools.filter((t) =>
+          ? visibleGroupTools.filter((t) =>
               `${t.name} ${t.desc} ${t.badge} ${grp.title}`.toLowerCase().includes(q)
             )
-          : grp.tools;
+          : visibleGroupTools;
         if (!filteredTools.length) return '';
 
         const isCollapsed = !q && Boolean(this.collapsedGroups[grp.id]);
@@ -635,6 +645,17 @@
           )
           .join('');
 
+        const vipPreflightBanner =
+          grpIdx === 0 && (!q || 'kiểm tra kỹ thuật cho file pdf trước khi in preflight vip pro'.includes(q))
+            ? `<div class="pt-1">
+                <button type="button" data-mod46-tool="preflight_inspect" class="w-full py-3.5 px-4 rounded-2xl border-2 border-amber-400 bg-gradient-to-r from-amber-500/25 via-rose-500/25 to-violet-500/25 hover:from-amber-500/35 hover:to-violet-500/35 text-amber-200 font-black text-xs sm:text-sm shadow-[0_0_24px_rgba(251,191,36,0.35)] animate-pulse flex items-center justify-center gap-2 cursor-pointer transition">
+                  <span>✨🔬</span>
+                  <span>Kiểm tra kỹ thuật cho file PDF trước khi in (Vô cùng VIP Pro)</span>
+                  <span class="px-2 py-0.5 rounded-full bg-amber-400 text-zinc-950 text-[10px] font-black">Xem kết quả ngay</span>
+                </button>
+              </div>`
+            : '';
+
         return `
           <section class="rounded-2xl border ${accentBorder[grp.accent] || 'border-zinc-700'} overflow-hidden">
             <button type="button" data-mod46-toggle-group="${grp.id}" class="w-full px-4 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-white/5 transition cursor-pointer">
@@ -651,6 +672,7 @@
               ${cards}
             </div>
           </section>
+          ${vipPreflightBanner}
         `;
       }).join('');
 
@@ -703,16 +725,27 @@
 
       body.querySelectorAll('[data-mod46-tool]').forEach((btn) => {
         btn.addEventListener('click', () => {
+          // Ghi nhớ chính xác vị trí đã lướt để khi bấm "← Danh mục công cụ" quay lại đúng chỗ!
+          this.lastHubScrollTop = body.scrollTop || 0;
           const tid = btn.getAttribute('data-mod46-tool');
           const tool = activeTools.find((t) => t.id === tid);
           if (tool) this.selectTool(tool);
         });
       });
+
+      if (restoreScroll && typeof this.lastHubScrollTop === 'number' && this.lastHubScrollTop > 0) {
+        requestAnimationFrame(() => {
+          body.scrollTop = this.lastHubScrollTop;
+        });
+      }
+      NS.i18n?.translateElement?.(body);
     }
 
     selectTool(tool, preloadedFile = null) {
       this.activeTool = tool;
       this.resetWorkspaceState();
+      this.sigCustomPos = null;
+      document.getElementById('btn-mod46-header-new-file')?.classList.remove('hidden');
       if (preloadedFile) {
         this.ingestFiles([preloadedFile]);
       } else {
@@ -996,22 +1029,58 @@
         return `<div id="mod46-true-editor-mount" class="min-h-[320px] flex items-center justify-center text-xs text-emerald-300 font-bold">⏳ Đang nạp Trình Chỉnh sửa PDF Trực Quan (Sửa chữ gốc, Vẽ, Ảnh, CAD)...</div>`;
       }
 
-      // Chế độ Ký tên & Vẽ chữ ký tay
+      // Chế độ Cắt xén lề thừa trực quan (Crop kéo khung trực tiếp + đồng bộ %)
+      if (tool.id === 'crop' && this.files[0]) {
+        return `
+          <div class="space-y-2.5">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span class="font-extrabold text-emerald-300">✂️ Kéo trực tiếp 4 cạnh khung màu xanh trên trang giấy hoặc nhập % bên phải:</span>
+              <span id="mod46-crop-live-badge" class="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-700 text-[11px] font-bold text-amber-300">Trái 5% · Phải 5% · Trên 5% · Dưới 5%</span>
+            </div>
+            <div class="rounded-xl border border-zinc-800 bg-zinc-950 p-3 flex justify-center overflow-auto">
+              <div id="mod46-crop-stage" class="relative inline-block select-none touch-none bg-white shadow-2xl">
+                <canvas id="canvas-mod46-crop-preview" class="block max-w-full"></canvas>
+                <div id="mod46-crop-box" class="absolute border-2 border-emerald-400 bg-emerald-400/10 shadow-[0_0_0_9999px_rgba(0,0,0,0.48)] cursor-move" style="left:5%;top:5%;right:5%;bottom:5%;">
+                  <div data-crop-handle="l" class="absolute top-1/2 -left-2 -translate-y-1/2 w-4 h-8 rounded bg-emerald-400 border border-zinc-950 cursor-ew-resize"></div>
+                  <div data-crop-handle="r" class="absolute top-1/2 -right-2 -translate-y-1/2 w-4 h-8 rounded bg-emerald-400 border border-zinc-950 cursor-ew-resize"></div>
+                  <div data-crop-handle="t" class="absolute left-1/2 -top-2 -translate-x-1/2 w-8 h-4 rounded bg-emerald-400 border border-zinc-950 cursor-ns-resize"></div>
+                  <div data-crop-handle="b" class="absolute left-1/2 -bottom-2 -translate-x-1/2 w-8 h-4 rounded bg-emerald-400 border border-zinc-950 cursor-ns-resize"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Chế độ Ký tên & Chọn vị trí đặt chữ ký trực quan ngay trên trang PDF
       if (tool.id === 'sign_edit') {
         const f0 = this.files[0];
         return `
           <div class="space-y-3">
-            <div class="rounded-xl border border-zinc-800 bg-zinc-950 p-3 flex flex-col sm:flex-row items-center gap-3">
-              <img data-mod46-file-thumb="${f0.id}" src="${f0.thumbUrl || ''}" class="w-40 max-h-52 object-contain rounded-lg border border-zinc-700 bg-white" />
-              <div class="flex-1 w-full space-y-2">
-                <div class="text-xs font-extrabold text-emerald-300">✍️ Bảng vẽ chữ ký bằng chuột / cảm ứng:</div>
-                <canvas id="canvas-mod46-sig-pad" width="420" height="140" class="w-full h-36 rounded-xl bg-white border-2 border-emerald-500/50 cursor-crosshair touch-none"></canvas>
-                <div class="flex flex-wrap items-center gap-2 text-[11px]">
-                  <button type="button" id="btn-mod46-sig-clear" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 font-bold">🧹 Xóa nét vẽ</button>
-                  <label class="px-2.5 py-1 rounded-lg bg-indigo-600/80 hover:bg-indigo-500 text-white font-bold cursor-pointer">
-                    📷 Tải ảnh chữ ký (tự xóa nền trắng)
-                    <input type="file" id="input-mod46-sig-img" accept="image/*" class="hidden" />
-                  </label>
+            <div class="rounded-xl border border-zinc-800 bg-zinc-950 p-3 space-y-2">
+              <div class="text-xs font-extrabold text-emerald-300">✍️ 1. Vẽ chữ ký bằng chuột / cảm ứng (hoặc gõ tên ở cột phải):</div>
+              <canvas id="canvas-mod46-sig-pad" width="460" height="120" class="w-full h-28 rounded-xl bg-white border-2 border-emerald-500/50 cursor-crosshair touch-none"></canvas>
+              <div class="flex flex-wrap items-center gap-2 text-[11px]">
+                <button type="button" id="btn-mod46-sig-clear" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 font-bold cursor-pointer">🧹 Xóa nét vẽ</button>
+                <label class="px-2.5 py-1 rounded-lg bg-indigo-600/80 hover:bg-indigo-500 text-white font-bold cursor-pointer">
+                  📷 Tải ảnh chữ ký (tự xóa nền trắng)
+                  <input type="file" id="input-mod46-sig-img" accept="image/*" class="hidden" />
+                </label>
+              </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-800 bg-zinc-950 p-3 space-y-2">
+              <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span class="font-extrabold text-sky-300">📍 2. Bấm hoặc kéo thả khung chữ ký trực tiếp lên đúng chỗ muốn đặt trên trang PDF:</span>
+                <span id="mod46-sig-pos-badge" class="text-[11px] font-bold text-amber-300">Trang 1</span>
+              </div>
+              <div class="flex justify-center overflow-auto">
+                <div id="mod46-sig-page-stage" class="relative inline-block bg-white shadow-2xl select-none touch-none cursor-crosshair">
+                  <canvas id="canvas-mod46-sig-page-preview" class="block max-w-full"></canvas>
+                  <div id="mod46-sig-drag-box" class="absolute border-2 border-dashed border-rose-500 bg-rose-500/15 rounded-lg flex items-center justify-center cursor-move px-1" style="left:64%;top:80%;width:28%;height:10%;">
+                    <img id="img-mod46-sig-live-preview" alt="" class="hidden max-w-full max-h-full object-contain pointer-events-none" />
+                    <span id="lbl-mod46-sig-placeholder" class="text-[10px] font-black text-rose-700 pointer-events-none">✍️ Kéo thả chữ ký</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1381,7 +1450,71 @@
         });
       }
 
-      // Bảng vẽ chữ ký bằng chuột & cảm ứng
+      // Tương tác Cắt xén lề trực quan (Drag-to-Crop 2 chiều đồng bộ với 4 ô %)
+      const cropCanvas = body.querySelector('#canvas-mod46-crop-preview');
+      const cropBox = body.querySelector('#mod46-crop-box');
+      const cropStage = body.querySelector('#mod46-crop-stage');
+      if (cropCanvas && cropBox && cropStage && this.files[0]) {
+        const inL = body.querySelector('#opt-crop-l');
+        const inR = body.querySelector('#opt-crop-r');
+        const inT = body.querySelector('#opt-crop-t');
+        const inB = body.querySelector('#opt-crop-b');
+        const badge = body.querySelector('#mod46-crop-live-badge');
+        const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(v)));
+        const syncBoxFromInputs = () => {
+          const l = clamp(Number(inL?.value || 0), 0, 45);
+          const r = clamp(Number(inR?.value || 0), 0, 45);
+          const t = clamp(Number(inT?.value || 0), 0, 45);
+          const b = clamp(Number(inB?.value || 0), 0, 45);
+          cropBox.style.left = `${l}%`;
+          cropBox.style.right = `${r}%`;
+          cropBox.style.top = `${t}%`;
+          cropBox.style.bottom = `${b}%`;
+          if (badge) badge.textContent = `Trái ${l}% · Phải ${r}% · Trên ${t}% · Dưới ${b}%`;
+        };
+        [inL, inR, inT, inB].forEach((el) => el?.addEventListener('input', syncBoxFromInputs));
+        syncBoxFromInputs();
+
+        let activeHandle = null;
+        cropStage.addEventListener('pointerdown', (ev) => {
+          const h = ev.target?.getAttribute?.('data-crop-handle');
+          if (!h) return;
+          activeHandle = h;
+          cropStage.setPointerCapture(ev.pointerId);
+          ev.preventDefault();
+        });
+        cropStage.addEventListener('pointermove', (ev) => {
+          if (!activeHandle) return;
+          const rect = cropStage.getBoundingClientRect();
+          if (rect.width <= 0 || rect.height <= 0) return;
+          const px = ((ev.clientX - rect.left) / rect.width) * 100;
+          const py = ((ev.clientY - rect.top) / rect.height) * 100;
+          if (activeHandle === 'l' && inL) inL.value = String(clamp(px, 0, 45));
+          if (activeHandle === 'r' && inR) inR.value = String(clamp(100 - px, 0, 45));
+          if (activeHandle === 't' && inT) inT.value = String(clamp(py, 0, 45));
+          if (activeHandle === 'b' && inB) inB.value = String(clamp(100 - py, 0, 45));
+          syncBoxFromInputs();
+        });
+        const stopCrop = () => { activeHandle = null; };
+        cropStage.addEventListener('pointerup', stopCrop);
+        cropStage.addEventListener('pointercancel', stopCrop);
+
+        (async () => {
+          try {
+            const pdfjsLib = await ensurePdfJs();
+            const pdf = await pdfjsLib.getDocument({ data: this.files[0].bytes.slice() }).promise;
+            const pg = await pdf.getPage(1);
+            const baseVp = pg.getViewport({ scale: 1 });
+            const targetW = Math.min(520, Math.max(260, (body.clientWidth || 600) * 0.55));
+            const vp = pg.getViewport({ scale: targetW / Math.max(1, baseVp.width) });
+            cropCanvas.width = Math.round(vp.width);
+            cropCanvas.height = Math.round(vp.height);
+            await pg.render({ canvasContext: cropCanvas.getContext('2d'), viewport: vp }).promise;
+          } catch (_eCropPv) {}
+        })();
+      }
+
+      // Bảng vẽ chữ ký + Kéo thả chọn vị trí chữ ký trực quan ngay trên trang PDF
       const sigCanvas = body.querySelector('#canvas-mod46-sig-pad');
       if (sigCanvas) {
         const ctx = sigCanvas.getContext('2d');
@@ -1390,6 +1523,28 @@
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         let drawing = false;
+        const sigLiveImg = body.querySelector('#img-mod46-sig-live-preview');
+        const sigPlaceholder = body.querySelector('#lbl-mod46-sig-placeholder');
+        const refreshLiveSigOverlay = () => {
+          const typed = body.querySelector('#opt-sign-typed-name')?.value?.trim() || '';
+          const url =
+            this.signatureDataUrl ||
+            (typed && NS.dangLovePdfPro?.renderCursiveSignaturePng
+              ? NS.dangLovePdfPro.renderCursiveSignaturePng(typed)
+              : '');
+          if (sigLiveImg && sigPlaceholder) {
+            if (url) {
+              sigLiveImg.src = url;
+              sigLiveImg.classList.remove('hidden');
+              sigPlaceholder.classList.add('hidden');
+            } else {
+              sigLiveImg.classList.add('hidden');
+              sigPlaceholder.classList.remove('hidden');
+            }
+          }
+        };
+        body.querySelector('#opt-sign-typed-name')?.addEventListener('input', refreshLiveSigOverlay);
+
         const getPt = (ev) => {
           const r = sigCanvas.getBoundingClientRect();
           return {
@@ -1410,6 +1565,7 @@
           ctx.lineTo(p.x, p.y);
           ctx.stroke();
           this.signatureDataUrl = sigCanvas.toDataURL('image/png');
+          refreshLiveSigOverlay();
         });
         const stopDraw = () => { drawing = false; };
         sigCanvas.addEventListener('pointerup', stopDraw);
@@ -1418,6 +1574,7 @@
         body.querySelector('#btn-mod46-sig-clear')?.addEventListener('click', () => {
           ctx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
           this.signatureDataUrl = '';
+          refreshLiveSigOverlay();
         });
         body.querySelector('#input-mod46-sig-img')?.addEventListener('change', (ev) => {
           const file = ev.target.files?.[0];
@@ -1430,7 +1587,6 @@
             const dw = img.width * scale;
             const dh = img.height * scale;
             ctx.drawImage(img, (sigCanvas.width - dw) / 2, (sigCanvas.height - dh) / 2, dw, dh);
-            // Tự động lọc nền trắng thành trong suốt
             const imgData = ctx.getImageData(0, 0, sigCanvas.width, sigCanvas.height);
             const d = imgData.data;
             for (let i = 0; i < d.length; i += 4) {
@@ -1438,10 +1594,80 @@
             }
             ctx.putImageData(imgData, 0, 0);
             this.signatureDataUrl = sigCanvas.toDataURL('image/png');
+            refreshLiveSigOverlay();
             this.toast('✅ Đã nạp ảnh chữ ký & tách nền trắng tự động!', 'success', 2000);
           };
           img.src = u;
         });
+
+        // Dựng trang PDF đang chọn & cho phép kéo thả / bấm chọn tọa độ chữ ký trực quan
+        const sigPageCanvas = body.querySelector('#canvas-mod46-sig-page-preview');
+        const sigStage = body.querySelector('#mod46-sig-page-stage');
+        const sigBox = body.querySelector('#mod46-sig-drag-box');
+        const sigPageInp = body.querySelector('#opt-sign-page');
+        const sigPosSel = body.querySelector('#opt-sign-pos');
+        const sigPosBadge = body.querySelector('#mod46-sig-pos-badge');
+        if (sigPageCanvas && sigStage && sigBox && this.files[0]) {
+          this.sigCustomPos = this.sigCustomPos || { xPct: 64, yPct: 80, wPct: 28, hPct: 10 };
+          const applySigBoxStyle = () => {
+            sigBox.style.left = `${this.sigCustomPos.xPct}%`;
+            sigBox.style.top = `${this.sigCustomPos.yPct}%`;
+            sigBox.style.width = `${this.sigCustomPos.wPct}%`;
+            sigBox.style.height = `${this.sigCustomPos.hPct}%`;
+            if (sigPosBadge) {
+              sigPosBadge.textContent = `Trang ${sigPageInp?.value || 1} · X:${Math.round(this.sigCustomPos.xPct)}% Y:${Math.round(this.sigCustomPos.yPct)}%`;
+            }
+          };
+          applySigBoxStyle();
+          sigPosSel?.addEventListener('change', () => {
+            const v = sigPosSel.value;
+            if (v === 'bottom-left') this.sigCustomPos = { xPct: 6, yPct: 80, wPct: 28, hPct: 10 };
+            else if (v === 'bottom-center') this.sigCustomPos = { xPct: 36, yPct: 80, wPct: 28, hPct: 10 };
+            else if (v === 'center') this.sigCustomPos = { xPct: 36, yPct: 45, wPct: 28, hPct: 10 };
+            else this.sigCustomPos = { xPct: 64, yPct: 80, wPct: 28, hPct: 10 };
+            applySigBoxStyle();
+          });
+
+          let draggingSig = false;
+          const placeSigAtEvent = (ev) => {
+            const rect = sigStage.getBoundingClientRect();
+            if (rect.width <= 0 || rect.height <= 0) return;
+            const cx = ((ev.clientX - rect.left) / rect.width) * 100;
+            const cy = ((ev.clientY - rect.top) / rect.height) * 100;
+            this.sigCustomPos.xPct = Math.max(0, Math.min(100 - this.sigCustomPos.wPct, cx - this.sigCustomPos.wPct / 2));
+            this.sigCustomPos.yPct = Math.max(0, Math.min(100 - this.sigCustomPos.hPct, cy - this.sigCustomPos.hPct / 2));
+            applySigBoxStyle();
+          };
+          sigStage.addEventListener('pointerdown', (ev) => {
+            draggingSig = true;
+            sigStage.setPointerCapture(ev.pointerId);
+            placeSigAtEvent(ev);
+          });
+          sigStage.addEventListener('pointermove', (ev) => {
+            if (draggingSig) placeSigAtEvent(ev);
+          });
+          const endSigDrag = () => { draggingSig = false; };
+          sigStage.addEventListener('pointerup', endSigDrag);
+          sigStage.addEventListener('pointercancel', endSigDrag);
+
+          const renderSignPagePreview = async (pgNo) => {
+            try {
+              const pdfjsLib = await ensurePdfJs();
+              const pdf = await pdfjsLib.getDocument({ data: this.files[0].bytes.slice() }).promise;
+              const safePg = Math.max(1, Math.min(pdf.numPages, Number(pgNo) || 1));
+              const pg = await pdf.getPage(safePg);
+              const baseVp = pg.getViewport({ scale: 1 });
+              const targetW = Math.min(500, Math.max(260, (body.clientWidth || 600) * 0.55));
+              const vp = pg.getViewport({ scale: targetW / Math.max(1, baseVp.width) });
+              sigPageCanvas.width = Math.round(vp.width);
+              sigPageCanvas.height = Math.round(vp.height);
+              await pg.render({ canvasContext: sigPageCanvas.getContext('2d'), viewport: vp }).promise;
+              applySigBoxStyle();
+            } catch (_eSigPv) {}
+          };
+          renderSignPagePreview(sigPageInp?.value || 1);
+          sigPageInp?.addEventListener('change', () => renderSignPagePreview(sigPageInp.value));
+        }
       }
 
       body.querySelector('#btn-mod46-run-primary')?.addEventListener('click', () => {
@@ -1750,11 +1976,20 @@
           const pg = pages[pgIdx];
           const { width, height } = pg.getSize();
           prog(55, `Đang chèn chữ ký lên trang ${pgIdx + 1}...`);
+          let sigW = 165;
+          let sigH = 56;
           let x = width - 190;
           let y = 42;
-          if (opts.signPos === 'bottom-left') x = 36;
-          else if (opts.signPos === 'bottom-center') x = (width - 160) / 2;
-          else if (opts.signPos === 'center') { x = (width - 160) / 2; y = (height - 60) / 2; }
+          if (this.sigCustomPos) {
+            sigW = Math.max(80, (this.sigCustomPos.wPct / 100) * width);
+            sigH = Math.max(30, (this.sigCustomPos.hPct / 100) * height);
+            x = (this.sigCustomPos.xPct / 100) * width;
+            y = Math.max(8, height - ((this.sigCustomPos.yPct + this.sigCustomPos.hPct) / 100) * height);
+          } else {
+            if (opts.signPos === 'bottom-left') x = 36;
+            else if (opts.signPos === 'bottom-center') x = (width - 160) / 2;
+            else if (opts.signPos === 'center') { x = (width - 160) / 2; y = (height - 60) / 2; }
+          }
           const activeSigUrl =
             this.signatureDataUrl ||
             (pro.signTypedName && NS.dangLovePdfPro?.renderCursiveSignaturePng
@@ -1765,7 +2000,7 @@
             const sigBytes = new Uint8Array(bin.length);
             for (let i = 0; i < bin.length; i++) sigBytes[i] = bin.charCodeAt(i);
             const sigImg = await doc.embedPng(sigBytes);
-            pg.drawImage(sigImg, { x, y, width: 165, height: 56 });
+            pg.drawImage(sigImg, { x, y, width: sigW, height: sigH });
           }
           if (opts.signNote) {
             const notePng = renderVietnameseTextToPngBytes(opts.signNote, { fontSize: 14, color: '#0f172a', bold: true });
@@ -2118,12 +2353,15 @@
 
         if (this.cancelled) return;
 
-        // Đóng gói kết quả + tự động tạo .ZIP nếu >= 2 tệp
+        // Đóng gói kết quả + giữ nguyên cờ báo cáo hiển thị trực tiếp (Preflight không cần tải file!)
         this.resultItems = outputs.map((o) => ({
           name: o.name,
           blob: o.blob,
           size: o.blob.size,
-          url: this.trackUrl(o.blob)
+          url: this.trackUrl(o.blob),
+          __inlineReportOnly: Boolean(o.__inlineReportOnly),
+          reportTitle: o.reportTitle || '',
+          reportHtml: o.reportHtml || '',
         }));
         if (this.resultItems.length >= 2) {
           prog(95, 'Đang nén gói .ZIP tải 1 lần...');
@@ -2156,6 +2394,29 @@
       if (!body) return;
       const primary = this.resultZipItem || this.resultItems[0];
       if (!primary) return;
+
+      // Chế độ hiển thị kết quả kiểm định trực tiếp trên màn hình (Preflight — KHÔNG bắt tải file về!)
+      if (this.resultItems.length === 1 && this.resultItems[0].__inlineReportOnly) {
+        const rep = this.resultItems[0];
+        body.innerHTML = `
+          <div class="max-w-4xl mx-auto py-3 space-y-4">
+            <div class="rounded-3xl border-2 border-amber-400/60 bg-zinc-900/95 p-5 space-y-4 shadow-2xl">
+              <div class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-3">
+                <h3 class="text-base sm:text-lg font-black text-amber-300">${escHtml(rep.reportTitle || '🔬 Kết quả Kiểm tra Kỹ thuật Trước Khi In')}</h3>
+                <div class="flex items-center gap-2">
+                  <button type="button" id="btn-mod46-do-another" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs cursor-pointer">🔄 Kiểm tra tệp khác</button>
+                </div>
+              </div>
+              ${rep.reportHtml}
+            </div>
+          </div>`;
+        body.querySelector('#btn-mod46-do-another')?.addEventListener('click', () => {
+          this.resetWorkspaceState();
+          this.renderUploadOrWorkspaceScreen();
+        });
+        NS.i18n?.translateElement?.(body);
+        return;
+      }
 
       const canPreviewPrimary =
         this.resultItems.length === 1 &&

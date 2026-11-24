@@ -30,17 +30,93 @@
     return '';
   }
 
+  const COUNTRY_PROFILES = {
+    VN: { countryCode: 'VN', countryName: 'Việt Nam', currency: 'VND', centralBank: 'NHNN Việt Nam (SBV)', stockIndex: 'VN-Index (HOSE)', goldMarket: 'Vàng miếng SJC & Vàng nhẫn 9999' },
+    US: { countryCode: 'US', countryName: 'Hoa Kỳ (Mỹ)', currency: 'USD', centralBank: 'Cục Dự trữ Liên bang Mỹ (Fed)', stockIndex: 'S&P 500 & Nasdaq', goldMarket: 'COMEX Gold / Spot XAU/USD' },
+    JP: { countryCode: 'JP', countryName: 'Nhật Bản', currency: 'JPY', centralBank: 'Ngân hàng Trung ương Nhật Bản (BoJ)', stockIndex: 'Nikkei 225 & TOPIX', goldMarket: 'Vàng vật chất Nhật (JPY/gram)' },
+    KR: { countryCode: 'KR', countryName: 'Hàn Quốc', currency: 'KRW', centralBank: 'Ngân hàng Trung ương Hàn Quốc (BoK)', stockIndex: 'KOSPI & KOSDAQ', goldMarket: 'KRX Gold Market (KRW/gram)' },
+    EU: { countryCode: 'EU', countryName: 'Châu Âu (Eurozone)', currency: 'EUR', centralBank: 'Ngân hàng Trung ương Châu Âu (ECB)', stockIndex: 'EURO STOXX 50 / DAX', goldMarket: 'Vàng vật chất châu Âu (EUR/oz)' },
+    GB: { countryCode: 'GB', countryName: 'Vương quốc Anh', currency: 'GBP', centralBank: 'Ngân hàng Trung ương Anh (BoE)', stockIndex: 'FTSE 100', goldMarket: 'LBMA London Gold (GBP/oz)' },
+    SG: { countryCode: 'SG', countryName: 'Singapore', currency: 'SGD', centralBank: 'MAS Singapore', stockIndex: 'STI (SGX)', goldMarket: 'Vàng đầu tư miễn GST Singapore' },
+    AU: { countryCode: 'AU', countryName: 'Úc (Australia)', currency: 'AUD', centralBank: 'RBA Australia', stockIndex: 'ASX 200', goldMarket: 'Perth Mint / XAU-AUD' },
+    CN: { countryCode: 'CN', countryName: 'Trung Quốc', currency: 'CNY', centralBank: 'PBOC Trung Quốc', stockIndex: 'CSI 300 & Hang Seng', goldMarket: 'Sàn vàng Thượng Hải (SGE)' },
+    TW: { countryCode: 'TW', countryName: 'Đài Loan', currency: 'TWD', centralBank: 'Ngân hàng Trung ương Đài Loan (CBC)', stockIndex: 'TAIEX', goldMarket: 'Vàng vật chất Đài Loan (TWD)' },
+  };
+
+  function resolveCountryProfile(code, countryName, areaLabel, source = 'manual') {
+    const up = String(code || 'VN').toUpperCase();
+    const base = COUNTRY_PROFILES[up] || {
+      countryCode: up,
+      countryName: countryName || up,
+      currency: 'USD',
+      centralBank: `Ngân hàng Trung ương ${countryName || up}`,
+      stockIndex: `Chỉ số chứng khoán chính ${countryName || up}`,
+      goldMarket: `Thị trường vàng nội địa ${countryName || up}`,
+    };
+    return {
+      ...base,
+      countryName: countryName || base.countryName,
+      areaLabel: areaLabel || countryName || base.countryName,
+      source,
+      resolvedAt: Date.now(),
+    };
+  }
+
+  async function detectUserRegionByGps(signal) {
+    if (!navigator.geolocation) {
+      throw new Error('Thiết bị chưa hỗ trợ GPS. Bạn hãy chọn Quốc gia / khu vực thủ công ở bên dưới để tiếp tục.');
+    }
+    const pos = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
+      });
+    }).catch((err) => {
+      if (err?.code === 1) {
+        throw new Error('Bạn vừa từ chối quyền Vị trí. Hãy chọn Quốc gia & khu vực bên dưới để hệ thống bám sát tin tức nơi bạn sống.');
+      }
+      throw new Error('Không lấy được tọa độ GPS lúc này. Hãy chọn Quốc gia & khu vực thủ công bên dưới nhé.');
+    });
+    const lat = Number(pos.coords.latitude.toFixed(5));
+    const lon = Number(pos.coords.longitude.toFixed(5));
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=vi`;
+    let code = 'VN';
+    let cName = 'Việt Nam';
+    let areaLabel = `${lat}, ${lon}`;
+    try {
+      const res = await INV.networkAdapter.fetchJson(url, { signal, timeoutMs: 9000, preferDirect: true });
+      const a = res?.data?.address || {};
+      if (a.country_code) code = String(a.country_code).toUpperCase();
+      if (a.country) cName = a.country;
+      const joined = [a.suburb || a.quarter || a.town, a.city_district || a.county, a.city || a.state, a.country]
+        .filter(Boolean)
+        .join(', ');
+      if (joined) areaLabel = joined;
+    } catch (_eGeo) {}
+    return { ...resolveCountryProfile(code, cName, areaLabel, 'gps'), lat, lon };
+  }
+
   function expandQueryTemplate(template) {
     const now = new Date();
     const month = now.getMonth() + 1;
     const year = now.getFullYear();
     const quarter = Math.ceil(month / 3);
     const monthsEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    return String(template || '')
+    const reg = INV.stateManager.userRegion;
+    let out = String(template || '')
       .replace(/\{MONTH\}/g, String(month))
       .replace(/\{MONTH_EN\}/g, monthsEn[month - 1])
       .replace(/\{YEAR\}/g, String(year))
       .replace(/\{QUARTER\}/g, String(quarter));
+    if (reg && reg.countryCode && reg.countryCode !== 'VN') {
+      out = out
+        .replace(/Việt Nam/gi, reg.countryName)
+        .replace(/NHNN/gi, reg.centralBank)
+        .replace(/VN-Index/gi, reg.stockIndex)
+        .replace(/SJC/gi, reg.goldMarket);
+    }
+    return out;
   }
 
   async function runGeminiGroundedSearch(items, kb, signal) {
@@ -426,12 +502,13 @@ ${checklistLines}`;
   }
 
   const promptComposer = {
-    buildGeminiPrompt({ mode = 'plain', targetStock = null, stressResult = null, anonymize = false } = {}) {
+    buildGeminiPrompt({ mode = 'plain', focus = 'general', targetStock = null, stressResult = null, anonymize = false } = {}) {
       const kb = INV.stateManager.activeKnowledge;
       const report = INV.stateManager.evaluationReport;
       const gold = INV.stateManager.goldData;
       const stock = targetStock || INV.stateManager.stockData;
       const reData = INV.stateManager.realEstateData;
+      const reg = INV.stateManager.userRegion || resolveCountryProfile('VN', 'Việt Nam', 'Việt Nam', 'default');
 
       const asOfDate = INV.utils.todayIso();
       const globalSnap = formatLayerSnapshot(report?.items, 'global_macro');
@@ -446,19 +523,33 @@ ${checklistLines}`;
           .join('; ') || (report ? 'Không có mục thiếu lớn' : 'Chưa chạy bước tìm tin tự động trước khi copy');
 
       const knowledgeDigest = kb?.core_principles_digest || 'Sử dụng đầy đủ khung phân tích 7 chương Vàng, Chứng khoán, Bất động sản và 5 chốt chặn an toàn.';
+      const focusInstructions = {
+        general: 'Đánh giá toàn diện cả 4 kênh (Tiền mặt/Tiết kiệm, Vàng, Chứng khoán, Bất động sản) bám sát thị trường tại ' + reg.countryName + ' và vĩ mô toàn cầu theo đúng dàn ý 5 mục.',
+        gold: `TẬP TRUNG CHUYÊN SÂU KÊNH VÀNG tại ${reg.countryName} (${reg.goldMarket}): Phân tích 5 nhân tố (TIPS 10Y & DXY 30%, Mua ròng NHTW & ETF 25%, Nợ công & Giá sàn AISC 20%, Cấu trúc nội địa & Chênh lệch quy đổi/Spread 15%, Vị thế COMEX COT 10%), kiểm tra Chốt chặn 4 (>10% chênh lệch / >3% spread) và khuyến nghị chiến thuật mua/chờ/nắm giữ cụ thể.`,
+        real_estate: `TẬP TRUNG CHUYÊN SÂU NHÀ ĐẤT tại khu vực ${reData?.areaLabel || reg.areaLabel} (${reg.countryName}): Đánh giá mặt bằng giá, tỷ suất cho thuê so với lãi suất vay thả nổi, kết quả Stress Test DSCR (chuẩn ≥ 1,2x), kiểm tra Chốt chặn 1 & 3, rà soát đủ 7 bước pháp lý và phân hóa phân khúc (nhà ở / đất nền / KCN).`,
+        stock: `TẬP TRUNG CHUYÊN SÂU CHỨNG KHOÁN (${stock?.symbol ? (mode === 'audit' && anonymize ? 'TÀI SẢN X' : stock.symbol) : reg.stockIndex}) tại ${reg.countryName}: Phân tích định giá P/E, Earnings Yield vs Trái phiếu 10Y & Chi phí vốn Damodaran, áp lực margin & khối ngoại, và chạy đúng bộ lọc sức khỏe theo đặc thù ngành (Sản xuất: M/Z/F-Score, Sloan, DuPont 5 nhân tố; Ngân hàng: P/B-ROE, NIM, CASA, NPL/LLR, CAR; BĐS: CFO, nợ/VCSH, TPDN, RNAV).`,
+      };
+      const focusDirective = focusInstructions[focus] || focusInstructions.general;
       const assetLabel =
         mode === 'audit' && anonymize
           ? 'TÀI SẢN X'
-          : stock?.symbol || reData?.areaLabel || 'Danh mục 3 kênh Vàng / Chứng khoán / Nhà đất';
+          : focus === 'gold'
+          ? `Kênh Vàng (${reg.goldMarket})`
+          : focus === 'real_estate'
+          ? `Nhà đất khu vực ${reData?.areaLabel || reg.areaLabel}`
+          : stock?.symbol || `Danh mục 4 kênh tại ${reg.countryName}`;
 
       if (mode === 'audit') {
-        return `[VAI TRÒ] Bạn là Giám đốc Quản trị Rủi ro Danh mục (Chief Risk Officer) chuyên thị trường vốn Việt Nam và vĩ mô toàn cầu. Mục tiêu tối thượng của bạn là bảo vệ vốn và đánh giá khách quan xác suất rủi ro/lợi nhuận, KHÔNG phải khuyến khích giao dịch.
+        return `[VAI TRÒ] Bạn là Giám đốc Quản trị Rủi ro Danh mục (Chief Risk Officer) chuyên thị trường vốn tại ${reg.countryName} (${reg.stockIndex}, ${reg.centralBank}, đồng tiền ${reg.currency}) và vĩ mô toàn cầu. Mục tiêu tối thượng của bạn là bảo vệ vốn và đánh giá khách quan xác suất rủi ro/lợi nhuận, KHÔNG phải khuyến khích giao dịch.
 
-[DỮ LIỆU ĐẦU VÀO — ĐÓNG DẤU NGÀY: ${asOfDate}]
+[TRỌNG TÂM PHÂN TÍCH YÊU CẦU]
+${focusDirective}
+
+[DỮ LIỆU ĐẦU VÀO — ĐÓNG DẤU NGÀY: ${asOfDate} · KHU VỰC: ${reg.areaLabel} (${reg.countryName})]
 Chỉ sử dụng bộ dữ liệu đã xác minh dưới đây (mọi phép tính tài chính phức tạp đã được tính sẵn ngoài hệ thống; tài sản mục tiêu: ${assetLabel}):
 - Tầng 1 (Vĩ mô & Thanh khoản Toàn cầu):
 ${globalSnap}
-- Tầng 2 (Vĩ mô, Tiền tệ & Pháp lý Việt Nam):
+- Tầng 2 (Vĩ mô, Tiền tệ & Pháp lý tại ${reg.countryName}):
 ${vnSnap}
 - Tầng 3 (Dữ liệu Vi mô Vàng / Chứng khoán / Bất động sản đã tính sẵn):
 ${goldText}
@@ -470,7 +561,7 @@ ${reText}
 ${knowledgeDigest}
 
 [RÀNG BUỘC CỨNG CHỐNG ẢO GIÁC & CHỐNG THIÊN KIẾN]
-1. Cấm lấy số liệu từ trí nhớ huấn luyện cũ để điền vào chỗ trống. Nếu thiếu biến số trọng yếu quyết định (ví dụ thiếu DSCR, thiếu chênh lệch giá vàng quy đổi, thiếu BCTC/margin), hãy nêu rõ mã DATA_MISSING và liệt kê chính xác chỉ số người dùng cần bổ sung trước khi kết luận (hoặc dùng công cụ tìm kiếm trực tuyến mới nhất có ghi rõ nguồn & ngày).
+1. Cấm lấy số liệu từ trí nhớ huấn luyện cũ để điền vào chỗ trống. Nếu thiếu biến số trọng yếu quyết định (ví dụ thiếu DSCR, thiếu chênh lệch giá vàng quy đổi, thiếu BCTC/margin), hãy nêu rõ mã DATA_MISSING và liệt kê chính xác chỉ số người dùng cần bổ sung (hoặc dùng công cụ tìm kiếm trực tuyến mới nhất có ghi rõ nguồn & ngày).
 2. Mọi luận điểm bắt buộc trích dẫn đúng con số từ dữ liệu đã nạp; không tự làm phép tính tài chính phức tạp nếu không kiểm chứng.
 3. Bắt buộc thực hiện tranh biện đối kháng hai chiều cân bằng tuyệt đối về độ dài và độ sâu giữa Phe Bò (Bull Researcher) và Phe Gấu (Bear Researcher) để triệt tiêu thiên kiến khung (Framing Bias).
 
@@ -486,19 +577,23 @@ ${knowledgeDigest}
 7. Dòng kết thúc bắt buộc nguyên văn: "${MANDATORY_DISCLAIMER}."`;
       }
 
-      return `Bạn hãy đóng vai một người cố vấn quản lý rủi ro tài chính cá nhân am hiểu thị trường Việt Nam và kinh tế thế giới. Hãy giải thích thật rõ ràng, bằng tiếng Việt đời thường, hạn chế tối đa từ chuyên ngành khó hiểu (nếu buộc phải nhắc đến thuật ngữ chuyên môn, hãy giải thích ngắn gọn trong ngoặc bằng ví dụ bình dân).
+      return `Bạn hãy đóng vai một người cố vấn quản lý rủi ro tài chính cá nhân am hiểu thị trường tại ${reg.countryName} (${reg.centralBank}, ${reg.stockIndex}, đồng tiền ${reg.currency}) và kinh tế thế giới. Hãy giải thích thật rõ ràng, bằng tiếng Việt đời thường, hạn chế tối đa từ chuyên ngành khó hiểu (nếu buộc phải nhắc đến thuật ngữ chuyên môn, hãy giải thích ngắn gọn trong ngoặc bằng ví dụ bình dân).
+
+=== TRỌNG TÂM PHÂN TÍCH ===
+- Quốc gia & khu vực người dùng: ${reg.areaLabel} (${reg.countryName} · Tiền tệ ${reg.currency})
+- Yêu cầu trọng tâm: ${focusDirective}
 
 === PHẦN 1: BỘ DỮ LIỆU THỊ TRƯỜNG MỚI NHẤT ĐÃ CHẮT LỌC ===
 - Ngày tổng hợp dữ liệu: ${asOfDate}
 - Dữ liệu Vĩ mô Thế giới đã thu thập:
 ${globalSnap}
-- Dữ liệu Kinh tế & Tiền tệ Việt Nam đã thu thập:
+- Dữ liệu Kinh tế & Tiền tệ tại ${reg.countryName} đã thu thập:
 ${vnSnap}
 - Dữ liệu Vàng (đã tính sẵn bằng code):
 ${goldText}
 - Dữ liệu Chứng khoán (đã tính sẵn bằng code):
 ${stockText}
-- Dữ liệu Nhà đất khu vực ${reData?.areaLabel || 'Việt Nam tổng quát'} (đã tính sẵn bằng code):
+- Dữ liệu Nhà đất khu vực ${reData?.areaLabel || reg.areaLabel} (đã tính sẵn bằng code):
 ${reText}
 - Các mục đang thiếu số liệu (DATA_MISSING): ${missingList}
 
@@ -511,8 +606,8 @@ ${knowledgeDigest}
 2. KHÔNG tự tính lại sai các con số đã được tính sẵn ở Phần 1.
 3. Trình bày cân bằng cả mặt TÍCH CỰC (cơ hội) lẫn mặt RỦI RO (cái bẫy cần tránh) cho từng kênh, tuyệt đối không thiên vị hay xúi giục mua bán vội vàng.
 4. Hãy trình bày câu trả lời gọn gàng theo đúng 5 mục sau:
-   - Mục 1: Bức tranh kinh tế hiện tại đang ở giai đoạn nào? (Giải thích thật dễ hiểu trong 3–5 dòng).
-   - Mục 2: Đánh giá từng kênh trong hiện tại và giai đoạn tới — (a) Vàng, (b) Chứng khoán, (c) Nhà đất, (d) Tiền mặt/Gửi tiết kiệm. Mỗi kênh ghi rõ: Mức độ hấp dẫn (Nên cân nhắc / Nên chờ / Nên tránh lúc này) + Lý do chính + Rủi ro lớn nhất.
+   - Mục 1: Bức tranh kinh tế hiện tại tại ${reg.countryName} và thế giới đang ở giai đoạn nào? (Giải thích thật dễ hiểu trong 3–5 dòng).
+   - Mục 2: Đánh giá chi tiết theo trọng tâm yêu cầu — (a) Vàng, (b) Chứng khoán, (c) Nhà đất, (d) Tiền mặt/Gửi tiết kiệm. Mỗi kênh ghi rõ: Mức độ hấp dẫn (Nên cân nhắc / Nên chờ / Nên tránh lúc này) + Lý do chính + Rủi ro lớn nhất.
    - Mục 3: Kiểm tra 5 chốt chặn an toàn (chỉ ra rõ hiện tại có chốt chặn nào đang báo đỏ không).
    - Mục 4: Gợi ý hướng phân bổ tiền và hành động thực tế cho giai đoạn hiện tại và 6–12 tháng tới (chia rõ cho người thích an toàn và người chấp nhận rủi ro vừa phải).
    - Mục 5: Những dấu hiệu cụ thể cần theo dõi trong thời gian tới (nếu dấu hiệu nào xảy ra thì đổi chiến lược ra sao).
@@ -572,29 +667,146 @@ ${knowledgeDigest}
     },
 
     async copyAndLaunchGeminiSplit(options = {}) {
-      const promptText = this.buildGeminiPrompt(options);
-      const copyRes = await this.safeCopyText(promptText);
-      if (!copyRes.ok) {
-        this.showManualCopyModal(promptText);
-      }
+      return this.openGeminiConfirmModal(options);
+    },
 
-      // Kết nối trực tiếp vào cầu nối Chia đôi màn hình Gemini sẵn có của Studio (Mod 16)!
-      if (NS.geminiSplitBridge?.launchExternalSplitWindow) {
-        NS.geminiSplitBridge.launchExternalSplitWindow('GEMINI', false);
-      } else {
-        window.open('https://gemini.google.com/app', '_blank', 'noopener,noreferrer');
-      }
+    async openGeminiConfirmModal(initialOptions = {}) {
+      document.getElementById('inv-gemini-confirm-modal')?.remove();
+      const opts = {
+        mode: initialOptions.mode || 'plain',
+        focus: initialOptions.focus || (initialOptions.targetStock ? 'stock' : 'general'),
+        targetStock: initialOptions.targetStock || null,
+        stressResult: initialOptions.stressResult || null,
+        anonymize: Boolean(initialOptions.anonymize),
+      };
 
-      NS.utils?.showToast?.(
-        'Đã sao chép xong bộ dữ liệu & kiến thức đầu tư! Bạn chỉ cần bấm vào ô nhập của Gemini bên cạnh rồi dán (Ctrl + V) và nhấn Gửi.',
-        'success',
-        5200
-      );
-      return { copied: copyRes.ok, promptText };
+      const modal = document.createElement('div');
+      modal.id = 'inv-gemini-confirm-modal';
+      modal.className = 'fixed inset-0 z-[2147483630] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+
+      const tr = (s) => NS.i18n?.translateText?.(s) || s;
+
+      modal.innerHTML = `
+        <div class="w-full max-w-3xl max-h-[90dvh] rounded-2xl border-2 border-emerald-500/50 bg-zinc-950 text-zinc-100 shadow-2xl flex flex-col overflow-hidden">
+          <div class="px-4 py-3 border-b border-zinc-800 bg-emerald-950/35 flex items-center justify-between gap-2 shrink-0">
+            <div class="min-w-0">
+              <h3 class="text-sm sm:text-base font-black text-emerald-300">✅ ${tr('Xác Nhận Câu Lệnh Phân Tích Đầu Tư & Mở Gemini')}</h3>
+              <p class="text-[11px] text-zinc-400">${tr('Đã tự động chèn khung phân tích chuẩn 7 chương + số liệu thực tế + khu vực của bạn.')}</p>
+            </div>
+            <button type="button" id="inv-gconf-close" class="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-rose-600 text-zinc-100 font-black cursor-pointer">✕</button>
+          </div>
+
+          <div class="p-4 overflow-y-auto flex-1 space-y-3">
+            <!-- Thanh trạng thái đã copy -->
+            <div id="inv-gconf-copy-banner" class="px-3 py-2 rounded-xl border border-amber-400/50 bg-amber-500/15 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span class="font-extrabold text-amber-200">✅ ${tr('Đã tự động sao chép toàn bộ câu lệnh vào bộ nhớ tạm! Bạn có thể xem/chỉnh thêm rồi bấm nút xanh bên dưới để chuyển qua Gemini.')}</span>
+              <button type="button" id="inv-gconf-recopy" class="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-[11px] cursor-pointer shrink-0">📋 ${tr('Copy Toàn Bộ Câu Lệnh')}</button>
+            </div>
+
+            <!-- Chọn chủ đề & chế độ phân tích -->
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-zinc-400 font-bold">${tr('Trọng tâm')}:</span>
+                <button type="button" data-gconf-focus="general" class="inv-gconf-focus-btn px-2.5 py-1 rounded-lg border font-bold cursor-pointer">🧭 ${tr('Tổng quát 4 kênh')}</button>
+                <button type="button" data-gconf-focus="gold" class="inv-gconf-focus-btn px-2.5 py-1 rounded-lg border font-bold cursor-pointer">🥇 ${tr('Vàng')}</button>
+                <button type="button" data-gconf-focus="real_estate" class="inv-gconf-focus-btn px-2.5 py-1 rounded-lg border font-bold cursor-pointer">🏘️ ${tr('Nhà đất')}</button>
+                <button type="button" data-gconf-focus="stock" class="inv-gconf-focus-btn px-2.5 py-1 rounded-lg border font-bold cursor-pointer">📊 ${tr('Chứng khoán')}</button>
+              </div>
+              <select id="inv-gconf-mode-sel" class="px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-700 text-xs font-bold text-zinc-100">
+                <option value="plain">${tr('Chế độ Phổ thông dễ hiểu')}</option>
+                <option value="audit">${tr('Chế độ Kiểm toán 2 chiều (Phe Bò vs Phe Gấu)')}</option>
+              </select>
+            </div>
+
+            <!-- Toàn văn câu lệnh đã tổng hợp -->
+            <div class="space-y-1">
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="font-extrabold text-amber-300">📜 ${tr('TOÀN VĂN CÂU LỆNH ĐẦU TƯ ĐÃ TỔNG HỢP (CÓ THỂ CHỈNH SỬA THÊM)')}:</span>
+                <span id="inv-gconf-stats" class="text-zinc-400 font-mono"></span>
+              </div>
+              <textarea id="inv-gconf-textarea" rows="12" class="w-full rounded-xl bg-black/80 border border-zinc-700 p-3 text-xs font-mono text-zinc-100 leading-relaxed focus:outline-none focus:border-emerald-400"></textarea>
+            </div>
+          </div>
+
+          <div class="px-4 py-3 border-t border-zinc-800 bg-zinc-900/90 flex flex-wrap items-center justify-between gap-2 shrink-0">
+            <button type="button" id="inv-gconf-back" class="px-3.5 py-2 rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer">← ${tr('Quay lại')}</button>
+            <button type="button" id="inv-gconf-launch" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-black shadow-lg cursor-pointer">
+              🪟 ${tr('Chuyển hướng & Chia đôi màn hình sang Gemini ngay')}
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const ta = modal.querySelector('#inv-gconf-textarea');
+      const statsEl = modal.querySelector('#inv-gconf-stats');
+      const modeSel = modal.querySelector('#inv-gconf-mode-sel');
+      if (modeSel) modeSel.value = opts.mode;
+
+      const rebuildAndCopy = async () => {
+        const text = this.buildGeminiPrompt(opts);
+        if (ta) ta.value = text;
+        const words = text.trim().split(/\s+/).filter(Boolean).length;
+        if (statsEl) statsEl.textContent = `${words.toLocaleString('vi-VN')} ${tr('từ')} (~${Math.round(words * 1.45).toLocaleString('vi-VN')} tokens)`;
+        modal.querySelectorAll('.inv-gconf-focus-btn').forEach((b) => {
+          const active = b.getAttribute('data-gconf-focus') === opts.focus;
+          b.className = active
+            ? 'inv-gconf-focus-btn px-2.5 py-1 rounded-lg border border-emerald-400 bg-emerald-600 text-white font-extrabold cursor-pointer'
+            : 'inv-gconf-focus-btn px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-emerald-500 font-bold cursor-pointer';
+        });
+        await this.safeCopyText(text);
+      };
+
+      await rebuildAndCopy();
+
+      modal.querySelectorAll('.inv-gconf-focus-btn').forEach((b) => {
+        b.addEventListener('click', () => {
+          opts.focus = b.getAttribute('data-gconf-focus') || 'general';
+          rebuildAndCopy();
+        });
+      });
+      modeSel?.addEventListener('change', () => {
+        opts.mode = modeSel.value;
+        rebuildAndCopy();
+      });
+      modal.querySelector('#inv-gconf-recopy')?.addEventListener('click', async () => {
+        const ok = await this.safeCopyText(ta?.value || '');
+        if (!ok.ok) this.showManualCopyModal(ta?.value || '');
+        NS.utils?.showToast?.('✅ Đã sao chép lại toàn bộ câu lệnh đầu tư vào bộ nhớ tạm!', 'success', 3000);
+      });
+      const closeConfirm = () => modal.remove();
+      modal.querySelector('#inv-gconf-close')?.addEventListener('click', closeConfirm);
+      modal.querySelector('#inv-gconf-back')?.addEventListener('click', closeConfirm);
+      modal.addEventListener('click', (ev) => {
+        if (ev.target === modal) closeConfirm();
+      });
+      modal.querySelector('#inv-gconf-launch')?.addEventListener('click', async () => {
+        const finalText = ta?.value || this.buildGeminiPrompt(opts);
+        await this.safeCopyText(finalText);
+        closeConfirm();
+        if (NS.geminiSplitBridge?.launchExternalSplitWindow) {
+          NS.geminiSplitBridge.launchExternalSplitWindow('GEMINI', false);
+        } else {
+          window.open('https://gemini.google.com/app', '_blank', 'noopener,noreferrer');
+        }
+        NS.utils?.showToast?.(
+          'Đã sao chép xong bộ dữ liệu & kiến thức đầu tư! Bạn chỉ cần bấm vào ô nhập của Gemini bên cạnh rồi dán (Ctrl + V) và nhấn Gửi.',
+          'success',
+          5200
+        );
+      });
+
+      NS.i18n?.translateElement?.(modal);
+      return { copied: true, promptText: ta?.value || '' };
     },
   };
 
   INV.MANDATORY_DISCLAIMER = MANDATORY_DISCLAIMER;
+  INV.COUNTRY_PROFILES = COUNTRY_PROFILES;
+  INV.resolveCountryProfile = resolveCountryProfile;
+  INV.detectUserRegionByGps = detectUserRegionByGps;
   INV.researchEvaluator = researchEvaluator;
   INV.promptComposer = promptComposer;
 })(typeof window !== 'undefined' ? window : globalThis);

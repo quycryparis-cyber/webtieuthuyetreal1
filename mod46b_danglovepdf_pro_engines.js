@@ -329,7 +329,18 @@
             <option value="booklet">Đóng gáy sách giữa (Booklet — tự đảo trang in gập!)</option>
           </select>
         </label>
-        <p class="text-[11px] text-zinc-400">Chế độ <strong>Booklet</strong> tự chèn trang trắng cho đủ bội số 4 và ghép trang cuối cạnh trang đầu để gập đôi thành sách.</p>`;
+        <div class="grid grid-cols-2 gap-2">
+          <label class="space-y-1"><span class="font-bold">Khoảng hở giữa trang (mm):</span>
+            <input id="opt-pro-nup-gap-mm" type="number" min="0" max="20" step="1" value="0" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" />
+          </label>
+          <label class="space-y-1"><span class="font-bold">Lề ngoài tờ giấy (mm):</span>
+            <input id="opt-pro-booklet-margin-mm" type="number" min="0" max="20" step="1" value="0" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" />
+          </label>
+        </div>
+        <label class="block space-y-1"><span class="font-bold">Độ rộng gáy sách — Gutter (mm, cho chế độ Booklet):</span>
+          <input id="opt-pro-booklet-gutter-mm" type="number" min="0" max="30" step="1" value="4" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
+        </label>
+        <p class="text-[11px] text-zinc-400">Để <strong>Khoảng hở = 0 mm</strong> để các trang ghép liền khít nhau không tách rời. Chế độ <strong>Booklet</strong> tự đảo trang đóng sách và chừa đúng độ rộng gáy bạn chọn.</p>`;
     }
 
     if (toolId === 'alternate_mix') {
@@ -467,9 +478,25 @@ XacNhan=true</textarea>
         <label class="block space-y-1"><span class="font-bold">Tiêu đề đầu trang (Header — hỗ trợ {date}, {page}, {total}):</span>
           <input id="opt-pro-hf-header" type="text" value="Tài liệu biên soạn • {date}" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
         </label>
+        <label class="block space-y-1"><span class="font-bold">Vị trí tiêu đề đầu trang:</span>
+          <select id="opt-pro-hf-hpos" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
+            <option value="left">Căn trái đầu trang</option>
+            <option value="center" selected>Căn giữa đầu trang</option>
+            <option value="right">Căn phải đầu trang</option>
+          </select>
+        </label>
+        <label class="flex items-center gap-2"><input id="opt-pro-hf-hline" type="checkbox" checked class="accent-amber-400" /><span>Kẻ đường phân cách dưới tiêu đề đầu trang</span></label>
         <label class="block space-y-1"><span class="font-bold">Chân trang (Footer):</span>
           <input id="opt-pro-hf-footer" type="text" value="Trang {page} / {total}" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
         </label>
+        <label class="block space-y-1"><span class="font-bold">Vị trí chân trang:</span>
+          <select id="opt-pro-hf-fpos" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
+            <option value="left">Căn trái chân trang</option>
+            <option value="center" selected>Căn giữa chân trang</option>
+            <option value="right">Căn phải chân trang</option>
+          </select>
+        </label>
+        <label class="flex items-center gap-2"><input id="opt-pro-hf-fline" type="checkbox" checked class="accent-amber-400" /><span>Kẻ đường phân cách trên chân trang</span></label>
         <label class="flex items-center gap-2"><input id="opt-pro-hf-skip1" type="checkbox" class="accent-amber-400" /><span>Bỏ qua trang bìa (Trang 1)</span></label>`;
     }
 
@@ -477,6 +504,14 @@ XacNhan=true</textarea>
       return `
         <label class="block space-y-1"><span class="font-bold">Tiêu đề trang Mục lục:</span>
           <input id="opt-pro-toc-title" type="text" value="MỤC LỤC TÀI LIỆU" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
+        </label>
+        <label class="block space-y-1"><span class="font-bold">Kiểu trình bày mục lục:</span>
+          <select id="opt-pro-toc-style" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
+            <option value="dots">(Tiêu đề) ............ (số trang)</option>
+            <option value="space">(Tiêu đề)   (số trang) — Tối giản</option>
+            <option value="dash">(Tiêu đề) ———— (số trang)</option>
+            <option value="prefix">[Số trang] · (Tiêu đề) — Báo chí</option>
+          </select>
         </label>
         <label class="block space-y-1"><span class="font-bold">Danh sách mục (Mỗi dòng: Tên chương | Số trang):</span>
           <textarea id="opt-pro-toc-lines" rows="4" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700 text-[11.5px]">Chương 1: Khởi đầu | 1
@@ -638,6 +673,9 @@ Chương 3: Tổng kết | 12</textarea>
       paper: document.getElementById('opt-pro-paper')?.value || 'a4',
       orient: document.getElementById('opt-pro-orient')?.value || 'portrait',
       nupMode: document.getElementById('opt-pro-nup-mode')?.value || '2',
+      nupGapMm: Math.max(0, Math.min(20, Number(document.getElementById('opt-pro-nup-gap-mm')?.value || 0))),
+      bookletMarginMm: Math.max(0, Math.min(20, Number(document.getElementById('opt-pro-booklet-margin-mm')?.value || 0))),
+      bookletGutterMm: Math.max(0, Math.min(30, Number(document.getElementById('opt-pro-booklet-gutter-mm')?.value ?? 4))),
       mixRev2: Boolean(document.getElementById('opt-pro-mix-rev2')?.checked),
       blankCount: Math.max(1, Math.min(200, Number(document.getElementById('opt-pro-blank-count')?.value || 10))),
       blankSize: document.getElementById('opt-pro-blank-size')?.value || 'a4',
@@ -651,8 +689,13 @@ Chương 3: Tổng kết | 12</textarea>
       annY: Number(document.getElementById('opt-pro-ann-y')?.value || 20),
       hfHeader: document.getElementById('opt-pro-hf-header')?.value || '',
       hfFooter: document.getElementById('opt-pro-hf-footer')?.value || '',
+      hfHPos: document.getElementById('opt-pro-hf-hpos')?.value || 'center',
+      hfFPos: document.getElementById('opt-pro-hf-fpos')?.value || 'center',
+      hfHLine: Boolean(document.getElementById('opt-pro-hf-hline')?.checked),
+      hfFLine: Boolean(document.getElementById('opt-pro-hf-fline')?.checked),
       hfSkip1: Boolean(document.getElementById('opt-pro-hf-skip1')?.checked),
       tocTitle: document.getElementById('opt-pro-toc-title')?.value?.trim() || 'MỤC LỤC TÀI LIỆU',
+      tocStyle: document.getElementById('opt-pro-toc-style')?.value || 'dots',
       tocLines: document.getElementById('opt-pro-toc-lines')?.value || '',
       epubOut: document.getElementById('opt-pro-epub-out')?.value || 'pdf',
       epubTitle: document.getElementById('opt-pro-epub-title')?.value?.trim() || '',
@@ -761,29 +804,38 @@ Chương 3: Tổng kết | 12</textarea>
         embedded.push(await out.embedPage(srcPages[i]));
       }
 
+      const MM_TO_PT = 2.83465;
+      const gapPt = (pro.nupGapMm || 0) * MM_TO_PT;
+      const outerMarginPt = (pro.bookletMarginMm || 0) * MM_TO_PT;
+      const gutterPt = (pro.bookletGutterMm ?? 4) * MM_TO_PT;
+
       if (pro.nupMode === 'booklet') {
-        // Bổ sung null (trang trắng) cho đủ bội số 4
         const padded = embedded.slice();
         while (padded.length % 4 !== 0) padded.push(null);
         const total = padded.length;
         const sheetW = 841.89; // A4 ngang
         const sheetH = 595.28;
-        const halfW = sheetW / 2;
+        const halfInnerW = Math.max(40, (sheetW - outerMarginPt * 2 - gutterPt) / 2);
+        const innerH = Math.max(40, sheetH - outerMarginPt * 2);
         for (let s = 0; s < total / 2; s++) {
           prog(15 + ((s + 1) / (total / 2)) * 75, `Đang ghép mặt sách ${s + 1}/${total / 2}...`);
           const isFront = s % 2 === 0;
           const leftIdx = isFront ? total - 1 - s : s;
           const rightIdx = isFront ? s : total - 1 - s;
           const pg = out.addPage([sheetW, sheetH]);
-          const drawSlot = (emb, slotX) => {
+          const drawBookletSide = (emb, isLeftSide) => {
             if (!emb) return;
-            const sc = Math.min((halfW - 18) / emb.width, (sheetH - 18) / emb.height);
+            const sc = Math.min(halfInnerW / emb.width, innerH / emb.height);
             const dw = emb.width * sc;
             const dh = emb.height * sc;
-            pg.drawPage(emb, { x: slotX + (halfW - dw) / 2, y: (sheetH - dh) / 2, width: dw, height: dh });
+            // Căn sát về phía gáy sách (cách trục giữa đúng gutterPt/2) để khi gập đôi liền mạch như sách in thật!
+            const spineX = sheetW / 2;
+            const x = isLeftSide ? spineX - gutterPt / 2 - dw : spineX + gutterPt / 2;
+            const y = outerMarginPt + (innerH - dh) / 2;
+            pg.drawPage(emb, { x, y, width: dw, height: dh });
           };
-          drawSlot(padded[leftIdx], 0);
-          drawSlot(padded[rightIdx], halfW);
+          drawBookletSide(padded[leftIdx], true);
+          drawBookletSide(padded[rightIdx], false);
         }
         outputs.push({ name: `${baseName}_Booklet_DongGay.pdf`, blob: new Blob([await out.save()], { type: 'application/pdf' }) });
         return outputs;
@@ -792,9 +844,19 @@ Chương 3: Tổng kết | 12</textarea>
       const n = Number(pro.nupMode) || 2;
       const gridMap = { 2: [2, 1, 841.89, 595.28], 4: [2, 2, 595.28, 841.89], 6: [3, 2, 841.89, 595.28], 9: [3, 3, 595.28, 841.89] };
       const [cols, rows, sw, sh] = gridMap[n] || gridMap[2];
-      const cellW = sw / cols;
-      const cellH = sh / rows;
+      const cellW = Math.max(20, (sw - outerMarginPt * 2 - gapPt * (cols - 1)) / cols);
+      const cellH = Math.max(20, (sh - outerMarginPt * 2 - gapPt * (rows - 1)) / rows);
       const perSheet = cols * rows;
+      // Khi khoảng hở = 0mm -> tính khung trang chung gọn để các trang nằm sát liền nhau không bị hở khoảng trắng thừa!
+      const refEmb = embedded[0];
+      const uniformScale = refEmb ? Math.min(cellW / refEmb.width, cellH / refEmb.height) : 1;
+      const tileW = refEmb ? refEmb.width * uniformScale : cellW;
+      const tileH = refEmb ? refEmb.height * uniformScale : cellH;
+      const totalGridW = tileW * cols + gapPt * (cols - 1);
+      const totalGridH = tileH * rows + gapPt * (rows - 1);
+      const originX = (sw - totalGridW) / 2;
+      const originTopY = (sh + totalGridH) / 2;
+
       for (let start = 0; start < embedded.length; start += perSheet) {
         prog(15 + ((start + perSheet) / embedded.length) * 75, `Đang dàn trang ${Math.floor(start / perSheet) + 1}...`);
         const pg = out.addPage([sw, sh]);
@@ -802,11 +864,11 @@ Chương 3: Tổng kết | 12</textarea>
           const emb = embedded[start + k];
           const col = k % cols;
           const row = Math.floor(k / cols);
-          const sc = Math.min((cellW - 14) / emb.width, (cellH - 14) / emb.height);
+          const sc = Math.min(tileW / emb.width, tileH / emb.height);
           const dw = emb.width * sc;
           const dh = emb.height * sc;
-          const x = col * cellW + (cellW - dw) / 2;
-          const y = sh - (row + 1) * cellH + (cellH - dh) / 2;
+          const x = originX + col * (tileW + gapPt) + (tileW - dw) / 2;
+          const y = originTopY - (row + 1) * tileH - row * gapPt + (tileH - dh) / 2;
           pg.drawPage(emb, { x, y, width: dw, height: dh });
         }
       }
@@ -1302,11 +1364,16 @@ Chương 3: Tổng kết | 12</textarea>
 
     // 11. THÊM TIÊU ĐỀ ĐẦU & CHÂN TRANG (HEADER & FOOTER)
     if (tool.id === 'header_footer') {
-      const { PDFDocument } = await ensurePdfLib();
+      const { PDFDocument, rgb } = await ensurePdfLib();
       const doc = await PDFDocument.load(ctrl.files[0].bytes, { ignoreEncryption: true });
       const pages = doc.getPages();
       const total = pages.length;
       const dateStr = new Date().toLocaleDateString('vi-VN');
+      const alignX = (pos, pageW, imgW) => {
+        if (pos === 'left') return 32;
+        if (pos === 'right') return Math.max(32, pageW - imgW - 32);
+        return (pageW - imgW) / 2;
+      };
       for (let i = 0; i < total; i++) {
         if (pro.hfSkip1 && i === 0) continue;
         prog(15 + ((i + 1) / total) * 75, `Đang gắn Header/Footer trang ${i + 1}/${total}...`);
@@ -1316,22 +1383,31 @@ Chương 3: Tổng kết | 12</textarea>
         if (pro.hfHeader.trim()) {
           const hPng = renderVietnameseTextToPngBytes(fmt(pro.hfHeader), { fontSize: 11, color: '#334155', bold: true, padX: 6, padY: 3 });
           const emb = await doc.embedPng(hPng.bytes);
-          pg.drawImage(emb, { x: (width - hPng.widthPt) / 2, y: height - hPng.heightPt - 14, width: hPng.widthPt, height: hPng.heightPt });
+          const hy = height - hPng.heightPt - 14;
+          pg.drawImage(emb, { x: alignX(pro.hfHPos, width, hPng.widthPt), y: hy, width: hPng.widthPt, height: hPng.heightPt });
+          if (pro.hfHLine) {
+            pg.drawLine({ start: { x: 32, y: hy - 4 }, end: { x: width - 32, y: hy - 4 }, thickness: 0.75, color: rgb(0.55, 0.6, 0.68) });
+          }
         }
         if (pro.hfFooter.trim()) {
           const fPng = renderVietnameseTextToPngBytes(fmt(pro.hfFooter), { fontSize: 11, color: '#475569', bold: false, padX: 6, padY: 3 });
           const emb = await doc.embedPng(fPng.bytes);
-          pg.drawImage(emb, { x: (width - fPng.widthPt) / 2, y: 14, width: fPng.widthPt, height: fPng.heightPt });
+          const fy = 14;
+          pg.drawImage(emb, { x: alignX(pro.hfFPos, width, fPng.widthPt), y: fy, width: fPng.widthPt, height: fPng.heightPt });
+          if (pro.hfFLine) {
+            pg.drawLine({ start: { x: 32, y: fy + fPng.heightPt + 4 }, end: { x: width - 32, y: fy + fPng.heightPt + 4 }, thickness: 0.75, color: rgb(0.55, 0.6, 0.68) });
+          }
         }
       }
       outputs.push({ name: `${baseName}_HeaderFooter.pdf`, blob: new Blob([await doc.save()], { type: 'application/pdf' }) });
       return outputs;
     }
 
-    // 12. TẠO TRANG MỤC LỤC TỰ ĐỘNG (AUTO TOC)
+    // 12. TẠO TRANG MỤC LỤC TỰ ĐỘNG (AUTO TOC — ĐA KIỂU TRÌNH BÀY)
     if (tool.id === 'bookmarks_toc') {
       const { PDFDocument } = await ensurePdfLib();
       const src = await PDFDocument.load(ctrl.files[0].bytes, { ignoreEncryption: true });
+      const style = pro.tocStyle || 'dots';
       const tocRows = pro.tocLines
         .split(/\r?\n/)
         .map((l) => l.trim())
@@ -1340,7 +1416,12 @@ Chương 3: Tổng kết | 12</textarea>
           const parts = l.split('|');
           const title = (parts[0] || l).trim();
           const pgNum = (parts[1] || '').trim();
-          return pgNum ? `${title} .................................... Trang ${pgNum}` : title;
+          if (!pgNum) return title;
+          if (style === 'space') return `${title}          ${pgNum}`;
+          if (style === 'dash') return `${title} ———————————— ${pgNum}`;
+          if (style === 'prefix') return `[Trang ${pgNum}]  ·  ${title}`;
+          const dotCount = Math.max(6, 48 - Math.min(40, title.length));
+          return `${title} ${'.'.repeat(dotCount)} ${pgNum}`;
         });
       prog(40, 'Đang dựng trang Mục lục & ghép vào đầu sách...');
       const tocBlob = await renderLinesToVietnamesePdfBlob(pro.tocTitle, [`# ${pro.tocTitle}`, '', ...tocRows], () => {});
@@ -1746,7 +1827,7 @@ ${visualOverlayHtml ? `<h2>2. Chồng lớp hình ảnh soi từng pixel (Visual
       return outputs;
     }
 
-    // 21. KIỂM TRA KỸ THUẬT TRƯỚC KHI IN (PREFLIGHT INSPECTOR)
+    // 21. KIỂM TRA KỸ THUẬT TRƯỚC KHI IN (PREFLIGHT INSPECTOR — HIỆN KẾT QUẢ TRỰC TIẾP, KHÔNG CẦN TẢI FILE!)
     if (tool.id === 'preflight_inspect') {
       const { PDFDocument } = await ensurePdfLib();
       const pdfjsLib = await ensurePdfJs();
@@ -1755,6 +1836,7 @@ ${visualOverlayHtml ? `<h2>2. Chồng lớp hình ảnh soi từng pixel (Visual
       const pdf = await pdfjsLib.getDocument({ data: ctrl.files[0].bytes.slice() }).promise;
       const pages = doc.getPages();
       const sizes = new Set();
+      const orientations = new Set();
       const rows = [];
       let lowTextPages = 0;
       for (let i = 0; i < pages.length; i++) {
@@ -1762,28 +1844,72 @@ ${visualOverlayHtml ? `<h2>2. Chồng lớp hình ảnh soi từng pixel (Visual
         const { width, height } = pages[i].getSize();
         const mmW = Math.round(width * 0.352778);
         const mmH = Math.round(height * 0.352778);
-        const key = `${mmW}x${mmH}mm`;
+        const key = `${mmW}×${mmH}mm`;
+        const orient = width > height ? 'Ngang' : 'Dọc';
         sizes.add(key);
+        orientations.add(orient);
         const jp = await pdf.getPage(i + 1);
         const tc = await jp.getTextContent();
         const charCount = tc.items.reduce((s, it) => s + String(it.str || '').trim().length, 0);
         if (charCount < 15) lowTextPages += 1;
-        rows.push(`<tr><td>Trang ${i + 1}</td><td>${mmW} × ${mmH} mm</td><td>${width > height ? 'Ngang' : 'Dọc'}</td><td>${charCount} ký tự</td><td>${charCount < 15 ? '⚠️ Có thể là ảnh scan (nên chạy OCR)' : '✅ Có lớp chữ vector'}</td></tr>`);
+        rows.push({
+          page: i + 1,
+          dim: `${mmW} × ${mmH} mm`,
+          orient,
+          chars: charCount,
+          status: charCount < 15 ? '⚠️ Ảnh scan / ít chữ (nên chạy OCR)' : '✅ Lớp chữ sắc nét',
+          warn: charCount < 15,
+        });
       }
-      const html = `<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><title>Preflight — ${escHtml(baseName)}</title>
-<style>body{font-family:Segoe UI,Arial,sans-serif;background:#0f172a;color:#e2e8f0;max-width:920px;margin:20px auto;padding:16px}
-table{width:100%;border-collapse:collapse;margin-top:14px}th,td{border:1px solid #334155;padding:8px 10px;text-align:left;font-size:13px}th{background:#1e293b}</style></head><body>
-<h1>🔬 Báo Cáo Kiểm Tra Kỹ Thuật Trước Khi In (Preflight)</h1>
-<ul>
-  <li><strong>Tên tệp:</strong> ${escHtml(ctrl.files[0].name)}</li>
-  <li><strong>Tổng số trang:</strong> ${pages.length}</li>
-  <li><strong>Tiêu đề / Tác giả Metadata:</strong> ${escHtml(doc.getTitle() || '(Trống)')} / ${escHtml(doc.getAuthor() || '(Trống)')}</li>
-  <li><strong>Đồng nhất khổ giấy:</strong> ${sizes.size === 1 ? `✅ Đồng nhất 100% (${[...sizes][0]})` : `⚠️ Phát hiện ${sizes.size} khổ giấy khác nhau (${[...sizes].join(', ')}) — nên dùng công cụ Đổi khổ giấy trước khi in!`}</li>
-  <li><strong>Trang dạng ảnh scan / ít chữ:</strong> ${lowTextPages}/${pages.length} trang</li>
-</ul>
-<table><thead><tr><th>Trang</th><th>Kích thước thực</th><th>Hướng</th><th>Mật độ chữ</th><th>Đánh giá</th></tr></thead><tbody>${rows.join('')}</tbody></table>
-</body></html>`;
-      outputs.push({ name: `Preflight_${baseName}.html`, blob: new Blob([html], { type: 'text/html;charset=utf-8' }) });
+      const isUniform = sizes.size === 1;
+      const isSameOrient = orientations.size === 1;
+      const score = Math.max(40, 100 - (isUniform ? 0 : 20) - (isSameOrient ? 0 : 10) - Math.min(25, lowTextPages * 3));
+      const reportHtml = `
+        <div class="space-y-4 text-left">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div class="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
+              <div class="text-[11px] text-zinc-400">Điểm sẵn sàng in</div>
+              <div class="text-xl font-black ${score >= 85 ? 'text-emerald-400' : score >= 65 ? 'text-amber-300' : 'text-rose-400'}">${score}/100</div>
+            </div>
+            <div class="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
+              <div class="text-[11px] text-zinc-400">Tổng số trang</div>
+              <div class="text-xl font-black text-sky-300">${pages.length} trang</div>
+            </div>
+            <div class="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
+              <div class="text-[11px] text-zinc-400">Đồng nhất khổ giấy</div>
+              <div class="text-xs font-extrabold mt-1 ${isUniform ? 'text-emerald-400' : 'text-amber-300'}">${isUniform ? `✅ 100% (${[...sizes][0]})` : `⚠️ ${sizes.size} khổ khác nhau`}</div>
+            </div>
+            <div class="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
+              <div class="text-[11px] text-zinc-400">Trang ít chữ / ảnh scan</div>
+              <div class="text-xs font-extrabold mt-1 ${lowTextPages === 0 ? 'text-emerald-400' : 'text-amber-300'}">${lowTextPages}/${pages.length} trang</div>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs space-y-1 text-zinc-300">
+            <div><strong>📄 Tệp kiểm định:</strong> ${escHtml(ctrl.files[0].name)}</div>
+            <div><strong>🏷️ Siêu dữ liệu (Tiêu đề / Tác giả):</strong> ${escHtml(doc.getTitle() || '(Trống)')} / ${escHtml(doc.getAuthor() || '(Trống)')}</div>
+            <div><strong>📐 Hướng giấy:</strong> ${isSameOrient ? `✅ Thống nhất (${[...orientations][0]})` : `⚠️ Lẫn cả trang Dọc & Ngang`}</div>
+            ${!isUniform ? `<div class="text-amber-300 font-bold">💡 Gợi ý: Phát hiện nhiều khổ (${[...sizes].join(', ')}), nên dùng "Đổi khổ giấy" trước khi mang đi in.</div>` : ''}
+          </div>
+
+          <div class="max-h-72 overflow-auto rounded-xl border border-zinc-800">
+            <table class="w-full text-xs text-left border-collapse">
+              <thead class="bg-zinc-950 sticky top-0 text-zinc-400">
+                <tr><th class="p-2 border-b border-zinc-800">Trang</th><th class="p-2 border-b border-zinc-800">Kích thước</th><th class="p-2 border-b border-zinc-800">Hướng</th><th class="p-2 border-b border-zinc-800">Số ký tự</th><th class="p-2 border-b border-zinc-800">Đánh giá</th></tr>
+              </thead>
+              <tbody class="divide-y divide-zinc-800/70">
+                ${rows.map((r) => `<tr class="hover:bg-zinc-800/40"><td class="p-2 font-bold">#${r.page}</td><td class="p-2">${r.dim}</td><td class="p-2">${r.orient}</td><td class="p-2">${r.chars}</td><td class="p-2 ${r.warn ? 'text-amber-300' : 'text-emerald-400'} font-bold">${r.status}</td></tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+      outputs.push({
+        __inlineReportOnly: true,
+        reportTitle: `🔬 Kết quả Kiểm tra Kỹ thuật Trước Khi In — ${ctrl.files[0].name}`,
+        reportHtml,
+        name: `Preflight_${baseName}.html`,
+        blob: new Blob([reportHtml], { type: 'text/html;charset=utf-8' }),
+      });
       return outputs;
     }
 

@@ -38,6 +38,11 @@
 
   // Trạng thái nhập liệu cục bộ của máy tính tiền vay & pháp y (nhỏ gọn, xóa khi destroy)
   let uiState = {
+    gateLoading: false,
+    gateStatus: '',
+    gateError: '',
+    gateCountry: 'VN',
+    gateAreaInput: '',
     evalProgress: null,
     goldLoading: false,
     goldError: '',
@@ -76,6 +81,11 @@
 
   function resetUiState() {
     uiState = {
+      gateLoading: false,
+      gateStatus: '',
+      gateError: '',
+      gateCountry: 'VN',
+      gateAreaInput: '',
       evalProgress: null,
       goldLoading: false,
       goldError: '',
@@ -923,12 +933,68 @@
   }
 
   // --------------------------------------------------------------------------
+  // MÀN HÌNH CỔNG XÁC ĐỊNH VỊ TRÍ & QUỐC GIA (BÁM SÁT THỊ TRƯỜNG TOÀN CẦU)
+  // --------------------------------------------------------------------------
+  function renderLocationGateScreen() {
+    const esc = INV.utils.escapeHtml;
+    const countries = Object.values(INV.COUNTRY_PROFILES || {});
+    return `
+      <div class="inv-root space-y-4">
+        <div class="inv-card text-center space-y-4 py-6">
+          <div class="text-4xl">🌍</div>
+          <div class="space-y-1.5 max-w-xl mx-auto">
+            <h3 class="text-base sm:text-lg font-black">Xác định Quốc gia &amp; Khu vực trước khi vào Đầu tư hôm nay</h3>
+            <p class="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              Người dùng có thể đang ở Việt Nam hoặc nước ngoài. Hãy cho phép truy cập vị trí (GPS) để hệ thống tự nhận diện đúng quốc gia, đồng tiền, ngân hàng trung ương, sàn chứng khoán &amp; khu vực nhà đất và tra cứu dữ liệu sát sườn nhất!
+            </p>
+          </div>
+
+          <div class="flex flex-col items-center gap-2">
+            <button type="button" id="inv-gate-btn-gps" class="inv-primary-btn" ${uiState.gateLoading ? 'disabled' : ''}>
+              ${uiState.gateLoading ? '⏳ Đang định vị &amp; tra cứu dữ liệu khu vực...' : '📍 Cho phép truy cập Vị trí (GPS) &amp; Tra cứu ngay'}
+            </button>
+            ${uiState.gateStatus ? `<div class="text-xs font-bold text-emerald-600 dark:text-emerald-400">${esc(uiState.gateStatus)}</div>` : ''}
+            ${uiState.gateError ? `<div class="text-xs font-bold text-amber-600 dark:text-amber-300 max-w-md">${esc(uiState.gateError)}</div>` : ''}
+          </div>
+
+          <div class="pt-4 border-t border-zinc-200 dark:border-zinc-800 max-w-lg mx-auto space-y-2.5 text-left">
+            <div class="text-xs font-extrabold text-zinc-700 dark:text-zinc-300">Hoặc chọn Quốc gia &amp; khu vực thủ công (khi máy tính không có GPS):</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <select id="inv-gate-country-sel" class="px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-bold">
+                ${countries
+                  .map(
+                    (c) => `<option value="${esc(c.countryCode)}" ${uiState.gateCountry === c.countryCode ? 'selected' : ''}>${esc(c.countryName)} (${esc(c.currency)})</option>`
+                  )
+                  .join('')}
+              </select>
+              <input type="text" id="inv-gate-area-inp" value="${esc(uiState.gateAreaInput)}" placeholder="Tùy chọn: Thành phố / Quận / Bang..." class="px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs" />
+            </div>
+            <button type="button" id="inv-gate-btn-manual" class="inv-secondary-btn w-full text-xs font-extrabold" ${uiState.gateLoading ? 'disabled' : ''}>
+              🚀 Xác nhận Quốc gia, Tra cứu &amp; Vào Đầu tư hôm nay
+            </button>
+          </div>
+        </div>
+        ${disclaimerFooterHtml()}
+      </div>`;
+  }
+
+  // --------------------------------------------------------------------------
   // RENDER TỔNG KHUNG & GẮN SỰ KIỆN
   // --------------------------------------------------------------------------
   function render() {
     const host = INV.stateManager.hostEl;
     if (!host || !host.isConnected) return;
 
+    // Bắt buộc xác định vị trí / quốc gia và tra cứu dữ liệu sát khu vực trước khi vào bảng điều khiển
+    if (!INV.stateManager.userRegion) {
+      host.innerHTML = renderLocationGateScreen();
+      bindLocationGateEvents(host);
+      NS.i18n?.translateElement?.(host);
+      return;
+    }
+
+    const reg = INV.stateManager.userRegion;
+    const esc = INV.utils.escapeHtml;
     const tab = INV.stateManager.activeTab;
     let bodyHtml = '';
     if (tab === 'gold') bodyHtml = renderGoldTab();
@@ -941,11 +1007,13 @@
         <!-- Header gọn nhẹ -->
         <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-zinc-200 dark:border-zinc-800">
           <div>
-            <h3 class="text-base font-black tracking-tight flex items-center gap-2">
+            <h3 class="text-base font-black tracking-tight flex items-center gap-2 flex-wrap">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600 dark:text-emerald-400"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
               <span>Đầu tư hôm nay</span>
+              <span class="inv-pill inv-sig-positive text-[10.5px]">🌍 ${esc(reg.areaLabel)} (${esc(reg.currency)})</span>
+              <button type="button" id="inv-btn-change-region" class="text-[11px] font-bold text-sky-600 dark:text-sky-400 underline cursor-pointer">Đổi vị trí</button>
             </h3>
-            <p class="text-[11.5px] text-zinc-500 dark:text-zinc-400">Tra cứu nhanh khi cần — Không chạy ngầm tốn máy</p>
+            <p class="text-[11.5px] text-zinc-500 dark:text-zinc-400">Tra cứu nhanh khi cần — Không chạy ngầm tốn máy · Bám sát ${esc(reg.countryName)} (${esc(reg.centralBank)}, ${esc(reg.stockIndex)})</p>
           </div>
           <button type="button" id="inv-btn-header-gemini" class="inv-gemini-btn text-xs py-2 px-3">
             🪟 Mở cùng Gemini
@@ -966,6 +1034,69 @@
 
     bindEvents(host);
     NS.i18n?.translateElement?.(host);
+  }
+
+  async function completeRegionEntry(regionObj) {
+    uiState.gateStatus = `✅ Đã xác định: ${regionObj.areaLabel} (${regionObj.countryName}). Đang tra cứu dữ liệu sát khu vực...`;
+    render();
+    INV.stateManager.userRegion = regionObj;
+    INV.storageAdapter.setSession('user_region', regionObj);
+    // Cập nhật sẵn khu vực nhà đất nếu có địa danh cụ thể
+    if (regionObj.areaLabel) {
+      INV.stateManager.realEstateData = INV.realEstateEngine.resolveManualArea(regionObj.areaLabel);
+      uiState.reManualInput = regionObj.areaLabel;
+    }
+    try {
+      await INV.researchEvaluator.runEvaluation({
+        depth: INV.storageAdapter.getPrefs().scanDepth || 'quick',
+        force: false,
+        onProgress: (p) => {
+          uiState.gateStatus = p.label;
+        },
+      });
+    } catch (_eInitEval) {}
+    uiState.gateLoading = false;
+    uiState.gateStatus = '';
+    uiState.gateError = '';
+    render();
+  }
+
+  function bindLocationGateEvents(host) {
+    const sel = host.querySelector('#inv-gate-country-sel');
+    const inp = host.querySelector('#inv-gate-area-inp');
+    sel?.addEventListener('change', () => { uiState.gateCountry = sel.value; });
+    inp?.addEventListener('input', () => { uiState.gateAreaInput = inp.value; });
+
+    host.querySelector('#inv-gate-btn-gps')?.addEventListener('click', async () => {
+      if (uiState.gateLoading) return;
+      uiState.gateLoading = true;
+      uiState.gateError = '';
+      uiState.gateStatus = '📡 Đang xin quyền Vị trí (GPS) và nhận diện quốc gia...';
+      render();
+      const { controller, signal } = INV.stateManager.createSignal();
+      try {
+        const reg = await INV.detectUserRegionByGps(signal);
+        if (signal.aborted) return;
+        await completeRegionEntry(reg);
+      } catch (err) {
+        uiState.gateLoading = false;
+        uiState.gateStatus = '';
+        uiState.gateError = err?.message || 'Chưa lấy được vị trí GPS.';
+        render();
+      } finally {
+        INV.stateManager.releaseController(controller);
+      }
+    });
+
+    host.querySelector('#inv-gate-btn-manual')?.addEventListener('click', async () => {
+      if (uiState.gateLoading) return;
+      uiState.gateLoading = true;
+      uiState.gateError = '';
+      const code = sel?.value || uiState.gateCountry || 'VN';
+      const area = (inp?.value || uiState.gateAreaInput || '').trim();
+      const profile = INV.resolveCountryProfile(code, undefined, area || undefined, 'manual');
+      await completeRegionEntry(profile);
+    });
   }
 
   async function triggerGoldFetch(force = false) {
@@ -1036,11 +1167,21 @@
       });
     });
 
-    // Nút mở nhanh cùng Gemini trên Header
+    // Đổi vị trí / quốc gia bất cứ lúc nào
+    host.querySelector('#inv-btn-change-region')?.addEventListener('click', () => {
+      INV.stateManager.userRegion = null;
+      INV.storageAdapter.clearSession('user_region');
+      render();
+    });
+
+    // Nút mở nhanh cùng Gemini trên Header (tự nhận trọng tâm theo thẻ đang mở + hiện màn hình xác nhận trước khi chuyển hướng!)
     host.querySelector('#inv-btn-header-gemini')?.addEventListener('click', () => {
       const prefs = INV.storageAdapter.getPrefs();
-      INV.promptComposer.copyAndLaunchGeminiSplit({
+      const curTab = INV.stateManager.activeTab;
+      const focusMap = { gold: 'gold', stock: 'stock', realestate: 'real_estate', overview: 'general' };
+      INV.promptComposer.openGeminiConfirmModal({
         mode: prefs.promptMode || 'plain',
+        focus: focusMap[curTab] || 'general',
         anonymize: uiState.anonymizeGemini,
       });
     });
@@ -1304,9 +1445,13 @@
   // --------------------------------------------------------------------------
   INV.mountIntoContainer = async function mountIntoContainer(hostEl) {
     INV.stateManager.hostEl = hostEl;
-    INV.stateManager.activeTab = 'overview'; // Mặc định mở màn hình Tổng quan siêu nhẹ — 0 gọi mạng!
+    INV.stateManager.activeTab = 'overview';
     await INV.fileParser.initActiveKnowledge();
-    // Khôi phục báo cáo ngắn hạn trong phiên nếu mới tắt chưa quá 30 phút
+    // Khôi phục quốc gia/khu vực đã xác nhận trong phiên (30 phút) để không bắt hỏi lại nếu vừa tắt mở lại
+    const cachedRegion = INV.storageAdapter.getSession('user_region', 30 * 60 * 1000);
+    if (cachedRegion?.data) {
+      INV.stateManager.userRegion = cachedRegion.data;
+    }
     const prefs = INV.storageAdapter.getPrefs();
     const cachedRep = INV.storageAdapter.getSession(`eval_report_${prefs.scanDepth || 'quick'}`, 30 * 60 * 1000);
     if (cachedRep?.data) {

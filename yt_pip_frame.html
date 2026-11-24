@@ -50,6 +50,7 @@
       // Dựng <iframe> trước với đầy đủ referrerpolicy & enablejsapi=1 (y hệt khung chính đã chứng minh chạy 100% trên Desktop!)
       var q = new URLSearchParams();
       q.set('enablejsapi', '1');
+      q.set('widgetid', '1');
       q.set('rel', '0');
       q.set('modestbranding', '1');
       q.set('playsinline', '1');
@@ -175,6 +176,18 @@
 
       function execYtCommand(func, args) {
         var safeArgs = Array.isArray(args) ? args.slice() : [];
+        if (func === 'seekBy') {
+          var delta = Number(safeArgs[0]) || 0;
+          var snapNow = readLiveSnapshotFromYtPlayer();
+          var baseT = typeof snapNow.currentTime === 'number' && isFinite(snapNow.currentTime) ? snapNow.currentTime : 0;
+          var dur = typeof snapNow.duration === 'number' && isFinite(snapNow.duration) ? snapNow.duration : 0;
+          var nextT = Math.max(0, dur > 1 ? Math.min(dur - 0.5, baseT + delta) : baseT + delta);
+          return execYtCommand('seekTo', [nextT, true]);
+        }
+        if (func === 'togglePlayPause') {
+          var stNow = readLiveSnapshotFromYtPlayer().playerState;
+          return execYtCommand(stNow === 1 || stNow === 3 ? 'pauseVideo' : 'playVideo', []);
+        }
         if (func === 'setLoop') {
           loopEnabled = Boolean(safeArgs[0]);
         }

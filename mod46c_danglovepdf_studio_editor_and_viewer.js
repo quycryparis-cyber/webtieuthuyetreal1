@@ -46,7 +46,8 @@
 
     const pv = document.createElement('div');
     pv.id = 'modal-mod46-interactive-preview';
-    pv.className = 'fixed inset-0 z-[2147483625] bg-zinc-950/96 backdrop-blur-md flex flex-col text-zinc-100 overflow-hidden';
+    pv.className = 'fixed inset-0 z-[2147483625] backdrop-blur-md flex flex-col text-zinc-100 overflow-hidden';
+    pv.style.cssText = 'position:fixed;inset:0;width:100vw;height:100dvh;background:rgba(9,9,11,0.97);display:flex;flex-direction:column;';
     pv.setAttribute('role', 'dialog');
     pv.setAttribute('aria-modal', 'true');
 
@@ -89,8 +90,8 @@
       </div>
 
       <!-- Khung thân chính: Sidebar trái (Thumbnails / Mục lục) + Sân khấu 4 lớp -->
-      <div class="flex-1 min-h-0 flex overflow-hidden">
-        <aside id="mod46-pv-sidebar" class="hidden w-48 sm:w-56 border-r border-zinc-800 bg-zinc-900/90 flex-col shrink-0 overflow-hidden">
+      <div class="flex-1 min-h-0 w-full flex overflow-hidden" style="flex:1;min-height:0;width:100%;display:flex;">
+        <aside id="mod46-pv-sidebar" class="hidden w-44 sm:w-56 border-r border-zinc-800 bg-zinc-900/95 flex-col shrink-0 overflow-hidden">
           <div class="grid grid-cols-2 border-b border-zinc-800 text-[11px] font-bold">
             <button type="button" data-pv-stab="thumbs" class="py-2 bg-zinc-800 text-emerald-300 cursor-pointer">🖼️ Trang nhỏ</button>
             <button type="button" data-pv-stab="outline" class="py-2 text-zinc-400 hover:text-white cursor-pointer">📑 Mục lục</button>
@@ -99,7 +100,7 @@
           <div id="mod46-pv-outline-list" class="hidden flex-1 overflow-y-auto p-2 space-y-1 text-xs"></div>
         </aside>
 
-        <div id="mod46-pv-stage" class="flex-1 min-h-0 overflow-auto py-4 px-2 sm:px-5 flex flex-col items-center gap-4 bg-zinc-950/90">
+        <div id="mod46-pv-stage" class="flex-1 min-w-0 min-h-0 w-full overflow-auto py-3 sm:py-5 px-2 sm:px-6 flex flex-col items-center gap-4 bg-zinc-950/95" style="flex:1;min-width:0;min-height:0;width:100%;">
           <div class="py-12 text-sm font-bold text-sky-300 animate-pulse">⏳ Đang khởi động nhân đọc PDF 4 lớp ngay trên máy...</div>
         </div>
       </div>
@@ -122,6 +123,7 @@
       isClosed = true;
       renderToken += 1;
       document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('resize', onResizeViewer);
       pv.querySelectorAll('canvas').forEach((c) => { c.width = 0; c.height = 0; });
       const docRef = pdfDoc;
       pdfDoc = null;
@@ -161,7 +163,12 @@
     pv.querySelector('#btn-mod46-pv-sidebar')?.addEventListener('click', () => {
       sidebar?.classList.toggle('hidden');
       sidebar?.classList.toggle('flex');
+      setTimeout(() => renderCurrentView(currentPage), 40);
     });
+    const onResizeViewer = () => {
+      if (!isClosed && pdfDoc) renderCurrentView(currentPage);
+    };
+    window.addEventListener('resize', onResizeViewer);
     pv.querySelectorAll('[data-pv-stab]').forEach((b) => {
       b.addEventListener('click', () => {
         const tab = b.getAttribute('data-pv-stab');
@@ -175,10 +182,19 @@
     async function renderSinglePageCard(pageNo, isFirstPrimary) {
       const page = await pdfDoc.getPage(pageNo);
       const baseVp = page.getViewport({ scale: 1, rotation: (page.rotate + viewRot) % 360 });
-      const maxCardW = layoutMode === 'spread' ? Math.max(240, (stage.clientWidth - 64) / 2) : Math.max(280, Math.min(stage.clientWidth - 36, 940));
+      const sidebarOpen = sidebar && !sidebar.classList.contains('hidden');
+      const fallbackWinW = Math.max(320, (window.innerWidth || 1024) - (sidebarOpen ? 228 : 0));
+      const measuredW = Math.max(stage.clientWidth || 0, fallbackWinW);
+      const isMobileVw = (window.innerWidth || 1024) < 640;
+      const maxCardW =
+        layoutMode === 'spread'
+          ? Math.max(260, (measuredW - 64) / 2)
+          : isMobileVw
+          ? Math.max(300, measuredW - 20)
+          : Math.max(460, Math.min(measuredW - 56, 1180));
       const fitScale = maxCardW / Math.max(1, baseVp.width);
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const renderScale = Math.max(0.45, Math.min(3.0, fitScale * zoomFactor));
+      const renderScale = Math.max(0.55, Math.min(3.5, fitScale * zoomFactor));
       const cssW = Math.round(baseVp.width * renderScale);
       const cssH = Math.round(baseVp.height * renderScale);
       const vp = page.getViewport({ scale: renderScale * dpr, rotation: (page.rotate + viewRot) % 360 });
@@ -653,6 +669,59 @@
         updateSummary();
       };
 
+      // Bộ gõ trực tiếp NGAY TRÊN TRANG PDF (KHÔNG bật popup window.prompt!)
+      const openInlinePdfTextEditor = ({ x, y, w, h, initialText, fontSize, onCommit }) => {
+        stage.querySelectorAll('.mod46-inline-pdf-editor-box').forEach((el) => el.remove());
+        const sc = this.pageScale;
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.value = initialText || '';
+        inp.className = 'mod46-inline-pdf-editor-box';
+        inp.style.cssText = [
+          'position:absolute',
+          `left:${Math.max(0, x * sc - 2)}px`,
+          `top:${Math.max(0, y * sc - 2)}px`,
+          `min-width:${Math.max(110, (w || 140) * sc + 24)}px`,
+          `max-width:${Math.max(160, Math.round(stage.clientWidth - x * sc - 6))}px`,
+          `height:${Math.max(22, (h || fontSize * 1.45) * sc + 6)}px`,
+          `font-size:${Math.max(11, Math.round((fontSize || 12) * sc))}px`,
+          'line-height:1.25',
+          'padding:1px 5px',
+          'background:#ffffff',
+          'color:#0f172a',
+          'border:2px solid #10b981',
+          'border-radius:4px',
+          'box-shadow:0 4px 16px rgba(16,185,129,0.35)',
+          'outline:none',
+          'z-index:40',
+          'font-family:"Segoe UI",Arial,sans-serif',
+        ].join(';');
+        stage.appendChild(inp);
+        let settled = false;
+        const finish = (save) => {
+          if (settled) return;
+          settled = true;
+          const val = inp.value;
+          inp.remove();
+          if (save && typeof onCommit === 'function') onCommit(val);
+        };
+        inp.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            finish(true);
+          } else if (ev.key === 'Escape') {
+            ev.preventDefault();
+            finish(false);
+          }
+          ev.stopPropagation();
+        });
+        inp.addEventListener('blur', () => finish(true));
+        setTimeout(() => {
+          inp.focus();
+          inp.setSelectionRange(inp.value.length, inp.value.length);
+        }, 0);
+      };
+
       const renderEditableTextBlocks = () => {
         blocksLayer.innerHTML = '';
         const isEditText = this.activeMode === 'edit_text';
@@ -665,28 +734,42 @@
         blocks.forEach((blk) => {
           const b = document.createElement('button');
           b.type = 'button';
-          b.title = 'Bấm để sửa trực tiếp dòng chữ gốc này';
+          b.title = 'Bấm vào đây để gõ, Backspace xóa hoặc sửa chữ trực tiếp trên trang PDF';
           b.style.position = 'absolute';
           b.style.left = `${blk.x * sc}px`;
           b.style.top = `${blk.y * sc}px`;
           b.style.width = `${Math.max(24, blk.w * sc)}px`;
           b.style.height = `${Math.max(16, blk.h * sc)}px`;
           b.className = 'border border-dashed border-emerald-500/75 bg-emerald-400/10 hover:bg-emerald-400/25 rounded cursor-text transition';
-          b.addEventListener('click', () => {
-            const edited = global.prompt('✏️ Sửa trực tiếp đoạn chữ gốc PDF (tự giữ tiếng Việt chuẩn):', blk.text);
-            if (edited === null) return;
-            this._pushUndo();
-            this.getPageObjects(this.currentPage).push({
-              type: 'replace_text',
+          b.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const existingReplaced = [...this.getPageObjects(this.currentPage)]
+              .reverse()
+              .find((o) => o.type === 'replace_text' && Math.abs(o.x - blk.x) < 3 && Math.abs(o.y - blk.y) < 3);
+            const startText = existingReplaced ? existingReplaced.text : blk.text;
+            openInlinePdfTextEditor({
               x: blk.x,
               y: blk.y,
               w: blk.w,
               h: blk.h,
-              text: edited,
+              initialText: startText,
               fontSize: Math.max(9, Math.round(blk.fontSize || 12)),
-              color: this.color === '#dc2626' ? '#0f172a' : this.color,
+              onCommit: (edited) => {
+                if (edited === startText) return;
+                this._pushUndo();
+                this.getPageObjects(this.currentPage).push({
+                  type: 'replace_text',
+                  x: blk.x,
+                  y: blk.y,
+                  w: blk.w,
+                  h: blk.h,
+                  text: edited,
+                  fontSize: Math.max(9, Math.round(blk.fontSize || 12)),
+                  color: this.color === '#dc2626' ? '#0f172a' : this.color,
+                });
+                redrawOverlay();
+              },
             });
-            redrawOverlay();
           });
           blocksLayer.appendChild(b);
         });
@@ -699,7 +782,7 @@
         const baseVp = page.getViewport({ scale: 1 });
         this.baseWidth = baseVp.width;
         this.baseHeight = baseVp.height;
-        const maxW = Math.min(680, Math.max(300, container.clientWidth - 40));
+        const maxW = Math.min(920, Math.max(320, container.clientWidth - 28));
         this.pageScale = maxW / Math.max(1, baseVp.width);
         const vp = page.getViewport({ scale: this.pageScale });
 
@@ -763,11 +846,20 @@
       overlayCanvas.addEventListener('pointerdown', (ev) => {
         const p = ptOf(ev);
         if (this.activeMode === 'add_text') {
-          const txt = global.prompt('➕ Nhập đoạn chữ mới cần chèn vào trang PDF:', 'Nội dung mới');
-          if (!txt) return;
-          this._pushUndo();
-          this.getPageObjects(this.currentPage).push({ type: 'add_text', x: p.x, y: p.y, text: txt, fontSize: this.fontSize, color: this.color });
-          redrawOverlay();
+          openInlinePdfTextEditor({
+            x: p.x,
+            y: p.y,
+            w: 160,
+            h: this.fontSize * 1.5,
+            initialText: '',
+            fontSize: this.fontSize,
+            onCommit: (txt) => {
+              if (!txt || !txt.trim()) return;
+              this._pushUndo();
+              this.getPageObjects(this.currentPage).push({ type: 'add_text', x: p.x, y: p.y, text: txt, fontSize: this.fontSize, color: this.color });
+              redrawOverlay();
+            },
+          });
           return;
         }
         if (this.activeMode === 'stamp') {

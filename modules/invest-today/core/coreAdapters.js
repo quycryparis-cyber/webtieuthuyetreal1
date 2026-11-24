@@ -64,6 +64,7 @@
   const stateManager = {
     activeTab: 'overview',
     hostEl: null,
+    userRegion: null, // { countryCode, countryName, areaLabel, currency, centralBank, stockIndex, source }
     defaultKnowledge: null,
     activeKnowledge: null,
     isCustomKnowledge: false,
@@ -116,6 +117,7 @@
       this.evaluationReport = null;
       this.defaultKnowledge = null;
       this.activeKnowledge = null;
+      this.userRegion = null;
     },
   };
 

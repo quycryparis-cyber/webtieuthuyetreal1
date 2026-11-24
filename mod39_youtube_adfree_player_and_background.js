@@ -2084,7 +2084,8 @@
       // Khi Cửa sổ nổi Desktop (Document PiP hoặc In-Page Floating) đang mở -> gọi trực tiếp hàm cùng origin __mod39ExecPipCommand
       // + dự phòng contentWindow.postMessage -> 100% nút Tua/Dừng/Lặp/Lặp A-B/Tốc độ/Âm lượng điều khiển tức thì không độ trễ!
       if (!options.forceMainIframe && this._activePipSyncSid) {
-        const bgCtrl = NS.youtubeStudio?.mobileBgAudio;
+        const bgCtrl =
+          NS.youtubeStudio?.playerCtrl?.mobileBgAudio || NS.youtubeStudio?.mobileBgAudio;
         let pipFrameWin = null;
         if (bgCtrl?._docPipWindow && !bgCtrl._docPipWindow.closed) {
           try {
@@ -2214,6 +2215,7 @@
           this.emit('onStateChange', info.playerState);
         }
       }
+      ctrl?.mobileBgAudio?.syncFloatingControlsUi?.();
       if (ctrl) {
         if (typeof ctrl._enforceAbLoopIfNeeded === 'function' && !ctrl.isVideoLiveStream?.()) {
           ctrl._enforceAbLoopIfNeeded(this.lastKnownTime, this.lastKnownDuration, this.lastKnownState);
@@ -5396,6 +5398,146 @@
 
       // 2) Ưu tiên #1 trên Desktop (Chrome / Edge / Brave / Desktop PWA qua HTTPS/HTTP):
       //    Document Picture-in-Picture nạp qua cầu nối same-origin yt_pip_frame.html (gửi chuẩn Referer + đồng bộ 2 chiều toàn bộ nút điều khiển!)
+      const trPip = (txt) => NS.i18n?.translateText?.(txt) || txt;
+      const buildFloatingDrawerMarkup = (prefix) => `
+        <div id="${prefix}-ctrl-drawer" style="display:none;background:#121216;border-bottom:1px solid #27272a;padding:6px 8px;font-size:11px;color:#e4e4e7;flex-shrink:0;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+            <span id="${prefix}-cur-time" style="font-family:monospace;font-size:10px;color:#a1a1aa;min-width:34px;">00:00</span>
+            <input id="${prefix}-seek-range" type="range" min="0" max="100" value="0" step="1" style="flex:1;accent-color:#10b981;height:4px;cursor:pointer;" />
+            <span id="${prefix}-dur-time" style="font-family:monospace;font-size:10px;color:#a1a1aa;min-width:34px;text-align:right;">00:00</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;">
+            <select id="${prefix}-speed-sel" title="${trPip('Tốc độ phát')}" style="background:#27272a;color:#f4f4f5;border:1px solid #3f3f46;border-radius:6px;padding:2px 5px;font-size:10.5px;font-weight:700;cursor:pointer;">
+              <option value="0.5">0.5x</option>
+              <option value="0.75">0.75x</option>
+              <option value="1" selected>1x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2x</option>
+            </select>
+            <button id="${prefix}-loop-btn" type="button" style="background:#27272a;color:#e4e4e7;border:1px solid #3f3f46;border-radius:6px;padding:2px 7px;font-size:10.5px;font-weight:700;cursor:pointer;">🔁 ${trPip('Lặp')}</button>
+            <button id="${prefix}-ab-a-btn" type="button" style="background:#27272a;color:#e4e4e7;border:1px solid #3f3f46;border-radius:6px;padding:2px 6px;font-size:10.5px;font-weight:700;cursor:pointer;">🅰️ A</button>
+            <button id="${prefix}-ab-b-btn" type="button" style="background:#27272a;color:#e4e4e7;border:1px solid #3f3f46;border-radius:6px;padding:2px 6px;font-size:10.5px;font-weight:700;cursor:pointer;">🅱️ B</button>
+            <button id="${prefix}-ab-toggle-btn" type="button" style="background:#27272a;color:#e4e4e7;border:1px solid #3f3f46;border-radius:6px;padding:2px 7px;font-size:10.5px;font-weight:700;cursor:pointer;">🔁 A–B</button>
+            <button id="${prefix}-ab-clear-btn" type="button" title="${trPip('Xóa mốc A–B')}" style="background:#27272a;color:#fda4af;border:1px solid #3f3f46;border-radius:6px;padding:2px 6px;font-size:10.5px;font-weight:700;cursor:pointer;">✕ A–B</button>
+            <span id="${prefix}-ab-badge" style="font-size:10px;color:#34d399;font-weight:700;margin-left:auto;"></span>
+          </div>
+        </div>
+      `;
+
+      const bindFloatingDrawerHandlers = (scopeRoot, prefix, onDrawerToggle) => {
+        const drawer = scopeRoot.querySelector(`#${prefix}-ctrl-drawer`);
+        const toggleBtn = scopeRoot.querySelector(`#${prefix}-toggle-drawer-btn`);
+        const seekRange = scopeRoot.querySelector(`#${prefix}-seek-range`);
+        const speedSel = scopeRoot.querySelector(`#${prefix}-speed-sel`);
+        const loopBtn = scopeRoot.querySelector(`#${prefix}-loop-btn`);
+        const abABtn = scopeRoot.querySelector(`#${prefix}-ab-a-btn`);
+        const abBBtn = scopeRoot.querySelector(`#${prefix}-ab-b-btn`);
+        const abToggleBtn = scopeRoot.querySelector(`#${prefix}-ab-toggle-btn`);
+        const abClearBtn = scopeRoot.querySelector(`#${prefix}-ab-clear-btn`);
+
+        toggleBtn?.addEventListener('click', () => {
+          if (!drawer) return;
+          const willOpen = drawer.style.display === 'none';
+          drawer.style.display = willOpen ? 'block' : 'none';
+          toggleBtn.textContent = willOpen ? `⚙️ ${trPip('Thu gọn')} ▲` : `⚙️ ${trPip('Điều khiển')} ▼`;
+          if (typeof onDrawerToggle === 'function') onDrawerToggle(willOpen);
+          this.syncFloatingControlsUi();
+        });
+
+        let seeking = false;
+        seekRange?.addEventListener('pointerdown', () => { seeking = true; });
+        seekRange?.addEventListener('pointerup', () => { seeking = false; });
+        seekRange?.addEventListener('change', (ev) => {
+          seeking = false;
+          const targetSec = Number(ev.target.value);
+          if (Number.isFinite(targetSec)) {
+            this.playerCtrl?.seekToSeconds?.(targetSec, true);
+          }
+        });
+        if (seekRange) seekRange.__isUserSeeking = () => seeking;
+
+        speedSel?.addEventListener('change', (ev) => {
+          const r = Number(ev.target.value);
+          if (Number.isFinite(r) && r > 0) this.playerCtrl?.setSpeed?.(r);
+        });
+        loopBtn?.addEventListener('click', () => {
+          this.playerCtrl?.toggleRepeat?.();
+          this.syncFloatingControlsUi();
+        });
+        abABtn?.addEventListener('click', () => {
+          this.playerCtrl?.markPointAFromCurrent?.();
+          this.syncFloatingControlsUi();
+        });
+        abBBtn?.addEventListener('click', () => {
+          this.playerCtrl?.markPointBFromCurrent?.();
+          this.syncFloatingControlsUi();
+        });
+        abToggleBtn?.addEventListener('click', () => {
+          this.playerCtrl?.toggleAbLoop?.();
+          this.syncFloatingControlsUi();
+        });
+        abClearBtn?.addEventListener('click', () => {
+          this.playerCtrl?.clearAbLoop?.();
+          this.syncFloatingControlsUi();
+        });
+      };
+
+      this.syncFloatingControlsUi = () => {
+        const snap = this.playerCtrl?.bridge?.getCurrentPlaybackSnapshot?.() || {};
+        const cur = Math.max(0, Math.floor(Number(snap.currentTime) || 0));
+        const dur = Math.max(0, Math.floor(Number(snap.duration) || this.playerCtrl?.getKnownDurationSeconds?.() || 0));
+        const isPlaying = snap.state === 1 || snap.state === 3;
+        const prefs = this.playerCtrl?.prefs || {};
+        const ab = this.playerCtrl?.abLoop || {};
+
+        const syncOne = (scopeRoot, prefix) => {
+          if (!scopeRoot) return;
+          const ppBtn = scopeRoot.querySelector(`#${prefix}-playpause-btn`);
+          if (ppBtn) ppBtn.textContent = isPlaying ? '⏸' : '▶';
+          const curEl = scopeRoot.querySelector(`#${prefix}-cur-time`);
+          const durEl = scopeRoot.querySelector(`#${prefix}-dur-time`);
+          const rangeEl = scopeRoot.querySelector(`#${prefix}-seek-range`);
+          if (curEl) curEl.textContent = formatSecondsToClock(cur);
+          if (durEl) durEl.textContent = formatSecondsToClock(dur);
+          if (rangeEl && !(typeof rangeEl.__isUserSeeking === 'function' && rangeEl.__isUserSeeking())) {
+            rangeEl.max = String(Math.max(1, dur));
+            rangeEl.value = String(Math.min(Math.max(1, dur), cur));
+          }
+          const speedEl = scopeRoot.querySelector(`#${prefix}-speed-sel`);
+          if (speedEl && prefs.speed) speedEl.value = String(prefs.speed > 2 ? 2 : prefs.speed);
+          const loopEl = scopeRoot.querySelector(`#${prefix}-loop-btn`);
+          if (loopEl) {
+            loopEl.style.background = prefs.repeatMode ? '#059669' : '#27272a';
+            loopEl.style.color = '#ffffff';
+          }
+          const abToggleEl = scopeRoot.querySelector(`#${prefix}-ab-toggle-btn`);
+          if (abToggleEl) {
+            abToggleEl.style.background = ab.enabled ? '#7c3aed' : '#27272a';
+            abToggleEl.style.color = '#ffffff';
+          }
+          const abBadgeEl = scopeRoot.querySelector(`#${prefix}-ab-badge`);
+          if (abBadgeEl) {
+            const aTxt = typeof ab.startSec === 'number' ? formatSecondsToClock(ab.startSec) : '—';
+            const bTxt = typeof ab.endSec === 'number' ? formatSecondsToClock(ab.endSec) : '—';
+            abBadgeEl.textContent =
+              typeof ab.startSec === 'number' || typeof ab.endSec === 'number'
+                ? `${ab.enabled ? '🔁 ' : ''}${aTxt} ➔ ${bTxt}`
+                : '';
+          }
+        };
+
+        try {
+          if (this._docPipWindow && !this._docPipWindow.closed) {
+            syncOne(this._docPipWindow.document, 'pip');
+          }
+        } catch (_eSyncPip) {}
+        try {
+          const fl = document.getElementById('mod39-desktop-floating-win');
+          if (fl) syncOne(fl, 'fl');
+        } catch (_eSyncFl) {}
+      };
+
       if (
         !forceInAppFallback &&
         isDesktopDirectYoutubeEnv() &&
@@ -5406,8 +5548,8 @@
       ) {
         try {
           const pipWin = await window.documentPictureInPicture.requestWindow({
-            width: 460,
-            height: 304
+            width: 480,
+            height: 316
           });
           const pipOpenedAtMs = Date.now();
           this._docPipClosedByUser = false;
@@ -5431,7 +5573,7 @@
             ov.innerHTML = `
               <div class="text-3xl">🖼️</div>
               <div class="text-sm font-black text-emerald-300">Video đang chạy ở Cửa sổ nổi (Đồng bộ 2 chiều)</div>
-              <p class="text-[11.5px] text-zinc-300 max-w-sm leading-relaxed">Khung video gốc đã tạm tắt để tránh phát 2 luồng. Bạn có thể dùng mọi nút <strong>Tua, Dừng, Tốc độ, Lặp A–B, Âm lượng</strong> bên dưới để điều khiển trực tiếp Cửa sổ nổi!</p>
+              <p class="text-[11.5px] text-zinc-300 max-w-sm leading-relaxed">Khung video gốc đã tạm tắt để tránh phát 2 luồng. Bạn có thể dùng mọi nút <strong>Tua, Dừng, Tốc độ, Lặp A–B, Âm lượng</strong> ngay trong Cửa sổ nổi hoặc bên dưới!</p>
               <button type="button" id="btn-mod39-stage-return-from-pip" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow-lg transition cursor-pointer">✕ Đóng Cửa sổ nổi &amp; Trả về khung gốc</button>
             `;
             stageWrap.appendChild(ov);
@@ -5449,16 +5591,18 @@
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
           doc.body.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 8px;background:#18181b;border-bottom:1px solid #27272a;font-size:11px;font-weight:700;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:5px;padding:5px 8px;background:#18181b;border-bottom:1px solid #27272a;font-size:11px;font-weight:700;flex-shrink:0;">
               <span id="pip-header-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">🖼️ ${safeTitle}</span>
               <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
-                <button id="pip-back10-btn" type="button" title="Tua lùi 10 giây" style="background:#27272a;color:#e4e4e7;border:1px solid #3f3f46;border-radius:6px;padding:2px 6px;font-size:10.5px;font-weight:700;cursor:pointer;">-10s</button>
-                <button id="pip-playpause-btn" type="button" title="Phát / Tạm dừng" style="background:#059669;color:#fff;border:0;border-radius:6px;padding:2px 7px;font-size:10.5px;font-weight:700;cursor:pointer;">⏯</button>
-                <button id="pip-fwd10-btn" type="button" title="Tua tới 10 giây" style="background:#27272a;color:#e4e4e7;border:1px solid #3f3f46;border-radius:6px;padding:2px 6px;font-size:10.5px;font-weight:700;cursor:pointer;">+10s</button>
-                <button id="pip-close-btn" type="button" style="background:#e11d48;color:#fff;border:0;border-radius:6px;padding:2px 8px;font-size:10.5px;font-weight:700;cursor:pointer;">✕ Đóng</button>
+                <button id="pip-back10-btn" type="button" title="${trPip('Tua lùi 10 giây')}" style="background:#27272a;color:#e4e4e7;border:1px solid #3f3f46;border-radius:6px;padding:2px 6px;font-size:10.5px;font-weight:700;cursor:pointer;">-10s</button>
+                <button id="pip-playpause-btn" type="button" title="${trPip('Phát / Tạm dừng')}" style="background:#059669;color:#fff;border:0;border-radius:6px;padding:2px 7px;font-size:10.5px;font-weight:700;cursor:pointer;">⏯</button>
+                <button id="pip-fwd10-btn" type="button" title="${trPip('Tua tới 10 giây')}" style="background:#27272a;color:#e4e4e7;border:1px solid #3f3f46;border-radius:6px;padding:2px 6px;font-size:10.5px;font-weight:700;cursor:pointer;">+10s</button>
+                <button id="pip-toggle-drawer-btn" type="button" title="${trPip('Mở rộng / Thu gọn bảng tua, tốc độ, lặp A-B')}" style="background:#1e293b;color:#38bdf8;border:1px solid #334155;border-radius:6px;padding:2px 7px;font-size:10.5px;font-weight:700;cursor:pointer;">⚙️ ${trPip('Điều khiển')} ▼</button>
+                <button id="pip-close-btn" type="button" style="background:#e11d48;color:#fff;border:0;border-radius:6px;padding:2px 8px;font-size:10.5px;font-weight:700;cursor:pointer;">✕ ${trPip('Đóng')}</button>
               </div>
             </div>
-            <div style="flex:1;position:relative;background:#000;">
+            ${buildFloatingDrawerMarkup('pip')}
+            <div style="flex:1;min-height:0;position:relative;background:#000;">
               <iframe id="pip-yt-iframe" src="${pipBridgeUrl}" style="width:100%;height:100%;border:0;" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
             </div>
           `;
@@ -5466,10 +5610,27 @@
             this._docPipClosedByUser = true;
             this.closeDesktopFloatingWindow();
           };
-          doc.getElementById('pip-back10-btn')?.addEventListener('click', () => this.playerCtrl?.seekRelative?.(-10));
-          doc.getElementById('pip-playpause-btn')?.addEventListener('click', () => this.playerCtrl?.togglePlayPause?.());
-          doc.getElementById('pip-fwd10-btn')?.addEventListener('click', () => this.playerCtrl?.seekRelative?.(10));
+          doc.getElementById('pip-back10-btn')?.addEventListener('click', () => {
+            this.playerCtrl?.seekRelative?.(-10);
+            this.syncFloatingControlsUi();
+          });
+          doc.getElementById('pip-playpause-btn')?.addEventListener('click', () => {
+            this.playerCtrl?.togglePlayPause?.();
+            this.syncFloatingControlsUi();
+          });
+          doc.getElementById('pip-fwd10-btn')?.addEventListener('click', () => {
+            this.playerCtrl?.seekRelative?.(10);
+            this.syncFloatingControlsUi();
+          });
           doc.getElementById('pip-close-btn')?.addEventListener('click', closeAndCleanDocPip);
+          bindFloatingDrawerHandlers(doc, 'pip', (isOpen) => {
+            try {
+              const curW = Math.max(460, pipWin.outerWidth || 480);
+              const curH = pipWin.outerHeight || 340;
+              pipWin.resizeTo(curW, isOpen ? Math.max(curH, 396) : Math.max(300, curH - 64));
+            } catch (_eSz) {}
+          });
+          setTimeout(() => this.syncFloatingControlsUi(), 120);
           pipWin.addEventListener('pagehide', () => {
             const autoDismissedByHost = !this._docPipClosedByUser && Date.now() - pipOpenedAtMs < 600;
             if (autoDismissedByHost) {
@@ -5512,10 +5673,17 @@
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;');
         win.innerHTML = `
-          <div id="mod39-floating-drag-bar" class="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-900 border-b border-zinc-800 cursor-move select-none text-xs">
-            <span class="font-extrabold text-violet-200 truncate flex-1">🖼️ ${safeTitle}</span>
-            <button type="button" id="btn-mod39-close-floating-win" class="px-2 py-0.5 rounded-lg bg-zinc-800 hover:bg-rose-600 text-zinc-100 font-extrabold transition">✕</button>
+          <div id="mod39-floating-drag-bar" class="flex items-center justify-between gap-1.5 px-2.5 py-2 bg-zinc-900 border-b border-zinc-800 cursor-move select-none text-xs">
+            <span class="font-extrabold text-violet-200 truncate flex-1 min-w-0">🖼️ ${safeTitle}</span>
+            <div class="flex items-center gap-1 shrink-0">
+              <button type="button" id="fl-back10-btn" title="${trPip('Tua lùi 10 giây')}" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-[10.5px] font-bold">-10s</button>
+              <button type="button" id="fl-playpause-btn" title="${trPip('Phát / Tạm dừng')}" class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold">⏯</button>
+              <button type="button" id="fl-fwd10-btn" title="${trPip('Tua tới 10 giây')}" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-[10.5px] font-bold">+10s</button>
+              <button type="button" id="fl-toggle-drawer-btn" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-sky-300 text-[10.5px] font-bold">⚙️ ${trPip('Điều khiển')} ▼</button>
+              <button type="button" id="btn-mod39-close-floating-win" class="px-2 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-extrabold transition">✕</button>
+            </div>
           </div>
+          ${buildFloatingDrawerMarkup('fl')}
           <div class="relative w-full aspect-video bg-black">
             <iframe src="${pipBridgeUrl}" class="w-full h-full border-0" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
           </div>
@@ -5573,9 +5741,23 @@
             dragging = false;
           });
         }
+        win.querySelector('#fl-back10-btn')?.addEventListener('click', () => {
+          this.playerCtrl?.seekRelative?.(-10);
+          this.syncFloatingControlsUi();
+        });
+        win.querySelector('#fl-playpause-btn')?.addEventListener('click', () => {
+          this.playerCtrl?.togglePlayPause?.();
+          this.syncFloatingControlsUi();
+        });
+        win.querySelector('#fl-fwd10-btn')?.addEventListener('click', () => {
+          this.playerCtrl?.seekRelative?.(10);
+          this.syncFloatingControlsUi();
+        });
+        bindFloatingDrawerHandlers(win, 'fl');
         win.querySelector('#btn-mod39-close-floating-win')?.addEventListener('click', () => {
           this.closeDesktopFloatingWindow();
         });
+        setTimeout(() => this.syncFloatingControlsUi(), 120);
         this.syncStatusUi();
         this.playerCtrl?.emitUiSync?.();
         safeNotify('🖼️ Đã mở Cửa sổ nổi — có thể kéo tự do qua mọi Tab!', 'success', 2600);
@@ -7950,17 +8132,11 @@
         this.vault.saveAbLoopForVideo(this.activeVideo.key, this.abLoop);
       }
       this.mobileBgAudio?.applyPrefsToNativeAudio?.();
-
-      if (this.abLoop.enabled && this.isAbPairValid()) {
-        const snap = this.bridge.getCurrentPlaybackSnapshot();
-        const isPlayingNow =
-          snap.state === MOD39_CONSTANTS.YT_PLAYER_STATES.PLAYING ||
-          snap.state === MOD39_CONSTANTS.YT_PLAYER_STATES.BUFFERING;
-        if (isPlayingNow && (snap.currentTime < nextStart || snap.currentTime >= nextEnd)) {
-          this.seekToSeconds(nextStart, true);
-        }
-      }
-
+      this.bridge?.dispatchPlayerCommand?.('setAbLoop', [
+        Boolean(this.abLoop.enabled),
+        this.abLoop.startSec,
+        this.abLoop.endSec
+      ]);
       this.emitUiSync();
       return { ok: true, abLoop: this.abLoop };
     }
@@ -8026,6 +8202,11 @@
         safeNotify('⏹ Đã tạm tắt Vòng Lặp A–B.', 'info', 1800);
       }
       this.mobileBgAudio?.applyPrefsToNativeAudio?.();
+      this.bridge?.dispatchPlayerCommand?.('setAbLoop', [
+        Boolean(this.abLoop.enabled),
+        this.abLoop.startSec,
+        this.abLoop.endSec
+      ]);
       this.emitUiSync();
       return true;
     }
@@ -8054,6 +8235,7 @@
         this.vault.saveAbLoopForVideo(this.activeVideo.key, this.abLoop);
       }
       this.mobileBgAudio?.applyPrefsToNativeAudio?.();
+      this.bridge?.dispatchPlayerCommand?.('setAbLoop', [false, null, null]);
       this.emitUiSync();
       safeNotify('🧹 Đã xóa mốc A–B cho video hiện tại.', 'info', 1800);
     }
