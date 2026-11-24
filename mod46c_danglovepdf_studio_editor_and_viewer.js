@@ -49,8 +49,12 @@
       return isThumbnail ? Math.min(Math.max(dpr, 1.5), 2) : Math.min(Math.max(dpr, 2), 3);
     },
 
-    async renderPageToCanvas(page, canvas, { scale = 1, rotation = 0, isThumbnail = false, bgColor = '#ffffff' } = {}) {
+    async renderPageToCanvas(page, canvas, optsOrScale = {}, extraOpts = {}) {
       if (!page || !canvas) return { cssW: 0, cssH: 0, outputScale: 2, viewport: null };
+      const opts = typeof optsOrScale === 'number'
+        ? { ...extraOpts, scale: optsOrScale }
+        : (optsOrScale || {});
+      const { scale = 1, rotation = 0, isThumbnail = false, bgColor = '#ffffff' } = opts;
       const prevTask = activeRenderTasks.get(canvas);
       if (prevTask && typeof prevTask.cancel === 'function') {
         try { prevTask.cancel(); } catch (_e) {}
@@ -101,59 +105,67 @@
   const FONT_IDB_NAME = 'DangLovePDF_FontCache';
   const FONT_CDN_URLS = {
     tinos: {
-      regular: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/tinos/Tinos-Regular.ttf',
-      bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/tinos/Tinos-Bold.ttf',
-      italic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/tinos/Tinos-Italic.ttf',
-      boldItalic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/tinos/Tinos-BoldItalic.ttf',
+      regular: 'https://fonts.gstatic.com/s/tinos/v26/buE4poGnedXvwgX8.ttf',
+      bold: 'https://fonts.gstatic.com/s/tinos/v26/buE1poGnedXvwj1AW0Fp.ttf',
+      italic: 'https://fonts.gstatic.com/s/tinos/v26/buE2poGnedXvwjX-fmE.ttf',
+      boldItalic: 'https://fonts.gstatic.com/s/tinos/v26/buEzpoGnedXvwjX-Rt1s0Co.ttf',
       label: 'Tinos (Khớp 1:1 Times New Roman)',
       cssFallback: '"Times New Roman", Georgia, serif',
     },
     arimo: {
-      regular: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/arimo/Arimo%5Bwght%5D.ttf',
-      bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/arimo/Arimo%5Bwght%5D.ttf',
-      italic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/arimo/Arimo-Italic%5Bwght%5D.ttf',
-      boldItalic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/arimo/Arimo-Italic%5Bwght%5D.ttf',
+      regular: 'https://fonts.gstatic.com/s/arimo/v36/P5sfzZCDf9_T_3cV7NCUECyoxNk37cxsBw.ttf',
+      bold: 'https://fonts.gstatic.com/s/arimo/v36/P5sfzZCDf9_T_3cV7NCUECyoxNk3CstsBw.ttf',
+      italic: 'https://fonts.gstatic.com/s/arimo/v36/P5sdzZCDf9_T_10c3i9MeUcyat4iJY-ERBrE.ttf',
+      boldItalic: 'https://fonts.gstatic.com/s/arimo/v36/P5sdzZCDf9_T_10c3i9MeUcyat4iJY9jQxrE.ttf',
       label: 'Arimo (Khớp 1:1 Arial/Helvetica)',
       cssFallback: 'Arial, Helvetica, sans-serif',
     },
     cousine: {
-      regular: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/cousine/Cousine-Regular.ttf',
-      bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/cousine/Cousine-Bold.ttf',
-      italic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/cousine/Cousine-Italic.ttf',
-      boldItalic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/cousine/Cousine-BoldItalic.ttf',
+      regular: 'https://fonts.gstatic.com/s/cousine/v31/d6lIkaiiRdih4SpPzSM.ttf',
+      bold: 'https://fonts.gstatic.com/s/cousine/v31/d6lNkaiiRdih4SpP9Z8K6T4.ttf',
+      italic: 'https://fonts.gstatic.com/s/cousine/v31/d6lKkaiiRdih4SpP_SEvyQ.ttf',
+      boldItalic: 'https://fonts.gstatic.com/s/cousine/v31/d6lPkaiiRdih4SpP_SEXdTvM1w.ttf',
       label: 'Cousine (Khớp 1:1 Courier New)',
       cssFallback: '"Courier New", Consolas, monospace',
     },
     carlito: {
-      regular: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/carlito/Carlito-Regular.ttf',
-      bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/carlito/Carlito-Bold.ttf',
-      italic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/carlito/Carlito-Italic.ttf',
-      boldItalic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/carlito/Carlito-BoldItalic.ttf',
+      regular: 'https://fonts.gstatic.com/s/carlito/v4/3Jn9SDPw3m-pk039PDA.ttf',
+      bold: 'https://fonts.gstatic.com/s/carlito/v4/3Jn4SDPw3m-pk039BIykaX0.ttf',
+      italic: 'https://fonts.gstatic.com/s/carlito/v4/3Jn_SDPw3m-pk039DDKBSQ.ttf',
+      boldItalic: 'https://fonts.gstatic.com/s/carlito/v4/3Jn6SDPw3m-pk039DDK59XglVg.ttf',
       label: 'Carlito (Khớp 1:1 Calibri)',
       cssFallback: 'Calibri, "Segoe UI", Arial, sans-serif',
     },
     caladea: {
-      regular: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/caladea/Caladea-Regular.ttf',
-      bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/caladea/Caladea-Bold.ttf',
-      italic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/caladea/Caladea-Italic.ttf',
-      boldItalic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/caladea/Caladea-BoldItalic.ttf',
+      regular: 'https://fonts.gstatic.com/s/caladea/v10/kJEzBugZ7AAjhybUjR8.ttf',
+      bold: 'https://fonts.gstatic.com/s/caladea/v10/kJE2BugZ7AAjhybUtaNY39o.ttf',
+      italic: 'https://fonts.gstatic.com/s/caladea/v10/kJExBugZ7AAjhybUvR19_w.ttf',
+      boldItalic: 'https://fonts.gstatic.com/s/caladea/v10/kJE0BugZ7AAjhybUvR1FQ98SrA.ttf',
       label: 'Caladea (Khớp 1:1 Cambria)',
       cssFallback: 'Cambria, Georgia, serif',
     },
+    notoserif: {
+      regular: 'https://fonts.gstatic.com/s/notoserif/v33/ga6iaw1J5X9T9RW6j9bNVls-hfgvz8JcMofYTa32J4wsL2JAlAhZqFCjwA.ttf',
+      bold: 'https://fonts.gstatic.com/s/notoserif/v33/ga6iaw1J5X9T9RW6j9bNVls-hfgvz8JcMofYTa32J4wsL2JAlAhZT1ejwA.ttf',
+      italic: 'https://fonts.gstatic.com/s/notoserif/v33/ga6saw1J5X9T9RW6j9bNfFIMZhhWnFTyNZIQD1-_FXP0RgnaOg9MYBNLg8cP.ttf',
+      boldItalic: 'https://fonts.gstatic.com/s/notoserif/v33/ga6saw1J5X9T9RW6j9bNfFIMZhhWnFTyNZIQD1-_FXP0RgnaOg9MYBOshMcP.ttf',
+      label: 'Noto Serif (Khớp LaTeX / Học thuật)',
+      cssFallback: '"Times New Roman", Cambria, Georgia, serif',
+    },
     roboto: {
-      regular: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/roboto/Roboto%5Bwdth%2Cwght%5D.ttf',
-      bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/roboto/Roboto%5Bwdth%2Cwght%5D.ttf',
-      italic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/roboto/Roboto-Italic%5Bwdth%2Cwght%5D.ttf',
-      boldItalic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/roboto/Roboto-Italic%5Bwdth%2Cwght%5D.ttf',
+      regular: 'https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbWmT.ttf',
+      bold: 'https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuYjammT.ttf',
+      italic: 'https://fonts.gstatic.com/s/roboto/v51/KFOKCnqEu92Fr1Mu53ZEC9_Vu3r1gIhOszmOClHrs6ljXfMMLoHQiA8.ttf',
+      boldItalic: 'https://fonts.gstatic.com/s/roboto/v51/KFOKCnqEu92Fr1Mu53ZEC9_Vu3r1gIhOszmOClHrs6ljXfMMLmbXiA8.ttf',
       label: 'Roboto (Chuẩn tiếng Việt)',
       cssFallback: 'Roboto, "Segoe UI", Arial, sans-serif',
     },
     notosans: {
-      regular: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf',
-      bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf',
-      italic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans-Italic%5Bwdth%2Cwght%5D.ttf',
-      boldItalic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans-Italic%5Bwdth%2Cwght%5D.ttf',
-      label: 'Noto Sans (Đầy đủ dấu Việt)',
+      regular: 'https://fonts.gstatic.com/s/arimo/v36/P5sfzZCDf9_T_3cV7NCUECyoxNk37cxsBw.ttf',
+      bold: 'https://fonts.gstatic.com/s/arimo/v36/P5sfzZCDf9_T_3cV7NCUECyoxNk3CstsBw.ttf',
+      italic: 'https://fonts.gstatic.com/s/arimo/v36/P5sdzZCDf9_T_10c3i9MeUcyat4iJY-ERBrE.ttf',
+      boldItalic: 'https://fonts.gstatic.com/s/arimo/v36/P5sdzZCDf9_T_10c3i9MeUcyat4iJY9jQxrE.ttf',
+      label: 'Arimo / Sans (Đầy đủ dấu Việt)',
       cssFallback: '"Segoe UI", Arial, sans-serif',
     },
   };
@@ -210,6 +222,11 @@
         displayFamily = 'Cambria';
         genericCategory = 'serif';
         cssFallback = 'Cambria, Georgia, serif';
+      } else if (/cmr|cmbx|cmti|cmmi|lmr|lmbx|tex|stix|computer\s*modern|noto\s*serif/i.test(combo)) {
+        canonicalKey = 'notoserif';
+        displayFamily = 'Noto Serif (LaTeX/Times)';
+        genericCategory = 'serif';
+        cssFallback = '"Times New Roman", Cambria, Georgia, serif';
       } else if (/times|tinos|nimbus\s*roman|minion|garamond|georgia|palatino|serif|vn-?time/i.test(combo)) {
         canonicalKey = 'tinos';
         displayFamily = /georgia/i.test(combo) ? 'Georgia' : 'Times New Roman';
@@ -294,13 +311,18 @@
       }
     },
 
-    async _registerDynamicFontFace(cacheKey, bytes) {
+    async _registerDynamicFontFace(cacheKey, bytes, meta = {}) {
       const dynFamily = `DL_Sync_${cacheKey.replace(/[^a-z0-9]/gi, '_')}`;
       try {
         if (typeof FontFace !== 'undefined' && document.fonts) {
-          const ff = new FontFace(dynFamily, bytes.slice().buffer);
+          const descriptors = {
+            weight: meta.isBold ? '700' : '400',
+            style: meta.isItalic ? 'italic' : 'normal',
+          };
+          const ff = new FontFace(dynFamily, bytes.slice().buffer, descriptors);
           const loaded = await ff.load();
           document.fonts.add(loaded);
+          await document.fonts.ready;
           return dynFamily;
         }
       } catch (_eFf) {}
@@ -380,12 +402,23 @@
         }
       }
 
-      const dynamicFamily = bytes ? await this._registerDynamicFontFace(cacheKey, bytes) : '';
+      const dynamicFamily = bytes ? await this._registerDynamicFontFace(cacheKey, bytes, meta) : '';
+      // Tier 0 (Đỉnh cao): Ghép trực tiếp FontFace gốc PDF.js đã giải mã từ file PDF (embeddedLoadedName)
+      // lên ĐẦU chuỗi ưu tiên, kế tiếp là Font Tiếng Việt 1:1 (Tinos/Arimo/Cousine/Carlito/Caladea/NotoSerif) cho ký tự mới gõ!
+      const familyChain = [];
+      if (meta.embeddedLoadedName) familyChain.push(`"${meta.embeddedLoadedName}"`);
+      if (dynamicFamily) familyChain.push(`"${dynamicFamily}"`);
+      familyChain.push(meta.cssFallback || '"Times New Roman", Georgia, serif');
       const result = {
         bytes,
         dynamicFamily,
-        cssFontFamily: dynamicFamily ? `"${dynamicFamily}", ${meta.cssFallback}` : meta.cssFallback,
-        badge: bytes ? badge : `🔤 Khớp họ font: ${meta.cleanFontFamily}`,
+        embeddedLoadedName: meta.embeddedLoadedName || '',
+        cssFontFamily: familyChain.join(', '),
+        badge: meta.embeddedLoadedName && bytes
+          ? `🎯 Khớp 100% Font gốc PDF + Tiếng Việt: ${meta.cleanFontFamily}`
+          : bytes
+          ? badge
+          : `🔤 Khớp họ font: ${meta.cleanFontFamily}`,
         isVectorReady: Boolean(bytes),
       };
       this._memCache.set(cacheKey, result);
@@ -421,6 +454,7 @@
           <button type="button" id="btn-mod46-pv-prev" class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer">◀ Trước</button>
           <span id="mod46-pv-page-info" class="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-zinc-950/90 border border-zinc-700 text-xs font-extrabold text-amber-300 whitespace-nowrap" title="Bấm vào số trang để nhập và nhảy thẳng tới trang bất kỳ">
             <span>Trang</span>
+            <span id="mod46-pv-page-sr" class="sr-only">1</span>
             <input id="inp-mod46-pv-page" type="number" min="1" max="1" value="1" inputmode="numeric" aria-label="Số trang hiện tại" class="w-12 px-1 py-0.5 rounded-lg bg-zinc-900 border border-amber-400/50 text-center text-xs font-black text-amber-300 focus:outline-none focus:border-amber-300 focus:ring-1 focus:ring-amber-400" />
             <span id="mod46-pv-page-total" class="text-zinc-300 font-bold">/ ...</span>
           </span>
@@ -526,6 +560,8 @@
           pageInputEl.value = String(currentPage);
         }
       }
+      const pageSrEl = pv.querySelector('#mod46-pv-page-sr');
+      if (pageSrEl) pageSrEl.textContent = String(currentPage);
       if (pageTotalEl) {
         pageTotalEl.textContent =
           layoutMode === 'spread' && currentPage < total
@@ -1345,21 +1381,33 @@
         updateSummary();
       };
 
-      // Nhận diện phông chữ gốc thực thụ từ PDF.js page.commonObjs + tc.styles qua DangLovePDFFontResolver
+      // Nhận diện phông chữ gốc thực thụ từ PDF.js page.commonObjs (kèm Tier-0 embeddedLoadedName) + tc.styles
       const detectPdfFontMeta = (page, fontName, styleObj) => {
         let realPdfFontName = fontName || '';
+        let embeddedLoadedName = '';
+        let objBold = false;
+        let objItalic = false;
         try {
           if (page?.commonObjs?.has?.(fontName)) {
             const obj = page.commonObjs.get(fontName);
             if (obj?.name) realPdfFontName = obj.name;
+            if (obj?.loadedName) embeddedLoadedName = obj.loadedName;
+            if (obj?.bold) objBold = true;
+            if (obj?.italic) objItalic = true;
           }
         } catch (_eCommon) {}
         const meta = DangLovePDFFontResolver.classifyFontMeta(realPdfFontName, styleObj);
+        const isBold = meta.isBold || objBold;
+        const isItalic = meta.isItalic || objItalic;
+        const cssWithEmbedded = embeddedLoadedName ? `"${embeddedLoadedName}", ${meta.cssFallback}` : meta.cssFallback;
         return {
           ...meta,
-          fontFamily: meta.cssFallback,
-          bold: meta.isBold,
-          italic: meta.isItalic,
+          embeddedLoadedName,
+          isBold,
+          isItalic,
+          fontFamily: cssWithEmbedded,
+          bold: isBold,
+          italic: isItalic,
         };
       };
 
@@ -1610,14 +1658,20 @@
             const maxH = Math.max(...arr.map((a) => a.h));
             const bw = Math.max(30, maxX - minX);
             const cols = sampleBlockColors(pCtx, minX, minY, bw, maxH, this.pageScale, this.outputScale);
+            // Chọn chunk chiếm nhiều ký tự chữ nhất trong dòng (tránh lấy nhầm font của dấu đầu dòng "•" hay ký hiệu toán!)
+            const dominant = arr.reduce((best, cur) => {
+              const curScore = String(cur.text || '').replace(/[\s•◦▪\-–—·]/g, '').length;
+              const bestScore = String(best.text || '').replace(/[\s•◦▪\-–—·]/g, '').length;
+              return curScore > bestScore ? cur : best;
+            }, arr[0]);
             blocks.push({
               x: minX,
               y: minY,
               w: bw,
               h: maxH,
-              fontSize: arr[0].fontSize,
-              fontFamily: arr[0].fontFamily,
-              fontMeta: arr[0].fontMeta,
+              fontSize: dominant.fontSize,
+              fontFamily: dominant.fontFamily,
+              fontMeta: dominant.fontMeta,
               bold: arr[0].bold,
               italic: arr[0].italic,
               inkColor: cols.inkColor,

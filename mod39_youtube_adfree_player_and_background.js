@@ -3265,19 +3265,40 @@
     }
 
     _isAutoBgProbeDisabled() {
+      // Mặc định trên Mobile là TẮT tự dò luồng nền (chỉ phát YouTube No-Cookie mượt mà).
+      // Chỉ bật khi người dùng chủ động bấm nút "🎧 Luồng phát nền, video mini"!
       try {
-        return localStorage.getItem('mod39_disable_auto_bg_probe') === '1';
+        return localStorage.getItem('mod39_enable_mobile_bg_stream') !== '1';
       } catch (_e) {
-        return false;
+        return true;
       }
     }
 
     _syncAutoProbeDisabledBar() {
       if (typeof document === 'undefined') return;
       const bar = document.getElementById('mod39-auto-probe-disabled-bar');
+      const toggleBtn = document.getElementById('btn-mod39-reenable-auto-probe');
+      const statusTxt = document.getElementById('mod39-mobile-bg-mode-hint');
       if (!bar) return;
-      const disabled = this._isAutoBgProbeDisabled();
-      bar.classList.toggle('hidden', !disabled);
+      if (isDesktopDirectYoutubeEnv()) {
+        bar.classList.add('hidden');
+        return;
+      }
+      bar.classList.remove('hidden');
+      const isBgEnabled = !this._isAutoBgProbeDisabled();
+      if (toggleBtn) {
+        toggleBtn.textContent = isBgEnabled
+          ? '✅ Đang bật: Luồng phát nền, video mini (Bấm để tắt)'
+          : '🎧 Luồng phát nền, video mini';
+        toggleBtn.className = isBgEnabled
+          ? 'w-full sm:w-auto px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 border border-emerald-300/70 text-white font-black text-xs shadow-lg transition cursor-pointer'
+          : 'w-full sm:w-auto px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:brightness-110 border-2 border-amber-300/90 text-zinc-950 font-black text-xs shadow-lg transition cursor-pointer mod39-bg-toggle-blink';
+      }
+      if (statusTxt) {
+        statusTxt.innerHTML = isBgEnabled
+          ? '🔄 <strong>Chế độ dò luồng nền đang BẬT</strong> — YouTube No-Cookie vẫn phát bình thường, khi luồng nền (Hình + Tiếng) sẵn sàng 100% mới tự thay thế.'
+          : '📺 Đang xem <strong>YouTube No-Cookie</strong> mặc định (không bị gián đoạn) — Bấm nút sáng bên cạnh nếu muốn bật phát nền &amp; video mini.';
+      }
     }
 
     _bindWaitOverlayButtonsOnce() {
@@ -3290,24 +3311,49 @@
           e.preventDefault();
           e.stopPropagation();
           if (persistDisable) {
-            try { localStorage.setItem('mod39_disable_auto_bg_probe', '1'); } catch (_e) {}
+            try { localStorage.setItem('mod39_enable_mobile_bg_stream', '0'); } catch (_e) {}
             this._syncAutoProbeDisabledBar();
           }
           this.cancelPublicStreamAndUseNoCookie();
         });
       };
-      bindOne('btn-mod39-cancel-public-stream-now', false);
+      bindOne('btn-mod39-cancel-public-stream-now', true);
       bindOne('btn-mod39-stop-probing-pill', true);
 
       const reenableBtn = document.getElementById('btn-mod39-reenable-auto-probe');
-      if (reenableBtn && reenableBtn.dataset.v129Bound !== '1') {
-        reenableBtn.dataset.v129Bound = '1';
+      if (reenableBtn && reenableBtn.dataset.v132Bound !== '1') {
+        reenableBtn.dataset.v132Bound = '1';
         reenableBtn.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          try { localStorage.removeItem('mod39_disable_auto_bg_probe'); } catch (_e) {}
-          this._syncAutoProbeDisabledBar();
-          NS.utils?.showToast?.('✅ Đã bật lại tính năng tự dò luồng phát nền (áp dụng từ video tiếp theo hoặc khi tải lại).', 'success', 3000);
+          const wasEnabled = !this._isAutoBgProbeDisabled();
+          if (wasEnabled) {
+            try { localStorage.setItem('mod39_enable_mobile_bg_stream', '0'); } catch (_e) {}
+            this.cancelPublicStreamAndUseNoCookie();
+            this._syncAutoProbeDisabledBar();
+            NS.utils?.showToast?.('📺 Đã tắt luồng nền — giữ nguyên YouTube No-Cookie mượt mà.', 'info', 2800);
+          } else {
+            try { localStorage.setItem('mod39_enable_mobile_bg_stream', '1'); } catch (_e) {}
+            this._syncAutoProbeDisabledBar();
+            const ctrl = this.playerCtrl;
+            const activeVid = ctrl?.activeVideo;
+            if (activeVid?.videoId && !activeVid.isLive) {
+              // Dò ngầm hoàn toàn bên dưới — TUYỆT ĐỐI KHÔNG cắt ngang hay tắt tiếng khung YouTube No-Cookie đang phát!
+              NS.nativePlayer?.unlockPlaybackGesture?.();
+              NS.unlockExternalAudioGesture?.();
+              this._userCancelledPublicStreamForSession = -1;
+              ctrl._lockedIframeSessionId = -1;
+              ctrl.activeEngine = 'RESOLVING_STREAM';
+              this.syncAudioBridgeStageCard();
+              this.onVideoLoaded(activeVid, {
+                sessionId: ctrl._engineSessionId || 0,
+                resolvingPreferred: true,
+              });
+              NS.utils?.showToast?.('🎧 Đang dò ngầm luồng phát nền (YouTube No-Cookie vẫn phát bình thường, sẵn sàng 100% mới chuyển).', 'info', 3400);
+            } else {
+              NS.utils?.showToast?.('✅ Đã bật Luồng phát nền, video mini — sẽ dò ngầm khi bạn phát video.', 'success', 3000);
+            }
+          }
         });
       }
       this._syncAutoProbeDisabledBar();
@@ -3477,30 +3523,31 @@
       }
 
       emptyCard?.classList.add('hidden');
+      // QUY TẮC TỐI THƯỢNG (v132): TUYỆT ĐỐI KHÔNG BAO GIỜ hiện lớp phủ che ngang khung phát video!
+      resolvingCard?.classList.add('hidden');
+      this._syncAutoProbeDisabledBar();
+
       const nativeVideoVisible = Boolean(
         NS.nativePlayer?.isActive?.() &&
         NS.nativePlayer.mode === 'video' &&
         !NS.nativePlayer._provisionalStageTakeover
       );
       if (nativeVideoVisible) {
-        probingPill?.classList.add('hidden');
-        audioStage?.classList.add('hidden');
-        nativeHost?.classList.remove('hidden');
-        iframeEl?.classList.add('hidden');
         const vidEl = document.getElementById('core-media-player');
-        const isBlackBufferingFrame = Boolean(
-          vidEl && (vidEl.readyState < 2 || this._nativeVideoFramePending)
-        );
-        if (isBlackBufferingFrame && !isDesktopDirectYoutubeEnv()) {
-          setPosterThumb();
-          const titleEl = document.getElementById('mod39-wait-overlay-title');
-          if (titleEl) {
-            titleEl.textContent = '⏳ Đang chuyển sang luồng công cộng mượt nhất...';
-          }
-          resolvingCard?.classList.remove('hidden');
+        const isFullyReady = Boolean(vidEl && vidEl.readyState >= 2 && !this._nativeVideoFramePending);
+        if (!isFullyReady && !isDesktopDirectYoutubeEnv()) {
+          // Chưa sẵn sàng đủ cả hình & tiếng -> GIỮ NGUYÊN YouTube No-Cookie phát xuyên suốt, chỉ báo gọn bên dưới!
+          nativeHost?.classList.add('hidden');
+          audioStage?.classList.add('hidden');
+          iframeEl?.classList.remove('hidden');
+          probingPill?.classList.remove('hidden');
           this._ensureWaitOverlayTicker(true);
         } else {
-          resolvingCard?.classList.add('hidden');
+          // Đã sẵn sàng 100% -> thay thế nguyên khối tức thì!
+          probingPill?.classList.add('hidden');
+          audioStage?.classList.add('hidden');
+          nativeHost?.classList.remove('hidden');
+          iframeEl?.classList.add('hidden');
           this._ensureWaitOverlayTicker(false);
         }
         return;
@@ -3509,36 +3556,14 @@
       if (engine === 'RESOLVING_STREAM') {
         audioStage?.classList.add('hidden');
         nativeHost?.classList.add('hidden');
-        const curIfrSrc = String(iframeEl?.getAttribute('src') || '');
-        const hasProvisionalYoutubeIframe = Boolean(
-          !this.playerCtrl?.prefs?.audioOnlyMode &&
-          curIfrSrc &&
-          curIfrSrc !== 'about:blank' &&
-          curIfrSrc.indexOf('youtube') !== -1 &&
-          (!video.videoId || curIfrSrc.indexOf(video.videoId) !== -1)
-        );
-        if (hasProvisionalYoutubeIframe) {
-          resolvingCard?.classList.add('hidden');
-          iframeEl?.classList.remove('hidden');
-          if (!isDesktopDirectYoutubeEnv()) {
-            probingPill?.classList.remove('hidden');
-            this._ensureWaitOverlayTicker(true);
-          } else {
-            probingPill?.classList.add('hidden');
-            this._ensureWaitOverlayTicker(false);
-          }
-          return;
-        }
-        probingPill?.classList.add('hidden');
-        iframeEl?.classList.add('hidden');
-        if (resolvingCard) {
-          setPosterThumb();
-          const titleEl = document.getElementById('mod39-wait-overlay-title');
-          if (titleEl) {
-            titleEl.textContent = '⏳ Đang kết nối luồng phát công cộng cho Mobile...';
-          }
-          resolvingCard.classList.remove('hidden');
+        // LUÔN giữ khung YouTube No-Cookie hiển thị nguyên vẹn trong lúc dò ngầm ở thanh bên dưới!
+        iframeEl?.classList.remove('hidden');
+        if (!isDesktopDirectYoutubeEnv()) {
+          probingPill?.classList.remove('hidden');
           this._ensureWaitOverlayTicker(true);
+        } else {
+          probingPill?.classList.add('hidden');
+          this._ensureWaitOverlayTicker(false);
         }
         return;
       }
@@ -5415,10 +5440,33 @@
         return { ok: true, closed: true };
       }
 
-      const snap = this.playerCtrl?.bridge?.getCurrentPlaybackSnapshot?.() || {};
-      const startSec = Math.max(0, Math.floor(Number(snap.currentTime) || Number(video.startSeconds) || 0));
+      const br = this.playerCtrl?.bridge;
+      const snap = br?.getCurrentPlaybackSnapshot?.() || {};
+      // Lấy mốc giây CHÍNH XÁC NHẤT từ khung chính trước khi tắt (ưu tiên ytPlayer.getCurrentTime -> _lastVisualIframeTimeSec -> snap.currentTime -> lastKnownTime)
+      let exactMainTime = 0;
+      try {
+        if (br?.ytPlayer && typeof br.ytPlayer.getCurrentTime === 'function') {
+          const tApi = Number(br.ytPlayer.getCurrentTime());
+          if (Number.isFinite(tApi) && tApi > 0) exactMainTime = tApi;
+        }
+      } catch (_eApiT) {}
+      if (!(exactMainTime > 0)) {
+        const candidates = [
+          Number(snap.currentTime),
+          Number(br?._lastVisualIframeTimeSec),
+          Number(br?.lastKnownTime),
+          Number(video.startSeconds),
+        ].filter((x) => Number.isFinite(x) && x > 0);
+        if (candidates.length) exactMainTime = candidates[0];
+      }
+      const startSec = Math.max(0, Math.floor(exactMainTime));
+      if (br && startSec > 0) {
+        br.lastKnownTime = exactMainTime;
+        br._lastVisualIframeTimeSec = exactMainTime;
+      }
+      video.startSeconds = startSec;
       this._preFloatingStartSec = startSec;
-      this._preFloatingWasPlaying = snap.state === MOD39_CONSTANTS.YT_PLAYER_STATES.PLAYING || Boolean(this.playerCtrl?.bridge?.assumedAutoplaying);
+      this._preFloatingWasPlaying = snap.state === MOD39_CONSTANTS.YT_PLAYER_STATES.PLAYING || Boolean(br?.assumedAutoplaying);
 
       // 1) Tắt HẲN khung video gốc (0 CPU/RAM/âm thanh nền ma) khi Cửa sổ nổi mở — dùng 1 nguồn duy nhất tại mọi thời điểm!
       this._desktopFloatingIframePaused = true;
@@ -7276,6 +7324,7 @@
         !isDesktopDirect && !isLiveStream && record.videoId ? NS.streamFetcher?.readCache?.(record.videoId) : null;
       const hasValidCachedDirect = Boolean(
         !isDesktopDirect &&
+          !this.mobileBgAudio?._isAutoBgProbeDisabled?.() &&
           cachedDirect &&
           cachedDirect.ok &&
           !cachedDirect.fallback &&
@@ -9749,7 +9798,18 @@
                 >✕ Thu Nhỏ Màn Hình</button>
               </div>
 
-              <!-- Thanh trạng thái dò luồng phát nền đặt GỌN PHÍA DƯỚI khung video (KHÔNG che hình video trên Mobile!) -->
+              <!-- Nút nổi bật (mặc định TẮT trên Mobile) để bật "Luồng phát nền, video mini" — đặt GỌN DƯỚI KHUNG VIDEO, tuyệt đối không che video! -->
+              <div
+                id="mod39-auto-probe-disabled-bar"
+                class="flex lg:hidden flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl bg-zinc-900/85 border border-amber-400/45 text-[11.5px] text-zinc-200 shadow"
+              >
+                <button
+                  type="button"
+                  id="btn-mod39-reenable-auto-probe"
+                  class="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:brightness-110 border-2 border-amber-300/90 text-zinc-950 font-black text-xs shadow-lg transition cursor-pointer mod39-bg-toggle-blink"
+                >🎧 Luồng phát nền, video mini</button>
+                <span id="mod39-mobile-bg-mode-hint" class="text-[11px] text-zinc-300 leading-snug">📺 Đang xem <strong>YouTube No-Cookie</strong> mặc định (không bị gián đoạn) — Bấm nút sáng bên cạnh nếu muốn bật phát nền &amp; video mini.</span>
+              </div>
               <div
                 id="mod39-probing-top-pill"
                 class="hidden p-2.5 rounded-xl bg-zinc-950/90 border border-emerald-400/45 text-[11.5px] text-zinc-100 shadow space-y-2"
@@ -9763,20 +9823,9 @@
                     type="button"
                     id="btn-mod39-stop-probing-pill"
                     class="w-full sm:w-auto px-3 py-1.5 rounded-lg bg-amber-500/90 hover:bg-amber-400 text-zinc-950 font-extrabold text-[11px] transition cursor-pointer"
-                    title="Tắt hẳn tự dò luồng phát nền và chỉ xem YouTube No-Cookie không quảng cáo"
-                  >🔕 Tắt tính năng tự dò luồng phát nền</button>
+                    title="Hủy dò luồng nền và tiếp tục xem YouTube No-Cookie không quảng cáo"
+                  >⏹️ Hủy dò (Giữ YouTube No-Cookie)</button>
                 </div>
-              </div>
-              <div
-                id="mod39-auto-probe-disabled-bar"
-                class="hidden px-3 py-1.5 rounded-xl bg-zinc-900/75 border border-zinc-700/70 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-300"
-              >
-                <span>📺 Đang ở chế độ chỉ xem <strong>YouTube No-Cookie</strong> (đã tắt tự dò luồng nền)</span>
-                <button
-                  type="button"
-                  id="btn-mod39-reenable-auto-probe"
-                  class="px-2.5 py-1 rounded-lg bg-emerald-600/85 hover:bg-emerald-500 text-white font-bold text-[10.5px] cursor-pointer"
-                >🔄 Bật lại tự dò luồng nền</button>
               </div>
 
               <!-- Cảnh báo dự phòng trung thực nếu gặp Error 101/150/153 hoặc file:// -->

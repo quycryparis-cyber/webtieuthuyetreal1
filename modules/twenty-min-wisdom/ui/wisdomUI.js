@@ -383,8 +383,9 @@
               <button type="button" id="wis20-btn-timer-reset" class="px-1 py-0.5 rounded-md border border-emerald-500/40 text-[10px] font-black cursor-pointer" title="Đặt lại 20:00">🔄</button>
             </span>
           ` : ''}
-          <button type="button" id="wis20-btn-rescan" class="wis20-btn text-[11px] py-1.5">🔄 Quét lại tin mới</button>
-          <button type="button" id="wis20-btn-change-loc" class="wis20-btn wis20-btn-change-loc text-[11px] py-1.5">📍 Đổi vị trí</button>
+          <button type="button" id="wis20-btn-export-pdf" class="wis20-btn wis20-btn-pdf text-xs py-1.5">📄 Xuất Báo Cáo PDF</button>
+          <button type="button" id="wis20-btn-rescan" class="wis20-btn text-xs py-1.5">🔄 Quét lại tin mới</button>
+          <button type="button" id="wis20-btn-change-loc" class="wis20-btn wis20-btn-change-loc text-xs py-1.5">📍 Đổi vị trí</button>
         </div>
       </div>
     `;
@@ -401,19 +402,24 @@
       <div class="wis20-root">
         ${renderHeaderLocationBarHtml(false)}
 
-        <!-- NÚT ĐẶC BIỆT ĐẶT NGAY Ở ĐẦU: XEM THÔNG TIN THÔ (5 MỤC KHOA HỌC, KHÔNG CẦN GEMINI) -->
-        <div class="wis20-raw-hero space-y-2.5">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="space-y-0.5">
-              <div class="text-xs font-black uppercase tracking-wide text-emerald-700 dark:text-emerald-300">⚡ Đọc nhanh tức thì · Không cần qua AI</div>
-              <h3 class="text-sm sm:text-base font-black">📰 Xem Thông Tin Thô Hôm Nay (Đã tự chia 5 mục khoa học)</h3>
-              <p class="text-xs opacity-85">
-                Đọc ngay <b>${res?.totalItems || 0} tin tức, chỉ số kinh tế &amp; ảnh sự kiện thực tế</b> do web tự động quét và phân loại khoa học — kèm link nguồn gốc xác thực 100%, không cần mở Gemini!
+        <!-- NÚT ĐẶC BIỆT ĐẶT NGAY Ở ĐẦU: XEM THÔNG TIN THÔ (8 TRỤ CỘT KHOA HỌC, KHÔNG CẦN GEMINI) -->
+        <div class="wis20-raw-hero space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="space-y-1">
+              <div class="text-xs font-black uppercase tracking-wide text-emerald-700 dark:text-emerald-300">⚡ Đọc nhanh tức thì · Bao phủ đủ 8 trụ cột tri thức người trưởng thành</div>
+              <h3 class="text-base sm:text-lg font-black">📰 Xem Thông Tin Thô Hôm Nay (Đã tự chia 8 mục khoa học)</h3>
+              <p class="text-sm opacity-90">
+                Đọc ngay <b>${res?.totalItems || 0} tin tức mới nhất, công trình y khoa PubMed, chỉ số kinh tế &amp; mô hình tư duy</b> — đã lọc sạch tin cũ, kèm link gốc 100%, không cần qua Gemini!
               </p>
             </div>
-            <button type="button" id="wis20-btn-open-raw-now" class="wis20-btn wis20-btn-primary px-4 py-2.5 text-xs sm:text-sm shrink-0">
-              📰 Xem thông tin thô ngay ➔
-            </button>
+            <div class="flex flex-wrap gap-2 shrink-0">
+              <button type="button" id="wis20-btn-open-raw-now" class="wis20-btn wis20-btn-primary px-4 py-2.5 text-sm">
+                📰 Xem thông tin thô ngay ➔
+              </button>
+              <button type="button" id="wis20-btn-export-pdf-hub" class="wis20-btn wis20-btn-pdf px-4 py-2.5 text-sm">
+                📄 Xuất PDF ngay
+              </button>
+            </div>
           </div>
           <div class="flex flex-wrap gap-1.5 pt-1">${catChips}</div>
         </div>
@@ -482,32 +488,32 @@
     const profile = res.profile || W20.getCountryProfile('VN');
 
     const metricStrip = `
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <div class="wis20-card py-2 px-3">
-          <div class="text-[10.5px] font-bold opacity-70">💱 USD / ${esc(m.localCurrency || 'VND')}</div>
-          <div class="text-sm font-black">${m.usdToLocal ? Number(m.usdToLocal).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) : '—'}</div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="wis20-kpi-card wis20-kpi-sky">
+          <div class="text-xs font-extrabold opacity-90">💱 Tỷ giá USD / ${esc(m.localCurrency || 'VND')}</div>
+          <div class="text-lg sm:text-xl font-black tracking-tight">${m.usdToLocal ? Number(m.usdToLocal).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) : '—'}</div>
         </div>
-        <div class="wis20-card py-2 px-3">
-          <div class="text-[10.5px] font-bold opacity-70">🥇 Vàng Thế giới (PAXG)</div>
-          <div class="text-sm font-black">${m.goldUsdOz ? '$' + m.goldUsdOz.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'} <span class="text-[10.5px] ${Number(m.gold24hPct) >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${m.gold24hPct != null ? (m.gold24hPct >= 0 ? '+' : '') + m.gold24hPct.toFixed(1) + '%' : ''}</span></div>
+        <div class="wis20-kpi-card wis20-kpi-amber">
+          <div class="text-xs font-extrabold opacity-90">🥇 Vàng Thế giới (PAXG)</div>
+          <div class="text-lg sm:text-xl font-black tracking-tight">${m.goldUsdOz ? '$' + m.goldUsdOz.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'} <span class="text-xs font-bold opacity-95">${m.gold24hPct != null ? (m.gold24hPct >= 0 ? '▲+' : '▼') + m.gold24hPct.toFixed(1) + '%' : ''}</span></div>
         </div>
-        <div class="wis20-card py-2 px-3">
-          <div class="text-[10.5px] font-bold opacity-70">₿ Bitcoin (24/7)</div>
-          <div class="text-sm font-black">${m.btcUsd ? '$' + m.btcUsd.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'} <span class="text-[10.5px] ${Number(m.btc24hPct) >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${m.btc24hPct != null ? (m.btc24hPct >= 0 ? '+' : '') + m.btc24hPct.toFixed(1) + '%' : ''}</span></div>
+        <div class="wis20-kpi-card wis20-kpi-violet">
+          <div class="text-xs font-extrabold opacity-90">₿ Bitcoin (24/7)</div>
+          <div class="text-lg sm:text-xl font-black tracking-tight">${m.btcUsd ? '$' + m.btcUsd.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'} <span class="text-xs font-bold opacity-95">${m.btc24hPct != null ? (m.btc24hPct >= 0 ? '▲+' : '▼') + m.btc24hPct.toFixed(1) + '%' : ''}</span></div>
         </div>
-        <div class="wis20-card py-2 px-3">
-          <div class="text-[10.5px] font-bold opacity-70">📈 GDP ${esc(profile.name)} (${esc(m.countryGdpYear || 'WB')})</div>
-          <div class="text-sm font-black">${m.countryGdpPct != null ? m.countryGdpPct + '%' : '—'}</div>
+        <div class="wis20-kpi-card wis20-kpi-emerald">
+          <div class="text-xs font-extrabold opacity-90">📈 GDP ${esc(profile.name)} (${esc(m.countryGdpYear || 'WB')})</div>
+          <div class="text-lg sm:text-xl font-black tracking-tight">${m.countryGdpPct != null ? m.countryGdpPct + '%' : '—'}</div>
         </div>
       </div>
     `;
 
     const filterBtns = `
       <div class="flex flex-wrap gap-1.5">
-        <button type="button" data-raw-cat="all" class="wis20-subtab text-[11px] py-1.5 ${filter === 'all' ? 'is-active' : ''}">📋 Tất cả 5 mục (${res.totalItems})</button>
+        <button type="button" data-raw-cat="all" class="wis20-subtab text-xs py-1.5 ${filter === 'all' ? 'is-active' : ''}">📋 Tất cả 8 trụ cột (${res.totalItems})</button>
         ${(W20.CATEGORIES || []).map((c) => {
           const cnt = res.categoriesData?.[c.id]?.length || 0;
-          return `<button type="button" data-raw-cat="${c.id}" class="wis20-subtab text-[11px] py-1.5 ${filter === c.id ? 'is-active' : ''}">${c.icon} ${esc(c.title.replace(/^\d+\.\s*/, '').split('&')[0].trim())} (${cnt})</button>`;
+          return `<button type="button" data-raw-cat="${c.id}" class="wis20-subtab text-xs py-1.5 ${filter === c.id ? 'is-active' : ''}">${c.icon} ${esc(c.title.replace(/^\d+\.\s*/, '').split('&')[0].trim())} (${cnt})</button>`;
         }).join('')}
       </div>
     `;
@@ -629,7 +635,7 @@
 
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="flex flex-wrap gap-1.5">
-            <button type="button" data-wis20-tab="raw" class="wis20-subtab ${state.activeTab === 'raw' ? 'is-active' : ''}">📰 Thông tin thô (5 mục khoa học)</button>
+            <button type="button" data-wis20-tab="raw" class="wis20-subtab ${state.activeTab === 'raw' ? 'is-active' : ''}">📰 Thông tin thô (8 trụ cột)</button>
             <button type="button" data-wis20-tab="briefing" class="wis20-subtab ${state.activeTab === 'briefing' ? 'is-active' : ''}">🧠 Bản tin 20 phút (Gemini)${state.geminiParsed ? ' ✅' : ''}</button>
             <button type="button" data-wis20-tab="visuals" class="wis20-subtab ${state.activeTab === 'visuals' ? 'is-active' : ''}">📊 Biểu đồ, Sơ đồ &amp; Hình ảnh</button>
           </div>
@@ -683,6 +689,21 @@
     });
 
     // Shared header buttons
+    const triggerExportPdf = async (btnEl) => {
+      if (!state.scanResult || typeof W20.exportWisdomReportPdf !== 'function') return;
+      const oldTxt = btnEl?.textContent || '';
+      if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ Đang dựng PDF bìa & biểu đồ...'; }
+      try {
+        const res = await W20.exportWisdomReportPdf(state.scanResult, state.geminiParsed);
+        toast(`✅ Đã xuất Báo cáo PDF sắc nét (${res.pages} trang · gồm Trang Bìa + Biểu đồ + 8 Trụ cột)!`, 'success', 4200);
+      } catch (err) {
+        toast('⚠️ Lỗi xuất PDF: ' + (err?.message || err), 'error', 3600);
+      } finally {
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = oldTxt; }
+      }
+    };
+    root.querySelector('#wis20-btn-export-pdf')?.addEventListener('click', (ev) => triggerExportPdf(ev.currentTarget));
+    root.querySelector('#wis20-btn-export-pdf-hub')?.addEventListener('click', (ev) => triggerExportPdf(ev.currentTarget));
     root.querySelector('#wis20-btn-change-loc')?.addEventListener('click', () => openChangeLocationWarningModal());
     root.querySelector('#wis20-btn-rescan')?.addEventListener('click', () => {
       if (state.confirmedLocation) confirmLocationAndScan(state.confirmedLocation);

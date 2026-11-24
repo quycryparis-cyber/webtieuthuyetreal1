@@ -671,7 +671,13 @@
               }
               const canvasW = canvasEl?.width || 0;
               const canvasH = canvasEl?.height || 0;
-              const pageInfo1 = document.getElementById('mod46-pv-page-info')?.textContent || '';
+              const readPvPageLabel = () => {
+                const inp = document.getElementById('inp-mod46-pv-page');
+                const tot = document.getElementById('mod46-pv-page-total');
+                if (inp && tot) return `${inp.value} ${tot.textContent || ''}`.trim();
+                return (document.getElementById('mod46-pv-page-info')?.textContent || '').replace(/\s+/g, ' ').trim();
+              };
+              const pageInfo1 = readPvPageLabel();
               const hash1 = canvasEl ? AT.sampleCanvasHash(canvasEl) : '';
               const nextPvBtn = document.getElementById('btn-mod46-pv-next');
               let pageInfo2 = '';
@@ -679,7 +685,7 @@
                 nextPvBtn.click();
                 AT.causal.buttonsTested += 1;
                 await AT.sleep(240);
-                pageInfo2 = document.getElementById('mod46-pv-page-info')?.textContent || '';
+                pageInfo2 = readPvPageLabel();
               }
               document.getElementById('btn-mod46-pv-close')?.click();
               await AT.sleep(80);
@@ -896,6 +902,90 @@
               `Không phát hiện đơ nặng hay rò rỉ tệp tạm (Tác vụ dài: ${st.longTasks}, Tệp tạm dư: ${st.unrevokedBlobs}).`,
               'mod47_performance_ram_and_lifecycle_manager.js',
               'smoothness'
+            );
+          },
+        },
+        {
+          id: 'i18n_full_5_languages_audit',
+          label: 'Quét dịch thuật toàn bộ 5 ngôn ngữ (EN / 简体 / 繁體 / KO / JA) trên mọi cửa sổ & pop-up',
+          run: async (ctx) => {
+            const i18n = globalScope.NoirStudio?.i18n;
+            if (!i18n || typeof i18n.setLanguage !== 'function') {
+              return makePass('i18n_full_5_languages_audit', 'visual_smooth_i18n', 'Bỏ qua kiểm tra 5 ngôn ngữ (không có bộ i18n)', 'Ứng dụng không đăng ký NS.i18n.', 'mod30_master_bootloader_and_integrity_guard.js', 'visual');
+            }
+            const origLang = i18n.getLanguage?.() || 'vi';
+            const targetLangs = ['en', 'zh-CN', 'zh-TW', 'ko', 'ja'];
+            const VN_DIACRITICS_RE = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+            const ALLOWED_BRAND_RE = /^(Tiếng Việt|ĐăngLovePDF|Mai Hải Đăng|Việt Nam|Hà Nội|Đà Nẵng|TP\.?\s*HCM|Hồ Chí Minh|Bi|NoirStudio|VietQR)/i;
+            const SKIP_ANCESTOR_SEL = '[data-i18n-ignore="true"], #at-shell-root, #novel-editor, #s18-rich-prompt-editor, #chapter-title-input, textarea, pre, code, script, style, #modal-mod51-lang-studio';
+            const leaks = [];
+
+            const scanDomForViLeaks = (langCode, scopeLabel, rootEl) => {
+              if (!rootEl) return;
+              const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT);
+              let node = walker.nextNode();
+              let foundInScope = 0;
+              while (node && foundInScope < 8) {
+                const txt = String(node.nodeValue || '').replace(/\s+/g, ' ').trim();
+                if (txt.length >= 3 && VN_DIACRITICS_RE.test(txt) && !ALLOWED_BRAND_RE.test(txt)) {
+                  const el = node.parentElement;
+                  if (el && !el.closest(SKIP_ANCESTOR_SEL)) {
+                    const st = globalScope.getComputedStyle?.(el);
+                    if (st && st.display !== 'none' && st.visibility !== 'hidden' && el.offsetParent !== null) {
+                      leaks.push({ lang: langCode, scope: scopeLabel, text: txt.slice(0, 70), selector: el.id ? `#${el.id}` : el.tagName.toLowerCase() });
+                      foundInScope += 1;
+                    }
+                  }
+                }
+                node = walker.nextNode();
+              }
+            };
+
+            try {
+              for (const lang of targetLangs) {
+                if (ctx.isAborted()) return null;
+                AT.driver.recordBreadcrumb(`Kiểm tra dịch thuật ngôn ngữ: ${lang.toUpperCase()}`);
+                i18n.setLanguage(lang, { persist: false, silent: true });
+                await AT.sleep(160);
+                // 1. Quét giao diện chính đang hiển thị
+                scanDomForViLeaks(lang, 'Màn hình chính', document.body);
+                // 2. Mở cửa sổ Giờ Quốc Tế / Thời Tiết / Đầu tư / 20p Thông thái (Mod 42)
+                if (globalScope.NoirStudio?.worldClockStudio?.openModal) {
+                  globalScope.NoirStudio.worldClockStudio.openModal('timezone');
+                  await AT.sleep(120);
+                  scanDomForViLeaks(lang, 'Pop-up Mod42', document.getElementById('mod42-world-clock-modal'));
+                  globalScope.NoirStudio.worldClockStudio.closeModal();
+                }
+                // 3. Mở ĐăngLovePDF Hub (Mod 46)
+                if (globalScope.NoirStudio?.dangLovePdf?.openDangLovePdfStudio) {
+                  globalScope.NoirStudio.dangLovePdf.openDangLovePdfStudio();
+                  await AT.sleep(120);
+                  scanDomForViLeaks(lang, 'Pop-up ĐăngLovePDF', document.getElementById('modal-mod46-danglovepdf-studio'));
+                  document.getElementById('btn-mod46-close-studio')?.click();
+                }
+                await AT.sleep(60);
+              }
+            } finally {
+              i18n.setLanguage(origLang, { persist: false, silent: true });
+              await AT.sleep(100);
+            }
+
+            if (leaks.length > 0) {
+              const sample = leaks.slice(0, 12).map((x) => `[${x.lang.toUpperCase()} · ${x.scope}] "${x.text}" (${x.selector})`).join('\n');
+              return makeIssue('i18n_full_5_languages_audit', 'visual_smooth_i18n', 'ERR_I18N_UNTRANSLATED', {
+                selector: leaks[0].selector,
+                moduleRef: `i18n_lang_${leaks[0].lang}.js`,
+                techDetail: `Phát hiện ${leaks.length} chuỗi tiếng Việt chưa dịch trên 5 ngôn ngữ:\n${sample}`,
+              });
+            }
+
+            return makePass(
+              'i18n_full_5_languages_audit',
+              'visual_smooth_i18n',
+              'Đạt chuẩn dịch thuật toàn diện cả 5 ngôn ngữ (EN / 简体 / 繁體 / KO / JA)',
+              'Đã chuyển lần lượt 5 ngôn ngữ và quét sạch giao diện chính + pop-up Mod 42 & ĐăngLovePDF — 0 chữ tiếng Việt bị sót.',
+              'mod30_master_bootloader_and_integrity_guard.js',
+              'visual'
             );
           },
         },

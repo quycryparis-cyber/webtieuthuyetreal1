@@ -4254,7 +4254,13 @@
           );
         })
         .join('');
-      this.popoverEl.innerHTML = headerHtml + itemsHtml;
+      const learnFooterHtml =
+        '<div class="pt-1.5 mt-1 border-t border-zinc-800">' +
+        '<button type="button" data-open-lang-learning="true" class="w-full px-2.5 py-2 rounded-xl border border-emerald-400/50 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 hover:text-white text-left transition cursor-pointer">' +
+        '<div class="text-[11px] font-black leading-snug">🎓 Học ngoại ngữ qua trang web / Learn languages via this website / 通过本网站学外语 / 透過本網站學外語 / 웹사이트로 외국어 배우기 / このサイトで外国語を学ぶ</div>' +
+        '</button>' +
+        '</div>';
+      this.popoverEl.innerHTML = headerHtml + itemsHtml + learnFooterHtml;
     }
 
     positionPopover(triggerEl) {

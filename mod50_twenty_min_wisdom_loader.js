@@ -20,6 +20,7 @@
   const STYLE_HREF = 'modules/twenty-min-wisdom/styles/twenty-min-wisdom.css';
   const SCRIPTS = [
     'modules/twenty-min-wisdom/engines/wisdomEngine.js',
+    'modules/twenty-min-wisdom/engines/wisdomPdfExporter.js',
     'modules/twenty-min-wisdom/ui/wisdomCharts.js',
     'modules/twenty-min-wisdom/ui/wisdomUI.js',
   ];

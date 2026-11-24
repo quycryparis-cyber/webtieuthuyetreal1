@@ -636,30 +636,33 @@
       if (!modal) {
         modal = document.createElement('div');
         modal.id = 'modal-mod46-danglovepdf-studio';
-        modal.className = 'fixed inset-0 z-[2147483590] bg-zinc-950/92 backdrop-blur-lg flex flex-col overflow-hidden text-zinc-100';
+        modal.className = 'fixed inset-0 z-[2147483590] bg-zinc-950/90 backdrop-blur-lg flex items-center justify-center p-1.5 sm:p-4 overflow-hidden text-zinc-100';
+        modal.style.cssText = 'position:fixed;inset:0;width:100vw;height:100dvh;display:flex;align-items:center;justify-content:center;';
         modal.setAttribute('role', 'dialog');
         modal.setAttribute('aria-modal', 'true');
         modal.innerHTML = `
-          <!-- Header gọn gàng -->
-          <div class="px-3 sm:px-5 py-3 border-b border-zinc-800 bg-zinc-900/95 flex flex-wrap items-center justify-between gap-2 shrink-0">
-            <div class="flex items-center gap-2.5 min-w-0">
-              <img src="assets/app-icon-192.png" alt="Logo ĐăngLovePDF" class="w-9 h-9 rounded-xl object-cover border-2 border-rose-400/80 shadow-md shrink-0" />
-              <div class="min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <h2 class="text-sm sm:text-base font-black text-rose-300 tracking-tight">ĐăngLovePDF ( ͡° ͜ʖ ͡°)</h2>
-                  <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/50 text-emerald-300 text-[10px] font-extrabold">🔒 48 Công cụ Premium · Xử lý 100% trên máy</span>
+          <div class="w-full max-w-[1440px] h-[96dvh] sm:h-[94dvh] mx-auto rounded-2xl border border-zinc-700/80 bg-zinc-950/98 shadow-2xl flex flex-col overflow-hidden">
+            <!-- Header gọn gàng căn giữa đầy đủ -->
+            <div class="w-full px-3 sm:px-6 py-3 border-b border-zinc-800 bg-zinc-900/95 flex flex-wrap items-center justify-between gap-2 shrink-0">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <img src="assets/app-icon-192.png" alt="Logo ĐăngLovePDF" class="w-9 h-9 rounded-xl object-cover border-2 border-rose-400/80 shadow-md shrink-0" />
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h2 class="text-sm sm:text-base font-black text-rose-300 tracking-tight">ĐăngLovePDF ( ͡° ͜ʖ ͡°)</h2>
+                    <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/50 text-emerald-300 text-[10px] font-extrabold">🔒 48 Công cụ Premium · Xử lý 100% trên máy</span>
+                  </div>
                 </div>
               </div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" id="btn-mod46-back-hub" class="hidden px-3 py-1.5 rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer">← Danh mục công cụ</button>
+                <button type="button" id="btn-mod46-header-new-file" class="hidden px-3 py-1.5 rounded-xl border border-emerald-500/60 bg-emerald-500/15 hover:bg-emerald-600 text-emerald-200 hover:text-white text-xs font-extrabold cursor-pointer">🔄 Làm tệp mới</button>
+                <button type="button" id="btn-mod46-close-studio" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
+              </div>
             </div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <button type="button" id="btn-mod46-back-hub" class="hidden px-3 py-1.5 rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer">← Danh mục công cụ</button>
-              <button type="button" id="btn-mod46-header-new-file" class="hidden px-3 py-1.5 rounded-xl border border-emerald-500/60 bg-emerald-500/15 hover:bg-emerald-600 text-emerald-200 hover:text-white text-xs font-extrabold cursor-pointer">🔄 Làm tệp mới</button>
-              <button type="button" id="btn-mod46-close-studio" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
-            </div>
-          </div>
 
-          <!-- Nội dung 4 trạng thái -->
-          <div id="mod46-studio-body" class="flex-1 min-h-0 overflow-y-auto p-3 sm:p-5"></div>
+            <!-- Nội dung 4 trạng thái (rộng rãi, căn giữa chuẩn Responsive Desktop & Mobile) -->
+            <div id="mod46-studio-body" class="w-full flex-1 min-h-0 overflow-y-auto p-3 sm:p-6"></div>
+          </div>
         `;
         document.body.appendChild(modal);
 

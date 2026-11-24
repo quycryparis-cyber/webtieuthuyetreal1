@@ -95,6 +95,23 @@
       this._lastCleanupCount = 0;
       this._lastCleanupAt = 0;
       this._initialized = false;
+      this._activeSubTab = 'perf'; // 'perf' | 'speed' | 'storage'
+      this._speedState = { running: false, progress: 0, status: '', result: null };
+      this._storageState = {
+        scanning: false,
+        scanned: false,
+        platformLabel: '',
+        isGuestWeb: false,
+        hasDiskFolder: false,
+        diskFolderName: '',
+        systemBytes: 0,
+        userBytes: 0,
+        quotaBytes: 0,
+        files: [], // { id, source: 'disk'|'idb'|'ls', folder, name, size, modifiedAt, parentHandle, dbName, storeName, keyName }
+        selectedIds: new Set(),
+        folderFilter: 'all',
+        sortBy: 'size_desc', // 'date_desc' | 'date_asc' | 'size_desc' | 'size_asc' | 'name_asc'
+      };
     }
 
     loadPrefs() {
@@ -422,10 +439,10 @@
         <button type="button" id="btn-toggle-tab6-perf-ram" data-noir-collapse-target="tab6-perf-ram-body" data-noir-collapse-key="tab6_acc_perf_ram" aria-expanded="false" class="noir-collapse-toggle w-full text-left flex flex-wrap items-center justify-between gap-2 cursor-pointer">
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
-              <span class="px-2.5 py-0.5 rounded-full bg-cyan-400 text-zinc-950 font-black text-[10px] tracking-wide">⚡ TỐI ƯU MƯỢT &amp; RAM</span>
-              <h3 class="text-sm sm:text-base font-black text-cyan-200 uppercase">Quản Lý Hiệu Năng, Tự Ngủ (Auto-Sleep) &amp; Tắt/Bật Chức Năng (Mod 47)</h3>
+              <span class="px-2.5 py-0.5 rounded-full bg-cyan-400 text-zinc-950 font-black text-[10px] tracking-wide">⚡ HIỆU NĂNG · DUNG LƯỢNG · MẠNG</span>
+              <h3 class="text-sm sm:text-base font-black text-cyan-200 uppercase">Quản lý hiệu năng, dung lượng app và test tốc độ mạng (Mod 47)</h3>
             </div>
-            <p class="text-[11px] text-zinc-300 mt-1">Tự ngắt tiến trình đồ họa thừa khi thoát để không tràn RAM — giữ nguyên nhạc nền, YouTube, Pomodoro &amp; tự lưu.</p>
+            <p class="text-[11px] text-zinc-300 mt-1">Theo dõi RAM &amp; Tự ngủ thông minh, kiểm tra tốc độ mạng thực tế (Ping/Download) và quản lý dung lượng tệp hệ thống / dữ liệu người dùng.</p>
           </div>
           <span class="noir-collapse-chevron px-3 py-1 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-200 text-[11px] font-extrabold shrink-0"><span class="noir-collapse-arrow">▾</span> <span class="noir-collapse-state-label">Mở rộng</span></span>
         </button>
@@ -494,6 +511,621 @@
       document.getElementById('tab6-acc-perf-ram-manager')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
+    formatSize(bytes) {
+      const b = Math.max(0, Number(bytes) || 0);
+      if (b < 1024) return `${Math.round(b)} B`;
+      if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+      if (b < 1024 * 1024 * 1024) return `${(b / (1024 * 1024)).toFixed(2)} MB`;
+      return `${(b / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+    }
+
+    formatDate(ts) {
+      if (!ts) return '—';
+      try {
+        return new Date(ts).toLocaleString('vi-VN', {
+          day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+        });
+      } catch (_e) {
+        return '—';
+      }
+    }
+
+    detectPlatformInfo() {
+      const isElectron = Boolean(globalScope.NoirDesktopLocalEngine || /Electron/i.test(navigator.userAgent || ''));
+      const isCapacitor = Boolean(globalScope.Capacitor?.isNativePlatform?.());
+      const isStandalonePwa = Boolean(globalScope.matchMedia?.('(display-mode: standalone)')?.matches || navigator.standalone);
+      const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+      const isGuest = Boolean(NS.guestMode?.isGuestModeActive?.() || document.body?.classList?.contains('noir-guest-demo-active'));
+      const dirHandle = NS.localFs?.rootDirHandle || NS.fsEngine?.rootDirHandle || null;
+
+      let label = '🌐 Bản Web Trình Duyệt';
+      if (isElectron) label = '🖥️ Bản Ứng Dụng Desktop (Electron)';
+      else if (isCapacitor) label = '📱 Bản Ứng Dụng Mobile Cài Đặt (Capacitor)';
+      else if (isStandalonePwa) label = isMobile ? '📱 Bản Ứng Dụng PWA trên Điện Thoại' : '🖥️ Bản Ứng Dụng PWA trên Máy Tính';
+      else if (isMobile) label = '📱 Bản Web trên Điện Thoại';
+      else label = '💻 Bản Web trên Máy Tính';
+      if (isGuest) label += ' · Chế độ Khách (Dùng thử)';
+
+      return { isElectron, isCapacitor, isStandalonePwa, isMobile, isGuest, dirHandle, label };
+    }
+
+    // ------------------------------------------------------------------------
+    // BÀI TEST TỐC ĐỘ MẠNG THỰC TẾ (PING / JITTER / DOWNLOAD MBPS / ỔN ĐỊNH)
+    // ------------------------------------------------------------------------
+    async runNetworkSpeedTest() {
+      if (this._speedState.running) return;
+      this._speedState = { running: true, progress: 8, status: '⏳ Bước 1/3: Đang đo độ trễ (Ping & Jitter)...', result: null };
+      this.refreshPanelUI();
+
+      const updateStep = (progress, status) => {
+        this._speedState.progress = progress;
+        this._speedState.status = status;
+        const bar = document.getElementById('mod47-speed-bar');
+        const lbl = document.getElementById('mod47-speed-status');
+        if (bar) bar.style.width = `${progress}%`;
+        if (lbl) lbl.textContent = status;
+      };
+
+      try {
+        // 1. Đo Ping & Jitter (5 lần gửi yêu cầu nhẹ không dùng cache)
+        const pings = [];
+        for (let i = 0; i < 5; i++) {
+          const t0 = performance.now();
+          try {
+            await fetch(`https://speed.cloudflare.com/__down?bytes=0&t=${Date.now()}_${i}`, { cache: 'no-store' });
+            pings.push(Math.max(1, Math.round(performance.now() - t0)));
+          } catch (_eP) {
+            try {
+              const t1 = performance.now();
+              await fetch(`https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/package.json?t=${Date.now()}_${i}`, { cache: 'no-store' });
+              pings.push(Math.max(1, Math.round(performance.now() - t1)));
+            } catch (_eP2) {}
+          }
+          updateStep(12 + i * 5, `⏳ Bước 1/3: Đang đo Ping lần ${i + 1}/5...`);
+        }
+        pings.sort((a, b) => a - b);
+        const pingMs = pings.length ? pings[Math.floor(pings.length / 2)] : null;
+        let jitterMs = 0;
+        if (pings.length >= 2) {
+          let diffSum = 0;
+          for (let i = 1; i < pings.length; i++) diffSum += Math.abs(pings[i] - pings[i - 1]);
+          jitterMs = Math.round(diffSum / (pings.length - 1));
+        }
+
+        // 2. Đo Tốc độ Tải xuống (Download Mbps — tải dần 3 gói 350KB -> 1MB -> 2MB)
+        const dlSamples = [];
+        const sizes = [350000, 1000000, 2000000];
+        for (let i = 0; i < sizes.length; i++) {
+          const sz = sizes[i];
+          updateStep(40 + i * 16, `⏳ Bước 2/3: Đang đo tốc độ tải xuống (${Math.round(sz / 1000)} KB)...`);
+          const t0 = performance.now();
+          let gotBytes = 0;
+          try {
+            const resp = await fetch(`https://speed.cloudflare.com/__down?bytes=${sz}&t=${Date.now()}_${i}`, { cache: 'no-store' });
+            if (resp.ok) {
+              const buf = await resp.arrayBuffer();
+              gotBytes = buf.byteLength;
+            }
+          } catch (_eCf) {
+            try {
+              const resp2 = await fetch(`https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js?t=${Date.now()}_${i}`, { cache: 'no-store' });
+              if (resp2.ok) {
+                const buf2 = await resp2.arrayBuffer();
+                gotBytes = buf2.byteLength;
+              }
+            } catch (_eJs) {}
+          }
+          const sec = Math.max(0.01, (performance.now() - t0) / 1000);
+          if (gotBytes > 10000) {
+            const mbps = (gotBytes * 8) / (sec * 1e6);
+            dlSamples.push(mbps);
+            // Nếu mạng chậm (< 3 Mbps), dừng sớm không tải gói 2MB tránh chờ lâu
+            if (mbps < 3 && i >= 1) break;
+          }
+        }
+        const downloadMbps = dlSamples.length
+          ? Number((dlSamples.reduce((a, b) => a + b, 0) / dlSamples.length).toFixed(2))
+          : 0;
+
+        // 3. Đánh giá tốc độ phản hồi tải lên & thông số đường truyền thiết bị
+        updateStep(92, '⏳ Bước 3/3: Đang phân tích chất lượng đường truyền...');
+        const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+        const estUploadMbps = downloadMbps > 0 ? Number(Math.max(0.5, downloadMbps * 0.42).toFixed(2)) : 0;
+        let grade = '🔴 Mạng yếu hoặc ngoại tuyến';
+        let advice = 'Nên bật chế độ "Tiết Kiệm RAM Tối Đa" và hạn chế tải tài liệu lớn.';
+        if (downloadMbps >= 40 && (pingMs == null || pingMs < 80)) {
+          grade = '🟢 Siêu nhanh · Tuyệt vời cho AI, YouTube 4K & Đồng bộ Drive';
+          advice = 'Đường truyền rất khỏe, mọi tính năng AI, PDF & Video chạy mượt tối đa.';
+        } else if (downloadMbps >= 12) {
+          grade = '🔵 Tốt · Mượt cho Viết truyện, YouTube HD & Quét tin';
+          advice = 'Kết nối ổn định, đáp ứng tốt toàn bộ tính năng của Studio.';
+        } else if (downloadMbps >= 3) {
+          grade = '🟡 Trung bình · Đủ dùng cơ bản';
+          advice = 'Nên tắt nền Video YouTube 60FPS để ưu tiên băng thông cho AI & lưu trữ.';
+        }
+
+        this._speedState = {
+          running: false,
+          progress: 100,
+          status: '✅ Hoàn tất kiểm tra tốc độ mạng!',
+          result: {
+            testedAt: new Date().toLocaleTimeString('vi-VN'),
+            online: navigator.onLine !== false,
+            pingMs,
+            jitterMs,
+            downloadMbps,
+            estUploadMbps,
+            effectiveType: conn?.effectiveType ? String(conn.effectiveType).toUpperCase() : 'Wi-Fi / LAN',
+            grade,
+            advice,
+          },
+        };
+      } catch (err) {
+        this._speedState = {
+          running: false,
+          progress: 0,
+          status: '⚠️ Không thể đo tốc độ mạng lúc này: ' + (err?.message || err),
+          result: null,
+        };
+      }
+      this.refreshPanelUI();
+    }
+
+    // ------------------------------------------------------------------------
+    // QUÉT DUNG LƯỢNG HỆ THỐNG VS DỮ LIỆU NGƯỜI DÙNG & QUẢN LÝ TỆP TRONG THƯ MỤC TỔNG
+    // ------------------------------------------------------------------------
+    _isHiddenSystemEntry(name, isDir) {
+      const n = String(name || '');
+      const lower = n.toLowerCase();
+      if (lower.startsWith('.')) return true;
+      const sysDirs = new Set([
+        'node_modules', 'electron', 'scripts', 'modules', 'autotester', 'assets',
+        'dist-app', 'release', 'android', 'ios', '.git', '.github', '.vscode', '__pycache__',
+      ]);
+      if (isDir) return sysDirs.has(lower);
+      const sysFiles = new Set([
+        'index.html', 'yt_pip_frame.html', 'sw.js', 'manifest.json', 'favicon.ico',
+        'package.json', 'package-lock.json', 'capacitor.config.json', 'streamfetcher.js',
+        'nativeplayer.js', 'systemfontscale.js', 'miscfunhub.js',
+      ]);
+      if (sysFiles.has(lower)) return true;
+      if (/^(mod\d+|i18n_lang_)/i.test(lower)) return true;
+      if (/\.(js|cjs|mjs|css|ts|map|bat|cmd|ps1|sh)$/i.test(lower)) return true;
+      return false;
+    }
+
+    async scanDeviceStorageAndFiles() {
+      if (this._storageState.scanning) return;
+      this._storageState.scanning = true;
+      this.refreshPanelUI();
+
+      const plat = this.detectPlatformInfo();
+      const files = [];
+      let systemBytes = 0;
+      let userBytes = 0;
+      let quotaBytes = 0;
+
+      // 1. Đo dung lượng Lõi Hệ Thống (Service Worker Core Caches — không thể xóa)
+      try {
+        if (globalScope.caches?.keys) {
+          const cacheNames = await globalScope.caches.keys();
+          for (const cname of cacheNames) {
+            const cache = await globalScope.caches.open(cname);
+            const reqs = await cache.keys();
+            for (const req of reqs) {
+              try {
+                const resp = await cache.match(req);
+                const cl = Number(resp?.headers?.get?.('content-length') || 0);
+                if (cl > 0) systemBytes += cl;
+                else if (resp) {
+                  const blob = await resp.clone().blob();
+                  systemBytes += blob.size || 0;
+                }
+              } catch (_eCm) {}
+            }
+          }
+        }
+      } catch (_eCache) {}
+
+      // Ước tính tối thiểu lõi hệ thống nếu trình duyệt chưa kích hoạt SW cache (VD: localhost dev)
+      if (systemBytes < 500000) {
+        systemBytes = Math.max(systemBytes, 14.2 * 1024 * 1024); // ~14.2 MB mã nguồn + icon + tài nguyên hệ thống
+      }
+
+      // 2. Đo dung lượng Bộ nhớ trình duyệt (navigator.storage.estimate + localStorage + IndexedDB)
+      try {
+        if (navigator.storage?.estimate) {
+          const est = await navigator.storage.estimate();
+          quotaBytes = Number(est.quota || 0);
+          const totalBrowserUsage = Number(est.usage || 0);
+          const estIdb = Math.max(0, totalBrowserUsage - (est.usageDetails?.caches || 0));
+          if (estIdb > 0) userBytes += estIdb;
+        }
+      } catch (_eEst) {}
+
+      // Đo localStorage (dữ liệu cài đặt & lịch sử người dùng)
+      let lsBytes = 0;
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k) continue;
+          const v = localStorage.getItem(k) || '';
+          lsBytes += (k.length + v.length) * 2;
+        }
+      } catch (_eLs) {}
+      if (lsBytes > 0) {
+        files.push({
+          id: 'ls_user_prefs',
+          source: 'ls',
+          folder: 'Bộ nhớ Trình duyệt (Cài đặt & Từ vựng)',
+          name: 'Cài đặt giao diện, Flashcard & lịch sử cục bộ (localStorage)',
+          size: lsBytes,
+          modifiedAt: Date.now(),
+          deletable: false,
+        });
+      }
+
+      // 3. Quét tệp thật trong Thư mục làm việc trên máy (File System Access API — BỎ QUA ở Chế độ Khách bản web!)
+      let diskBytes = 0;
+      const walkDirHandle = async (dirHandle, relFolder, depth = 0) => {
+        if (!dirHandle || depth > 4 || files.length > 500) return;
+        try {
+          for await (const [name, entry] of dirHandle.entries()) {
+            const isDir = entry.kind === 'directory';
+            if (this._isHiddenSystemEntry(name, isDir)) continue;
+            if (isDir) {
+              await walkDirHandle(entry, relFolder ? `${relFolder}/${name}` : name, depth + 1);
+            } else {
+              try {
+                const f = await entry.getFile();
+                diskBytes += f.size || 0;
+                files.push({
+                  id: `disk_${relFolder}_${name}_${f.lastModified}`,
+                  source: 'disk',
+                  folder: relFolder || 'Thư mục gốc',
+                  name,
+                  size: f.size || 0,
+                  modifiedAt: f.lastModified || Date.now(),
+                  parentHandle: dirHandle,
+                  deletable: true,
+                });
+              } catch (_eF) {}
+            }
+          }
+        } catch (_eDir) {}
+      };
+
+      if (!plat.isGuest && plat.dirHandle) {
+        await walkDirHandle(plat.dirHandle, '', 0);
+        userBytes += diskBytes;
+      }
+
+      // 4. Quét các tệp dữ liệu lớn người dùng lưu trong IndexedDB (Ảnh nền, Video nền, Nhạc MP3, Bản sao lưu, Truyện)
+      try {
+        if (typeof indexedDB !== 'undefined' && typeof indexedDB.databases === 'function') {
+          const dbs = await indexedDB.databases();
+          for (const dbInfo of (dbs || []).slice(0, 8)) {
+            const dbName = dbInfo?.name;
+            if (!dbName || /DangLovePDF_FontCache/i.test(dbName)) continue;
+            await new Promise((resolve) => {
+              try {
+                const req = indexedDB.open(dbName);
+                req.onsuccess = () => {
+                  const db = req.result;
+                  const stores = Array.from(db.objectStoreNames || []);
+                  if (!stores.length) { db.close(); return resolve(); }
+                  let pending = stores.length;
+                  const doneStore = () => { if (--pending <= 0) { db.close(); resolve(); } };
+                  stores.forEach((storeName) => {
+                    try {
+                      const tx = db.transaction(storeName, 'readonly');
+                      const st = tx.objectStore(storeName);
+                      const curReq = st.openCursor();
+                      let count = 0;
+                      curReq.onsuccess = (ev) => {
+                        const cursor = ev.target.result;
+                        if (!cursor || count >= 40) return doneStore();
+                        count++;
+                        const val = cursor.value;
+                        let sz = 0;
+                        let displayName = String(cursor.key || `item_${count}`);
+                        let modAt = Date.now();
+                        if (val instanceof Blob) {
+                          sz = val.size;
+                          displayName = val.name || displayName;
+                          modAt = val.lastModified || modAt;
+                        } else if (val && typeof val === 'object') {
+                          if (val.blob instanceof Blob) sz += val.blob.size;
+                          else if (val.file instanceof Blob) sz += val.file.size;
+                          else {
+                            try { sz = new Blob([JSON.stringify(val)]).size; } catch (_eS) { sz = 512; }
+                          }
+                          displayName = val.name || val.title || val.fileName || displayName;
+                          modAt = val.updatedAt || val.savedAt || val.createdAt || modAt;
+                        } else if (typeof val === 'string') {
+                          sz = val.length * 2;
+                        }
+                        if (sz >= 2048) {
+                          files.push({
+                            id: `idb_${dbName}_${storeName}_${String(cursor.key)}`,
+                            source: 'idb',
+                            folder: `Kho App (${dbName} / ${storeName})`,
+                            name: String(displayName).slice(0, 90),
+                            size: sz,
+                            modifiedAt: typeof modAt === 'number' ? modAt : Date.parse(modAt) || Date.now(),
+                            dbName,
+                            storeName,
+                            keyName: cursor.key,
+                            deletable: true,
+                          });
+                        }
+                        cursor.continue();
+                      };
+                      curReq.onerror = doneStore;
+                    } catch (_eTx) { doneStore(); }
+                  });
+                };
+                req.onerror = () => resolve();
+              } catch (_eOpen) { resolve(); }
+            });
+          }
+        }
+      } catch (_eIdb) {}
+
+      if (userBytes === 0) {
+        userBytes = files.reduce((s, f) => s + (f.size || 0), 0);
+      }
+
+      this._storageState = {
+        ...this._storageState,
+        scanning: false,
+        scanned: true,
+        platformLabel: plat.label,
+        isGuestWeb: plat.isGuest && !plat.isElectron && !plat.isCapacitor,
+        hasDiskFolder: Boolean(!plat.isGuest && plat.dirHandle),
+        diskFolderName: plat.dirHandle?.name || '',
+        systemBytes,
+        userBytes,
+        quotaBytes,
+        files,
+        selectedIds: new Set(),
+      };
+      this.refreshPanelUI();
+    }
+
+    async deleteSelectedStorageFiles() {
+      const sel = this._storageState.selectedIds;
+      if (!sel || sel.size === 0) return;
+      const targets = this._storageState.files.filter((f) => f.deletable && sel.has(f.id));
+      if (!targets.length) return;
+
+      const totalSz = targets.reduce((s, f) => s + (f.size || 0), 0);
+      const ok = globalScope.confirm(
+        `⚠️ Bạn có chắc chắn muốn XÓA VĨNH VIỄN ${targets.length} tệp đã chọn (giải phóng ${this.formatSize(totalSz)})?\n(Tệp lõi hệ thống không bao giờ bị ảnh hưởng.)`
+      );
+      if (!ok) return;
+
+      let deletedCount = 0;
+      for (const f of targets) {
+        try {
+          if (f.source === 'disk' && f.parentHandle && typeof f.parentHandle.removeEntry === 'function') {
+            await f.parentHandle.removeEntry(f.name);
+            deletedCount++;
+          } else if (f.source === 'idb' && f.dbName && f.storeName) {
+            await new Promise((resolve) => {
+              const req = indexedDB.open(f.dbName);
+              req.onsuccess = () => {
+                const db = req.result;
+                try {
+                  const tx = db.transaction(f.storeName, 'readwrite');
+                  tx.objectStore(f.storeName).delete(f.keyName);
+                  tx.oncomplete = () => { db.close(); deletedCount++; resolve(); };
+                  tx.onerror = () => { db.close(); resolve(); };
+                } catch (_eD) { db.close(); resolve(); }
+              };
+              req.onerror = () => resolve();
+            });
+          }
+        } catch (_eDel) {}
+      }
+
+      NS.utils?.showToast?.(`🗑️ Đã xóa thành công ${deletedCount}/${targets.length} tệp người dùng!`, 'success', 3200);
+      await this.scanDeviceStorageAndFiles();
+    }
+
+    _getFilteredSortedStorageFiles() {
+      const st = this._storageState;
+      let arr = (st.files || []).filter((f) => st.folderFilter === 'all' || f.folder === st.folderFilter);
+      const sort = st.sortBy || 'size_desc';
+      arr = arr.slice().sort((a, b) => {
+        if (sort === 'size_desc') return (b.size || 0) - (a.size || 0);
+        if (sort === 'size_asc') return (a.size || 0) - (b.size || 0);
+        if (sort === 'date_desc') return (b.modifiedAt || 0) - (a.modifiedAt || 0);
+        if (sort === 'date_asc') return (a.modifiedAt || 0) - (b.modifiedAt || 0);
+        return String(a.name || '').localeCompare(String(b.name || ''));
+      });
+      return arr;
+    }
+
+    _renderSpeedTabHtml() {
+      const sp = this._speedState;
+      const r = sp.result;
+      return `
+        <div class="space-y-3">
+          <div class="p-4 rounded-2xl bg-zinc-950/85 border border-sky-500/40 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div class="text-sm font-black text-sky-300">📶 Kiểm Tra Tốc Độ Mạng Thực Tế (Ping · Jitter · Tải xuống)</div>
+                <div class="text-xs text-zinc-400">Đo trực tiếp qua máy chủ biên toàn cầu (Cloudflare Edge) — chỉ chạy khi bạn bấm nút.</div>
+              </div>
+              <button type="button" id="btn-mod47-run-speedtest" ${sp.running ? 'disabled' : ''} class="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:brightness-110 text-white font-black text-xs shadow-lg cursor-pointer">
+                ${sp.running ? '⏳ Đang đo tốc độ...' : '🚀 Chạy kiểm tra tốc độ mạng ngay'}
+              </button>
+            </div>
+            ${sp.running || sp.status ? `
+              <div class="space-y-1.5">
+                <div class="w-full h-2.5 rounded-full bg-zinc-800 overflow-hidden">
+                  <div id="mod47-speed-bar" class="h-full bg-gradient-to-r from-emerald-400 via-sky-400 to-violet-400 transition-all" style="width:${sp.progress}%"></div>
+                </div>
+                <div id="mod47-speed-status" class="text-xs font-bold text-cyan-300">${escHtml(sp.status)}</div>
+              </div>
+            ` : ''}
+          </div>
+
+          ${r ? `
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div class="p-3 rounded-xl bg-gradient-to-br from-emerald-950/70 to-zinc-950 border border-emerald-500/45">
+                <div class="text-[11px] font-bold text-emerald-300">⬇️ Tốc độ Tải xuống</div>
+                <div class="text-xl font-black text-white mt-0.5">${r.downloadMbps} <span class="text-xs font-bold text-emerald-300">Mbps</span></div>
+              </div>
+              <div class="p-3 rounded-xl bg-gradient-to-br from-sky-950/70 to-zinc-950 border border-sky-500/45">
+                <div class="text-[11px] font-bold text-sky-300">📡 Độ trễ (Ping)</div>
+                <div class="text-xl font-black text-white mt-0.5">${r.pingMs ?? '—'} <span class="text-xs font-bold text-sky-300">ms</span></div>
+              </div>
+              <div class="p-3 rounded-xl bg-gradient-to-br from-violet-950/70 to-zinc-950 border border-violet-500/45">
+                <div class="text-[11px] font-bold text-violet-300">〰️ Dao động (Jitter)</div>
+                <div class="text-xl font-black text-white mt-0.5">${r.jitterMs} <span class="text-xs font-bold text-violet-300">ms</span></div>
+              </div>
+              <div class="p-3 rounded-xl bg-gradient-to-br from-amber-950/70 to-zinc-950 border border-amber-500/45">
+                <div class="text-[11px] font-bold text-amber-300">⬆️ Tải lên (ước tính)</div>
+                <div class="text-xl font-black text-white mt-0.5">~${r.estUploadMbps} <span class="text-xs font-bold text-amber-300">Mbps</span></div>
+              </div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-zinc-950/85 border border-emerald-500/35 space-y-1 text-xs">
+              <div class="font-black text-white">${escHtml(r.grade)}</div>
+              <div class="text-zinc-300">${escHtml(r.advice)}</div>
+              <div class="text-[11px] text-zinc-400">Loại mạng thiết bị báo: <b>${escHtml(r.effectiveType)}</b> · Đo lúc: ${escHtml(r.testedAt)}</div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    _renderStorageTabHtml() {
+      const st = this._storageState;
+      const totalUsed = Math.max(1, (st.systemBytes || 0) + (st.userBytes || 0));
+      const sysPct = Math.round(((st.systemBytes || 0) / totalUsed) * 100);
+      const usrPct = Math.max(0, 100 - sysPct);
+      const folders = ['all', ...new Set((st.files || []).map((f) => f.folder))];
+      const visibleFiles = this._getFilteredSortedStorageFiles();
+      const deletableVisible = visibleFiles.filter((f) => f.deletable);
+
+      return `
+        <div class="space-y-3.5">
+          <div class="p-4 rounded-2xl bg-zinc-950/85 border border-emerald-500/40 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div class="text-sm font-black text-emerald-300">💾 Quản Lý Dung Lượng Thiết Bị &amp; Tệp Người Dùng</div>
+                <div class="text-xs text-zinc-300 mt-0.5">${escHtml(st.platformLabel || this.detectPlatformInfo().label)}</div>
+              </div>
+              <button type="button" id="btn-mod47-scan-storage" ${st.scanning ? 'disabled' : ''} class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow cursor-pointer">
+                ${st.scanning ? '⏳ Đang quét dung lượng...' : st.scanned ? '🔄 Quét lại dung lượng & tệp' : '🔍 Phân tích dung lượng thiết bị ngay'}
+              </button>
+            </div>
+
+            ${st.scanned ? `
+              <!-- Biểu đồ thanh phân tách 2 phần rõ ràng: Lõi hệ thống (không thể xóa) vs Dữ liệu người dùng -->
+              <div class="space-y-2 pt-1">
+                <div class="w-full h-3.5 rounded-full bg-zinc-800 overflow-hidden flex">
+                  <div style="width:${sysPct}%" class="h-full bg-sky-500" title="Dung lượng Lõi Hệ Thống (Bắt buộc)"></div>
+                  <div style="width:${usrPct}%" class="h-full bg-amber-400" title="Dung lượng Dữ Liệu Người Dùng"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
+                  <div class="p-3 rounded-xl bg-sky-950/35 border border-sky-500/40 space-y-1">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-black text-sky-300">🔒 Lõi Hệ Thống (Bắt buộc · Không thể xóa)</span>
+                      <span class="font-black text-white">${this.formatSize(st.systemBytes)}</span>
+                    </div>
+                    <p class="text-[11px] text-zinc-300 leading-relaxed">
+                      Bao gồm mã nguồn vận hành, biểu tượng ứng dụng, hình nền mặc định và bộ đệm ngoại tuyến do hệ thống cung cấp sẵn để web/app chạy ổn định.
+                    </p>
+                  </div>
+                  <div class="p-3 rounded-xl bg-amber-950/35 border border-amber-500/45 space-y-1">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-black text-amber-300">👤 Dữ Liệu Người Dùng (Có thể dọn dẹp)</span>
+                      <span class="font-black text-white">${this.formatSize(st.userBytes)}</span>
+                    </div>
+                    <p class="text-[11px] text-zinc-300 leading-relaxed">
+                      Bao gồm bản thảo, tệp xuất PDF/DOCX, ảnh/video nền bạn tải lên, nhạc MP3 &amp; dữ liệu trong thư mục làm việc ${st.hasDiskFolder ? `("${escHtml(st.diskFolderName)}")` : '(lưu trên trình duyệt)'}.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              ${st.isGuestWeb ? `
+                <div class="p-3 rounded-xl bg-zinc-900/90 border border-zinc-700 text-xs text-zinc-300">
+                  ℹ️ Bạn đang ở <b>Chế độ Khách (Bản Web)</b> nên không liên kết thư mục ổ cứng trên máy. Danh sách dưới chỉ hiển thị bộ nhớ tạm trên trình duyệt (nếu có).
+                </div>
+              ` : ''}
+
+              <!-- Trình quản lý Tệp trong Thư mục Tổng (Ẩn hoàn toàn thư mục mã nguồn hệ thống!) -->
+              <div class="space-y-2.5 pt-2 border-t border-zinc-800">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="text-xs font-black text-cyan-300 uppercase">🗂️ Tệp trong Thư mục Tổng (${visibleFiles.length} tệp · Đã ẩn toàn bộ thư mục mã nguồn)</div>
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <select id="sel-mod47-folder-filter" class="px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-zinc-100">
+                      ${folders.map((f) => `<option value="${escHtml(f)}" ${f === st.folderFilter ? 'selected' : ''}>${f === 'all' ? '📂 Tất cả thư mục' : '📁 ' + escHtml(f)}</option>`).join('')}
+                    </select>
+                    <select id="sel-mod47-file-sort" class="px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-zinc-100">
+                      <option value="size_desc" ${st.sortBy === 'size_desc' ? 'selected' : ''}>📊 Dung lượng: Lớn → Nhỏ</option>
+                      <option value="size_asc" ${st.sortBy === 'size_asc' ? 'selected' : ''}>📊 Dung lượng: Nhỏ → Lớn</option>
+                      <option value="date_desc" ${st.sortBy === 'date_desc' ? 'selected' : ''}>🕒 Ngày thêm: Mới nhất</option>
+                      <option value="date_asc" ${st.sortBy === 'date_asc' ? 'selected' : ''}>🕒 Ngày thêm: Cũ nhất</option>
+                      <option value="name_asc" ${st.sortBy === 'name_asc' ? 'selected' : ''}>🔤 Tên tệp: A → Z</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <button type="button" id="btn-mod47-sel-all-files" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-[11px] font-bold cursor-pointer">☑️ Chọn tất cả (${deletableVisible.length})</button>
+                    <button type="button" id="btn-mod47-desel-files" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-bold cursor-pointer">⬜ Bỏ chọn</button>
+                  </div>
+                  <button type="button" id="btn-mod47-delete-sel-files" ${st.selectedIds.size === 0 ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${st.selectedIds.size > 0 ? 'bg-rose-600 hover:bg-rose-500 text-white shadow' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}">
+                    🗑️ Xóa tệp đã chọn (${st.selectedIds.size})
+                  </button>
+                </div>
+
+                ${visibleFiles.length ? `
+                  <div class="max-h-72 overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-950/90">
+                    <table class="w-full text-left text-xs border-collapse">
+                      <thead class="sticky top-0 bg-zinc-900 text-zinc-300">
+                        <tr>
+                          <th class="p-2 w-8">✓</th>
+                          <th class="p-2">Tệp &amp; Thư mục chứa</th>
+                          <th class="p-2 whitespace-nowrap">Ngày thêm / Sửa</th>
+                          <th class="p-2 text-right whitespace-nowrap">Dung lượng</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${visibleFiles.slice(0, 150).map((f) => `
+                          <tr class="border-t border-zinc-800/80 hover:bg-zinc-900/70">
+                            <td class="p-2">
+                              ${f.deletable ? `<input type="checkbox" data-mod47-file-chk="${escHtml(f.id)}" ${st.selectedIds.has(f.id) ? 'checked' : ''} class="w-4 h-4 accent-rose-500 cursor-pointer" />` : '<span title="Hệ thống bảo vệ">🔒</span>'}
+                            </td>
+                            <td class="p-2 min-w-0">
+                              <div class="font-bold text-zinc-100 truncate max-w-[260px] sm:max-w-[380px]" title="${escHtml(f.name)}">${escHtml(f.name)}</div>
+                              <div class="text-[10.5px] text-cyan-400/90">📁 ${escHtml(f.folder)}</div>
+                            </td>
+                            <td class="p-2 text-[11px] text-zinc-400 whitespace-nowrap">${escHtml(this.formatDate(f.modifiedAt))}</td>
+                            <td class="p-2 text-right font-mono font-bold text-amber-300 whitespace-nowrap">${this.formatSize(f.size)}</td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                ` : '<div class="p-4 text-center text-xs text-zinc-400 rounded-xl border border-zinc-800">Không tìm thấy tệp dữ liệu người dùng nào trong thư mục này.</div>'}
+              </div>
+            ` : `
+              <div class="p-4 text-center text-xs text-zinc-400 rounded-xl bg-zinc-900/60 border border-zinc-800">
+                Bấm nút xanh <b>"🔍 Phân tích dung lượng thiết bị ngay"</b> ở trên để xem chi tiết phần dung lượng Lõi hệ thống (bắt buộc) vs Dữ liệu người dùng và quản lý/xóa tệp trong thư mục tổng.
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
     refreshPanelUI() {
       const body = document.getElementById('tab6-perf-ram-body');
       if (!body) return;
@@ -501,8 +1133,17 @@
       const essentials = this.getEssentialServicesStatus();
       const ramText = this.getRamBadgeText();
       const disabledCount = Object.values(this.prefs.disabledFeatures || {}).filter(Boolean).length;
+      const tab = this._activeSubTab || 'perf';
 
-      body.innerHTML = `
+      const subTabsHtml = `
+        <div class="flex flex-wrap gap-1.5 pb-1 border-b border-zinc-800">
+          <button type="button" data-mod47-subtab="perf" class="px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${tab === 'perf' ? 'bg-cyan-500 text-zinc-950 shadow' : 'bg-zinc-900 border border-zinc-700 text-zinc-300 hover:border-cyan-400'}">⚡ Hiệu năng, RAM &amp; Tự ngủ</button>
+          <button type="button" data-mod47-subtab="speed" class="px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${tab === 'speed' ? 'bg-sky-500 text-zinc-950 shadow' : 'bg-zinc-900 border border-zinc-700 text-zinc-300 hover:border-sky-400'}">📶 Test tốc độ mạng</button>
+          <button type="button" data-mod47-subtab="storage" class="px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${tab === 'storage' ? 'bg-emerald-500 text-zinc-950 shadow' : 'bg-zinc-900 border border-zinc-700 text-zinc-300 hover:border-emerald-400'}">💾 Dung lượng app &amp; Quản lý tệp</button>
+        </div>
+      `;
+
+      const perfTabHtml = `
         <!-- Thanh trạng thái & Nút 1 chạm -->
         <div class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-zinc-950/80 border border-zinc-800">
           <div class="space-y-0.5 text-xs">
@@ -585,6 +1226,17 @@
         </div>
       `;
 
+      body.innerHTML =
+        subTabsHtml +
+        (tab === 'speed' ? this._renderSpeedTabHtml() : tab === 'storage' ? this._renderStorageTabHtml() : perfTabHtml);
+
+      body.querySelectorAll('[data-mod47-subtab]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          this._activeSubTab = btn.dataset.mod47Subtab || 'perf';
+          this.refreshPanelUI();
+        });
+      });
+
       body.querySelector('#btn-mod47-cleanup-ram-now')?.addEventListener('click', () => this.runCleanupNow(false));
       body.querySelectorAll('[data-mod47-preset]').forEach((btn) => {
         btn.addEventListener('click', () => this.applyPreset(btn.dataset.mod47Preset));
@@ -606,6 +1258,38 @@
           this.setFeatureEnabled(key, !currentlyEnabled);
         });
       });
+
+      // Speed test & Storage events
+      body.querySelector('#btn-mod47-run-speedtest')?.addEventListener('click', () => this.runNetworkSpeedTest());
+      body.querySelector('#btn-mod47-scan-storage')?.addEventListener('click', () => this.scanDeviceStorageAndFiles());
+      body.querySelector('#sel-mod47-folder-filter')?.addEventListener('change', (ev) => {
+        this._storageState.folderFilter = ev.target.value || 'all';
+        this.refreshPanelUI();
+      });
+      body.querySelector('#sel-mod47-file-sort')?.addEventListener('change', (ev) => {
+        this._storageState.sortBy = ev.target.value || 'size_desc';
+        this.refreshPanelUI();
+      });
+      body.querySelector('#btn-mod47-sel-all-files')?.addEventListener('click', () => {
+        this._getFilteredSortedStorageFiles().forEach((f) => {
+          if (f.deletable) this._storageState.selectedIds.add(f.id);
+        });
+        this.refreshPanelUI();
+      });
+      body.querySelector('#btn-mod47-desel-files')?.addEventListener('click', () => {
+        this._storageState.selectedIds.clear();
+        this.refreshPanelUI();
+      });
+      body.querySelector('#btn-mod47-delete-sel-files')?.addEventListener('click', () => this.deleteSelectedStorageFiles());
+      body.querySelectorAll('[data-mod47-file-chk]').forEach((chk) => {
+        chk.addEventListener('change', () => {
+          const id = chk.getAttribute('data-mod47-file-chk');
+          if (chk.checked) this._storageState.selectedIds.add(id);
+          else this._storageState.selectedIds.delete(id);
+          this.refreshPanelUI();
+        });
+      });
+      NS.i18n?.translateElement?.(body);
     }
 
     init() {

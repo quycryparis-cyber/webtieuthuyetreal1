@@ -85,6 +85,9 @@
       var acked = false;
       var ytWidgetId = 1;
       var appliedInitialPrefs = false;
+      var bootedAtMs = Date.now();
+      var initialStartSeekPending = start > 0;
+      var initialStartSeekAttempts = 0;
       var handshakeTimer = null;
       var pollTimer = null;
       var pendingCmds = [];
@@ -136,7 +139,16 @@
             var v = typeof ytPlayer.getVolume === 'function' ? ytPlayer.getVolume() : undefined;
             var m = typeof ytPlayer.isMuted === 'function' ? ytPlayer.isMuted() : undefined;
             var vd = typeof ytPlayer.getVideoData === 'function' ? ytPlayer.getVideoData() : null;
-            if (typeof t === 'number' && isFinite(t) && t >= 0) lastInfo.currentTime = t;
+            if (typeof t === 'number' && isFinite(t) && t >= 0) {
+              // Trong 2.4 giây đầu lúc mới mở từ khung chính tại mốc start > 0, bỏ qua tín hiệu 0s giả từ YouTube trước khi seekTo(start) hoàn tất
+              var ignoreBootZero = initialStartSeekPending && Date.now() - bootedAtMs < 2400 && t < Math.max(1, start - 2);
+              if (!ignoreBootZero) {
+                lastInfo.currentTime = t;
+                if (initialStartSeekPending && t >= Math.max(0, start - 2)) {
+                  initialStartSeekPending = false;
+                }
+              }
+            }
             if (typeof d === 'number' && isFinite(d) && d > 0) lastInfo.duration = d;
             if (typeof s === 'number') lastInfo.playerState = s;
             if (typeof r === 'number' && isFinite(r) && r > 0) lastInfo.playbackRate = r;
@@ -159,6 +171,8 @@
         if (!isFinite(abState.startSec) || !isFinite(abState.endSec) || abState.endSec <= abState.startSec) return false;
         if (lastInfo.playerState !== 1 && lastInfo.playerState !== 3) return false;
         var now = Date.now();
+        // Chờ seek về đúng mốc thời gian từ khung chính (start) ổn định xong mới kích hoạt vòng lặp A-B!
+        if (initialStartSeekPending && now - bootedAtMs < 2600) return false;
         if (now - abState.lastJumpAtMs < 350) return false;
         var cur = Number(lastInfo.currentTime);
         if (!isFinite(cur) || cur < 0) return false;
@@ -285,6 +299,22 @@
         if (appliedInitialPrefs) return;
         appliedInitialPrefs = true;
         setTimeout(function () {
+          // Ép tua đúng mốc thời gian đang phát ở khung chính nếu YouTube embed bỏ qua ?start=N
+          if (start > 0) {
+            var curNow = 0;
+            try {
+              if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
+                curNow = Number(ytPlayer.getCurrentTime()) || 0;
+              }
+            } catch (_eCur) {}
+            if (curNow < start - 2) {
+              initialStartSeekAttempts += 1;
+              execYtCommand('seekTo', [start, true]);
+              if (autoplay === '1') execYtCommand('playVideo', []);
+            } else {
+              initialStartSeekPending = false;
+            }
+          }
           if (rate && Math.abs(rate - 1) > 0.01) {
             execYtCommand('setPlaybackRate', [rate > 2 ? 2 : rate]);
           }
@@ -295,7 +325,7 @@
             execYtCommand('setVolume', [vol]);
           }
           flushPendingCommands();
-        }, 140);
+        }, 180);
       }
 
       function startListeningHandshake() {
@@ -418,7 +448,19 @@
         }
 
         if ((data.event === 'infoDelivery' || data.event === 'initialDelivery') && data.info && typeof data.info === 'object') {
-          if (typeof data.info.currentTime === 'number' && isFinite(data.info.currentTime)) lastInfo.currentTime = data.info.currentTime;
+          if (typeof data.info.currentTime === 'number' && isFinite(data.info.currentTime)) {
+            var incomingT = data.info.currentTime;
+            var ignoreBootReset = initialStartSeekPending && Date.now() - bootedAtMs < 2400 && incomingT < Math.max(1, start - 2);
+            if (!ignoreBootReset) {
+              lastInfo.currentTime = incomingT;
+              if (initialStartSeekPending && incomingT >= Math.max(0, start - 2)) {
+                initialStartSeekPending = false;
+              }
+            } else if (initialStartSeekAttempts < 2 && data.info.playerState === 1) {
+              initialStartSeekAttempts += 1;
+              execYtCommand('seekTo', [start, true]);
+            }
+          }
           if (typeof data.info.duration === 'number' && data.info.duration > 0) lastInfo.duration = data.info.duration;
           if (typeof data.info.playerState === 'number') {
             lastInfo.playerState = data.info.playerState;

@@ -49,6 +49,13 @@
       plainDesc: 'Bác sĩ App đã bấm thật vào nút nhưng màn hình, dữ liệu và tính năng không có phản ứng gì.',
       fixAdvice: 'Kiểm tra gắn sự kiện `addEventListener` (ưu tiên Event Delegation `closest("[data-action]")`) và kiểm tra điều kiện chặn sai trong hàm xử lý.',
     },
+    ERR_I18N_UNTRANSLATED: {
+      severity: 'P1',
+      pillar: 'visual',
+      plainTitle: 'Phát hiện chữ tiếng Việt chưa được dịch khi đổi sang 5 ngôn ngữ khác',
+      plainDesc: 'Khi chuyển sang Tiếng Anh / Trung (Giản-Phồn) / Hàn / Nhật và mở các cửa sổ pop-up, vẫn còn dòng chữ tiếng Việt chưa dịch.',
+      fixAdvice: 'Bổ sung các cụm chữ bị sót vào từ điển `exact` của cả 5 tệp `i18n_lang_en.js`, `i18n_lang_zh_cn.js`, `i18n_lang_zh_tw.js`, `i18n_lang_ko.js`, `i18n_lang_ja.js` và gọi `NS.i18n.translateElement(modalEl)` sau khi dựng DOM động.',
+    },
     ERR_ZOMBIE_TOGGLE: {
       severity: 'P0',
       pillar: 'functional',
