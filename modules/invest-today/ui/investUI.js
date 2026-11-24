@@ -43,6 +43,16 @@
     gateError: '',
     gateCountry: 'VN',
     gateAreaInput: '',
+    pendingGpsRegion: null,
+    wizardStage: 'location_gate', // 'location_gate' | 'loading_full_scan' | 'two_step_setup' | 'dashboard'
+    loadingPct: 0,
+    loadingLabel: '',
+    loadingDone: false,
+    w2Focus: 'general',
+    w2Mode: 'veteran30',
+    w2AutoMergeNotice: '',
+    w2SyncCountdown: null, // { sec, msg }
+    w2CountdownTimerId: null,
     evalProgress: null,
     goldLoading: false,
     goldError: '',
@@ -92,12 +102,25 @@
   };
 
   function resetUiState() {
+    if (uiState.w2CountdownTimerId) {
+      clearInterval(uiState.w2CountdownTimerId);
+    }
     uiState = {
       gateLoading: false,
       gateStatus: '',
       gateError: '',
       gateCountry: 'VN',
       gateAreaInput: '',
+      pendingGpsRegion: null,
+      wizardStage: 'location_gate',
+      loadingPct: 0,
+      loadingLabel: '',
+      loadingDone: false,
+      w2Focus: 'general',
+      w2Mode: 'veteran30',
+      w2AutoMergeNotice: '',
+      w2SyncCountdown: null,
+      w2CountdownTimerId: null,
       evalProgress: null,
       goldLoading: false,
       goldError: '',
@@ -1244,11 +1267,73 @@
   }
 
   // --------------------------------------------------------------------------
-  // MÀN HÌNH CỔNG XÁC ĐỊNH VỊ TRÍ & QUỐC GIA (BÁM SÁT THỊ TRƯỜNG TOÀN CẦU)
+  // POP-UP CẢNH BÁO KHI BẤM ĐỔI VỊ TRÍ (CÓ / KHÔNG / NÚT ✕ ĐÓNG)
+  // --------------------------------------------------------------------------
+  function openChangeRegionConfirmModal() {
+    document.getElementById('inv-change-region-confirm-modal')?.remove();
+    const tr = (s) => NS.i18n?.translateText?.(s) || s;
+    const modal = document.createElement('div');
+    modal.id = 'inv-change-region-confirm-modal';
+    modal.className = 'fixed inset-0 z-[2147483635] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.innerHTML = `
+      <div class="w-full max-w-md rounded-2xl border-2 border-amber-400/70 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden">
+        <div class="px-4 py-3 border-b border-zinc-800 bg-amber-500/15 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 text-sm font-black text-amber-300">
+            <span>⚠️</span>
+            <span>${tr('Xác nhận đổi vị trí đầu tư')}</span>
+          </div>
+          <button type="button" id="inv-chg-loc-x" class="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-rose-600 text-zinc-100 font-black cursor-pointer" title="${tr('Đóng')}">✕</button>
+        </div>
+        <div class="p-4 space-y-3 text-xs sm:text-sm leading-relaxed text-zinc-200">
+          <p>${tr('Nếu bạn đổi vị trí (Thủ công hoặc tự động qua GPS) thì đều cần phân tích lại để có số liệu chính xác nhất, bạn chắc chứ?')}</p>
+        </div>
+        <div class="px-4 py-3 border-t border-zinc-800 bg-zinc-900/90 flex items-center justify-end gap-2">
+          <button type="button" id="inv-chg-loc-no" class="px-4 py-2 rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs font-bold cursor-pointer">❌ ${tr('Không')}</button>
+          <button type="button" id="inv-chg-loc-yes" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-black shadow-lg cursor-pointer">✅ ${tr('Có, đổi vị trí & phân tích lại')}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const closeIt = () => modal.remove();
+    modal.querySelector('#inv-chg-loc-x')?.addEventListener('click', closeIt);
+    modal.querySelector('#inv-chg-loc-no')?.addEventListener('click', closeIt);
+    modal.addEventListener('click', (ev) => {
+      if (ev.target === modal) closeIt();
+    });
+    modal.querySelector('#inv-chg-loc-yes')?.addEventListener('click', () => {
+      closeIt();
+      if (uiState.w2CountdownTimerId) {
+        clearInterval(uiState.w2CountdownTimerId);
+        uiState.w2CountdownTimerId = null;
+      }
+      INV.stateManager.abortAll();
+      INV.stateManager.userRegion = null;
+      INV.stateManager.evaluationReport = null;
+      INV.stateManager.unifiedAnalytics = null;
+      INV.stateManager.deterministicMatches = null;
+      INV.stateManager.goldData = null;
+      INV.stateManager.realEstateData = null;
+      INV.storageAdapter.clearSession('user_region');
+      INV.storageAdapter.clearSession('eval_report_quick');
+      INV.storageAdapter.clearSession('eval_report_full');
+      INV.storageAdapter.clearSession('wizard_stage');
+      uiState.pendingGpsRegion = null;
+      uiState.w2SyncCountdown = null;
+      uiState.wizardStage = 'location_gate';
+      render();
+    });
+    NS.i18n?.translateElement?.(modal);
+  }
+
+  // --------------------------------------------------------------------------
+  // PHA A: MÀN HÌNH CỔNG XÁC ĐỊNH VỊ TRÍ & CHỜ NGƯỜI DÙNG XÁC NHẬN
   // --------------------------------------------------------------------------
   function renderLocationGateScreen() {
     const esc = INV.utils.escapeHtml;
     const countries = Object.values(INV.COUNTRY_PROFILES || {});
+    const pendingGps = uiState.pendingGpsRegion;
     return `
       <div class="inv-root space-y-4">
         <div class="inv-card text-center space-y-4 py-6">
@@ -1256,16 +1341,28 @@
           <div class="space-y-1.5 max-w-xl mx-auto">
             <h3 class="text-base sm:text-lg font-black">Xác định Quốc gia &amp; Khu vực trước khi vào Đầu tư hôm nay</h3>
             <p class="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              Người dùng có thể đang ở Việt Nam hoặc nước ngoài. Hãy cho phép truy cập vị trí (GPS) để hệ thống tự nhận diện đúng quốc gia, đồng tiền, ngân hàng trung ương, sàn chứng khoán &amp; khu vực nhà đất và tra cứu dữ liệu sát sườn nhất!
+              Hãy dò vị trí (GPS) hoặc chọn thủ công. Sau khi bạn bấm <strong>Xác nhận</strong>, hệ thống sẽ tự động tra cứu thông tin toàn diện (34 chỉ tiêu) và chuẩn bị sẵn câu lệnh 2 bước cho Gemini!
             </p>
           </div>
 
-          <div class="flex flex-col items-center gap-2">
+          <div class="flex flex-col items-center gap-2.5">
             <button type="button" id="inv-gate-btn-gps" class="inv-primary-btn" ${uiState.gateLoading ? 'disabled' : ''}>
-              ${uiState.gateLoading ? '⏳ Đang định vị &amp; tra cứu dữ liệu khu vực...' : '📍 Cho phép truy cập Vị trí (GPS) &amp; Tra cứu ngay'}
+              ${uiState.gateLoading ? '⏳ Đang dò vị trí GPS của bạn...' : '📍 Cho phép truy cập Vị trí (GPS)'}
             </button>
             ${uiState.gateStatus ? `<div class="text-xs font-bold text-emerald-600 dark:text-emerald-400">${esc(uiState.gateStatus)}</div>` : ''}
             ${uiState.gateError ? `<div class="text-xs font-bold text-amber-600 dark:text-amber-300 max-w-md">${esc(uiState.gateError)}</div>` : ''}
+
+            ${
+              pendingGps
+                ? `<div class="w-full max-w-lg p-3.5 rounded-2xl border-2 border-emerald-400/70 bg-emerald-500/12 space-y-2.5 shadow-lg">
+                    <div class="text-xs font-extrabold text-emerald-700 dark:text-emerald-300">✅ Đã dò ra vị trí của bạn qua GPS:</div>
+                    <div class="text-sm font-black text-zinc-900 dark:text-white">📍 ${esc(pendingGps.areaLabel)} (${esc(pendingGps.countryName)} · ${esc(pendingGps.currency)})</div>
+                    <button type="button" id="inv-gate-btn-confirm-gps" class="inv-primary-btn w-full text-xs sm:text-sm">
+                      🚀 Xác nhận vị trí này &amp; Bắt đầu tra cứu toàn diện
+                    </button>
+                  </div>`
+                : ''
+            }
           </div>
 
           <div class="pt-4 border-t border-zinc-200 dark:border-zinc-800 max-w-lg mx-auto space-y-2.5 text-left">
@@ -1281,7 +1378,216 @@
               <input type="text" id="inv-gate-area-inp" value="${esc(uiState.gateAreaInput)}" placeholder="Tùy chọn: Thành phố / Quận / Bang..." class="px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs" />
             </div>
             <button type="button" id="inv-gate-btn-manual" class="inv-secondary-btn w-full text-xs font-extrabold" ${uiState.gateLoading ? 'disabled' : ''}>
-              🚀 Xác nhận Quốc gia, Tra cứu &amp; Vào Đầu tư hôm nay
+              🚀 Xác nhận Quốc gia &amp; Bắt đầu tra cứu toàn diện
+            </button>
+          </div>
+        </div>
+        ${disclaimerFooterHtml()}
+      </div>`;
+  }
+
+  // --------------------------------------------------------------------------
+  // PHA B: MÀN HÌNH CHỜ LOADING TRA CỨU TOÀN DIỆN & TỔNG HỢP PROMPT
+  // --------------------------------------------------------------------------
+  function renderFullScanLoadingScreen() {
+    const esc = INV.utils.escapeHtml;
+    const reg = INV.stateManager.userRegion;
+    const pct = Math.max(5, Math.min(100, Math.round(uiState.loadingPct || 10)));
+    return `
+      <div class="inv-root space-y-4">
+        <div class="inv-card inv-workflow-glow-card text-center py-10 px-4 space-y-4">
+          <div class="flex justify-center">
+            ${
+              uiState.loadingDone
+                ? '<div class="w-14 h-14 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-3xl">✅</div>'
+                : '<div class="w-14 h-14 rounded-full border-4 border-emerald-400 border-t-transparent animate-spin"></div>'
+            }
+          </div>
+          <div class="space-y-1.5 max-w-lg mx-auto">
+            <h3 class="text-base sm:text-lg font-black ${uiState.loadingDone ? 'text-emerald-600 dark:text-emerald-300' : ''}">
+              ${uiState.loadingDone ? 'Tra cứu & Tổng hợp thông tin toàn diện thành công!' : 'Đang tra cứu thông tin toàn diện & chuẩn bị câu lệnh Gemini...'}
+            </h3>
+            <p class="text-xs text-zinc-600 dark:text-zinc-300">
+              Khu vực: <strong>${esc(reg?.areaLabel || 'Việt Nam')} (${esc(reg?.countryName || 'Việt Nam')})</strong> · Tự động quét 34 chỉ tiêu, lọc 5 chốt 0% bịa đặt SHA-256 &amp; tổng hợp sẵn câu lệnh.
+            </p>
+          </div>
+          <div class="max-w-md mx-auto space-y-1.5">
+            <div class="flex justify-between text-xs font-bold">
+              <span>${esc(uiState.loadingLabel || 'Đang kết nối các nguồn API chính thống...')}</span>
+              <span class="inv-num text-emerald-500">${pct}%</span>
+            </div>
+            <div class="inv-meter-track" style="height:10px;">
+              <div class="inv-meter-fill bg-gradient-to-r from-emerald-500 to-sky-500" style="width:${pct}%"></div>
+            </div>
+          </div>
+        </div>
+        ${disclaimerFooterHtml()}
+      </div>`;
+  }
+
+  // --------------------------------------------------------------------------
+  // PHA C: MÀN HÌNH 2 BƯỚC RẤT NGẮN GỌN (TRƯỚC KHI VÀO CÁC BẢNG PHÂN TÍCH)
+  // --------------------------------------------------------------------------
+  function renderTwoStepSetupScreen() {
+    const esc = INV.utils.escapeHtml;
+    const reg = INV.stateManager.userRegion;
+    const prefs = INV.storageAdapter.getPrefs();
+    const rep = INV.stateManager.evaluationReport;
+    const curMode = uiState.w2Mode || prefs.promptMode || 'veteran30';
+    const curFocus = uiState.w2Focus || 'general';
+    const countdown = uiState.w2SyncCountdown;
+
+    const previewPrompt = INV.promptComposer.buildGeminiPrompt({
+      mode: curMode,
+      focus: curFocus,
+      userGoal: prefs.userGoal || '',
+      fieldNotes: prefs.fieldNotes || '',
+    });
+    const wordCount = previewPrompt.trim().split(/\s+/).filter(Boolean).length;
+
+    return `
+      <div class="inv-root space-y-4">
+        <!-- Thanh vị trí + Nút Đổi vị trí NỔI BẬT -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-zinc-200 dark:border-zinc-800">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-black">📈 Đầu tư hôm nay</span>
+            <span class="inv-pill inv-sig-positive text-[11px]">🌍 ${esc(reg?.areaLabel || '')} (${esc(reg?.currency || 'VND')})</span>
+            <button type="button" id="inv-btn-change-region" class="inv-change-loc-btn">📍 Đổi vị trí</button>
+          </div>
+          <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+            ✅ Đã tra cứu xong ${rep?.items?.length || 34} chỉ tiêu (${rep?.live_count || 0} API sống · 0% bịa đặt)
+          </span>
+        </div>
+
+        <!-- Màn hình 2 Bước gọn gàng -->
+        <div class="inv-card inv-workflow-glow-card space-y-4">
+          <!-- BƯỚC 1: TRA CỨU GEMINI (3 CHẾ ĐỘ x 4 TRỌNG TÂM + TỰ GHÉP KHẨU VỊ/BCTC) -->
+          <div class="space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="inv-step-badge">⚡ BƯỚC 1: TRA CỨU &amp; GỬI CÂU LỆNH SANG GEMINI</span>
+              <span class="text-[11px] font-mono text-zinc-500">${wordCount.toLocaleString('vi-VN')} từ · Khung ${curMode === 'veteran30' ? '30 năm 6 phần' : curMode === 'audit' ? 'Kiểm toán Bò/Gấu' : 'Tóm gọn'}</span>
+            </div>
+
+            <!-- 3 chế độ hỏi (3 khung prompt riêng) -->
+            <div class="space-y-1.5">
+              <div class="text-xs font-extrabold text-zinc-700 dark:text-zinc-200">1. Chọn chế độ phân tích (mỗi chế độ 1 khung câu lệnh riêng):</div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-xs">
+                ${[
+                  ['veteran30', '🏆 Chuyên gia 30 năm', 'Bình dân học vụ · 6 phần chuẩn'],
+                  ['audit', '⚖️ Kiểm toán 2 chiều', 'Tranh biện Phe Bò vs Phe Gấu'],
+                  ['plain', '📘 Phổ thông tóm gọn', 'Ngắn gọn, đi thẳng trọng tâm'],
+                ]
+                  .map(
+                    ([val, title, sub]) => `
+                  <button type="button" data-w2-mode="${val}" class="p-2 rounded-xl border text-left transition cursor-pointer ${
+                      curMode === val
+                        ? 'border-emerald-400 bg-emerald-600/20 ring-1 ring-emerald-400'
+                        : 'border-zinc-300 dark:border-zinc-700 bg-white/60 dark:bg-zinc-900/60 hover:border-emerald-500'
+                    }">
+                    <div class="font-extrabold">${title}</div>
+                    <div class="text-[10.5px] text-zinc-500 dark:text-zinc-400">${sub}</div>
+                  </button>`
+                  )
+                  .join('')}
+              </div>
+            </div>
+
+            <!-- 4 trọng tâm (từng trọng tâm có khung câu lệnh riêng) -->
+            <div class="space-y-1.5">
+              <div class="text-xs font-extrabold text-zinc-700 dark:text-zinc-200">2. Chọn trọng tâm tài sản:</div>
+              <div class="flex flex-wrap gap-1.5 text-xs">
+                ${[
+                  ['general', '🧭 Tổng quát 3 tài sản'],
+                  ['gold', '🥇 Riêng kênh Vàng'],
+                  ['real_estate', '🏘️ Riêng Nhà đất khu vực'],
+                  ['stock', '📊 Riêng Chứng khoán'],
+                ]
+                  .map(
+                    ([val, lbl]) => `
+                  <button type="button" data-w2-focus="${val}" class="px-3 py-1.5 rounded-xl border font-extrabold transition cursor-pointer ${
+                      curFocus === val
+                        ? 'border-sky-400 bg-sky-600 text-white shadow'
+                        : 'border-zinc-300 dark:border-zinc-700 bg-white/70 dark:bg-zinc-900/70 hover:border-sky-400'
+                    }">${lbl}</button>`
+                  )
+                  .join('')}
+              </div>
+            </div>
+
+            <!-- Khẩu vị, mục tiêu & số liệu BCTC/thực địa (tự động ghép khi nhập xong & rời ô!) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <label class="space-y-1">
+                <span class="font-bold text-zinc-700 dark:text-zinc-300">🎯 Khẩu vị &amp; Mục tiêu đầu tư (tự ghép vào prompt khi rời ô):</span>
+                <input id="inv-w2-goal" type="text" value="${esc(prefs.userGoal || '')}" placeholder="VD: Vốn 500tr, cầm 3 năm, không vay đòn bẩy..." class="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs" />
+              </label>
+              <label class="space-y-1">
+                <span class="font-bold text-zinc-700 dark:text-zinc-300">📝 Số liệu BCTC / Khảo sát thực địa bổ sung (tùy chọn):</span>
+                <input id="inv-w2-notes" type="text" value="${esc(prefs.fieldNotes || '')}" placeholder="VD: Mã FPT / Đất đường 7m5, sổ hồng sẵn, giá 85tr/m²..." class="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-xs" />
+              </label>
+            </div>
+            ${uiState.w2AutoMergeNotice ? `<div class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">${esc(uiState.w2AutoMergeNotice)}</div>` : ''}
+
+            <!-- Nút chính Bước 1: Copy sẵn & Chuyển hướng sang Gemini ngay -->
+            <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
+              <button type="button" id="inv-w2-btn-launch-gemini" class="inv-gemini-btn text-xs sm:text-sm py-2.5 px-5">
+                🪟 Copy sẵn câu lệnh &amp; Chuyển hướng sang Gemini ngay
+              </button>
+              <button type="button" id="inv-w2-btn-preview-prompt" class="inv-secondary-btn text-xs">👁️ Xem câu lệnh / Tải .MD</button>
+            </div>
+          </div>
+
+          <!-- BƯỚC 2: DÁN CÂU TRẢ LỜI GEMINI + HÌNH MÔ PHỎNG NÚT SAO CHÉP + ĐẾM NGƯỢC 3 GIÂY -->
+          <div class="pt-4 border-t border-emerald-500/30 space-y-3">
+            <span class="inv-step-badge" style="background:rgba(56,189,248,0.18);color:#38bdf8;border-color:rgba(56,189,248,0.45);">📥 BƯỚC 2: DÁN CÂU TRẢ LỜI GEMINI ĐỂ TỰ CẬP NHẬT BIỂU ĐỒ &amp; DỮ LIỆU</span>
+
+            <!-- Màn hình mô phỏng nút Sao chép ở cuối câu trả lời hoàn chỉnh của Gemini -->
+            <div class="rounded-2xl border border-zinc-700 bg-zinc-950 text-zinc-200 p-3 space-y-2 text-left max-w-2xl mx-auto shadow-inner">
+              <div class="flex items-center justify-between text-[10.5px] text-zinc-400">
+                <span class="font-extrabold text-sky-300">✨ Mô phỏng màn hình kết quả của Gemini (cuộn xuống cuối câu trả lời)</span>
+                <span class="px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300">Hướng dẫn trực quan</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 text-[11px] text-zinc-300 space-y-1 font-mono">
+                <div class="text-emerald-300 font-bold">## 1. Kết luận nhanh trong 3 câu ... ## 6. Chiến lược hành động</div>
+                <div class="text-zinc-400">\`\`\`json { "schema": "INVEST_INTEL_SYNC_V2", "channel_scores": {...}, "allocation_pct": [...] } \`\`\`</div>
+              </div>
+              <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+                <div class="flex items-center gap-2 text-zinc-400 text-xs">
+                  <span class="px-2 py-1 rounded-lg bg-zinc-900 border border-zinc-800">👍</span>
+                  <span class="px-2 py-1 rounded-lg bg-zinc-900 border border-zinc-800">👎</span>
+                  <span class="px-2 py-1 rounded-lg bg-zinc-900 border border-zinc-800">🔄</span>
+                  <span class="inv-gemini-copy-demo-btn inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-600 text-white font-black text-xs border border-emerald-300">
+                    📋 Sao chép (Copy)
+                  </span>
+                </div>
+                <span class="text-[11px] font-extrabold text-amber-300">👈 Bấm đúng nút Sao chép này ở cuối bài Gemini rồi dán xuống dưới!</span>
+              </div>
+            </div>
+
+            <!-- Ô dán câu trả lời Gemini + Nút Đồng bộ -->
+            <div class="space-y-2 max-w-2xl mx-auto">
+              <textarea id="inv-w2-gemini-paste" rows="4" placeholder="Dán toàn bộ câu trả lời bạn vừa copy từ Gemini vào đây (nhấn Ctrl + V hoặc chạm giữ -> Dán)..." class="w-full p-3 rounded-xl border-2 border-sky-500/45 bg-white dark:bg-zinc-950 text-xs font-mono focus:outline-none focus:border-emerald-400"></textarea>
+
+              ${
+                countdown
+                  ? `<div class="p-3.5 rounded-2xl border-2 border-emerald-400 bg-emerald-500/18 text-center space-y-2">
+                      <div class="text-sm font-black text-emerald-700 dark:text-emerald-300">✅ ${esc(countdown.msg)}</div>
+                      <div class="text-xs font-extrabold text-amber-600 dark:text-amber-300">
+                        ⏳ Tự động chuyển sang trang Phân tích, Biểu đồ, Báo chí &amp; Link chính thức sau <span class="text-base font-black">${countdown.sec}</span> giây...
+                      </div>
+                      <button type="button" id="inv-w2-btn-enter-now" class="inv-primary-btn py-1.5 px-4 text-xs">👉 Vào xem ngay bây giờ</button>
+                    </div>`
+                  : `<div class="flex flex-wrap items-center justify-center gap-2">
+                      <button type="button" id="inv-w2-btn-sync" class="inv-primary-btn text-xs sm:text-sm py-2.5 px-6">
+                        ⚡ Đồng bộ câu trả lời Gemini &amp; Tổng hợp biểu đồ
+                      </button>
+                    </div>`
+              }
+            </div>
+          </div>
+
+          <div class="pt-2 text-center">
+            <button type="button" id="inv-w2-btn-skip-to-dashboard" class="text-[11px] text-zinc-500 hover:text-emerald-500 underline cursor-pointer">
+              Hoặc bỏ qua Gemini — xem ngay phân tích &amp; 6 biểu đồ từ dữ liệu Code vừa quét →
             </button>
           </div>
         </div>
@@ -1296,14 +1602,30 @@
     const host = INV.stateManager.hostEl;
     if (!host || !host.isConnected) return;
 
-    // Bắt buộc xác định vị trí / quốc gia và tra cứu dữ liệu sát khu vực trước khi vào bảng điều khiển
-    if (!INV.stateManager.userRegion) {
+    // Pha A: Cổng xác định vị trí & chờ xác nhận
+    if (!INV.stateManager.userRegion || uiState.wizardStage === 'location_gate') {
       host.innerHTML = renderLocationGateScreen();
       bindLocationGateEvents(host);
       NS.i18n?.translateElement?.(host);
       return;
     }
 
+    // Pha B: Màn hình chờ Loading tra cứu toàn diện
+    if (uiState.wizardStage === 'loading_full_scan') {
+      host.innerHTML = renderFullScanLoadingScreen();
+      NS.i18n?.translateElement?.(host);
+      return;
+    }
+
+    // Pha C: Màn hình 2 Bước gọn gàng trước khi vào phân tích chi tiết
+    if (uiState.wizardStage === 'two_step_setup') {
+      host.innerHTML = renderTwoStepSetupScreen();
+      bindTwoStepEvents(host);
+      NS.i18n?.translateElement?.(host);
+      return;
+    }
+
+    // Pha D: Bảng Phân tích 5 Tab đầy đủ (sau khi xong 2 bước)
     const reg = INV.stateManager.userRegion;
     const esc = INV.utils.escapeHtml;
     const tab = INV.stateManager.activeTab;
@@ -1316,20 +1638,23 @@
 
     host.innerHTML = `
       <div class="inv-root space-y-4">
-        <!-- Header gọn nhẹ -->
+        <!-- Header gọn nhẹ + Nút Đổi vị trí NỔI BẬT -->
         <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-zinc-200 dark:border-zinc-800">
           <div>
             <h3 class="text-base font-black tracking-tight flex items-center gap-2 flex-wrap">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600 dark:text-emerald-400"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
               <span>Đầu tư hôm nay</span>
               <span class="inv-pill inv-sig-positive text-[10.5px]">🌍 ${esc(reg.areaLabel)} (${esc(reg.currency)})</span>
-              <button type="button" id="inv-btn-change-region" class="text-[11px] font-bold text-sky-600 dark:text-sky-400 underline cursor-pointer">Đổi vị trí</button>
+              <button type="button" id="inv-btn-change-region" class="inv-change-loc-btn">📍 Đổi vị trí</button>
             </h3>
             <p class="text-[11.5px] text-zinc-500 dark:text-zinc-400">Tra cứu nhanh khi cần — Không chạy ngầm tốn máy · Bám sát ${esc(reg.countryName)} (${esc(reg.centralBank)}, ${esc(reg.stockIndex)})</p>
           </div>
-          <button type="button" id="inv-btn-header-gemini" class="inv-gemini-btn text-xs py-2 px-3">
-            🪟 Mở cùng Gemini
-          </button>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button type="button" id="inv-btn-back-to-2steps" class="inv-secondary-btn text-xs py-1.5 px-3">🔁 Màn hình 2 Bước</button>
+            <button type="button" id="inv-btn-header-gemini" class="inv-gemini-btn text-xs py-2 px-3">
+              🪟 Mở cùng Gemini
+            </button>
+          </div>
         </div>
 
         <!-- 5 Thẻ điều hướng lớn (Tab Biểu đồ phân tích chuyên nghiệp nằm ngay bên phải Nhà đất quanh đây) -->
@@ -1350,28 +1675,68 @@
   }
 
   async function completeRegionEntry(regionObj) {
-    uiState.gateStatus = `✅ Đã xác định: ${regionObj.areaLabel} (${regionObj.countryName}). Đang tra cứu dữ liệu sát khu vực...`;
-    render();
     INV.stateManager.userRegion = regionObj;
     INV.storageAdapter.setSession('user_region', regionObj);
-    // Cập nhật sẵn khu vực nhà đất nếu có địa danh cụ thể
     if (regionObj.areaLabel) {
       INV.stateManager.realEstateData = INV.realEstateEngine.resolveManualArea(regionObj.areaLabel);
       uiState.reManualInput = regionObj.areaLabel;
     }
-    try {
-      await INV.researchEvaluator.runEvaluation({
-        depth: INV.storageAdapter.getPrefs().scanDepth || 'full',
-        force: false,
-        onProgress: (p) => {
-          uiState.gateStatus = p.label;
-        },
-      });
-    } catch (_eInitEval) {}
+
+    // Chuyển ngay sang Pha B: Màn hình chờ Loading tra cứu thông tin toàn diện!
     uiState.gateLoading = false;
     uiState.gateStatus = '';
     uiState.gateError = '';
+    uiState.pendingGpsRegion = null;
+    uiState.wizardStage = 'loading_full_scan';
+    uiState.loadingDone = false;
+    uiState.loadingPct = 12;
+    uiState.loadingLabel = `Đang tra cứu thông tin toàn diện cho ${regionObj.areaLabel} (${regionObj.countryName})...`;
     render();
+
+    const { controller, signal } = INV.stateManager.createSignal();
+    try {
+      const [rep, goldSnap, hist30d] = await Promise.all([
+        INV.researchEvaluator.runEvaluation({
+          depth: 'full',
+          force: true,
+          onProgress: (p) => {
+            uiState.loadingPct = Math.max(12, Math.min(92, p.pct || 50));
+            uiState.loadingLabel = p.label || 'Đang tổng hợp dữ liệu...';
+            render();
+          },
+        }),
+        INV.goldEngine.fetchLiveGoldSnapshot({ force: false, signal }).catch(() => null),
+        INV.goldEngine.fetchGoldHistory30d ? INV.goldEngine.fetchGoldHistory30d(signal).catch(() => null) : Promise.resolve(null),
+      ]);
+      if (goldSnap) INV.stateManager.goldData = goldSnap;
+      if (hist30d) uiState.goldHistory30d = hist30d;
+      if (rep && INV.deterministicExtractor?.buildUnifiedAnalyticsFromCode) {
+        INV.stateManager.unifiedAnalytics = INV.deterministicExtractor.buildUnifiedAnalyticsFromCode({
+          report: rep,
+          goldSnap: INV.stateManager.goldData,
+          goldHist30d: uiState.goldHistory30d || rep.gold_history_30d,
+          stockData: INV.stateManager.stockData,
+          reData: INV.stateManager.realEstateData,
+          surveys: INV.storageAdapter.getRealEstateSurveys ? INV.storageAdapter.getRealEstateSurveys() : [],
+        });
+      }
+    } catch (_eInitEval) {
+    } finally {
+      INV.stateManager.releaseController(controller);
+    }
+
+    uiState.loadingPct = 100;
+    uiState.loadingDone = true;
+    uiState.loadingLabel = '✅ Đã tra cứu thông tin toàn diện & tổng hợp sẵn câu lệnh Gemini!';
+    render();
+    NS.utils?.showToast?.('✅ Đã tra cứu xong dữ liệu toàn diện! Mời bạn thực hiện 2 bước ngắn gọn tiếp theo.', 'success', 3400);
+
+    setTimeout(() => {
+      if (!INV.stateManager.hostEl || !INV.stateManager.userRegion) return;
+      uiState.wizardStage = 'two_step_setup';
+      INV.storageAdapter.setSession('wizard_stage', 'two_step_setup');
+      render();
+    }, 750);
   }
 
   function bindLocationGateEvents(host) {
@@ -1384,13 +1749,18 @@
       if (uiState.gateLoading) return;
       uiState.gateLoading = true;
       uiState.gateError = '';
-      uiState.gateStatus = '📡 Đang xin quyền Vị trí (GPS) và nhận diện quốc gia...';
+      uiState.pendingGpsRegion = null;
+      uiState.gateStatus = '📡 Đang xin quyền Vị trí (GPS) và nhận diện khu vực của bạn...';
       render();
       const { controller, signal } = INV.stateManager.createSignal();
       try {
         const reg = await INV.detectUserRegionByGps(signal);
         if (signal.aborted) return;
-        await completeRegionEntry(reg);
+        // Dò vị trí xong -> DỪNG LẠI CHỜ NGƯỜI DÙNG BẤM XÁC NHẬN!
+        uiState.gateLoading = false;
+        uiState.gateStatus = '';
+        uiState.pendingGpsRegion = reg;
+        render();
       } catch (err) {
         uiState.gateLoading = false;
         uiState.gateStatus = '';
@@ -1401,14 +1771,175 @@
       }
     });
 
+    host.querySelector('#inv-gate-btn-confirm-gps')?.addEventListener('click', async () => {
+      if (!uiState.pendingGpsRegion) return;
+      await completeRegionEntry(uiState.pendingGpsRegion);
+    });
+
     host.querySelector('#inv-gate-btn-manual')?.addEventListener('click', async () => {
       if (uiState.gateLoading) return;
-      uiState.gateLoading = true;
       uiState.gateError = '';
       const code = sel?.value || uiState.gateCountry || 'VN';
       const area = (inp?.value || uiState.gateAreaInput || '').trim();
       const profile = INV.resolveCountryProfile(code, undefined, area || undefined, 'manual');
       await completeRegionEntry(profile);
+    });
+  }
+
+  function bindTwoStepEvents(host) {
+    host.querySelector('#inv-btn-change-region')?.addEventListener('click', openChangeRegionConfirmModal);
+
+    host.querySelectorAll('[data-w2-mode]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        uiState.w2Mode = btn.getAttribute('data-w2-mode') || 'veteran30';
+        INV.storageAdapter.savePrefs({ promptMode: uiState.w2Mode });
+        render();
+      });
+    });
+
+    host.querySelectorAll('[data-w2-focus]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        uiState.w2Focus = btn.getAttribute('data-w2-focus') || 'general';
+        render();
+      });
+    });
+
+    const goalEl = host.querySelector('#inv-w2-goal');
+    const notesEl = host.querySelector('#inv-w2-notes');
+    const autoMergeInputs = () => {
+      const gVal = (goalEl?.value || '').trim();
+      const nVal = (notesEl?.value || '').trim();
+      INV.storageAdapter.savePrefs({ userGoal: gVal, fieldNotes: nVal });
+      if (gVal || nVal) {
+        uiState.w2AutoMergeNotice = '✅ Đã tự động kết hợp Khẩu vị / Số liệu BCTC & thực địa vào câu lệnh Gemini!';
+      } else {
+        uiState.w2AutoMergeNotice = '';
+      }
+      render();
+    };
+    goalEl?.addEventListener('blur', autoMergeInputs);
+    notesEl?.addEventListener('blur', autoMergeInputs);
+
+    // Bước 1: Copy sẵn câu lệnh (đúng chế độ + trọng tâm + khẩu vị/BCTC) & chuyển hướng thẳng sang Gemini!
+    host.querySelector('#inv-w2-btn-launch-gemini')?.addEventListener('click', async () => {
+      const gVal = (goalEl?.value || '').trim();
+      const nVal = (notesEl?.value || '').trim();
+      INV.storageAdapter.savePrefs({ promptMode: uiState.w2Mode, userGoal: gVal, fieldNotes: nVal });
+      const promptText = INV.promptComposer.buildGeminiPrompt({
+        mode: uiState.w2Mode || 'veteran30',
+        focus: uiState.w2Focus || 'general',
+        userGoal: gVal,
+        fieldNotes: nVal,
+      });
+      const copied = await INV.promptComposer.safeCopyText(promptText);
+      if (!copied.ok) INV.promptComposer.showManualCopyModal(promptText);
+      if (NS.geminiSplitBridge?.launchExternalSplitWindow) {
+        NS.geminiSplitBridge.launchExternalSplitWindow('GEMINI', false);
+      } else {
+        window.open('https://gemini.google.com/app', '_blank', 'noopener,noreferrer');
+      }
+      NS.utils?.showToast?.(
+        '✅ Đã copy sẵn toàn bộ câu lệnh đầu tư! Sang Gemini bên cạnh bấm Dán (Ctrl + V) -> Gửi, rồi copy kết quả dán vào Bước 2 nhé.',
+        'success',
+        5200
+      );
+    });
+
+    host.querySelector('#inv-w2-btn-preview-prompt')?.addEventListener('click', () => {
+      const gVal = (goalEl?.value || '').trim();
+      const nVal = (notesEl?.value || '').trim();
+      INV.storageAdapter.savePrefs({ promptMode: uiState.w2Mode, userGoal: gVal, fieldNotes: nVal });
+      INV.promptComposer.openGeminiConfirmModal({
+        mode: uiState.w2Mode || 'veteran30',
+        focus: uiState.w2Focus || 'general',
+      });
+    });
+
+    const enterDashboardNow = () => {
+      if (uiState.w2CountdownTimerId) {
+        clearInterval(uiState.w2CountdownTimerId);
+        uiState.w2CountdownTimerId = null;
+      }
+      uiState.w2SyncCountdown = null;
+      uiState.wizardStage = 'dashboard';
+      INV.storageAdapter.setSession('wizard_stage', 'dashboard');
+      INV.stateManager.activeTab = 'overview';
+      render();
+    };
+
+    host.querySelector('#inv-w2-btn-enter-now')?.addEventListener('click', enterDashboardNow);
+    host.querySelector('#inv-w2-btn-skip-to-dashboard')?.addEventListener('click', enterDashboardNow);
+
+    // Bước 2: Dán câu trả lời Gemini & Bấm Đồng bộ -> Thông báo xong + Đếm ngược 3 giây tự chuyển qua Phân tích & Báo chí!
+    host.querySelector('#inv-w2-btn-sync')?.addEventListener('click', () => {
+      const raw = (host.querySelector('#inv-w2-gemini-paste')?.value || '').trim();
+      if (!raw) {
+        NS.utils?.showToast?.('⚠️ Bạn hãy dán câu trả lời của Gemini vào ô trước khi bấm Đồng bộ nhé!', 'warning', 3200);
+        host.querySelector('#inv-w2-gemini-paste')?.focus();
+        return;
+      }
+      const parsed = INV.deterministicExtractor?.parseGeminiStructuredReply
+        ? INV.deterministicExtractor.parseGeminiStructuredReply(raw)
+        : { ok: false };
+
+      let successMsg = 'Đã tổng hợp thông tin & cập nhật toàn bộ 6 biểu đồ từ Gemini thành công!';
+      if (parsed.ok && parsed.data) {
+        const synced = parsed.data;
+        INV.stateManager.unifiedAnalytics = synced;
+        const prevRep = INV.stateManager.evaluationReport || { items: [], triggered_breakers: [], live_headlines: [], as_of_date: synced.as_of_date };
+        const mkChannel = (key, name, fb) => {
+          const dm = (synced.decision_matrix || []).find((d) => d.channel.toLowerCase().includes(fb)) || {};
+          const sc = synced.channel_scores?.[key] ?? 60;
+          return {
+            name,
+            score: sc,
+            signal: dm.signal || (sc >= 72 ? 'positive' : sc <= 48 ? 'danger' : 'caution'),
+            badge: dm.decision || (sc >= 72 ? 'Thuận lợi' : sc <= 48 ? 'Thận trọng cao' : 'Theo dõi'),
+            reason: dm.reason || prevRep.channel_scores?.[key]?.reason || '',
+          };
+        };
+        INV.stateManager.evaluationReport = {
+          ...prevRep,
+          as_of_date: synced.as_of_date || prevRep.as_of_date,
+          cycle_phase: synced.cycle_phase || prevRep.cycle_phase,
+          channel_scores: {
+            cash: mkChannel('cash', 'Tiền mặt / Tiết kiệm', 'tiền'),
+            gold: mkChannel('gold', 'Vàng', 'vàng'),
+            stock: mkChannel('stock', 'Chứng khoán', 'chứng'),
+            real_estate: mkChannel('real_estate', 'Nhà đất', 'đất'),
+          },
+          narrative_summary: {
+            opportunities: synced.verdict_summary?.opportunities?.length ? synced.verdict_summary.opportunities : prevRep.narrative_summary?.opportunities || [],
+            risks: synced.verdict_summary?.risks?.length ? synced.verdict_summary.risks : prevRep.narrative_summary?.risks || [],
+            current_outlook: synced.verdict_summary?.current_outlook || prevRep.narrative_summary?.current_outlook || '',
+            upcoming_outlook: synced.verdict_summary?.upcoming_outlook || prevRep.narrative_summary?.upcoming_outlook || '',
+          },
+        };
+      } else {
+        // Fallback an toàn: vẫn lưu tóm tắt văn bản Gemini & dùng dữ liệu API sống để dựng trọn bộ biểu đồ
+        successMsg = 'Đã tổng hợp xong thông tin (ghi nhận câu trả lời Gemini & kết hợp toàn bộ số liệu API sống để dựng 6 biểu đồ)!';
+        if (INV.stateManager.evaluationReport) {
+          INV.stateManager.evaluationReport.gemini_raw_note = raw.slice(0, 4000);
+        }
+      }
+
+      NS.utils?.showToast?.(`✅ ${successMsg}`, 'success', 3800);
+      if (uiState.w2CountdownTimerId) clearInterval(uiState.w2CountdownTimerId);
+      uiState.w2SyncCountdown = { sec: 3, msg: successMsg };
+      render();
+      uiState.w2CountdownTimerId = setInterval(() => {
+        if (!uiState.w2SyncCountdown) {
+          clearInterval(uiState.w2CountdownTimerId);
+          uiState.w2CountdownTimerId = null;
+          return;
+        }
+        uiState.w2SyncCountdown.sec -= 1;
+        if (uiState.w2SyncCountdown.sec <= 0) {
+          enterDashboardNow();
+        } else {
+          render();
+        }
+      }, 1000);
     });
   }
 
@@ -1484,10 +2015,11 @@
       });
     });
 
-    // Đổi vị trí / quốc gia bất cứ lúc nào
-    host.querySelector('#inv-btn-change-region')?.addEventListener('click', () => {
-      INV.stateManager.userRegion = null;
-      INV.storageAdapter.clearSession('user_region');
+    // Đổi vị trí / quốc gia -> Bật pop-up cảnh báo Có / Không / ✕ trước khi reset phân tích
+    host.querySelector('#inv-btn-change-region')?.addEventListener('click', openChangeRegionConfirmModal);
+    host.querySelector('#inv-btn-back-to-2steps')?.addEventListener('click', () => {
+      uiState.wizardStage = 'two_step_setup';
+      INV.storageAdapter.setSession('wizard_stage', 'two_step_setup');
       render();
     });
 
@@ -1928,10 +2460,14 @@
     INV.stateManager.hostEl = hostEl;
     INV.stateManager.activeTab = 'overview';
     await INV.fileParser.initActiveKnowledge();
-    // Khôi phục quốc gia/khu vực đã xác nhận trong phiên (30 phút) để không bắt hỏi lại nếu vừa tắt mở lại
+    // Khôi phục quốc gia/khu vực & bước wizard đã xác nhận trong phiên (30 phút)
     const cachedRegion = INV.storageAdapter.getSession('user_region', 30 * 60 * 1000);
     if (cachedRegion?.data) {
       INV.stateManager.userRegion = cachedRegion.data;
+      const cachedStage = INV.storageAdapter.getSession('wizard_stage', 30 * 60 * 1000)?.data;
+      uiState.wizardStage = cachedStage || 'two_step_setup';
+    } else {
+      uiState.wizardStage = 'location_gate';
     }
     const prefs = INV.storageAdapter.getPrefs();
     const cachedRep = INV.storageAdapter.getSession(`eval_report_${prefs.scanDepth || 'full'}`, 30 * 60 * 1000);

@@ -44,6 +44,23 @@
     "Mô phỏng trang giấy trực quan": "Visual Paper Page Simulator",
     "Trạm Đóng Gói Câu Lệnh Đầu Tư (30 Năm Kinh Nghiệm) & Mở Gemini": "30-Year Veteran Investment Prompt Station & Gemini Split",
     "Autotester nội bộ": "Internal AutoTester",
+
+    "Đang tìm luồng phát có thể phát trong nền, tìm xong tự động chuyển": "Searching for background-capable stream, will auto-switch once found",
+    "Tắt tính năng tự dò luồng phát nền": "Disable Auto Background Stream Probing",
+    "Bật lại tự dò luồng nền": "Re-enable Auto Background Probing",
+    "Xác nhận đổi vị trí đầu tư": "Confirm Investment Location Change",
+    "Nếu bạn đổi vị trí (Thủ công hoặc tự động qua GPS) thì đều cần phân tích lại để có số liệu chính xác nhất, bạn chắc chứ?": "If you change location (Manually or via GPS), all data will be re-analyzed for maximum accuracy. Are you sure?",
+    "Có, đổi vị trí & phân tích lại": "Yes, Change Location & Re-analyze",
+    "Xác nhận vị trí này & Bắt đầu tra cứu toàn diện": "Confirm This Location & Start Full Research",
+    "Xác nhận Quốc gia & Bắt đầu tra cứu toàn diện": "Confirm Country & Start Full Research",
+    "Đang tra cứu thông tin toàn diện & chuẩn bị câu lệnh Gemini...": "Running Comprehensive Research & Preparing Gemini Prompt...",
+    "Tra cứu & Tổng hợp thông tin toàn diện thành công!": "Comprehensive Research & Summary Complete!",
+    "BƯỚC 1: TRA CỨU & GỬI CÂU LỆNH SANG GEMINI": "STEP 1: RESEARCH & SEND PROMPT TO GEMINI",
+    "BƯỚC 2: DÁN CÂU TRẢ LỜI GEMINI ĐỂ TỰ CẬP NHẬT BIỂU ĐỒ & DỮ LIỆU": "STEP 2: PASTE GEMINI REPLY TO AUTO-UPDATE CHARTS & DATA",
+    "Copy sẵn câu lệnh & Chuyển hướng sang Gemini ngay": "Copy Prompt & Launch Gemini Now",
+    "Đồng bộ câu trả lời Gemini & Tổng hợp biểu đồ": "Sync Gemini Reply & Build Charts",
+    "Vào xem ngay bây giờ": "Open Now",
+    "Màn hình 2 Bước": "2-Step Setup",
 };
 
   const exact = Object.freeze({

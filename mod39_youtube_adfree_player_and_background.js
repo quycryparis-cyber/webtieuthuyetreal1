@@ -3255,7 +3255,7 @@
           badge.textContent = `⏱️ Đang dò & đệm luồng công cộng: ${sec}s`;
         }
         if (pillText) {
-          pillText.textContent = `Đang xem tạm No-Cookie · Dò luồng nền & Cửa sổ nổi (${sec}s)...`;
+          pillText.textContent = `Đang tìm luồng phát có thể phát trong nền, tìm xong tự động chuyển (${sec}s)...`;
         }
       };
       updateText();
@@ -3264,20 +3264,53 @@
       }
     }
 
+    _isAutoBgProbeDisabled() {
+      try {
+        return localStorage.getItem('mod39_disable_auto_bg_probe') === '1';
+      } catch (_e) {
+        return false;
+      }
+    }
+
+    _syncAutoProbeDisabledBar() {
+      if (typeof document === 'undefined') return;
+      const bar = document.getElementById('mod39-auto-probe-disabled-bar');
+      if (!bar) return;
+      const disabled = this._isAutoBgProbeDisabled();
+      bar.classList.toggle('hidden', !disabled);
+    }
+
     _bindWaitOverlayButtonsOnce() {
       if (typeof document === 'undefined') return;
-      const bindOne = (id) => {
+      const bindOne = (id, persistDisable = false) => {
         const btn = document.getElementById(id);
         if (!btn || btn.dataset.v110CancelBound === '1') return;
         btn.dataset.v110CancelBound = '1';
         btn.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
+          if (persistDisable) {
+            try { localStorage.setItem('mod39_disable_auto_bg_probe', '1'); } catch (_e) {}
+            this._syncAutoProbeDisabledBar();
+          }
           this.cancelPublicStreamAndUseNoCookie();
         });
       };
-      bindOne('btn-mod39-cancel-public-stream-now');
-      bindOne('btn-mod39-stop-probing-pill');
+      bindOne('btn-mod39-cancel-public-stream-now', false);
+      bindOne('btn-mod39-stop-probing-pill', true);
+
+      const reenableBtn = document.getElementById('btn-mod39-reenable-auto-probe');
+      if (reenableBtn && reenableBtn.dataset.v129Bound !== '1') {
+        reenableBtn.dataset.v129Bound = '1';
+        reenableBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          try { localStorage.removeItem('mod39_disable_auto_bg_probe'); } catch (_e) {}
+          this._syncAutoProbeDisabledBar();
+          NS.utils?.showToast?.('✅ Đã bật lại tính năng tự dò luồng phát nền (áp dụng từ video tiếp theo hoặc khi tải lại).', 'success', 3000);
+        });
+      }
+      this._syncAutoProbeDisabledBar();
     }
 
     _bindNativeVideoFrameListenersOnce() {
@@ -3433,6 +3466,7 @@
       };
 
       if (!video) {
+        document.querySelectorAll('.mod39-offscreen-keepalive-tab').forEach((el) => el.classList.remove('mod39-offscreen-keepalive-tab'));
         resolvingCard?.classList.add('hidden');
         probingPill?.classList.add('hidden');
         audioStage?.classList.add('hidden');
@@ -5163,6 +5197,41 @@
       }
     }
 
+    _ensureOffscreenTab5WakeStyle() {
+      if (typeof document === 'undefined' || document.getElementById('mod39-keepalive-tab5-style')) return;
+      const st = document.createElement('style');
+      st.id = 'mod39-keepalive-tab5-style';
+      st.textContent = `
+        .mod39-offscreen-keepalive-tab.hidden {
+          display: block !important;
+          position: fixed !important;
+          left: -12000px !important;
+          top: 0 !important;
+          width: 480px !important;
+          height: 270px !important;
+          opacity: 0.001 !important;
+          pointer-events: none !important;
+          overflow: hidden !important;
+          z-index: -1 !important;
+        }
+      `;
+      document.head.appendChild(st);
+    }
+
+    _wakeHiddenTab5AncestorsForPlayback() {
+      if (typeof document === 'undefined') return;
+      this._ensureOffscreenTab5WakeStyle();
+      const stageWrap = document.getElementById('mod39-player-stage-wrapper');
+      if (!stageWrap) return;
+      let cur = stageWrap;
+      while (cur && cur !== document.body && cur !== document.documentElement) {
+        if (cur.classList?.contains('hidden') || getComputedStyle(cur).display === 'none') {
+          cur.classList.add('mod39-offscreen-keepalive-tab');
+        }
+        cur = cur.parentElement;
+      }
+    }
+
     restoreDesktopIframeAfterFloatingClose(resumeAtSec = null, shouldResume = true, options = {}) {
       if (this._restoringFloatingClose) return;
       this._restoringFloatingClose = true;
@@ -5272,6 +5341,11 @@
               ? shouldResume && !pipWasPaused
               : Boolean(this._preFloatingWasPlaying) && !pipWasPaused;
 
+          // Đánh thức khung Tab 5 ngoài màn hình nếu đang đứng ở Tab 1-4 để Chromium tự chạy tiếp video NGAY LẬP TỨC mà không cần qua Tab 5!
+          if (shouldPlayBack) {
+            this._wakeHiddenTab5AncestorsForPlayback();
+          }
+
           // Luôn dựng lại <iframe> mới tinh qua mountEmbedUrlIntoIframe(forceFreshIframe: true) tại ĐÚNG bài & ĐÚNG giây của Cửa sổ nổi!
           this.playerCtrl?.bridge?.mountEmbedUrlIntoIframe?.(
             { ...video, startSeconds: targetSec },
@@ -5283,6 +5357,18 @@
               killExternalAudio: true
             }
           );
+          if (shouldPlayBack) {
+            const kickPlay = () => {
+              try {
+                if (!this.playerCtrl?.prefs?.muted) {
+                  this.playerCtrl?.bridge?.dispatchPlayerCommand?.('unMute', [], { forceMainIframe: true });
+                }
+                this.playerCtrl?.bridge?.dispatchPlayerCommand?.('playVideo', [], { forceMainIframe: true });
+              } catch (_eKick) {}
+            };
+            setTimeout(kickPlay, 350);
+            setTimeout(kickPlay, 950);
+          }
           this.syncAudioBridgeStageCard();
           NS.youtubeStudio?.viewRenderer?.syncFloatingMiniDock?.();
           this.nudgeDesktopIframeCompositorRepaint();
@@ -7216,7 +7302,7 @@
           useMod21AudioBridge: true,
           cachedStream: cachedDirect
         });
-      } else if (!isLiveStream && record.videoId && isHttpOrigin && !global.__MOD39_DISABLE_AUTO_RESOLVE__) {
+      } else if (!isLiveStream && record.videoId && isHttpOrigin && !global.__MOD39_DISABLE_AUTO_RESOLVE__ && !this.mobileBgAudio?._isAutoBgProbeDisabled?.()) {
         NS.nativePlayer?.unlockPlaybackGesture?.();
         NS.unlockExternalAudioGesture?.();
         // Tạm tắt âm thanh MP3 ở Tab 3 & phát tạm ngay khung hình youtube-nocookie để không bao giờ bị màn hình đen trong lúc dò luồng công cộng liên tục
@@ -9589,22 +9675,6 @@
                     </div>
                   </div>
                 </div>
-                <!-- Thanh trạng thái nổi gọn góc trên khi đang xem tạm YouTube No-Cookie lúc dò luồng công cộng -->
-                <div
-                  id="mod39-probing-top-pill"
-                  class="hidden absolute top-2 left-2 right-2 z-[11] flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-zinc-950/88 backdrop-blur-md border border-emerald-400/50 text-[11px] text-zinc-100 shadow-lg"
-                >
-                  <div class="flex items-center gap-1.5 min-w-0">
-                    <span class="inline-block w-3 h-3 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin shrink-0"></span>
-                    <span id="mod39-probing-pill-text" class="font-bold text-emerald-200 truncate">Đang xem tạm No-Cookie · Dò luồng phát nền &amp; Cửa sổ nổi...</span>
-                  </div>
-                  <button
-                    type="button"
-                    id="btn-mod39-stop-probing-pill"
-                    class="px-2.5 py-1 rounded-lg bg-amber-500/90 hover:bg-amber-400 text-zinc-950 font-extrabold text-[10.5px] shrink-0 transition cursor-pointer"
-                    title="Dừng dò luồng công cộng và giữ nguyên trình phát YouTube No-Cookie không quảng cáo"
-                  >✕ Dừng dò (Giữ No-Cookie)</button>
-                </div>
                 <!-- Khung Audio-Stage Chế Độ 2 (không tự mở iframe YouTube có bánh răng/CC; chạm khung để Phát / Tạm dừng) -->
                 <div
                   id="mod39-audio-only-stage"
@@ -9677,6 +9747,36 @@
                   id="btn-mod39-exit-pseudo-fs"
                   class="mod39-stage-exit-pseudo-btn hidden absolute top-3 right-3 z-20 px-3 py-1.5 rounded-xl bg-black/80 hover:bg-rose-600 text-white text-xs font-extrabold border border-zinc-500 shadow-lg"
                 >✕ Thu Nhỏ Màn Hình</button>
+              </div>
+
+              <!-- Thanh trạng thái dò luồng phát nền đặt GỌN PHÍA DƯỚI khung video (KHÔNG che hình video trên Mobile!) -->
+              <div
+                id="mod39-probing-top-pill"
+                class="hidden p-2.5 rounded-xl bg-zinc-950/90 border border-emerald-400/45 text-[11.5px] text-zinc-100 shadow space-y-2"
+              >
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="inline-block w-3.5 h-3.5 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin shrink-0"></span>
+                  <span id="mod39-probing-pill-text" class="font-bold text-emerald-200 leading-snug">Đang tìm luồng phát có thể phát trong nền, tìm xong tự động chuyển</span>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    id="btn-mod39-stop-probing-pill"
+                    class="w-full sm:w-auto px-3 py-1.5 rounded-lg bg-amber-500/90 hover:bg-amber-400 text-zinc-950 font-extrabold text-[11px] transition cursor-pointer"
+                    title="Tắt hẳn tự dò luồng phát nền và chỉ xem YouTube No-Cookie không quảng cáo"
+                  >🔕 Tắt tính năng tự dò luồng phát nền</button>
+                </div>
+              </div>
+              <div
+                id="mod39-auto-probe-disabled-bar"
+                class="hidden px-3 py-1.5 rounded-xl bg-zinc-900/75 border border-zinc-700/70 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-300"
+              >
+                <span>📺 Đang ở chế độ chỉ xem <strong>YouTube No-Cookie</strong> (đã tắt tự dò luồng nền)</span>
+                <button
+                  type="button"
+                  id="btn-mod39-reenable-auto-probe"
+                  class="px-2.5 py-1 rounded-lg bg-emerald-600/85 hover:bg-emerald-500 text-white font-bold text-[10.5px] cursor-pointer"
+                >🔄 Bật lại tự dò luồng nền</button>
               </div>
 
               <!-- Cảnh báo dự phòng trung thực nếu gặp Error 101/150/153 hoặc file:// -->

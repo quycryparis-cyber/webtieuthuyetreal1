@@ -34,6 +34,16 @@
     "4. Biểu đồ Chấm Điểm 5 Trụ Cột Cốt Lõi (Thang 10)": "4. 5大重要柱スコア (10点満点)",
     "6. Ma Trận Quyết Định Hành Động (Rõ ràng — Không nói nước đôi)": "6. アクション決定マトリクス",
     "Autotester nội bộ": "内蔵オートテスター",
+
+    "Đang tìm luồng phát có thể phát trong nền, tìm xong tự động chuyển": "バックグラウンド再生可能なストリームを検索中（見つかり次第自動切替）",
+    "Tắt tính năng tự dò luồng phát nền": "バックグラウンド自動検索をオフにする",
+    "Bật lại tự dò luồng nền": "自動検索を再度オンにする",
+    "Xác nhận đổi vị trí đầu tư": "投資地域の変更確認",
+    "Nếu bạn đổi vị trí (Thủ công hoặc tự động qua GPS) thì đều cần phân tích lại để có số liệu chính xác nhất, bạn chắc chứ?": "地域を変更（手動またはGPS）すると、最新データ取得のため再分析が必要になります。よろしいですか？",
+    "Có, đổi vị trí & phân tích lại": "はい、地域を変更して再分析する",
+    "Copy sẵn câu lệnh & Chuyển hướng sang Gemini ngay": "プロンプトをコピーしてGeminiを開く",
+    "Đồng bộ câu trả lời Gemini & Tổng hợp biểu đồ": "Geminiの回答を同期してチャートを作成",
+    "Màn hình 2 Bước": "2ステップ画面",
 };
 
   const exact = Object.freeze({
