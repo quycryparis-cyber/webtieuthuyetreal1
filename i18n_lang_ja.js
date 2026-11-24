@@ -10,6 +10,17 @@
   NS.i18nPacks = NS.i18nPacks || {};
 
   const exact = Object.freeze({
+    "Mở ngay giao diện xử lý PDF & File 100% nội bộ": "100%ローカルPDF・ファイル処理ツールを今すぐ開く",
+    "🔒 41 Công cụ Premium · Xử lý 100% trên máy": "🔒 41個のプレミアムツール・100%端末内処理",
+    "Xuất truyện qua PDF & ĐăngLovePDF": "小説PDF出力 & ĐăngLovePDF",
+    "Hệ thống đang tự kiểm tra, bạn chờ xíu nha...": "システムが自動点検中です。少々お待ちください...",
+    "ĐIỂM SỨC KHỎE 5 TRỤ CỘT": "5本柱アプリ健康スコア",
+    "Đúng chức năng": "機能性",
+    "Đồng bộ": "同期性",
+    "Độ mượt": "滑らかさ",
+    "Dễ bấm": "操作性",
+    "Bền bỉ": "耐久性",
+    "Bác sĩ App toàn diện đã sẵn sàng!": "総合アプリ診断の準備ができました！",
     "🩺 Autotester nội bộ": "🩺 内蔵オートテスター",
     "Báo lỗi, góp ý và kiểm thử Web/App": "バグ報告・ご意見・Web/App自動診断",
     "🐞 Báo lỗi & Kiểm thử": "🐞 バグ報告＆診断",

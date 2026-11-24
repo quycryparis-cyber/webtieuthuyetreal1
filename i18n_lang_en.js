@@ -10,6 +10,17 @@
   NS.i18nPacks = NS.i18nPacks || {};
 
   const exact = Object.freeze({
+    "Mở ngay giao diện xử lý PDF & File 100% nội bộ": "Open 100% local offline PDF & File Suite now",
+    "🔒 41 Công cụ Premium · Xử lý 100% trên máy": "🔒 41 Premium Tools · 100% On-Device Processing",
+    "Xuất truyện qua PDF & ĐăngLovePDF": "Export Story to PDF & ĐăngLovePDF",
+    "Hệ thống đang tự kiểm tra, bạn chờ xíu nha...": "System is running a self-check, please wait a moment...",
+    "ĐIỂM SỨC KHỎE 5 TRỤ CỘT": "5-PILLAR APP HEALTH SCORE",
+    "Đúng chức năng": "Functionality",
+    "Đồng bộ": "Synchronization",
+    "Độ mượt": "Smoothness",
+    "Dễ bấm": "Touch & UI",
+    "Bền bỉ": "Resilience",
+    "Bác sĩ App toàn diện đã sẵn sàng!": "Comprehensive App Doctor is ready!",
     "🩺 Autotester nội bộ": "🩺 Built-in AutoTester",
     "Báo lỗi, góp ý và kiểm thử Web/App": "Bug Reports, Feedback & Web/App Testing",
     "🐞 Báo lỗi & Kiểm thử": "🐞 Bug Report & Testing",

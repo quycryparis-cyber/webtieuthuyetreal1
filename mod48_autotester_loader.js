@@ -19,6 +19,16 @@
   if (NS.__MOD48_AUTOTESTER_LOADER_READY__) return;
   NS.__MOD48_AUTOTESTER_LOADER_READY__ = true;
 
+  // Crash-Safe Startup Sweep: dọn sạch mọi khóa sandbox mồ côi nếu lần kiểm thử trước bị tắt đột ngột
+  try {
+    const orphanKeys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('__at_sbx__') || k.startsWith('__autotest_sandbox__'))) orphanKeys.push(k);
+    }
+    orphanKeys.forEach((k) => localStorage.removeItem(k));
+  } catch (_eSweep) {}
+
   const AUTOTESTER_SCRIPTS = [
     'autotester/intelligence/intelligence.js',
     'autotester/core/coreEngine.js',

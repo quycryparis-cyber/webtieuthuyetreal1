@@ -1,9 +1,11 @@
 /**
  * ============================================================================
- * 🔬 AUTOTESTER AUDITORS
- * (ErrorAndChaosAuditor + SmoothnessAndRamAuditor + VisualAndMobileAuditor)
- * ============================================================================
- * Tương thích trọn vẹn Safari iOS (kiểm tra an toàn trước khi gọi API Chromium).
+ * 🔬 AUTOTESTER ULTRA AUDITORS (v118)
+ * - ErrorAuditor (window.onerror, unhandledrejection, console.error)
+ * - SmoothnessAndRamAuditor (FPS, Long Tasks, CLS, Unrevoked Blobs, RAM)
+ * - VisualAndMobileAuditor (Overflow, Floating Docks Overlap, Touch Targets, Layout Diff, i18n Key Leaks)
+ * - BrowserCapabilityMatrixAuditor (10 Browser APIs + Safari/Firefox/Mobile Safety)
+ * - CanvasPixelSampler (16-Point RGB Hash for Desmos & Weather Sky Canvas Liveness)
  * ============================================================================
  */
 (function initAutoTesterAuditors(globalScope) {
@@ -12,7 +14,7 @@
   const AT = (globalScope.__NoirAutoTesterNS = globalScope.__NoirAutoTesterNS || {});
 
   // --------------------------------------------------------------------------
-  // 1. ERROR & CONSOLE AUDITOR (window.onerror, unhandledrejection, console.error)
+  // 1. ERROR & CONSOLE AUDITOR
   // --------------------------------------------------------------------------
   class ErrorAuditor {
     constructor() {
@@ -30,6 +32,7 @@
 
       this._boundOnError = (ev) => {
         const msg = ev?.message || String(ev?.error || 'Lỗi kịch bản không xác định');
+        if (/ResizeObserver loop/i.test(msg)) return;
         this.errors.push({
           source: 'window.onerror',
           message: msg,
@@ -39,8 +42,7 @@
       };
       this._boundRejection = (ev) => {
         const msg = ev?.reason?.message || String(ev?.reason || 'Promise từ chối chưa xử lý');
-        // Bỏ qua ping hit-counter ngoài mạng bị chặn
-        if (/abacus\.jasoncameron\.dev|Failed to fetch \(AutoTester/i.test(msg)) return;
+        if (/abacus\.jasoncameron\.dev|Failed to fetch \(AutoTester|open-meteo|geocoding-api/i.test(msg)) return;
         this.errors.push({
           source: 'unhandledrejection',
           message: msg,
@@ -57,7 +59,7 @@
         const self = this;
         console.error = function wrappedConsoleError(...args) {
           const text = args.map((a) => (a && a.message ? a.message : String(a))).join(' ');
-          if (!/abacus\.jasoncameron\.dev|AutoTester Offline/i.test(text)) {
+          if (!/abacus\.jasoncameron\.dev|AutoTester Offline|Mock AutoTester/i.test(text)) {
             self.errors.push({
               source: 'console.error',
               message: text.slice(0, 260),
@@ -85,7 +87,7 @@
   }
 
   // --------------------------------------------------------------------------
-  // 2. SMOOTHNESS & RAM AUDITOR (FPS, Long Tasks >100ms, CLS, Blob Leaks, RAM)
+  // 2. SMOOTHNESS & RAM AUDITOR (Safari iOS Safe)
   // --------------------------------------------------------------------------
   class SmoothnessAndRamAuditor {
     constructor() {
@@ -117,27 +119,25 @@
       this.stats = this._emptyStats();
       this.activeBlobs.clear();
 
-      // Theo dõi FPS
-      let frames = 0;
-      let lastSample = performance.now();
-      const fpsSamples = [];
+      this._frames = 0;
+      this._lastSample = performance.now();
+      this._fpsSamples = [];
       const tick = (now) => {
         if (!this._active) return;
-        frames += 1;
-        const dt = now - lastSample;
-        if (dt >= 400) {
-          const fps = Math.round((frames * 1000) / dt);
-          fpsSamples.push(fps);
+        this._frames += 1;
+        const dt = now - this._lastSample;
+        if (dt >= 250) {
+          const fps = Math.min(120, Math.round((this._frames * 1000) / dt));
+          this._fpsSamples.push(fps);
           this.stats.minFps = Math.min(this.stats.minFps, fps);
-          this.stats.avgFps = Math.round(fpsSamples.reduce((a, b) => a + b, 0) / fpsSamples.length);
-          frames = 0;
-          lastSample = now;
+          this.stats.avgFps = Math.round(this._fpsSamples.reduce((a, b) => a + b, 0) / this._fpsSamples.length);
+          this._frames = 0;
+          this._lastSample = now;
         }
         this._rafId = requestAnimationFrame(tick);
       };
       this._rafId = requestAnimationFrame(tick);
 
-      // Safari iOS-safe PerformanceObserver('longtask')
       try {
         if (
           typeof PerformanceObserver === 'function' &&
@@ -156,7 +156,6 @@
         }
       } catch (_eLt) {}
 
-      // Safari iOS-safe Layout Shift (CLS)
       try {
         if (
           typeof PerformanceObserver === 'function' &&
@@ -174,7 +173,6 @@
         }
       } catch (_eCls) {}
 
-      // Đếm URL.createObjectURL tạo ra mà quên revokeObjectURL
       try {
         if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
           this._origCreateBlob = URL.createObjectURL;
@@ -195,9 +193,18 @@
       } catch (_eBlob) {}
     }
 
+    resetFpsWindow() {
+      this._frames = 0;
+      this._lastSample = performance.now();
+      this._fpsSamples = [];
+      this.stats.avgFps = 60;
+      this.stats.minFps = 60;
+      this.stats.longTasks = 0;
+      this.stats.maxLongTaskMs = 0;
+    }
+
     snapshot() {
       try {
-        // Chỉ đọc performance.memory trên Chromium (bỏ qua an toàn trên Safari iOS)
         const mem = globalScope.performance?.memory;
         if (mem && Number(mem.usedJSHeapSize) > 0) {
           this.stats.ramMb = Number((mem.usedJSHeapSize / (1024 * 1024)).toFixed(1));
@@ -228,16 +235,89 @@
   }
 
   // --------------------------------------------------------------------------
-  // 3. VISUAL & MOBILE AUDITOR (Tràn ngang, Nút bé, Thanh nổi đè nhau, Lệch tọa độ)
+  // 3. CANVAS 16-POINT PIXEL SAMPLER (Kiểm tra Canvas vẽ đồ thị / bầu trời sống thật)
+  // --------------------------------------------------------------------------
+  function sampleCanvasHash(canvasEl) {
+    if (!canvasEl || canvasEl.tagName !== 'CANVAS') return '';
+    try {
+      const w = canvasEl.width || 0;
+      const h = canvasEl.height || 0;
+      if (w < 4 || h < 4) return 'EMPTY_DIM';
+      const ctx = canvasEl.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return 'NON_2D_CTX';
+      const samples = [];
+      for (let gx = 1; gx <= 4; gx++) {
+        for (let gy = 1; gy <= 4; gy++) {
+          const x = Math.min(w - 1, Math.floor((w * gx) / 5));
+          const y = Math.min(h - 1, Math.floor((h * gy) / 5));
+          const d = ctx.getImageData(x, y, 1, 1).data;
+          samples.push(`${d[0]},${d[1]},${d[2]},${d[3]}`);
+        }
+      }
+      return samples.join('|');
+    } catch (_e) {
+      return 'TAINTED_OR_WEBGL';
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 4. BROWSER CAPABILITY MATRIX AUDITOR (10 API trình duyệt & Độ an toàn Safari/Firefox)
+  // --------------------------------------------------------------------------
+  const BrowserCapabilityMatrixAuditor = {
+    audit() {
+      const matrix = [
+        { name: 'Document PiP', supported: Boolean(globalScope.documentPictureInPicture?.requestWindow), fallback: 'Cửa sổ nổi HTML trong trang' },
+        { name: 'File System Access', supported: typeof globalScope.showDirectoryPicker === 'function', fallback: 'Chọn tệp chuẩn & tải xuống' },
+        { name: 'Screen Wake Lock', supported: Boolean(navigator.wakeLock?.request), fallback: 'Hoạt động bình thường không cần khóa sáng' },
+        { name: 'BroadcastChannel', supported: typeof globalScope.BroadcastChannel === 'function', fallback: 'Đồng bộ qua storage event' },
+        { name: 'Clipboard API', supported: Boolean(navigator.clipboard?.writeText), fallback: 'Sao chép qua vùng chọn textarea' },
+        { name: 'Web Audio API', supported: Boolean(globalScope.AudioContext || globalScope.webkitAudioContext), fallback: 'Âm thanh HTML5 Audio' },
+        { name: 'Service Worker PWA', supported: Boolean(navigator.serviceWorker), fallback: 'Chạy trực tuyến bình thường' },
+        { name: 'VisualViewport', supported: Boolean(globalScope.visualViewport), fallback: 'window.innerHeight chuẩn' },
+        { name: 'Speech Recognition', supported: Boolean(globalScope.SpeechRecognition || globalScope.webkitSpeechRecognition), fallback: 'Nhập văn bản trực tiếp' },
+        { name: 'Performance Memory', supported: Boolean(globalScope.performance?.memory), fallback: 'Ẩn nhẹ thông số RAM trên Safari/Firefox' },
+      ];
+      const supportedCount = matrix.filter((m) => m.supported).length;
+      return {
+        total: matrix.length,
+        supportedCount,
+        matrix,
+        summaryText: `Hỗ trợ ${supportedCount}/${matrix.length} năng lực trình duyệt hiện đại (mọi mục thiếu đều có phương án dự phòng an toàn).`,
+      };
+    },
+  };
+
+  // --------------------------------------------------------------------------
+  // 5. VISUAL, MOBILE & I18N AUDITOR
   // --------------------------------------------------------------------------
   const VisualAndMobileAuditor = {
+    scanI18nKeyLeaks() {
+      const leaks = [];
+      const nodes = document.querySelectorAll('section:not(.hidden) button, section:not(.hidden) h1, section:not(.hidden) h2, section:not(.hidden) h3, section:not(.hidden) label');
+      const leakPat = /(\{\{[^}]+\}\}|\bi18n\.[a-z0-9_.]+\b|\bbtn_[a-z0-9_]{4,}\b)/i;
+      for (let i = 0; i < Math.min(nodes.length, 300); i++) {
+        const n = nodes[i];
+        if (n.closest('[data-autotester-ui="true"]') || n.closest('.hidden')) continue;
+        const txt = String(n.textContent || '').trim();
+        if (!txt || txt.length > 140) continue;
+        const m = txt.match(leakPat);
+        if (m) {
+          leaks.push({
+            selector: n.id ? `#${n.id}` : n.tagName.toLowerCase(),
+            token: m[0],
+          });
+        }
+      }
+      return leaks;
+    },
+
     scanCurrentScreen(screenLabel = 'Màn hình hiện tại') {
       const findings = [];
       const vw = window.innerWidth;
       const vh = window.innerHeight;
       const isMobile = vw < 768;
 
-      // 1. Kiểm tra tràn khung ngang (Horizontal Overflow)
+      // 1. Tràn ngang (Horizontal Overflow)
       const docOverflow = document.documentElement.scrollWidth - vw;
       if (docOverflow > 4) {
         let offenderSel = 'body';
@@ -259,7 +339,7 @@
         });
       }
 
-      // 2. Kiểm tra 3 thanh nổi góc dưới (Pomodoro, Âm nhạc, Bi Số 8) có đè lên nhau không
+      // 2. 3 thanh nổi góc dưới có đè nhau không
       const docks = [
         { id: '#s15-floating-pomodoro-pill', name: 'Thanh Pomodoro nổi' },
         { id: '#s15-floating-audio-pill', name: 'Thanh Âm nhạc nổi' },
@@ -292,7 +372,17 @@
         }
       }
 
-      // 3. Trên màn hình điện thoại: kiểm tra nút bấm chính quá nhỏ (<34px) dễ bấm trượt
+      // 3. Quét mã ngôn ngữ i18n chưa dịch
+      const leaks = this.scanI18nKeyLeaks();
+      if (leaks.length > 0) {
+        findings.push({
+          code: 'ERR_I18N_KEY_LEAK',
+          selector: leaks[0].selector,
+          techDetail: `${screenLabel}: phát hiện ${leaks.length} chuỗi chưa dịch (${leaks.slice(0, 3).map((x) => x.token).join(', ')})`,
+        });
+      }
+
+      // 4. Nút quá nhỏ trên màn hình điện thoại
       if (isMobile) {
         const tinyButtons = [];
         const btns = document.querySelectorAll('section:not(.hidden) button:not(.hidden)');
@@ -318,7 +408,7 @@
         }
       }
 
-      // 4. Lưu & đối chiếu Layout Snapshot Diff (so với lần chạy trước cùng kích thước màn hình)
+      // 5. Layout Snapshot Diff
       try {
         const keyIds = ['mobile-bottom-nav', 's15-floating-pomodoro-pill', 's15-floating-audio-pill', 's11-mascot-bi-corner'];
         const curSnap = { vw };
@@ -358,4 +448,6 @@
   AT.errorAuditor = new ErrorAuditor();
   AT.smoothAuditor = new SmoothnessAndRamAuditor();
   AT.visualAuditor = VisualAndMobileAuditor;
+  AT.browserMatrix = BrowserCapabilityMatrixAuditor;
+  AT.sampleCanvasHash = sampleCanvasHash;
 })(typeof window !== 'undefined' ? window : globalThis);

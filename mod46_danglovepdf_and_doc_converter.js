@@ -96,6 +96,13 @@
 
   const ALL_TOOLS = TOOL_GROUPS.flatMap((g) => g.tools.map((t) => ({ ...t, groupId: g.id })));
 
+  function getActiveToolGroups() {
+    return NS.dangLovePdfPro?.PRO_TOOL_GROUPS || TOOL_GROUPS;
+  }
+  function getActiveAllTools() {
+    return getActiveToolGroups().flatMap((g) => g.tools.map((t) => ({ ...t, groupId: g.id })));
+  }
+
   // ==========================================================================
   // 2. BỘ NẠP THƯ VIỆN ON-DEMAND (CHỈ TẢI KHI DÙNG — 0MS KHI KHỞI ĐỘNG APP)
   // ==========================================================================
@@ -491,12 +498,12 @@
               <p class="text-[11.5px] text-zinc-300 leading-relaxed">Mở cửa sổ xuất truyện PDF &amp; Bản in (tùy chỉnh font sách in, bìa sách, mục lục, .DOCX / .TXT).</p>
             </button>
             <button type="button" id="btn-mod46-choice-danglovepdf" class="group text-left p-4 rounded-2xl border-2 border-rose-500/60 hover:border-rose-300 bg-gradient-to-br from-rose-950/60 to-zinc-900 hover:from-rose-900/50 transition space-y-2 cursor-pointer shadow-lg">
-              <div class="flex items-center justify-between">
-                <span class="text-3xl">❤️</span>
-                <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-[10px] font-extrabold">100% Trên Máy</span>
+              <div class="flex items-center justify-between gap-2">
+                <img src="assets/danglovepdf_icon.jpg" alt="Em ILovePDF hư đã có anh lo" class="w-11 h-11 rounded-xl object-cover border-2 border-rose-300/80 shadow-md" />
+                <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-[10px] font-extrabold">41 Công Cụ · 100% Trên Máy</span>
               </div>
-              <div class="text-sm font-black text-rose-200 group-hover:text-white">ĐăngLovePDF</div>
-              <p class="text-[11.5px] text-zinc-300 leading-relaxed">Gộp, tách, nén, xoay, ký tên, đánh số, đọc chữ ảnh (OCR) &amp; đổi định dạng PDF / Word / Ảnh / Excel / Slide.</p>
+              <div class="text-sm font-black text-rose-200 group-hover:text-white">ĐăngLovePDF ( ͡° ͜ʖ ͡°)</div>
+              <p class="text-[11.5px] text-zinc-300 leading-relaxed">Đủ mọi tính năng Premium: Gộp, tách, nén, dàn trang sách, OCR 2 lớp, che đen vĩnh viễn, so sánh PDF, xử lý hàng loạt &amp; đổi mọi định dạng!</p>
             </button>
           </div>
         </div>
@@ -535,11 +542,11 @@
           <!-- Header gọn gàng -->
           <div class="px-3 sm:px-5 py-3 border-b border-zinc-800 bg-zinc-900/95 flex flex-wrap items-center justify-between gap-2 shrink-0">
             <div class="flex items-center gap-2.5 min-w-0">
-              <span class="text-xl">❤️</span>
+              <img src="assets/danglovepdf_icon.jpg" alt="Em ILovePDF hư đã có anh lo" class="w-9 h-9 rounded-xl object-cover border-2 border-rose-400/80 shadow-md shrink-0" />
               <div class="min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <h2 class="text-sm sm:text-base font-black text-rose-300 tracking-tight">ĐăngLovePDF</h2>
-                  <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/50 text-emerald-300 text-[10px] font-extrabold">🔒 Xử lý 100% trên máy — File không rời thiết bị</span>
+                  <h2 class="text-sm sm:text-base font-black text-rose-300 tracking-tight">ĐăngLovePDF ( ͡° ͜ʖ ͡°)</h2>
+                  <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/50 text-emerald-300 text-[10px] font-extrabold">🔒 41 Công cụ Premium · Xử lý 100% trên máy</span>
                 </div>
               </div>
             </div>
@@ -569,7 +576,7 @@
       modal.classList.remove('hidden');
 
       if (initialToolId) {
-        const found = ALL_TOOLS.find((t) => t.id === initialToolId);
+        const found = getActiveAllTools().find((t) => t.id === initialToolId);
         if (found) {
           this.selectTool(found);
           return;
@@ -581,7 +588,7 @@
     }
 
     // ------------------------------------------------------------------------
-    // MÀN HÌNH 1: TRANG CHỦ DANH MỤC CÔNG CỤ (5 CỤM RÚT GỌN + NÚT RÚT GỌN TỔNG)
+    // MÀN HÌNH 1: TRANG CHỦ DANH MỤC CÔNG CỤ (7 CỤM RÚT GỌN + NÚT RÚT GỌN TỔNG)
     // ------------------------------------------------------------------------
     renderHubScreen(searchQuery = '') {
       const body = document.getElementById('mod46-studio-body');
@@ -590,16 +597,20 @@
       backBtn?.classList.add('hidden');
 
       const q = String(searchQuery || '').trim().toLowerCase();
+      const activeGroups = getActiveToolGroups();
+      const activeTools = getActiveAllTools();
 
       const accentBorder = {
         emerald: 'border-emerald-500/40 bg-emerald-950/20',
+        cyan: 'border-cyan-500/40 bg-cyan-950/20',
         amber: 'border-amber-500/40 bg-amber-950/20',
         sky: 'border-sky-500/40 bg-sky-950/20',
         violet: 'border-violet-500/40 bg-violet-950/20',
+        teal: 'border-teal-500/40 bg-teal-950/20',
         rose: 'border-rose-500/40 bg-rose-950/20'
       };
 
-      const clustersHtml = TOOL_GROUPS.map((grp) => {
+      const clustersHtml = activeGroups.map((grp) => {
         const filteredTools = q
           ? grp.tools.filter((t) =>
               `${t.name} ${t.desc} ${t.badge} ${grp.title}`.toLowerCase().includes(q)
@@ -675,7 +686,7 @@
 
       body.querySelector('#btn-mod46-toggle-all-groups')?.addEventListener('click', () => {
         this.allGroupsCollapsed = !this.allGroupsCollapsed;
-        TOOL_GROUPS.forEach((g) => {
+        activeGroups.forEach((g) => {
           this.collapsedGroups[g.id] = this.allGroupsCollapsed;
         });
         this.renderHubScreen(searchInput?.value || '');
@@ -685,7 +696,7 @@
         btn.addEventListener('click', () => {
           const gid = btn.getAttribute('data-mod46-toggle-group');
           this.collapsedGroups[gid] = !this.collapsedGroups[gid];
-          this.allGroupsCollapsed = TOOL_GROUPS.every((g) => Boolean(this.collapsedGroups[g.id]));
+          this.allGroupsCollapsed = activeGroups.every((g) => Boolean(this.collapsedGroups[g.id]));
           this.renderHubScreen(searchInput?.value || '');
         });
       });
@@ -693,7 +704,7 @@
       body.querySelectorAll('[data-mod46-tool]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const tid = btn.getAttribute('data-mod46-tool');
-          const tool = ALL_TOOLS.find((t) => t.id === tid);
+          const tool = activeTools.find((t) => t.id === tid);
           if (tool) this.selectTool(tool);
         });
       });
@@ -846,8 +857,8 @@
 
       const tool = this.activeTool;
 
-      // MÀN HÌNH 2: CHƯA CÓ FILE -> KHUNG KÉO THẢ LỚN DỄ DÙNG
-      if (!this.files.length) {
+      // MÀN HÌNH 2: CHƯA CÓ FILE -> KHUNG KÉO THẢ LỚN DỄ DÙNG (trừ công cụ Tạo mới không cần nạp file)
+      if (!this.files.length && !tool.noFileRequired) {
         body.innerHTML = `
           <div class="max-w-3xl mx-auto py-4 space-y-4">
             <div class="text-center space-y-1.5">
@@ -895,7 +906,7 @@
       // MÀN HÌNH 3: KHÔNG GIAN LÀM VIỆC 2 CỘT (70% XEM TRƯỚC / 30% TÙY CHỌN)
       const totalBytes = this.files.reduce((s, f) => s + f.size, 0);
       const over300Mb = totalBytes > 300 * 1024 * 1024;
-      const canRun = this.files.length >= (tool.minFiles || 1);
+      const canRun = tool.noFileRequired || this.files.length >= (tool.minFiles || 1);
 
       body.innerHTML = `
         <div class="max-w-6xl mx-auto space-y-3">
@@ -964,6 +975,7 @@
                 <div class="flex items-center justify-between gap-1 text-[10px]">
                   <button type="button" data-pg-act="left" data-pg-uid="${pg.uid}" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 font-bold" title="Đổi sang trái">◀</button>
                   <button type="button" data-pg-act="rot" data-pg-uid="${pg.uid}" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-amber-600 font-bold" title="Xoay 90°">↻</button>
+                  <button type="button" data-pg-act="dup" data-pg-uid="${pg.uid}" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-emerald-600 font-bold" title="Nhân bản trang">📋</button>
                   <button type="button" data-pg-act="right" data-pg-uid="${pg.uid}" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 font-bold" title="Đổi sang phải">▶</button>
                   <button type="button" data-pg-act="del" data-pg-uid="${pg.uid}" class="px-1.5 py-0.5 rounded bg-rose-900/70 hover:bg-rose-600 font-bold" title="Xóa trang">✕</button>
                 </div>
@@ -993,6 +1005,16 @@
                 </div>
               </div>
             </div>
+          </div>
+        `;
+      }
+
+      if (tool.noFileRequired && !this.files.length) {
+        return `
+          <div class="rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-6 text-center space-y-2">
+            <div class="text-4xl">${tool.icon}</div>
+            <div class="text-sm font-black text-emerald-200">${escHtml(tool.name)}</div>
+            <p class="text-xs text-zinc-300">Công cụ này khởi tạo trực tiếp tệp PDF mới ngay trong RAM — hãy chỉnh số trang &amp; kiểu giấy ở cột phải rồi bấm nút <strong>Tạo file PDF mới</strong>!</p>
           </div>
         `;
       }
@@ -1044,14 +1066,20 @@
             <select id="opt-mod46-split-mode" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700 text-zinc-100">
               <option value="range">Tách theo khoảng trang tùy chọn</option>
               <option value="single">Tách lẻ từng trang thành nhiều PDF</option>
+              <option value="every_n">Tách đều mỗi N trang 1 tệp</option>
+              <option value="max_mb">Tách sao cho mỗi tệp không vượt quá (MB)</option>
             </select>
           </label>
-          <label class="block space-y-1"><span class="font-bold text-zinc-300">Khoảng trang (ví dụ: 1-3, 5, 7-9):</span>
+          <label class="block space-y-1"><span class="font-bold text-zinc-300">Khoảng trang (vd: 1-3, 5, 7-9):</span>
             <input id="opt-mod46-split-ranges" type="text" placeholder="1-3, 5" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700 text-zinc-100" />
-          </label>`;
+          </label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="space-y-1"><span>Mỗi N trang:</span><input id="opt-mod46-split-everyn" type="number" min="1" value="2" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
+            <label class="space-y-1"><span>Tối đa (MB):</span><input id="opt-mod46-split-maxmb" type="number" step="0.5" min="0.5" value="5" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
+          </div>`;
       }
       if (id === 'organize') {
-        return `<p class="text-zinc-300 leading-relaxed">Dùng các nút <strong>◀ / ▶</strong> để đổi chỗ, <strong>↻</strong> để xoay 90°, <strong>✕</strong> để bỏ trang thừa hoặc bấm <strong>+ Trang trắng</strong> ở trên.</p>`;
+        return `<p class="text-zinc-300 leading-relaxed">Dùng các nút <strong>◀ / ▶</strong> để đổi chỗ, <strong>↻</strong> xoay 90°, <strong>📋</strong> nhân bản trang, <strong>✕</strong> bỏ trang thừa hoặc bấm <strong>+ Trang trắng</strong> ở trên.</p>`;
       }
       if (id === 'crop') {
         return `
@@ -1061,7 +1089,14 @@
             <label class="space-y-1"><span>Cắt Phải (%)</span><input id="opt-crop-r" type="number" min="0" max="40" value="5" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
             <label class="space-y-1"><span>Cắt Trên (%)</span><input id="opt-crop-t" type="number" min="0" max="40" value="5" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
             <label class="space-y-1"><span>Cắt Dưới (%)</span><input id="opt-crop-b" type="number" min="0" max="40" value="5" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
-          </div>`;
+          </div>
+          <label class="block space-y-1"><span class="font-bold">Áp dụng cắt lề cho:</span>
+            <select id="opt-crop-scope" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
+              <option value="all">Toàn bộ các trang</option>
+              <option value="odd">Chỉ các trang LẺ (1, 3, 5...)</option>
+              <option value="even">Chỉ các trang CHẴN (2, 4, 6...)</option>
+            </select>
+          </label>`;
       }
       if (id === 'compress') {
         return `
@@ -1102,12 +1137,18 @@
           <div class="grid grid-cols-2 gap-2">
             <label class="space-y-1"><span>Từ trang:</span><input id="opt-pn-from" type="number" min="1" value="1" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
             <label class="space-y-1"><span>Số bắt đầu:</span><input id="opt-pn-start" type="number" min="1" value="1" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
-          </div>`;
+          </div>
+          <label class="block space-y-1"><span class="font-bold">Tiền tố mã Bates (tùy chọn, vd: HS-):</span>
+            <input id="opt-pn-bates-prefix" type="text" placeholder="Để trống nếu đánh số thường" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
+          </label>`;
       }
       if (id === 'watermark') {
         return `
-          <label class="block space-y-1"><span class="font-bold">Nội dung đóng dấu:</span>
+          <label class="block space-y-1"><span class="font-bold">Nội dung đóng dấu chữ:</span>
             <input id="opt-wm-text" type="text" value="BẢN QUYỀN TÁC GIẢ" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
+          </label>
+          <label class="block space-y-1"><span class="font-bold">Hoặc tải Logo ảnh PNG/JPG (ưu tiên nếu có):</span>
+            <input id="opt-wm-logo-file" type="file" accept="image/png,image/jpeg,image/webp" class="w-full text-[11px] text-zinc-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:bg-zinc-800 file:text-zinc-100" />
           </label>
           <div class="grid grid-cols-2 gap-2">
             <label class="space-y-1"><span>Màu chữ:</span><input id="opt-wm-color" type="color" value="#e11d48" class="w-full h-8 rounded bg-zinc-950 border border-zinc-700" /></label>
@@ -1117,6 +1158,9 @@
       }
       if (id === 'sign_edit') {
         return `
+          <label class="block space-y-1"><span class="font-bold">Hoặc gõ tên tạo chữ ký viết tay tự động:</span>
+            <input id="opt-sign-typed-name" type="text" placeholder="Ví dụ: Mai Hải Đăng (tự tạo nét bút ký)" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
+          </label>
           <label class="block space-y-1"><span class="font-bold">Chèn vào trang số:</span>
             <input id="opt-sign-page" type="number" min="1" value="1" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
           </label>
@@ -1181,7 +1225,9 @@
           <label class="block space-y-1"><span class="font-bold">Định dạng xuất ra:</span>
             <select id="opt-p2d-out" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
               <option value="docx">Word (.DOCX — Chỉnh sửa được)</option>
+              <option value="md">Markdown (.MD — Phân cấp tiêu đề tự động)</option>
               <option value="txt">Văn bản thuần (.TXT)</option>
+              <option value="json">Dữ liệu JSON (.JSON kèm tọa độ &amp; cỡ chữ)</option>
             </select>
           </label>`;
       }
@@ -1224,8 +1270,16 @@
               <option value="eng">Chỉ Tiếng Anh</option>
             </select>
           </label>
-          <p class="text-[11px] text-zinc-400">Lần đầu chạy sẽ tải gói ngôn ngữ OCR lưu sẵn vào máy để chạy cực nhanh những lần sau.</p>`;
+          <label class="block space-y-1"><span class="font-bold">Định dạng kết quả OCR:</span>
+            <select id="opt-ocr-out-fmt" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
+              <option value="searchable_pdf">PDF 2 lớp tìm &amp; copy được (Ctrl+F — Khuyên dùng)</option>
+              <option value="txt">Văn bản thuần (.TXT)</option>
+            </select>
+          </label>
+          <p class="text-[11px] text-zinc-400">Chạy trực tiếp trên CPU máy bạn — lần đầu tải gói ngôn ngữ lưu đệm sẵn cho các lần sau.</p>`;
       }
+      const proOpt = NS.dangLovePdfPro?.buildProOptionsHtml?.(this, id);
+      if (proOpt) return proOpt;
       return `<p class="text-zinc-300 leading-relaxed">Bấm nút bên dưới để xử lý tệp ngay trên máy của bạn.</p>`;
     }
 
@@ -1281,6 +1335,9 @@
           if (realIdx < 0) return;
           if (act === 'rot') {
             this.pagesState[realIdx].rotation = (this.pagesState[realIdx].rotation + 90) % 360;
+          } else if (act === 'dup') {
+            const clone = { ...this.pagesState[realIdx], uid: `dup_${Date.now()}_${Math.random().toString(36).slice(2, 6)}` };
+            this.pagesState.splice(realIdx + 1, 0, clone);
           } else if (act === 'del') {
             if (visible.length <= 1) {
               this.toast('⚠️ Phải giữ lại ít nhất 1 trang trong file PDF.', 'warning', 2000);
@@ -1404,12 +1461,14 @@
     // ------------------------------------------------------------------------
     async executeActiveTool() {
       const tool = this.activeTool;
-      if (!tool || !this.files.length) return;
+      if (!tool || (!this.files.length && !tool.noFileRequired)) return;
       this.cancelled = false;
       this.resultItems = [];
       this.resultZipItem = null;
 
       // Đọc toàn bộ tùy chọn từ DOM TRƯỚC khi chuyển sang màn hình Processing
+      const wmLogoFile = document.getElementById('opt-wm-logo-file')?.files?.[0] || null;
+      const pro = NS.dangLovePdfPro?.readProOptions ? NS.dangLovePdfPro.readProOptions() : {};
       const opts = {
         outName: document.getElementById('opt-mod46-outname')?.value?.trim() || '',
         splitMode: document.getElementById('opt-mod46-split-mode')?.value || 'range',
@@ -1427,6 +1486,7 @@
         wmColor: document.getElementById('opt-wm-color')?.value || '#e11d48',
         wmOpacity: Math.max(0.08, Math.min(1, Number(document.getElementById('opt-wm-opacity')?.value || 0.28))),
         wmTile: Boolean(document.getElementById('opt-wm-tile')?.checked),
+        wmLogoFile,
         signPage: Math.max(1, Number(document.getElementById('opt-sign-page')?.value || 1)),
         signPos: document.getElementById('opt-sign-pos')?.value || 'bottom-right',
         signNote: document.getElementById('opt-sign-note')?.value?.trim() || '',
@@ -1443,14 +1503,32 @@
       };
 
       const inputTotalSize = this.files.reduce((s, f) => s + f.size, 0);
-      const baseName = String(this.files[0].name || 'ket_qua').replace(/\.[^.]+$/, '');
+      const baseName = String(this.files[0]?.name || 'DangLovePDF').replace(/\.[^.]+$/, '');
       const prog = (pct, msg) => this.showProcessingView(pct, msg);
       prog(8, 'Đang nạp công cụ xử lý...');
 
       try {
-        const outputs = []; // [{ name, blob }]
+        let outputs = []; // [{ name, blob }]
 
-        if (tool.id === 'merge') {
+        // Ưu tiên kiểm tra 22+ công cụ Pro mở rộng tại mod46b_danglovepdf_pro_engines.js
+        const proRes = NS.dangLovePdfPro?.executeProTool
+          ? await NS.dangLovePdfPro.executeProTool(this, tool, opts, pro, {
+              ensurePdfLib,
+              ensurePdfJs,
+              ensureJsZip,
+              ensureXlsx,
+              parsePageRanges,
+              renderVietnameseTextToPngBytes,
+              renderLinesToVietnamesePdfBlob,
+              buildDocxBlobFromParagraphs,
+              baseName,
+              prog,
+            })
+          : null;
+
+        if (Array.isArray(proRes)) {
+          outputs = proRes;
+        } else if (tool.id === 'merge') {
           const { PDFDocument } = await ensurePdfLib();
           const merged = await PDFDocument.create();
           for (let i = 0; i < this.files.length; i++) {
@@ -1467,10 +1545,28 @@
           const { PDFDocument } = await ensurePdfLib();
           const src = await PDFDocument.load(this.files[0].bytes);
           const total = src.getPageCount();
-          const groups =
-            opts.splitMode === 'single'
-              ? Array.from({ length: total }, (_, i) => [i])
-              : parsePageRanges(opts.splitRanges, total);
+          let groups = [];
+          if (opts.splitMode === 'single') {
+            groups = Array.from({ length: total }, (_, i) => [i]);
+          } else if (opts.splitMode === 'every_n') {
+            const step = Math.max(1, pro.splitEveryN || 2);
+            for (let i = 0; i < total; i += step) {
+              const g = [];
+              for (let k = i; k < Math.min(total, i + step); k++) g.push(k);
+              groups.push(g);
+            }
+          } else if (opts.splitMode === 'max_mb') {
+            const maxBytes = Math.max(200 * 1024, (pro.splitMaxMb || 5) * 1024 * 1024);
+            const avgPerPage = Math.max(1024, this.files[0].size / Math.max(1, total));
+            const step = Math.max(1, Math.floor((maxBytes * 0.9) / avgPerPage));
+            for (let i = 0; i < total; i += step) {
+              const g = [];
+              for (let k = i; k < Math.min(total, i + step); k++) g.push(k);
+              groups.push(g);
+            }
+          } else {
+            groups = parsePageRanges(opts.splitRanges, total);
+          }
           for (let g = 0; g < groups.length; g++) {
             if (this.cancelled) return;
             prog(15 + ((g + 1) / groups.length) * 75, `Đang tách phần ${g + 1}/${groups.length}...`);
@@ -1509,7 +1605,10 @@
           const doc = await PDFDocument.load(this.files[0].bytes);
           const pages = doc.getPages();
           pages.forEach((pg, idx) => {
-            prog(20 + ((idx + 1) / pages.length) * 70, `Đang cắt viền trang ${idx + 1}/${pages.length}...`);
+            const pageNo = idx + 1;
+            if (pro.cropScope === 'odd' && pageNo % 2 === 0) return;
+            if (pro.cropScope === 'even' && pageNo % 2 === 1) return;
+            prog(20 + ((idx + 1) / pages.length) * 70, `Đang cắt viền trang ${pageNo}/${pages.length}...`);
             const { width, height } = pg.getSize();
             const x = width * (opts.cropL / 100);
             const y = height * (opts.cropB / 100);
@@ -1557,7 +1656,9 @@
             const pg = pages[i];
             const { width, height } = pg.getSize();
             const nVal = opts.pnStart + (i + 1 - opts.pnFrom);
-            const label = opts.pnFmt.replace('{n}', String(nVal)).replace('{total}', String(total));
+            const label = pro.batesPrefix
+              ? `${pro.batesPrefix}${String(nVal).padStart(4, '0')}`
+              : opts.pnFmt.replace('{n}', String(nVal)).replace('{total}', String(total));
             const rendered = renderVietnameseTextToPngBytes(label, { fontSize: 13, color: '#1f2937', bold: true, padX: 6, padY: 4 });
             const img = await doc.embedPng(rendered.bytes);
             let x = (width - rendered.widthPt) / 2;
@@ -1571,8 +1672,21 @@
         } else if (tool.id === 'watermark') {
           const { PDFDocument, degrees } = await ensurePdfLib();
           const doc = await PDFDocument.load(this.files[0].bytes);
-          const rendered = renderVietnameseTextToPngBytes(opts.wmText, { fontSize: 38, color: opts.wmColor, bold: true, padX: 14, padY: 10 });
-          const img = await doc.embedPng(rendered.bytes);
+          let img = null;
+          let wmW = 220;
+          let wmH = 80;
+          if (opts.wmLogoFile) {
+            const logoBytes = new Uint8Array(await opts.wmLogoFile.arrayBuffer());
+            img = /png/i.test(opts.wmLogoFile.type || opts.wmLogoFile.name) ? await doc.embedPng(logoBytes) : await doc.embedJpg(logoBytes);
+            const sc = Math.min(240 / img.width, 160 / img.height);
+            wmW = img.width * sc;
+            wmH = img.height * sc;
+          } else {
+            const rendered = renderVietnameseTextToPngBytes(opts.wmText, { fontSize: 38, color: opts.wmColor, bold: true, padX: 14, padY: 10 });
+            img = await doc.embedPng(rendered.bytes);
+            wmW = rendered.widthPt;
+            wmH = rendered.heightPt;
+          }
           const pages = doc.getPages();
           pages.forEach((pg, idx) => {
             prog(15 + ((idx + 1) / pages.length) * 75, `Đang đóng dấu trang ${idx + 1}/${pages.length}...`);
@@ -1583,8 +1697,8 @@
                   pg.drawImage(img, {
                     x: rx,
                     y: ry,
-                    width: rendered.widthPt * 0.65,
-                    height: rendered.heightPt * 0.65,
+                    width: wmW * 0.65,
+                    height: wmH * 0.65,
                     rotate: degrees(35),
                     opacity: opts.wmOpacity
                   });
@@ -1592,10 +1706,10 @@
               }
             } else {
               pg.drawImage(img, {
-                x: (width - rendered.widthPt) / 2,
-                y: (height - rendered.heightPt) / 2,
-                width: rendered.widthPt,
-                height: rendered.heightPt,
+                x: (width - wmW) / 2,
+                y: (height - wmH) / 2,
+                width: wmW,
+                height: wmH,
                 rotate: degrees(35),
                 opacity: opts.wmOpacity
               });
@@ -1615,8 +1729,13 @@
           if (opts.signPos === 'bottom-left') x = 36;
           else if (opts.signPos === 'bottom-center') x = (width - 160) / 2;
           else if (opts.signPos === 'center') { x = (width - 160) / 2; y = (height - 60) / 2; }
-          if (this.signatureDataUrl) {
-            const bin = atob(this.signatureDataUrl.split(',')[1]);
+          const activeSigUrl =
+            this.signatureDataUrl ||
+            (pro.signTypedName && NS.dangLovePdfPro?.renderCursiveSignaturePng
+              ? NS.dangLovePdfPro.renderCursiveSignaturePng(pro.signTypedName)
+              : '');
+          if (activeSigUrl) {
+            const bin = atob(activeSigUrl.split(',')[1]);
             const sigBytes = new Uint8Array(bin.length);
             for (let i = 0; i < bin.length; i++) sigBytes[i] = bin.charCodeAt(i);
             const sigImg = await doc.embedPng(sigBytes);
@@ -1763,28 +1882,49 @@
           const pdfjsLib = await ensurePdfJs();
           const pdf = await pdfjsLib.getDocument({ data: this.files[0].bytes.slice() }).promise;
           const paragraphs = [];
+          const mdLines = [];
+          const jsonPages = [];
           for (let i = 1; i <= pdf.numPages; i++) {
             if (this.cancelled) return;
             prog(12 + (i / pdf.numPages) * 75, `Đang trích chữ trang ${i}/${pdf.numPages}...`);
             const page = await pdf.getPage(i);
             const tc = await page.getTextContent();
+            const pageItems = [];
             let lastY = null;
             let curLine = '';
+            let curFontSize = 12;
+            const flushLine = () => {
+              const t = curLine.trim();
+              if (!t) return;
+              paragraphs.push(t);
+              mdLines.push(curFontSize >= 18 ? `# ${t}` : curFontSize >= 14.5 ? `## ${t}` : t);
+            };
             for (const item of tc.items) {
               const y = Math.round(item.transform?.[5] || 0);
+              const x = Math.round(item.transform?.[4] || 0);
+              const fSize = Math.round(Math.hypot(item.transform?.[0] || 12, item.transform?.[1] || 0));
+              if (item.str.trim()) pageItems.push({ text: item.str, x, y, fontSize: fSize });
               if (lastY !== null && Math.abs(y - lastY) > 6) {
-                if (curLine.trim()) paragraphs.push(curLine.trim());
+                flushLine();
                 curLine = item.str;
+                curFontSize = fSize;
               } else {
                 curLine += (curLine && !curLine.endsWith(' ') && !item.str.startsWith(' ') ? ' ' : '') + item.str;
+                curFontSize = Math.max(curFontSize, fSize);
               }
               lastY = y;
             }
-            if (curLine.trim()) paragraphs.push(curLine.trim());
+            flushLine();
             paragraphs.push('');
+            mdLines.push('');
+            jsonPages.push({ page: i, items: pageItems });
           }
           if (opts.p2dOut === 'txt') {
             outputs.push({ name: `${baseName}.txt`, blob: new Blob([paragraphs.join('\n')], { type: 'text/plain;charset=utf-8' }) });
+          } else if (opts.p2dOut === 'md') {
+            outputs.push({ name: `${baseName}.md`, blob: new Blob([mdLines.join('\n')], { type: 'text/markdown;charset=utf-8' }) });
+          } else if (opts.p2dOut === 'json') {
+            outputs.push({ name: `${baseName}_Structured.json`, blob: new Blob([JSON.stringify({ file: this.files[0].name, pages: jsonPages }, null, 2)], { type: 'application/json;charset=utf-8' }) });
           } else {
             const docxBlob = await buildDocxBlobFromParagraphs(baseName, paragraphs);
             outputs.push({ name: `${baseName}.docx`, blob: docxBlob });
@@ -1843,6 +1983,37 @@
         } else if (tool.id === 'ocr_pdf') {
           const Tesseract = await ensureTesseract();
           const fullTextParts = [];
+          const wantSearchablePdf = pro.ocrOutFormat === 'searchable_pdf';
+          const outPdf = wantSearchablePdf ? await (await ensurePdfLib()).PDFDocument.create() : null;
+          const stdFont = outPdf ? await outPdf.embedFont((await ensurePdfLib()).StandardFonts.Helvetica) : null;
+
+          const appendSearchablePage = async (canvasEl, ocrData) => {
+            if (!outPdf) return;
+            const jpgBytes = NS.dangLovePdfPro?.dataUrlToUint8
+              ? NS.dangLovePdfPro.dataUrlToUint8(canvasEl.toDataURL('image/jpeg', 0.88))
+              : new Uint8Array();
+            const emb = await outPdf.embedJpg(jpgBytes);
+            const pw = 595.28;
+            const ph = (canvasEl.height / Math.max(1, canvasEl.width)) * pw;
+            const pg = outPdf.addPage([pw, ph]);
+            // Lớp 1 (ẩn bên dưới): chữ ASCII/không dấu khớp tọa độ để hỗ trợ bôi đen & tìm kiếm Ctrl+F
+            const words = ocrData?.words || [];
+            const scaleX = pw / Math.max(1, canvasEl.width);
+            const scaleY = ph / Math.max(1, canvasEl.height);
+            for (const w of words) {
+              const safeWord = String(w.text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '').trim();
+              if (!safeWord || !w.bbox) continue;
+              const bx = w.bbox.x0 * scaleX;
+              const by = ph - w.bbox.y1 * scaleY;
+              const bh = Math.max(6, (w.bbox.y1 - w.bbox.y0) * scaleY * 0.85);
+              try {
+                pg.drawText(safeWord, { x: bx, y: Math.max(2, by), size: Math.min(28, bh), font: stdFont, opacity: 0.01 });
+              } catch (_eW) {}
+            }
+            // Lớp 2 (hiển thị phía trên): ảnh gốc sắc nét
+            pg.drawImage(emb, { x: 0, y: 0, width: pw, height: ph });
+          };
+
           if (/\.pdf$/i.test(this.files[0].name)) {
             const pdfjsLib = await ensurePdfJs();
             const pdf = await pdfjsLib.getDocument({ data: this.files[0].bytes.slice() }).promise;
@@ -1857,11 +2028,28 @@
               await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
               const res = await Tesseract.recognize(c, opts.ocrLang);
               fullTextParts.push(`--- TRANG ${i} ---\n${res?.data?.text || ''}`);
+              if (wantSearchablePdf) await appendSearchablePage(c, res?.data);
             }
           } else {
             prog(30, 'Đang nhận diện chữ trên ảnh (OCR)...');
             const res = await Tesseract.recognize(this.files[0].file, opts.ocrLang);
             fullTextParts.push(res?.data?.text || '');
+            if (wantSearchablePdf) {
+              const im = await new Promise((resolve, reject) => {
+                const el = new Image();
+                el.onload = () => resolve(el);
+                el.onerror = reject;
+                el.src = this.trackUrl(this.files[0].file);
+              });
+              const c = document.createElement('canvas');
+              c.width = im.naturalWidth || im.width;
+              c.height = im.naturalHeight || im.height;
+              c.getContext('2d').drawImage(im, 0, 0);
+              await appendSearchablePage(c, res?.data);
+            }
+          }
+          if (wantSearchablePdf && outPdf) {
+            outputs.push({ name: `${baseName}_OCR_Searchable.pdf`, blob: new Blob([await outPdf.save()], { type: 'application/pdf' }) });
           }
           outputs.push({ name: `${baseName}_OCR.txt`, blob: new Blob([fullTextParts.join('\n\n')], { type: 'text/plain;charset=utf-8' }) });
         }
@@ -1913,7 +2101,7 @@
           ? Math.round(((inputTotalSize - primary.size) / inputTotalSize) * 100)
           : null;
 
-      const chainTools = ALL_TOOLS.filter((t) => t.accept.includes('.pdf') && t.id !== this.activeTool?.id);
+      const chainTools = getActiveAllTools().filter((t) => t.accept.includes('.pdf') && !t.noFileRequired && t.id !== this.activeTool?.id);
 
       body.innerHTML = `
         <div class="max-w-2xl mx-auto py-4 space-y-4">
@@ -1982,7 +2170,7 @@
       });
       body.querySelector('#btn-mod46-chain-go')?.addEventListener('click', () => {
         const nextId = body.querySelector('#sel-mod46-chain-tool')?.value;
-        const nextTool = ALL_TOOLS.find((t) => t.id === nextId);
+        const nextTool = getActiveAllTools().find((t) => t.id === nextId);
         const curItem = this.resultItems[0];
         if (!nextTool || !curItem) return;
         const nextFile = new File([curItem.blob], curItem.name, { type: curItem.blob.type || 'application/pdf' });
@@ -1991,26 +2179,53 @@
     }
 
     // ------------------------------------------------------------------------
-    // NÂNG CẤP NÚT "📕 Xuất truyện qua PDF và dùng ĐăngLovePDF" NHẤP NHÁY NỔI BẬT
+    // NÂNG CẤP NÚT TAB 6 (CÓ ICON MEME) + NÚT VÀO NHANH DƯỚI CHẾ ĐỘ KHÁCH
     // ------------------------------------------------------------------------
     upgradeExportPdfButton() {
       const btn = document.getElementById('btn-tab6-top-export-pdf');
-      if (!btn) return;
-      btn.classList.add('noir-danglovepdf-glow-btn');
-      btn.textContent = '📕 Xuất truyện qua PDF và dùng ĐăngLovePDF';
-      btn.title = 'Chọn Xuất truyện đã viết qua PDF hoặc dùng bộ công cụ ĐăngLovePDF (Gộp, Tách, Nén, Ký tên, Đổi định dạng 100% trên máy)';
+      if (btn) {
+        btn.classList.add('noir-danglovepdf-glow-btn');
+        btn.innerHTML = `<span class="inline-flex items-center gap-1.5"><img src="assets/danglovepdf_icon.jpg" alt="" class="w-5 h-5 rounded-md object-cover border border-white/80 shrink-0" /><span>Xuất truyện qua PDF &amp; ĐăngLovePDF</span></span>`;
+        btn.title = 'Chọn Xuất truyện đã viết qua PDF hoặc dùng bộ 41 công cụ ĐăngLovePDF (100% trên máy)';
+      }
 
       if (!document.__mod46PdfChooserCaptureBound) {
         document.__mod46PdfChooserCaptureBound = true;
         document.addEventListener('click', (ev) => {
           const hit = ev.target?.closest?.('#btn-tab6-top-export-pdf');
-          if (!hit) return;
-          ev.preventDefault();
-          ev.stopPropagation();
-          ev.stopImmediatePropagation();
-          this.openTwoChoiceChooserModal();
+          if (hit) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            ev.stopImmediatePropagation();
+            this.openTwoChoiceChooserModal();
+            return;
+          }
+          // Nút "ĐăngLovePDF ( ͡° ͜ʖ ͡°)" ngay dưới nút Chế Độ Khách -> vào thẳng Guest Mode & mở Hub ĐăngLovePDF!
+          const quickGateBtn = ev.target?.closest?.('#btn-gate-quick-danglovepdf');
+          if (quickGateBtn) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            this.openQuickInGuestMode();
+          }
         }, true);
       }
+    }
+
+    openQuickInGuestMode() {
+      try {
+        if (NS.guestMode?.enterGuestMode) {
+          NS.guestMode.enterGuestMode({
+            targetScreen: 'SCREEN_6_SYSTEM',
+            skipDefaultTab5: true,
+            customToast: '❤️ Đã vào Chế Độ Khách và mở ngay ĐăngLovePDF (41 công cụ 100% nội bộ)!',
+          });
+        } else {
+          document.getElementById('btn-gate-enter-guest-mode')?.click();
+        }
+      } catch (_e) {}
+      setTimeout(() => {
+        this.openDangLovePdfStudio();
+      }, 120);
     }
 
     init() {

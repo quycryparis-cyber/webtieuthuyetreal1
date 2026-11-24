@@ -427,7 +427,7 @@
             </div>
             <p class="text-[11px] text-zinc-300 mt-1">Tự ngắt tiến trình đồ họa thừa khi thoát để không tràn RAM — giữ nguyên nhạc nền, YouTube, Pomodoro &amp; tự lưu.</p>
           </div>
-          <span class="noir-collapse-chevron px-3 py-1 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-200 text-[11px] font-extrabold shrink-0">▼ Mở rộng</span>
+          <span class="noir-collapse-chevron px-3 py-1 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-200 text-[11px] font-extrabold shrink-0"><span class="noir-collapse-arrow">▾</span> <span class="noir-collapse-state-label">Mở rộng</span></span>
         </button>
         <div id="tab6-perf-ram-body" class="hidden pt-3 border-t border-cyan-500/25 space-y-4"></div>
       `;
@@ -440,14 +440,34 @@
 
       const toggleBtn = card.querySelector('#btn-toggle-tab6-perf-ram');
       const bodyEl = card.querySelector('#tab6-perf-ram-body');
-      const chevronEl = card.querySelector('.noir-collapse-chevron');
-      toggleBtn?.addEventListener('click', (ev) => {
-        // Nếu hệ thống collapse toàn cục chưa gắn thì tự mở/đóng an toàn
-        if (ev.defaultPrevented) return;
-        const isHidden = bodyEl.classList.toggle('hidden');
+      const stateLblEl = card.querySelector('.noir-collapse-state-label');
+      const arrowEl = card.querySelector('.noir-collapse-arrow');
+      const syncToggleUi = () => {
+        if (!bodyEl || !toggleBtn) return;
+        const isHidden = bodyEl.classList.contains('hidden');
         toggleBtn.setAttribute('aria-expanded', isHidden ? 'false' : 'true');
-        if (chevronEl) chevronEl.textContent = isHidden ? '▼ Mở rộng' : '▲ Thu gọn';
+        if (stateLblEl) stateLblEl.textContent = isHidden ? 'Mở rộng' : 'Thu gọn';
+        if (arrowEl) arrowEl.textContent = isHidden ? '▾' : '▴';
         if (!isHidden) this.refreshPanelUI();
+      };
+      if (toggleBtn) {
+        // Đánh dấu đã gắn bộ lắng nghe chuẩn để mod29.refreshBindings() không gắn trùng click gây tự triệt tiêu
+        toggleBtn.dataset.mod29CollapseBound = '1';
+        toggleBtn.addEventListener('click', (ev) => {
+          ev.stopImmediatePropagation();
+          if (!bodyEl) return;
+          bodyEl.classList.toggle('hidden');
+          syncToggleUi();
+        });
+      }
+      // Đồng bộ nhãn mũi tên mỗi khi người dùng bấm "Thu gọn tất cả" hoặc "Mở rộng tất cả" ở Tab 6
+      document.getElementById('btn-tab6-collapse-all')?.addEventListener('click', () => {
+        bodyEl?.classList.add('hidden');
+        syncToggleUi();
+      });
+      document.getElementById('btn-tab6-expand-all')?.addEventListener('click', () => {
+        bodyEl?.classList.remove('hidden');
+        syncToggleUi();
       });
 
       this.refreshPanelUI();

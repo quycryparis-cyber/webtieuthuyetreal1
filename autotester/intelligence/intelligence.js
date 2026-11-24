@@ -1,12 +1,11 @@
 /**
  * ============================================================================
- * 🧠 AUTOTESTER INTELLIGENCE LAYER
- * (plainVietnameseMap + ruleKnowledgeBase + improvementLoopEngine)
+ * 🧠 AUTOTESTER ULTRA INTELLIGENCE LAYER (v118)
+ * (PlainVietnameseDictionary + 30+ RuleKnowledgeBase + 5-Pillar LoopEngine)
  * ============================================================================
- * - 100% tiếng Việt đời thường trên giao diện (cấm thuật ngữ kỹ thuật).
- * - Kho tri thức kê đơn sửa code chuẩn cho Antigravity.
- * - Chấm điểm 4 cột (40/25/20/15), lưu mốc 20 vòng, phát hiện Hồi quy (Regression)
- *   và xuất "Đơn thuốc kỹ thuật" chuẩn Markdown.
+ * - 100% tiếng Việt đời thường trên giao diện (học sinh cấp 2 đọc hiểu ngay).
+ * - Chấm điểm 5 Trụ cột: Chức năng (25) + Đồng bộ (25) + Độ mượt (20) + Giao diện (15) + Độ bền (15).
+ * - Lưu 20 vòng lịch sử Delta, phát hiện Hồi quy (Regression) & xuất Đơn thuốc gửi AI.
  * ============================================================================
  */
 (function initAutoTesterIntelligence(globalScope) {
@@ -14,21 +13,24 @@
 
   const AT = (globalScope.__NoirAutoTesterNS = globalScope.__NoirAutoTesterNS || {});
 
-  // 1. TỪ ĐIỂN BẮT BUỘC CHO FRONT-END (100% TIẾNG VIỆT ĐỜI THƯỜNG)
+  // 1. TỪ ĐIỂN BẮT BUỘC CHO FRONT-END (100% TIẾNG VIỆT ĐỜI THƯỜNG — CẤM TỪ CHUYÊN NGÀNH)
   const PLAIN_VI_MAP = Object.freeze({
+    brand: 'Bác sĩ App',
+    loadingTitle: 'Hệ thống đang tự kiểm tra, bạn chờ xíu nha...',
+    loadingSub: 'Đang kiểm tra từng nút bấm, độ đồng bộ và độ mượt — bản thảo của bạn luôn được bảo vệ an toàn.',
     runAll: 'Khám tổng quát',
     runAllFull: 'Khám tổng quát toàn bộ app',
-    testCurrent: 'Kiểm tra trang này',
+    testCurrent: 'Kiểm tra màn hình này',
     stop: 'Dừng ngay',
     recorder: 'Quay lại thao tác mẫu',
     selfHeal: 'Tự tìm nút nếu bị đổi chỗ',
-    chaos: 'Thử bấm phá & nạp file hỏng',
+    chaos: 'Thử bấm phá & nạp tệp hỏng',
     visualDiff: 'Soi giao diện bị lệch hình',
-    smoothness: 'Độ mượt khi vuốt & bấm',
-    memory: 'Mức ngốn máy',
+    smoothness: 'Độ mượt khi bấm & vuốt',
+    memory: 'Độ nhẹ máy',
     overflowTouch: 'Khung hình & Độ dễ bấm',
-    offlineSim: 'Thử giả lập rớt mạng',
-    regressionTitle: 'Cảnh báo: Sửa chỗ kia làm hỏng chỗ này',
+    offlineSim: 'Thử lúc mất mạng & AI báo lỗi',
+    regressionTitle: 'Cảnh báo: Sửa chỗ khác vô tình làm hỏng chỗ này!',
     sevP0: '🔴 Lỗi nặng (Sửa ngay)',
     sevP1: '🟠 Nên sửa sớm',
     sevP2: '🟡 Gợi ý cho mượt hơn',
@@ -38,20 +40,153 @@
     devDetailsBtn: 'Xem chi tiết cho lập trình viên',
   });
 
-  // 2. KHO TRI THỨC TỰ KÊ ĐƠN SỬA CODE (ruleKnowledgeBase)
+  // 2. KHO TRI THỨC TỰ KÊ ĐƠN SỬA CODE (30+ QUY TẮC ÁNH XẠ ĐẦY ĐỦ)
   const RULE_KNOWLEDGE_BASE = Object.freeze({
+    ERR_DEAD_BUTTON: {
+      severity: 'P0',
+      pillar: 'functional',
+      plainTitle: 'Có nút bấm bị liệt (bấm vào không ăn)',
+      plainDesc: 'Bác sĩ App đã bấm thật vào nút nhưng màn hình, dữ liệu và tính năng không có phản ứng gì.',
+      fixAdvice: 'Kiểm tra gắn sự kiện `addEventListener` (ưu tiên Event Delegation `closest("[data-action]")`) và kiểm tra điều kiện chặn sai trong hàm xử lý.',
+    },
+    ERR_ZOMBIE_TOGGLE: {
+      severity: 'P0',
+      pillar: 'functional',
+      plainTitle: 'Công tắc giả (bật sáng đèn nhưng máy không chạy)',
+      plainDesc: 'Nút có đổi màu khi bấm nhưng chức năng thật bên dưới không hề khởi động.',
+      fixAdvice: 'Kiểm tra hàm nghiệp vụ gắn với công tắc để chắc chắn state nội bộ và engine (Audio/PiP/Canvas/Modal) thực sự được kích hoạt.',
+    },
+    ERR_CLICK_INTERCEPTED: {
+      severity: 'P0',
+      pillar: 'visual',
+      plainTitle: 'Nút bấm bị khung hoặc lớp trong suốt khác che mất',
+      plainDesc: 'Khi bấm vào tâm nút thì bị một lớp khác nằm đè lên trên chắn mất thao tác.',
+      fixAdvice: 'Thêm `pointer-events: none` cho lớp phủ trang trí hoặc điều chỉnh lại `z-index` của phần tử đang che khuất.',
+    },
+    ERR_PIP_TIME_DESYNC: {
+      severity: 'P0',
+      pillar: 'sync',
+      plainTitle: 'Cửa sổ nổi YouTube bị lệch giờ phát so với khung chính',
+      plainDesc: 'Thời gian phát ở cửa sổ nổi và trình phát chính không khớp nhau hoặc nút điều khiển chưa đồng bộ.',
+      fixAdvice: 'Đồng bộ Single Source of Truth `{ videoId, currentTime, isPlaying, playbackRate }` qua postMessage/hook trực tiếp giữa `mod39` và `yt_pip_frame.html`.',
+    },
+    ERR_DUAL_AUDIO_ECHO: {
+      severity: 'P0',
+      pillar: 'sync',
+      plainTitle: 'Âm thanh bị phát vọng đôi từ cả 2 khung cùng lúc',
+      plainDesc: 'Khi mở cửa sổ nổi mà khung gốc chưa tắt luồng phát làm 2 tiếng chồng lên nhau.',
+      fixAdvice: 'Unmount hoặc chuyển `about:blank` / `mute` khung nguồn ngay khi cửa sổ nổi tiếp nhận luồng phát.',
+    },
+    ERR_BG_VIDEO_DESYNC: {
+      severity: 'P1',
+      pillar: 'sync',
+      plainTitle: 'Nền video chuyển động chưa đồng bộ với trình phát YouTube',
+      plainDesc: 'Đổi trạng thái phát hoặc tắt nền video nhưng lớp nền phía sau chưa cập nhật kịp.',
+      fixAdvice: 'Kiểm tra cầu nối đồng bộ giữa `mod39` và `mod40_youtube_motion_background_engine.js`, dừng hẳn rAF/iframe khi tắt nền.',
+    },
+    ERR_COLLAPSE_SINGLE_BROKEN: {
+      severity: 'P1',
+      pillar: 'sync',
+      plainTitle: 'Nút Thu gọn / Mở rộng đơn lẻ hoạt động chưa chuẩn',
+      plainDesc: 'Bấm thu gọn một mục nhưng nội dung bên trong không ẩn đi hoặc không mở lại được.',
+      fixAdvice: 'Đảm bảo click cập nhật đồng bộ cả class `.hidden` (chiều cao = 0) lẫn thuộc tính `aria-expanded` và mũi tên chỉ hướng.',
+    },
+    ERR_COLLAPSE_ALL_INCOMPLETE: {
+      severity: 'P0',
+      pillar: 'sync',
+      plainTitle: 'Bấm "Thu gọn tất cả" vẫn còn sót mục chưa đóng',
+      plainDesc: 'Một số mục con vẫn bị kẹt mở sau khi người dùng bấm nút Thu gọn tất cả.',
+      fixAdvice: 'Quét đầy đủ tất cả khối có thể thu gọn trong tab/modal hiện tại và đặt đồng loạt trạng thái ẩn + `aria-expanded="false"`.',
+    },
+    ERR_EXPAND_ALL_INCOMPLETE: {
+      severity: 'P1',
+      pillar: 'sync',
+      plainTitle: 'Bấm "Mở rộng tất cả" vẫn còn mục bị ẩn chưa bung ra',
+      plainDesc: 'Sau khi bấm Mở rộng tất cả vẫn còn ít nhất một mục không hiển thị nội dung.',
+      fixAdvice: 'Cập nhật lại hàm Mở rộng tất cả để gỡ `.hidden` và đặt `aria-expanded="true"` cho 100% mục con.',
+    },
+    ERR_MASTER_TOGGLE_DESYNC: {
+      severity: 'P1',
+      pillar: 'sync',
+      plainTitle: 'Nút tổng Thu gọn/Mở rộng chưa tự đổi chữ khi đóng mở từng mục con',
+      plainDesc: 'Đã tự tay đóng hết các mục con nhưng nút tổng vẫn ghi "Thu gọn tất cả", phải bấm 2 lần.',
+      fixAdvice: 'Tính trạng thái nút tổng trực tiếp từ số mục con đang mở (`expandedCount === 0`) sau mỗi cú bấm đơn lẻ.',
+    },
+    ERR_MODE_CLIPBOARD_STALE: {
+      severity: 'P0',
+      pillar: 'sync',
+      plainTitle: 'Chữ sao chép câu lệnh bị dính của chế độ cũ hoặc rỗng',
+      plainDesc: 'Chuyển sang chế độ AI mới rồi bấm sao chép nhưng nội dung chép ra không khớp chế độ hiện tại.',
+      fixAdvice: 'Đọc trực tiếp `activeMode` và nội dung sống từ DOM ngay lúc bấm nút Sao chép thay vì giữ biến cũ trong closure (`mod14`/`mod16`/`mod17`).',
+    },
+    ERR_PROMPT_STATE_DESYNC: {
+      severity: 'P0',
+      pillar: 'sync',
+      plainTitle: 'Ô lệnh AI chưa đồng bộ với chữ mới vừa gõ',
+      plainDesc: 'Vừa chỉnh sửa chữ xong nhưng bấm sao chép lại thiếu đoạn vừa thêm.',
+      fixAdvice: 'Gọi đồng bộ `rich -> plain` trước khi sao chép hoặc tổng hợp Prompt tại `mod16`/`mod17`.',
+    },
+    ERR_CALC_DEAD_KEY: {
+      severity: 'P0',
+      pillar: 'functional',
+      plainTitle: 'Có phím trên máy tính Casio FX-570 bị liệt hoặc tính sai',
+      plainDesc: 'Bấm thử phép tính chuẩn trên máy tính giả lập nhưng phím không ăn hoặc ra sai đáp số.',
+      fixAdvice: 'Kiểm tra sự kiện bấm phím và bộ tính toán trong `mod45_scientific_fx570_and_desmos_graphing_calc.js`.',
+    },
+    ERR_DESMOS_CANVAS_STATIC: {
+      severity: 'P1',
+      pillar: 'functional',
+      plainTitle: 'Khung vẽ đồ thị Desmos không có hình hoặc không phản ứng',
+      plainDesc: 'Mở đồ thị hàm số nhưng khung vẽ vẫn trống trơn sau khi vẽ thử.',
+      fixAdvice: 'Kiểm tra kích thước `<canvas>` (width/height > 0) và gọi lại `graph.render()` sau khi mở container trong `mod45`.',
+    },
+    ERR_POMO_SYNC_DRIFT: {
+      severity: 'P1',
+      pillar: 'sync',
+      plainTitle: 'Đồng hồ Pomodoro chính và thanh nổi góc màn hình bị lệch giờ',
+      plainDesc: 'Hai chỗ hiển thị đồng hồ tập trung chạy không khớp nhau khi bấm Chạy/Tạm dừng.',
+      fixAdvice: 'Đồng bộ chung 1 bộ đếm duy nhất trong `mod20_bidirectional_pomodoro_sync_engine.js` và cập nhật tức thì cả Tab 5 lẫn `#floating-pomo-time`.',
+    },
+    ERR_GEO_PERMISSION_STUCK: {
+      severity: 'P1',
+      pillar: 'sync',
+      plainTitle: 'Định vị vị trí bị kẹt vòng xoay khi từ chối quyền hoặc đổi tọa độ',
+      plainDesc: 'Khi thử tắt quyền GPS, màn hình không dừng chờ hoặc không báo hướng dẫn rõ ràng.',
+      fixAdvice: 'Bắt đủ mã lỗi `PERMISSION_DENIED (1)` và `TIMEOUT (3)` trong `mod42_world_clock_weather_and_alarm.js`, tắt trạng thái loading trong `finally`.',
+    },
+    ERR_WEATHER_SKY_DESYNC: {
+      severity: 'P1',
+      pillar: 'sync',
+      plainTitle: 'Nền bầu trời thời tiết 3D chưa khớp với trạng thái thời tiết',
+      plainDesc: 'Đổi dữ liệu thời tiết nhưng nền bầu trời không đổi hiệu ứng tương ứng.',
+      fixAdvice: 'Đảm bảo `mod42` bắn tín hiệu cập nhật sang `mod43_realtime_weather_sky_engine.js` mỗi khi thời tiết hoặc khung giờ thay đổi.',
+    },
+    ERR_ALARM_NOT_TRIGGERED: {
+      severity: 'P0',
+      pillar: 'sync',
+      plainTitle: 'Đến giờ hẹn nhưng báo thức không tự kêu',
+      plainDesc: 'Tua nhanh đồng hồ ảo tới đúng giờ hẹn mà báo thức không kích hoạt.',
+      fixAdvice: 'Dùng so sánh mốc thời gian tuyệt đối `Date.now() >= alarm.triggerTimestamp` trong `mod42` thay vì chỉ đếm ngược tick.',
+    },
+    ERR_ZOMBIE_ALARM_RING: {
+      severity: 'P1',
+      pillar: 'sync',
+      plainTitle: 'Đã tắt báo thức nhưng chuông vẫn kêu lặp lại',
+      plainDesc: 'Bấm tắt báo thức xong nhưng trạng thái hẹn giờ vẫn chưa dọn sạch.',
+      fixAdvice: 'Gắn cờ `hasFired`, hủy sạch Audio/Oscillator và xóa lịch lặp khi bấm Dismiss trong `mod42`.',
+    },
     ERR_CONSOLE_RUNTIME: {
       severity: 'P0',
       pillar: 'functional',
       plainTitle: 'Có lỗi chạy ngầm khiến một phần tính năng có thể hỏng',
-      plainDesc: 'Hệ thống phát hiện lỗi bất ngờ xảy ra bên dưới khi bạn vừa bấm thao tác.',
-      fixAdvice: 'Kiểm tra stack trace, bổ sung optional chaining (?.) / try-catch và kiểm tra null cho phần tử DOM tại tệp gây lỗi.',
+      plainDesc: 'Hệ thống phát hiện lỗi bất ngờ xảy ra bên dưới trong lúc bấm thao tác.',
+      fixAdvice: 'Kiểm tra stack trace, bổ sung optional chaining (`?.`) và `try/catch` tại file phát sinh lỗi.',
     },
     ERR_MOBILE_OVERFLOW: {
       severity: 'P0',
       pillar: 'visual',
       plainTitle: 'Khung màn hình bị tràn ra ngoài mép phải',
-      plainDesc: 'Có một ô hoặc thanh nút dài hơn màn hình nên phải kéo ngang mới thấy hết.',
+      plainDesc: 'Có ô hoặc thanh nút rộng hơn màn hình khiến phải kéo ngang mới thấy hết.',
       fixAdvice: 'Thêm `min-w-0`, `max-w-full`, `overflow-x-hidden` hoặc `flex-wrap` cho phần tử vượt khung trên `@media (max-width: 768px)`.',
     },
     ERR_FLOATING_OVERLAP: {
@@ -59,90 +194,111 @@
       pillar: 'visual',
       plainTitle: 'Các thanh nổi góc màn hình đang đè lên nhau',
       plainDesc: 'Hai thanh công cụ nổi chạm vào nhau làm che mất nút bấm bên dưới.',
-      fixAdvice: 'Tách tọa độ `bottom` / `left` / `right` riêng biệt trong `@media (max-width: 639px)` và giới hạn `max-width` cho từng thanh nổi.',
+      fixAdvice: 'Tách tọa độ `bottom`/`left`/`right` riêng biệt trong `@media (max-width: 639px)` tại `index.html`.',
     },
     WARN_SMALL_TOUCH_TARGET: {
       severity: 'P2',
       pillar: 'visual',
       plainTitle: 'Có nút bấm hơi nhỏ trên điện thoại, dễ bấm trượt',
-      plainDesc: 'Một số nút bấm nhỏ hơn đầu ngón tay chuẩn nên trên màn hình điện thoại hơi khó chạm trúng.',
-      fixAdvice: 'Tăng kích thước vùng chạm lên tối thiểu `min-width: 44px; min-height: 44px` trên màn hình nhỏ và cách nút kế bên tối thiểu `8px`.',
+      plainDesc: 'Một số nút nhỏ hơn đầu ngón tay chuẩn nên trên màn hình cảm ứng hơi khó chạm.',
+      fixAdvice: 'Tăng vùng chạm lên tối thiểu `min-width: 44px; min-height: 44px` trên di động và cách nút kế bên ít nhất `8px`.',
+    },
+    ERR_I18N_KEY_LEAK: {
+      severity: 'P2',
+      pillar: 'visual',
+      plainTitle: 'Có dòng chữ bị sót mã lập trình chưa dịch',
+      plainDesc: 'Phát hiện chuỗi dạng mã khóa hoặc dấu ngoặc chưa chuyển sang ngôn ngữ tự nhiên.',
+      fixAdvice: 'Bổ sung chuỗi thiếu vào 5 file `i18n_lang_*.js` và kiểm tra hàm thay biến trong `mod30`.',
+    },
+    ERR_BROWSER_API_UNSAFE: {
+      severity: 'P1',
+      pillar: 'resilience',
+      plainTitle: 'Một tính năng trình duyệt thiếu lớp bảo vệ cho Safari iPhone / Firefox',
+      plainDesc: 'Kiểm tra năng lực đa trình duyệt phát hiện API đặc thù có thể thiếu phương án dự phòng.',
+      fixAdvice: 'Bọc kiểm tra tồn tại API (`typeof ... !== "undefined"`) trước khi gọi PiP, File System Access, Wake Lock, SpeechRecognition hoặc `performance.memory`.',
     },
     WARN_MAIN_THREAD_JANK: {
       severity: 'P1',
       pillar: 'smoothness',
       plainTitle: 'Màn hình hơi bị khựng khi vuốt hoặc bấm',
       plainDesc: 'Tốc độ khung hình tụt thấp hoặc có thao tác làm máy đứng hình nhẹ trên 0.1 giây.',
-      fixAdvice: 'Tách tác vụ nặng bằng `requestIdleCallback` / chunk async, tạm dừng Canvas 60FPS khi ẩn và bật Mod 47 Auto-Sleep.',
+      fixAdvice: 'Tách tác vụ nặng bằng `requestIdleCallback`, giảm mật độ hạt 60FPS trên di động và kích hoạt Mod 47 Auto-Sleep.',
     },
     WARN_UNREVOKED_BLOBS: {
       severity: 'P1',
       pillar: 'smoothness',
       plainTitle: 'Máy đang giữ tệp tạm trong bộ nhớ chưa dọn',
-      plainDesc: 'Một số tệp ảnh hoặc PDF tạm tạo ra xong chưa được thu hồi lại bộ nhớ.',
-      fixAdvice: 'Gọi `URL.revokeObjectURL(url)` ngay khi đóng hộp thoại xem trước, đổi công cụ hoặc kết thúc phiên xử lý file.',
+      plainDesc: 'Một số tệp ảnh hoặc PDF tạm tạo ra xong chưa được thu hồi lại RAM.',
+      fixAdvice: 'Gọi `URL.revokeObjectURL(url)` trong khối `finally` ngay khi đóng xem trước hoặc chuyển tính năng.',
     },
     ERR_PDF_OUTPUT_INVALID: {
       severity: 'P0',
       pillar: 'functional',
-      plainTitle: 'Xuất hoặc xử lý file PDF không thành công',
-      plainDesc: 'Tệp kết quả bị rỗng (0 byte) hoặc không đúng định dạng PDF chuẩn.',
-      fixAdvice: 'Kiểm tra `mod46_danglovepdf_and_doc_converter.js` / `mod26`: đảm bảo vẽ tiếng Việt qua Canvas Unicode hoặc nhúng font đầy đủ và trả về `Blob` có chữ ký `%PDF`.',
+      plainTitle: 'Xuất hoặc nạp file PDF không thành công',
+      plainDesc: 'Tệp kết quả bị rỗng hoặc bộ xử lý PDF chưa nhận đủ tệp mẫu.',
+      fixAdvice: 'Kiểm tra `mod46_danglovepdf_and_doc_converter.js` / `mod26` đảm bảo chữ ký `%PDF` và giữ nguyên dấu tiếng Việt.',
     },
     ERR_CHAOS_BAD_FILE_CRASH: {
       severity: 'P1',
       pillar: 'resilience',
       plainTitle: 'Khi nạp file hỏng/rỗng app chưa báo lỗi lịch sự',
-      plainDesc: 'Thử đưa file rỗng 0 byte vào mà không thấy thông báo nhắc người dùng hoặc bị lỗi ngầm.',
-      fixAdvice: 'Kiểm tra `file.size === 0` và kiểm tra Magic Bytes đầu file trước khi nạp vào parser PDF/DOCX/Ảnh, hiện toast cảnh báo rõ ràng.',
+      plainDesc: 'Đưa file rỗng 0 byte vào mà app chưa từ chối rõ ràng hoặc phát sinh lỗi ngầm.',
+      fixAdvice: 'Kiểm tra `file.size === 0` và Magic Bytes đầu file trước khi nạp parser, báo toast tiếng Việt rõ ràng.',
     },
     ERR_CHAOS_DOUBLE_CLICK: {
       severity: 'P1',
       pillar: 'resilience',
       plainTitle: 'Bấm đúp siêu nhanh có nguy cơ chạy trùng 2 lần',
-      plainDesc: 'Nút xử lý chưa khóa tạm khi đang chạy nên bấm 2 cái liên tiếp dễ tạo dữ liệu lặp.',
-      fixAdvice: 'Thêm cờ khóa `isBusy` hoặc thuộc tính `disabled` tạm thời trong suốt lúc tác vụ bất đồng bộ đang chạy.',
+      plainDesc: 'Thao tác bấm liên tiếp tạo ra lỗi hoặc kẹt trạng thái đóng/mở.',
+      fixAdvice: 'Bổ sung cờ khóa `isBusy` hoặc debounce cho nút xử lý bất đồng bộ.',
     },
     ERR_OFFLINE_FREEZE: {
       severity: 'P1',
       pillar: 'resilience',
-      plainTitle: 'Khi mất mạng bất ngờ giao diện phản ứng chưa mượt',
-      plainDesc: 'Giả lập rớt mạng ghi nhận lỗi không được bắt gọn gàng.',
-      fixAdvice: 'Bọc toàn bộ lời gọi `fetch()` bằng `try/catch` + timeout `AbortController`, hiển thị thông báo tiếng Việt thân thiện khi offline.',
+      plainTitle: 'Khi mất mạng hoặc máy chủ báo lỗi, giao diện chưa xử lý gọn',
+      plainDesc: 'Giả lập rớt mạng hoặc lỗi API 429/500 gây lỗi không được bắt gọn.',
+      fixAdvice: 'Bọc mọi lệnh `fetch()` bằng `try/catch` + `AbortController` timeout và hiện thông báo tiếng Việt thân thiện.',
+    },
+    ERR_XSS_UNESCAPED: {
+      severity: 'P0',
+      pillar: 'resilience',
+      plainTitle: 'Ô nhập liệu có nguy cơ thực thi mã lạ khi dán chữ đặc biệt',
+      plainDesc: 'Dán thử chuỗi thẻ kịch bản mẫu và phát hiện dấu hiệu thực thi ngoài ý muốn.',
+      fixAdvice: 'Luôn escape HTML (`<`, `>`, `"`, `\'`) hoặc dùng `textContent` thay vì `innerHTML` cho dữ liệu người dùng nhập.',
     },
     ERR_CHATBOT_PINGPONG: {
       severity: 'P0',
       pillar: 'functional',
       plainTitle: 'Trợ lý AI Viên Bi Số 8 trả lời chưa đúng ngữ cảnh trang web',
       plainDesc: 'Hỏi về tính năng trang web nhưng trợ lý lại từ chối hoặc đẩy qua chế độ khác.',
-      fixAdvice: 'Kiểm tra `classifyChatMessageIntent` và `STUDIO_USAGE_KNOWLEDGE_BASE` trong `mod27_mascot_bi_so_8_and_dual_chat_assistant.js`.',
+      fixAdvice: 'Kiểm tra `classifyChatMessageIntent` trong `mod27_mascot_bi_so_8_and_dual_chat_assistant.js`.',
     },
     ERR_MISSING_COPY_SELECT_ALL: {
       severity: 'P1',
       pillar: 'functional',
-      plainTitle: 'Khung soạn/câu lệnh thiếu nút Chọn tất cả hoặc Sao chép tất cả',
-      plainDesc: 'Một khung câu lệnh, đầu ra AI hoặc Story Bible chưa có đủ 2 nút chọn hết & chép hết.',
-      fixAdvice: 'Bổ sung tự động 2 nút `☑️ Chọn tất cả` và `📋 Sao chép tất cả` trong `V115WordRichEditorProSuite` (`mod17`) cho mọi khung prompt/output/Story Bible.',
+      plainTitle: 'Khung câu lệnh / Đầu ra / Story Bible thiếu nút Chọn tất cả hoặc Sao chép tất cả',
+      plainDesc: 'Chưa thấy đủ cả 2 nút Chọn tất cả và Sao chép tất cả trên khung soạn thảo.',
+      fixAdvice: 'Kiểm tra `V115WordRichEditorProSuite` trong `mod17_tab3_five_modes_output_controller.js`.',
     },
     WARN_VISUAL_SHIFT: {
       severity: 'P2',
       pillar: 'visual',
       plainTitle: 'Giao diện có khối bị lệch vị trí so với lần khám chuẩn trước',
-      plainDesc: 'So với bản chụp lần trước, một khung chính đã thay đổi kích thước hoặc tọa độ đáng kể.',
-      fixAdvice: 'Đối chiếu CSS layout tại phần tử bị dịch chuyển để chắc chắn không làm xô lệch bố cục ngoài ý muốn.',
+      plainDesc: 'Một khung chính đã dịch chuyển mạnh so với lần chụp mẫu trước đó.',
+      fixAdvice: 'Đối chiếu CSS bố cục tại phần tử bị dịch chuyển để tránh xô lệch ngoài ý muốn.',
     },
     WARN_SELF_HEAL_DRIFT: {
       severity: 'P2',
       pillar: 'functional',
-      plainTitle: 'Một nút bấm đã đổi vị trí nhưng Bác sĩ App vẫn tự tìm được',
-      plainDesc: 'Tính năng vẫn bấm được bình thường, chỉ ghi chú nhẹ để cập nhật lại mã định danh nút.',
-      fixAdvice: 'Cập nhật lại CSS selector / `data-testid` của nút đã thay đổi để kịch bản kiểm thử khớp nhanh hơn.',
+      plainTitle: 'Một nút bấm đã đổi mã nhưng Bác sĩ App vẫn tự tìm được',
+      plainDesc: 'Nút vẫn chạy bình thường, chỉ cần cập nhật lại mã định danh để kiểm tra nhanh hơn.',
+      fixAdvice: 'Cập nhật lại selector hoặc `data-testid` của nút đã thay đổi.',
     },
   });
 
-  // 3. ĐỘNG CƠ CHẤM ĐIỂM 4 CỘT + LỊCH SỬ 20 VÒNG + PHÁT HIỆN HỒI QUY + ĐƠN THUỐC AI
-  const HISTORY_KEY = 'noir_at_v117_history_v1';
-  const SNAPSHOT_KEY = 'noir_at_v117_layout_baseline_v1';
+  // 3. ĐỘNG CƠ CHẤM ĐIỂM 5 TRỤ CỘT + LỊCH SỬ 20 VÒNG + PHÁT HIỆN HỒI QUY + ĐƠN THUỐC AI
+  const HISTORY_KEY = '__autotester_history_v1__';
+  const SNAPSHOT_KEY = '__autotester_layout_baseline_v1__';
 
   class ImprovementLoopEngine {
     loadHistory() {
@@ -172,7 +328,7 @@
       } catch (_e) {}
     }
 
-    computeReport(results, perfStats, breadcrumbs) {
+    computeReport(results, perfStats, breadcrumbs, kpis = {}) {
       const prevHist = this.loadHistory();
       const prevRun = prevHist.length ? prevHist[prevHist.length - 1] : null;
       const runNumber = (prevRun?.runNumber || 0) + 1;
@@ -180,35 +336,35 @@
       const passed = results.filter((r) => r.status === 'PASS');
       const issues = results.filter((r) => r.status !== 'PASS');
 
-      // Chấm điểm 4 cột: Chức năng (40), Độ mượt (25), Dễ bấm/Giao diện (20), Chống sập/Độ bền (15)
-      let pFunc = 40;
-      let pSmooth = 25;
-      let pVisual = 20;
+      // Chấm điểm 5 trụ cột theo đặc tả Ultra: Chức năng 25, Đồng bộ 25, Độ mượt 20, Giao diện 15, Độ bền 15
+      let pFunc = 25;
+      let pSync = 25;
+      let pSmooth = 20;
+      let pVisual = 15;
       let pResil = 15;
 
       for (const it of issues) {
         const sev = it.severity || 'P2';
-        const pen = sev === 'P0' ? 14 : sev === 'P1' ? 7 : 3;
+        const pen = sev === 'P0' ? 9 : sev === 'P1' ? 5 : 2;
         if (it.pillar === 'functional') pFunc = Math.max(0, pFunc - pen);
+        else if (it.pillar === 'sync') pSync = Math.max(0, pSync - pen);
         else if (it.pillar === 'smoothness') pSmooth = Math.max(0, pSmooth - pen);
         else if (it.pillar === 'visual') pVisual = Math.max(0, pVisual - pen);
         else if (it.pillar === 'resilience') pResil = Math.max(0, pResil - pen);
       }
 
-      if (perfStats.minFps > 0 && perfStats.minFps < 30) pSmooth = Math.max(0, pSmooth - 6);
-      if (perfStats.longTasks > 2) pSmooth = Math.max(0, pSmooth - 4);
-      if (perfStats.unrevokedBlobs > 3) pSmooth = Math.max(0, pSmooth - 4);
+      if (perfStats.minFps > 0 && perfStats.minFps < 30) pSmooth = Math.max(0, pSmooth - 4);
+      if (perfStats.longTasks > 2) pSmooth = Math.max(0, pSmooth - 3);
+      if (perfStats.unrevokedBlobs > 3) pSmooth = Math.max(0, pSmooth - 3);
 
-      const totalScore = Math.max(0, Math.min(100, Math.round(pFunc + pSmooth + pVisual + pResil)));
+      const totalScore = Math.max(0, Math.min(100, Math.round(pFunc + pSync + pSmooth + pVisual + pResil)));
       const scoreDelta = prevRun ? totalScore - Number(prevRun.totalScore || 0) : 0;
 
-      // Phát hiện Hồi quy (Regression): mục trước PASS mà lần này FAIL
       const prevPassedIds = new Set(prevRun?.passedIds || []);
       const prevFailedIds = new Set(prevRun?.failedIds || []);
       const regressions = issues.filter((it) => prevPassedIds.has(it.id));
       const fixedSincePrev = passed.filter((it) => prevFailedIds.has(it.id));
 
-      // Sắp xếp lỗi theo P0 -> P1 -> P2
       const sevRank = { P0: 0, P1: 1, P2: 2 };
       issues.sort((a, b) => (sevRank[a.severity] ?? 3) - (sevRank[b.severity] ?? 3));
 
@@ -217,13 +373,21 @@
         timestamp: Date.now(),
         viewport: `${window.innerWidth}x${window.innerHeight}`,
         isMobile: window.innerWidth < 768,
+        browserSignature: this._detectBrowserSignature(),
         totalScore,
         scoreDelta,
         pillars: {
-          functional: { score: pFunc, max: 40, label: 'Chạy đúng' },
-          smoothness: { score: pSmooth, max: 25, label: 'Độ mượt' },
-          visual: { score: pVisual, max: 20, label: 'Dễ bấm' },
-          resilience: { score: pResil, max: 15, label: 'Chống sập' },
+          functional: { score: pFunc, max: 25, label: 'Đúng chức năng' },
+          sync: { score: pSync, max: 25, label: 'Đồng bộ' },
+          smoothness: { score: pSmooth, max: 20, label: 'Độ mượt' },
+          visual: { score: pVisual, max: 15, label: 'Dễ bấm' },
+          resilience: { score: pResil, max: 15, label: 'Bền bỉ' },
+        },
+        kpis: {
+          buttonsTested: kpis.buttonsTested || 0,
+          deadButtonsFound: kpis.deadButtonsFound || 0,
+          syncPassed: results.filter((r) => r.pillar === 'sync' && r.status === 'PASS').length,
+          syncTotal: results.filter((r) => r.pillar === 'sync').length,
         },
         passed,
         issues,
@@ -249,22 +413,32 @@
       return report;
     }
 
+    _detectBrowserSignature() {
+      const ua = navigator.userAgent || '';
+      const eng = /Edg\//i.test(ua)
+        ? 'Edge'
+        : /Firefox/i.test(ua)
+          ? 'Firefox'
+          : /Safari/i.test(ua) && !/Chrome|Chromium/i.test(ua)
+            ? 'Safari'
+            : 'Chrome';
+      const dev = window.innerWidth < 768 ? 'Mobile' : 'Desktop';
+      return `${eng}-${dev}`;
+    }
+
     buildAiPatchPrompt(report) {
       if (!report) return 'Chưa có kết quả khám để xuất đơn thuốc.';
-      const deviceTxt = report.isMobile
-        ? `Điện thoại cảm ứng (${report.viewport}px)`
-        : `Máy tính Desktop (${report.viewport}px)`;
       const deltaTxt =
         report.runNumber > 1
-          ? ` (${report.scoreDelta >= 0 ? '+' : ''}${report.scoreDelta}đ so với vòng #${String(report.runNumber - 1).padStart(2, '0')})`
+          ? ` (${report.scoreDelta >= 0 ? '↑ +' : '↓ '}${report.scoreDelta} điểm so với Vòng #${String(report.runNumber - 1).padStart(2, '0')})`
           : '';
       const fixedTxt = report.fixedSincePrev.length
-        ? report.fixedSincePrev.map((x) => `\`${x.code || x.id}\``).join(', ')
-        : 'Vòng đầu tiên / chưa có mục đổi trạng thái';
+        ? report.fixedSincePrev.map((x) => `\`${x.id}\``).join(', ')
+        : 'Vòng đầu tiên / giữ ổn định';
       const regTxt = report.regressions.length
         ? `⚠️ PHÁT HIỆN ${report.regressions.length} LỖI HỒI QUY: ` +
           report.regressions.map((x) => `\`${x.code || x.id}\` (${x.plainTitle})`).join('; ')
-        : '0 lỗi mới phát sinh.';
+        : 'Không có lỗi mới tái phát.';
 
       const p0 = report.issues.filter((i) => i.severity === 'P0');
       const p1 = report.issues.filter((i) => i.severity === 'P1');
@@ -274,43 +448,45 @@
         list.length
           ? list
               .map(
-                (i) =>
-                  `- **Mã lỗi:** \`${i.code}\` tại \`${i.moduleRef || 'app'}\`\n` +
-                  `  - **Mục kiểm tra:** ${i.plainTitle}\n` +
-                  (i.selector ? `  - **Phần tử / CSS Selector:** \`${i.selector}\`\n` : '') +
-                  `  - **Chi tiết kỹ thuật:** ${i.techDetail || i.plainDesc}\n` +
-                  `  - **Hướng khắc phục đề xuất:** ${i.fixAdvice || RULE_KNOWLEDGE_BASE[i.code]?.fixAdvice || 'Kiểm tra log và xử lý ngoại lệ.'}`
+                (i, idx) =>
+                  `### ${idx + 1}. ${i.plainTitle} (\`${i.code}\`)\n` +
+                  `- **File liên quan:** \`${i.moduleRef || 'app'}\`\n` +
+                  (i.selector ? `- **Phần tử / CSS Selector:** \`${i.selector}\`\n` : '') +
+                  `- **Số liệu đo thật:** ${i.techDetail || i.plainDesc}\n` +
+                  `- **Yêu cầu sửa code:** ${i.fixAdvice || RULE_KNOWLEDGE_BASE[i.code]?.fixAdvice || 'Kiểm tra và xử lý triệt để.'}`
               )
-              .join('\n')
+              .join('\n\n')
           : '- Không ghi nhận mục nào.';
 
-      const lines = [
-        `# BÁO CÁO TỰ CẢI THIỆN TỪ AUTOTESTER (VÒNG LẶP #${String(report.runNumber).padStart(2, '0')})`,
-        `- **Thiết bị:** ${deviceTxt} | **Điểm sức khỏe:** ${report.totalScore}/100${deltaTxt}`,
-        `- **4 Trụ cột:** Chạy đúng ${report.pillars.functional.score}/40 · Độ mượt ${report.pillars.smoothness.score}/25 · Dễ bấm ${report.pillars.visual.score}/20 · Chống sập ${report.pillars.resilience.score}/15`,
-        `- **Hiệu năng đo được:** FPS TB ${report.perfStats.avgFps || '--'} (Thấp nhất ${report.perfStats.minFps || '--'}) · Long Tasks (>100ms): ${report.perfStats.longTasks} · CLS: ${report.perfStats.cls} · Blob chưa dọn: ${report.perfStats.unrevokedBlobs}${report.perfStats.ramMb ? ` · RAM: ${report.perfStats.ramMb} MB` : ''}`,
-        `- **Tiến bộ vòng trước:** ${fixedTxt}`,
+      const p = report.pillars;
+      return [
+        `# ĐƠN THUỐC SỬA LỖI & TỐI ƯU TỰ ĐỘNG TỪ AUTOTESTER ULTRA (VÒNG LẶP #${String(report.runNumber).padStart(2, '0')})`,
+        `- **Môi trường kiểm thử:** ${report.browserSignature} (${report.viewport}px)`,
+        `- **Điểm sức khỏe tổng:** ${report.totalScore}/100${deltaTxt}`,
+        `- **5 Trụ cột:** Chức năng ${p.functional.score}/${p.functional.max} | Đồng bộ ${p.sync.score}/${p.sync.max} | Độ mượt ${p.smoothness.score}/${p.smoothness.max} | Giao diện ${p.visual.score}/${p.visual.max} | Độ bền ${p.resilience.score}/${p.resilience.max}`,
+        `- **Chỉ số thật:** Nút đã kiểm: ${report.kpis.buttonsTested} (Liệt: ${report.kpis.deadButtonsFound}) · Đồng bộ đạt: ${report.kpis.syncPassed}/${report.kpis.syncTotal} · FPS TB ${report.perfStats.avgFps} (Thấp nhất ${report.perfStats.minFps}) · Long Tasks: ${report.perfStats.longTasks} · Blob chưa dọn: ${report.perfStats.unrevokedBlobs}${report.perfStats.ramMb ? ` · RAM: ${report.perfStats.ramMb} MB` : ''}`,
+        `- **Tiến bộ từ vòng trước:** ${fixedTxt}`,
         `- **Cảnh báo hồi quy (Regression):** ${regTxt}`,
         '',
-        '## 1. [P0 - LỖI NẶNG CẦN SỬA NGAY]',
+        '## [ƯU TIÊN 1 — P0: LỖI NẶNG, LIỆT NÚT & LỆCH ĐỒNG BỘ CẦN SỬA NGAY]',
         fmtGroup(p0),
         '',
-        '## 2. [P1 - TĂNG ĐỘ MƯỢT, ĐỘ BỀN & TÍNH NĂNG]',
+        '## [ƯU TIÊN 2 — P1: TĂNG ĐỘ MƯỢT, ĐỒNG BỘ & ĐỘ BỀN]',
         fmtGroup(p1),
         '',
-        '## 3. [P2 - TỐI ƯU FRONT-END & TRẢI NGHIỆM BẤM]',
+        '## [ƯU TIÊN 3 — P2: TỐI ƯU FRONT-END, MOBILE & ĐA NGÔN NGỮ]',
         fmtGroup(p2),
         '',
-        '## 4. [15 BƯỚC THAO TÁC GẦN NHẤT (BREADCRUMBS)]',
+        '## [15 BƯỚC THAO TÁC GẦN NHẤT (BREADCRUMBS)]',
         ...(report.breadcrumbs.length
           ? report.breadcrumbs.map((b, idx) => `${idx + 1}. [${b.time}] ${b.action}`)
           : ['- Không có bước nào ghi nhận.']),
         '',
-        `## TIÊU CHÍ NGHIỆM THU VÒNG LẶP #${String(report.runNumber + 1).padStart(2, '0')}`,
-        `- Giữ nguyên toàn bộ ${report.passed.length} bài kiểm thử đang PASS, xử lý dứt điểm ${p0.length} lỗi P0 & ${p1.length} cảnh báo P1, giữ FPS tối thiểu >= 45 FPS và 0 tràn khung trên màn hình di động.`,
-      ];
-
-      return lines.join('\n');
+        `## TIÊU CHÍ NGHIỆM THU CHO VÒNG LẶP #${String(report.runNumber + 1).padStart(2, '0')}`,
+        `1. Giữ nguyên toàn bộ ${report.passed.length} mục đang PASS (0 hồi quy).`,
+        `2. Xử lý dứt điểm ${p0.length} lỗi P0 và ${p1.length} cảnh báo P1.`,
+        '3. Nâng FPS tối thiểu >= 45 FPS, 0 nút liệt, 0 lệch đồng bộ và 0 tràn ngang trên màn hình di động.',
+      ].join('\n');
     }
   }
 

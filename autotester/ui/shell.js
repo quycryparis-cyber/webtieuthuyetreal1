@@ -1,11 +1,12 @@
 /**
  * ============================================================================
- * 🎨 AUTOTESTER FRONT-END SHELL ("BÁC SĨ APP" — 100% TIẾNG VIỆT ĐỜI THƯỜNG)
+ * 🎨 AUTOTESTER ULTRA FRONT-END SHELL ("BÁC SĨ APP" — v118)
  * ============================================================================
- * - Laptop: Side Drawer gọn bên phải (368px) + Viên thuốc thu gọn kéo thả tự do.
- * - Điện thoại: Bottom Sheet 3 nấc (8% / 46% / 92%).
+ * - Màn hình chờ xoay biểu tượng thương hiệu + % tiến độ trực tiếp khi đang khám.
+ * - Điểm sức khỏe 5 Trụ cột (Đúng chức năng, Đồng bộ, Độ mượt, Dễ bấm, Bền bỉ) + KPI sống.
+ * - Laptop: Side Drawer gọn bên phải + Viên thuốc thu gọn.
+ * - Điện thoại: Bottom Sheet 3 nấc (8% / 48% / 92%).
  * - Đúng 2 Tab: (1) Kết quả khám & (2) Chọn bài kiểm tra (4 cụm đóng kín mặc định).
- * - Không một từ chuyên ngành nào trên nút bấm & thẻ hiển thị chính.
  * ============================================================================
  */
 (function initAutoTesterShell(globalScope) {
@@ -85,7 +86,6 @@
         this.ctrl.notify('Phần tử đang nằm ở màn hình hoặc hộp thoại khác — hãy mở đúng màn hình đó rồi bấm lại nhé.');
         return;
       }
-      // Tự thu gọn xuống nấc nhỏ để lộ rõ chỗ bị lỗi
       if (window.innerWidth < 768) {
         this.mobileSnap = 'mini';
       } else {
@@ -115,16 +115,44 @@
       }, 220);
     }
 
+    _renderLoadingSplashHtml(prog) {
+      const pct = Math.max(0, Math.min(100, Math.round(prog.pct || 0)));
+      return `
+        <div id="at-loading-splash" class="at-loading-splash" data-autotester-ui="true" role="status" aria-live="polite">
+          <div class="at-splash-card">
+            <div class="at-splash-orbit">
+              <img
+                src="assets/favicon-portrait-192.png"
+                onerror="this.onerror=null;this.src='assets/app-icon-192.png';"
+                alt="Bác sĩ App"
+                class="at-splash-avatar"
+              />
+            </div>
+            <div class="at-splash-title">${escHtml(AT.PLAIN_VI_MAP.loadingTitle)}</div>
+            <div id="at-splash-pct" class="at-splash-pct">${pct}%</div>
+            <div class="at-splash-bar-track">
+              <div class="at-splash-bar-fill" style="width:${pct}%"></div>
+            </div>
+            <div class="at-splash-step">${escHtml(prog.text || AT.PLAIN_VI_MAP.loadingSub)}</div>
+            <div class="at-splash-safe-note">🛡️ Bản thảo &amp; dữ liệu thật của bạn luôn được bảo vệ 100%</div>
+            <button type="button" id="at-splash-btn-stop" class="at-splash-stop-btn">⏹ ${escHtml(AT.PLAIN_VI_MAP.stop)}</button>
+          </div>
+        </div>
+      `;
+    }
+
     render() {
       if (!this.rootEl) return;
       const isRunning = this.ctrl.isRunning;
       const report = this.ctrl.lastReport;
       const prog = this.ctrl.progress;
+      const splashHtml = isRunning ? this._renderLoadingSplashHtml(prog) : '';
 
       // Chế độ thu gọn thành viên thuốc nổi trên Laptop
       if (this.minimized && window.innerWidth >= 768) {
         const badge = report ? `${report.totalScore}/100` : isRunning ? `${prog.pct}%` : 'Sẵn sàng';
         this.rootEl.innerHTML = `
+          ${splashHtml}
           <div id="at-min-pill" class="at-minimized-pill" title="Bấm để mở lại bảng Bác sĩ App">
             <span>🩺 Bác sĩ App</span>
             <span style="padding:2px 8px;border-radius:999px;background:rgba(16,185,129,0.22);color:#6ee7b7;">${escHtml(badge)}</span>
@@ -134,18 +162,20 @@
           this.minimized = false;
           this.render();
         });
+        this.rootEl.querySelector('#at-splash-btn-stop')?.addEventListener('click', () => this.ctrl.abortRun());
         return;
       }
 
       const snapClass = `at-snap-${this.mobileSnap}`;
 
       this.rootEl.innerHTML = `
+        ${splashHtml}
         <div class="at-panel ${snapClass}">
           <!-- Thanh kéo 3 nấc cho điện thoại -->
           <div class="at-sheet-handle-row">
             <button type="button" class="at-snap-btn" data-at-snap="mini">Nhỏ (8%)</button>
             <div class="at-sheet-pill"></div>
-            <button type="button" class="at-snap-btn" data-at-snap="mid">Vừa (46%)</button>
+            <button type="button" class="at-snap-btn" data-at-snap="mid">Vừa (48%)</button>
             <button type="button" class="at-snap-btn" data-at-snap="full">Mở rộng (92%)</button>
           </div>
 
@@ -178,7 +208,7 @@
             }
           </div>
 
-          <!-- Thanh tiến độ khi đang chạy -->
+          <!-- Thanh tiến độ gọn -->
           ${
             isRunning || prog.text
               ? `
@@ -232,12 +262,12 @@
         return `
           <div class="at-score-card" style="text-align:center;padding:20px 14px;">
             <div style="font-size:32px;">🩺</div>
-            <div style="font-weight:900;font-size:14px;color:#ecfdf5;margin-top:6px;">Bác sĩ App đã sẵn sàng!</div>
+            <div style="font-weight:900;font-size:14px;color:#ecfdf5;margin-top:6px;">Bác sĩ App toàn diện đã sẵn sàng!</div>
             <div style="font-size:12px;color:#a1a1aa;margin-top:4px;">
-              Bấm nút xanh <strong>▶ Khám tổng quát</strong> để tự động kiểm tra toàn bộ ứng dụng, độ mượt, giao diện điện thoại và khả năng chống sập.
+              Bấm nút xanh <strong>▶ Khám tổng quát</strong> để tự động kiểm tra 5 trụ cột: Đúng chức năng, Đồng bộ nút bấm &amp; YouTube PiP, Độ mượt, Giao diện điện thoại và Độ bền.
             </div>
             <div style="font-size:11px;color:#6ee7b7;margin-top:8px;">
-              🛡️ Bảo vệ tuyệt đối bản thảo &amp; Story Bible thật của bạn.
+              🛡️ Bảo vệ tuyệt đối bản thảo, Story Bible &amp; không bao giờ tốn Token AI thật.
             </div>
           </div>
         `;
@@ -253,18 +283,35 @@
               : 'Giữ nguyên điểm'
           : 'Lần khám đầu tiên';
 
-      const pillarColors = { functional: '#10b981', smoothness: '#38bdf8', visual: '#a855f7', resilience: '#f59e0b' };
-      const pillarsHtml = Object.entries(report.pillars)
-        .map(([k, p]) => {
-          const pct = Math.round((p.score / p.max) * 100);
+      const pillarColors = {
+        functional: '#10b981',
+        sync: '#06b6d4',
+        smoothness: '#38bdf8',
+        visual: '#a855f7',
+        resilience: '#f59e0b',
+      };
+      const pillarEntries = Object.entries(report.pillars || {});
+      const pillarsHtml = pillarEntries
+        .map(([k, p], idx) => {
+          const pct = Math.round((p.score / Math.max(1, p.max)) * 100);
+          const fullSpan = pillarEntries.length % 2 === 1 && idx === pillarEntries.length - 1 ? 'at-pillar-full' : '';
           return `
-            <div>
+            <div class="${fullSpan}">
               <div class="at-pillar-label"><span>${escHtml(p.label)}</span><span>${p.score}/${p.max}</span></div>
-              <div class="at-pillar-bar"><div class="at-pillar-fill" style="width:${pct}%;background:${pillarColors[k]}"></div></div>
+              <div class="at-pillar-bar"><div class="at-pillar-fill" style="width:${pct}%;background:${pillarColors[k] || '#10b981'}"></div></div>
             </div>
           `;
         })
         .join('');
+
+      const kpis = report.kpis || { buttonsTested: 0, deadButtonsFound: 0, syncPassed: 0, syncTotal: 0 };
+      const kpiHtml = `
+        <div class="at-kpi-row">
+          <span class="at-kpi-pill">🖱️ Đã kiểm: ${kpis.buttonsTested} nút</span>
+          <span class="at-kpi-pill" style="color:${kpis.deadButtonsFound > 0 ? '#fca5a5' : '#6ee7b7'};">⚡ Nút liệt: ${kpis.deadButtonsFound}</span>
+          <span class="at-kpi-pill" style="color:#67e8f9;">🔄 Đồng bộ: ${kpis.syncPassed}/${kpis.syncTotal}</span>
+        </div>
+      `;
 
       const regHtml = report.regressions.length
         ? `<div class="at-regression-banner">⚠️ ${escHtml(AT.PLAIN_VI_MAP.regressionTitle)}: ${report.regressions.map((r) => escHtml(r.plainTitle)).join(', ')}</div>`
@@ -298,7 +345,7 @@ Chi tiết: ${escHtml(it.techDetail || '')}
               `;
             })
             .join('')
-        : `<div class="at-score-card" style="border-color:rgba(16,185,129,0.55);color:#a7f3d0;font-weight:800;text-align:center;">🎉 Tuyệt vời! Không phát hiện lỗi nào trên màn hình vừa khám!</div>`;
+        : `<div class="at-score-card" style="border-color:rgba(16,185,129,0.55);color:#a7f3d0;font-weight:800;text-align:center;">🎉 Tuyệt vời! Không phát hiện lỗi hay lệch đồng bộ nào!</div>`;
 
       const passedCount = report.passed.length;
       const totalCount = report.passed.length + report.issues.length;
@@ -335,15 +382,16 @@ Chi tiết: ${escHtml(it.techDetail || '')}
         <div class="at-score-card">
           <div class="at-score-top">
             <div>
-              <div style="font-size:11px;color:#a1a1aa;font-weight:700;">ĐIỂM SỨC KHỎE ỨNG DỤNG</div>
+              <div style="font-size:11px;color:#a1a1aa;font-weight:700;">ĐIỂM SỨC KHỎE 5 TRỤ CỘT</div>
               <div class="at-score-num ${scoreCls}">${report.totalScore}<span style="font-size:15px;color:#71717a;">/100</span></div>
             </div>
             <div style="text-align:right;">
               <span class="at-delta-pill">${escHtml(deltaTxt)}</span>
-              <div style="font-size:10.5px;color:#a1a1aa;margin-top:4px;">Vòng #${report.runNumber} · ${escHtml(report.viewport)}</div>
+              <div style="font-size:10.5px;color:#a1a1aa;margin-top:4px;">Vòng #${report.runNumber} · ${escHtml(report.browserSignature || report.viewport)}</div>
             </div>
           </div>
           <div class="at-pillars">${pillarsHtml}</div>
+          ${kpiHtml}
           ${regHtml}
           <button type="button" id="at-btn-copy-rx" class="at-btn-copy-rx">${escHtml(AT.PLAIN_VI_MAP.copyRxBtn)}</button>
         </div>
@@ -406,7 +454,7 @@ Chi tiết: ${escHtml(it.techDetail || '')}
         ${groupsHtml}
         <div class="at-score-card">
           <div style="font-weight:900;font-size:12.5px;color:#fecaca;margin-bottom:6px;">🎬 ${escHtml(AT.PLAIN_VI_MAP.recorder)}</div>
-          <div style="font-size:11.5px;color:#a1a1aa;margin-bottom:8px;">Tự bấm các nút trên trang web như bình thường — Bác sĩ App sẽ ghi lại thành kịch bản để lần sau tự bấm lặp lại giúp bạn.</div>
+          <div style="font-size:11.5px;color:#a1a1aa;margin-bottom:8px;">Tự bấm các nút trên trang web như bình thường — Bác sĩ App sẽ ghi lại thành kịch bản từ khóa tiếng Việt để chạy lặp lại giúp bạn.</div>
           <button type="button" id="at-btn-toggle-record" class="at-small-btn" style="width:100%;padding:9px;font-weight:900;background:${recActive ? '#dc2626' : 'rgba(239,68,68,0.2)'};border-color:#ef4444;color:#fff;">
             ${recActive ? `⏹ Dừng & Lưu kịch bản mẫu (đã ghi ${recCount} bước)` : '🔴 Quay mẫu mới'}
           </button>
@@ -419,6 +467,7 @@ Chi tiết: ${escHtml(it.techDetail || '')}
       const r = this.rootEl;
       if (!r) return;
 
+      r.querySelector('#at-splash-btn-stop')?.addEventListener('click', () => this.ctrl.abortRun());
       r.querySelector('#at-btn-power-off')?.addEventListener('click', () => this.ctrl.closeAndCleanup());
       r.querySelector('#at-btn-settings')?.addEventListener('click', () => {
         this.settingsOpen = !this.settingsOpen;

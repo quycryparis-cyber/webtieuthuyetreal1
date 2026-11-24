@@ -9,10 +9,12 @@
  */
 'use strict';
 
-const { app, BrowserWindow, shell, session } = require('electron');
+const { app, BrowserWindow, shell, session, ipcMain } = require('electron');
 const http = require('node:http');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
+const { execFile } = require('node:child_process');
 
 const DIST_ROOT = path.resolve(__dirname, '..', 'dist-app');
 const MIME_TYPES = {
@@ -86,6 +88,7 @@ async function createMainWindow() {
     icon: fs.existsSync(iconPath) ? iconPath : undefined,
     autoHideMenuBar: true,
     webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
@@ -111,6 +114,84 @@ async function createMainWindow() {
     mainWindow = null;
   });
 }
+
+// ============================================================================
+// CẦU NỐI NHÂN NỘI BỘ MÁY TÍNH CHO ĐĂNGLOVEPDF (LibreOffice / qpdf / Ghostscript)
+// ============================================================================
+function execFileAsync(bin, args, timeoutMs = 90000) {
+  return new Promise((resolve, reject) => {
+    execFile(bin, args, { timeout: timeoutMs, windowsHide: true }, (err, stdout, stderr) => {
+      if (err) return reject(new Error(stderr || err.message));
+      resolve({ stdout, stderr });
+    });
+  });
+}
+
+async function resolveBinary(candidates) {
+  for (const bin of candidates) {
+    try {
+      if (path.isAbsolute(bin) && fs.existsSync(bin)) return bin;
+      await execFileAsync(process.platform === 'win32' ? 'where' : 'which', [bin], 4000);
+      return bin;
+    } catch (_e) {}
+  }
+  return null;
+}
+
+ipcMain.handle('danglovepdf:detect-engines', async () => {
+  const soffice = await resolveBinary(['soffice', 'libreoffice', 'C:\\Program Files\\LibreOffice\\program\\soffice.exe']);
+  const qpdf = await resolveBinary(['qpdf', 'C:\\Program Files\\qpdf\\bin\\qpdf.exe']);
+  const gs = await resolveBinary(['gswin64c', 'gswin32c', 'gs']);
+  return { libreoffice: Boolean(soffice), qpdf: Boolean(qpdf), ghostscript: Boolean(gs) };
+});
+
+ipcMain.handle('danglovepdf:run-local-tool', async (_ev, payload) => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'danglovepdf-'));
+  try {
+    const safeName = path.basename(String(payload?.filename || 'input.pdf')).replace(/[^a-zA-Z0-9._-]/g, '_');
+    const inPath = path.join(tmpDir, safeName);
+    const base = safeName.replace(/\.[^.]+$/, '');
+    fs.writeFileSync(inPath, Buffer.from(payload?.bytes || []));
+
+    if (payload?.cmd === 'office_to_pdf') {
+      const soffice = await resolveBinary(['soffice', 'libreoffice', 'C:\\Program Files\\LibreOffice\\program\\soffice.exe']);
+      if (!soffice) return { ok: false, error: 'Chưa phát hiện LibreOffice trên máy tính. Hãy cài LibreOffice miễn phí để chuyển đổi Office chuẩn 100%.' };
+      await execFileAsync(soffice, ['--headless', '--convert-to', 'pdf', '--outdir', tmpDir, inPath]);
+      const outPath = path.join(tmpDir, `${base}.pdf`);
+      if (!fs.existsSync(outPath)) return { ok: false, error: 'LibreOffice không tạo được file PDF đầu ra.' };
+      return { ok: true, outName: `${base}.pdf`, bytes: Array.from(fs.readFileSync(outPath)) };
+    }
+
+    if (payload?.cmd === 'qpdf_encrypt' || payload?.cmd === 'qpdf_decrypt' || payload?.cmd === 'qpdf_linearize') {
+      const qpdf = await resolveBinary(['qpdf', 'C:\\Program Files\\qpdf\\bin\\qpdf.exe']);
+      if (!qpdf) return { ok: false, error: 'Chưa phát hiện qpdf trên máy tính. Hãy cài qpdf để mã hóa AES-256 / tối ưu tải nhanh.' };
+      const outPath = path.join(tmpDir, `${base}_qpdf.pdf`);
+      let args = ['--linearize', inPath, outPath];
+      if (payload.cmd === 'qpdf_encrypt') {
+        const pw = String(payload.password || '123456');
+        args = ['--encrypt', pw, pw, '256', ...(payload.noPrint ? ['--print=none', '--extract=n'] : []), '--', inPath, outPath];
+      } else if (payload.cmd === 'qpdf_decrypt') {
+        args = [`--password=${String(payload.password || '')}`, '--decrypt', inPath, outPath];
+      }
+      await execFileAsync(qpdf, args);
+      return { ok: true, outName: `${base}_qpdf.pdf`, bytes: Array.from(fs.readFileSync(outPath)) };
+    }
+
+    if (payload?.cmd === 'gs_compress') {
+      const gs = await resolveBinary(['gswin64c', 'gswin32c', 'gs']);
+      if (!gs) return { ok: false, error: 'Chưa phát hiện Ghostscript trên máy tính. Hãy cài Ghostscript để nén sâu font-subsetting.' };
+      const outPath = path.join(tmpDir, `${base}_gs.pdf`);
+      await execFileAsync(gs, ['-sDEVICE=pdfwrite', '-dCompatibilityLevel=1.4', '-dPDFSETTINGS=/ebook', '-dNOPAUSE', '-dQUIET', '-dBATCH', `-sOutputFile=${outPath}`, inPath]);
+      return { ok: true, outName: `${base}_Compressed.pdf`, bytes: Array.from(fs.readFileSync(outPath)) };
+    }
+
+    return { ok: false, error: 'Lệnh nhân máy tính không hợp lệ.' };
+  } catch (err) {
+    return { ok: false, error: err?.message || String(err) };
+  } finally {
+    try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_e) {}
+  }
+});
 
 app.whenReady().then(createMainWindow);
 

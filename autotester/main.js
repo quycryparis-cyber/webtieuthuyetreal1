@@ -1,6 +1,7 @@
 /**
  * ============================================================================
- * 🩺 AUTOTESTER MAIN CONTROLLER — KHỞI TẠO, ĐIỀU PHỐI & DỌN SẠCH RAM KHI TẮT
+ * 🩺 AUTOTESTER ULTRA MAIN CONTROLLER (v118)
+ * Khởi tạo, điều phối màn hình chờ xoay %, bảo vệ 3 lớp Sandbox & dọn sạch RAM
  * ============================================================================
  */
 (function initAutoTesterMain(globalScope) {
@@ -53,6 +54,9 @@
       try { AT.recorder.cancel(); } catch (_e) {}
       try { AT.errorAuditor.stop(); } catch (_e) {}
       try { AT.smoothAuditor.stop(); } catch (_e) {}
+      try { AT.clipboard.restore(); } catch (_e) {}
+      try { AT.geoMock.restore(); } catch (_e) {}
+      try { AT.virtualClock.restore(); } catch (_e) {}
       try { AT.interceptors.restoreAll(); } catch (_e) {}
       try { AT.sandbox.exitAndRestore(); } catch (_e) {}
       this.shell.unmount();
@@ -63,21 +67,24 @@
       if (this.isRunning) return;
       this.isRunning = true;
       this._aborted = false;
-      this.progress = { pct: 5, text: `Đang khởi động: ${runLabel}...` };
+      this.progress = { pct: 4, text: `Đang khởi động: ${runLabel}...` };
       this.shell.activeTab = 'results';
       if (window.innerWidth < 768) this.shell.mobileSnap = 'mid';
       this.shell.render();
 
       AT.sandbox.enter();
       AT.driver.resetRunState();
+      AT.causal.reset();
+      AT.clipboard.start();
       AT.errorAuditor.start();
       AT.smoothAuditor.start();
       AT.interceptors.startSilentDownloadCapture();
+      AT.interceptors.setNetworkSimulation('shield'); // Lá chắn 0 đốt Token AI thật
 
       const results = [];
       const ctx = {
         isAborted: () => this._aborted,
-        speedDelay: () => (this.shell.speedMode === 'visual' ? 350 : 60),
+        speedDelay: () => (this.shell.speedMode === 'visual' ? 320 : 55),
       };
 
       try {
@@ -85,8 +92,8 @@
           if (this._aborted) break;
           const t = testsList[i];
           this.progress = {
-            pct: Math.round(((i + 0.3) / Math.max(1, testsList.length)) * 90) + 5,
-            text: `Đang kiểm tra (${i + 1}/${testsList.length}): ${t.label}...`,
+            pct: Math.min(95, Math.round(((i + 0.35) / Math.max(1, testsList.length)) * 90) + 5),
+            text: `(${i + 1}/${testsList.length}) ${t.label}...`,
           };
           this.shell.render();
 
@@ -107,10 +114,15 @@
               moduleRef: 'app',
             });
           }
+
+          this.progress = {
+            pct: Math.min(98, Math.round(((i + 1) / Math.max(1, testsList.length)) * 92) + 5),
+            text: `Xong (${i + 1}/${testsList.length}): ${t.label}`,
+          };
+          this.shell.render();
           await AT.sleep(ctx.speedDelay());
         }
 
-        // Bổ sung lỗi console ngầm nếu bắt được trong lúc chạy
         if (AT.errorAuditor.errors.length > 0) {
           results.push({
             id: 'global_runtime_errors',
@@ -127,7 +139,6 @@
           });
         }
 
-        // Ghi chú nhẹ nếu Self-Healing phải tự tìm nút đổi chỗ
         if (AT.driver.healedNotes.length > 0) {
           results.push({
             id: 'self_healing_drift',
@@ -142,14 +153,27 @@
             techDetail: AT.driver.healedNotes.map((h) => `Expected ${h.expected} -> Found ${h.foundTag} (score ${h.score})`).join('\n'),
           });
         }
+
+        if (!this._aborted) {
+          this.progress = { pct: 100, text: '✅ Hoàn tất 100%! Đang tổng hợp điểm sức khỏe 5 trụ cột...' };
+          this.shell.render();
+          await AT.sleep(220);
+        }
       } finally {
         const perfStats = AT.smoothAuditor.snapshot();
         AT.errorAuditor.stop();
         AT.smoothAuditor.stop();
+        AT.clipboard.restore();
+        AT.geoMock.restore();
+        AT.virtualClock.restore();
         AT.interceptors.restoreAll();
         AT.sandbox.exitAndRestore();
 
-        this.lastReport = AT.loopEngine.computeReport(results, perfStats, AT.driver.breadcrumbs);
+        const kpis = {
+          buttonsTested: AT.causal.buttonsTested,
+          deadButtonsFound: AT.causal.deadButtonsFound,
+        };
+        this.lastReport = AT.loopEngine.computeReport(results, perfStats, AT.driver.breadcrumbs, kpis);
         this.isRunning = false;
         this.progress = {
           pct: 100,
@@ -180,29 +204,31 @@
     }
 
     async runCurrentScreenOnly() {
+      const perfSuite = AT.SUITE_GROUPS.find((g) => g.id === 'visual_smooth_i18n')?.tests.find((t) => t.id === 'perf_fps_and_memory');
       const quickTests = [
         {
           id: 'current_screen_visual',
-          groupId: 'visual_mobile',
-          label: 'Soi tràn mép, đè thanh nổi & kích thước nút trên màn hình đang mở',
+          groupId: 'visual_smooth_i18n',
+          label: 'Soi tràn mép, đè thanh nổi, mã chữ chưa dịch & nút bấm trên màn hình đang mở',
           run: async () => {
             const findings = AT.visualAuditor.scanCurrentScreen('Màn hình đang mở');
+            const cap = AT.browserMatrix.audit();
             if (!findings.length) {
               return {
                 id: 'current_screen_visual',
-                groupId: 'visual_mobile',
+                groupId: 'visual_smooth_i18n',
                 status: 'PASS',
                 severity: 'OK',
                 pillar: 'visual',
                 plainTitle: 'Màn hình đang mở hiển thị gọn đẹp, không bị cắt hay tràn mép',
-                plainDesc: `Đã kiểm tra sạch trên khung hình ${window.innerWidth}x${window.innerHeight}px.`,
+                plainDesc: `Đã kiểm tra sạch trên khung hình ${window.innerWidth}x${window.innerHeight}px. ${cap.summaryText}`,
               };
             }
             const first = findings[0];
             const kb = AT.RULE_KNOWLEDGE_BASE[first.code] || {};
             return {
               id: 'current_screen_visual',
-              groupId: 'visual_mobile',
+              groupId: 'visual_smooth_i18n',
               code: first.code,
               status: 'FAIL',
               severity: kb.severity || 'P1',
@@ -215,7 +241,7 @@
             };
           },
         },
-        ...AT.SUITE_GROUPS.find((g) => g.id === 'smoothness_ram').tests.map((t) => ({ ...t, groupId: 'smoothness_ram' })),
+        ...(perfSuite ? [{ ...perfSuite, groupId: 'visual_smooth_i18n' }] : []),
       ];
       await this._executeTests(quickTests, 'Kiểm tra màn hình đang mở');
     }
@@ -228,14 +254,7 @@
         groupId: 'chaos_resilience',
         label: `Chạy lại kịch bản mẫu "${rec.name}"`,
         run: async (ctx) => {
-          for (const st of rec.steps) {
-            if (ctx.isAborted()) return null;
-            if (st.type === 'click') {
-              await AT.driver.click(st.descriptor, st.label, 140);
-            } else if (st.type === 'fill') {
-              await AT.driver.fill(st.descriptor, st.value, st.label);
-            }
-          }
+          await AT.dsl.runSteps(rec.steps, ctx);
           return {
             id: `replay_${rec.id}`,
             groupId: 'chaos_resilience',

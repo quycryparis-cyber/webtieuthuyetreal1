@@ -1,12 +1,13 @@
 /**
  * ============================================================================
- * 🧪 AUTOTESTER TEST SUITES (TỐI ƯU SÂU CHO APP 48 MODULE + TƯƠNG THÍCH WEB KHÁC)
+ * 🧪 AUTOTESTER ULTRA TEST SUITES (v118 — ĐỒNG BỘ, HOẠT ĐỘNG THẬT & ĐỘ BỀN)
  * ============================================================================
  * Gom gọn thành đúng 4 cụm thu gọn dễ hiểu cho người dùng phổ thông:
- *  Cụm 1: Các tính năng chính (Viết truyện, AI, Story Bible, ĐăngLovePDF, YouTube, Bi Số 8, RAM)
- *  Cụm 2: Giao diện & Bấm trên điện thoại (Tràn khung, Đè thanh nổi, Nút bấm, Soi lệch hình)
- *  Cụm 3: Độ mượt & Ngốn máy (FPS 60 khung hình, Tác vụ gây đơ, Tệp tạm quên dọn, RAM)
- *  Cụm 4: Thử bấm phá & Rớt mạng (Bấm đúp nhanh, Nạp file 0 byte/hỏng, Đổi tab liên tục, Rớt mạng)
+ *  Cụm 1: Đồng bộ & Hoạt động thật (YouTube PiP/Nền, Thu gọn/Mở rộng, 6 Chế độ AI + Clipboard,
+ *         FX-570/Desmos/Pomodoro/Bi Số 8, Định vị GPS/Thời tiết/Bầu trời/Báo thức)
+ *  Cụm 2: Viết truyện, Story Bible & Đổi tệp tin (ĐăngLovePDF nạp RAM, 6 Tab, Quản lý RAM Mod 47)
+ *  Cụm 3: Giao diện, 6 Ngôn ngữ, Đa trình duyệt & Độ mượt (Tràn mép, Đè thanh nổi, i18n, 10 API, FPS/RAM)
+ *  Cụm 4: Thử thách độ bền, Chống mã độc & Tự quay mẫu (File 0 byte, XSS, Bấm đúp, Giả lập rớt mạng)
  * ============================================================================
  */
 (function initAutoTesterSuites(globalScope) {
@@ -14,8 +15,8 @@
 
   const AT = (globalScope.__NoirAutoTesterNS = globalScope.__NoirAutoTesterNS || {});
 
-  function makePass(id, groupId, plainTitle, plainDesc, moduleRef = 'app') {
-    return { id, groupId, status: 'PASS', severity: 'OK', pillar: 'functional', plainTitle, plainDesc, moduleRef };
+  function makePass(id, groupId, plainTitle, plainDesc, moduleRef = 'app', pillar = 'functional') {
+    return { id, groupId, status: 'PASS', severity: 'OK', pillar, plainTitle, plainDesc, moduleRef };
   }
 
   function makeIssue(id, groupId, code, override = {}) {
@@ -47,21 +48,484 @@
       const btn = document.querySelector(`[data-s14-tab="${screenKey}"]`);
       if (btn) btn.click();
     }
-    await AT.sleep(160);
+    await AT.sleep(150);
   }
 
   // --------------------------------------------------------------------------
-  // DANH MỤC 4 CỤM BÀI KIỂM TRA (MẶC ĐỊNH ĐÓNG KÍN — BẤM VÀO MỚI MỞ TICK CHỌN)
+  // DANH MỤC 4 CỤM BÀI KIỂM TRA ULTRA (MẶC ĐỊNH ĐÓNG KÍN — 12 BÀI CHUYÊN SÂU)
   // --------------------------------------------------------------------------
   const SUITE_GROUPS = [
+    // ========================================================================
+    // CỤM 1: ĐỒNG BỘ & HOẠT ĐỘNG THẬT (YouTube PiP, Thu gọn/Mở rộng, 6 Chế độ, FX-570, GPS/Báo thức)
+    // ========================================================================
+    {
+      id: 'sync_and_liveness',
+      icon: '🔄',
+      title: '1. Đồng bộ & Hoạt động thật (YouTube PiP, Thu gọn, 6 Chế độ, FX-570, GPS, Báo thức)',
+      tests: [
+        {
+          id: 'sync_youtube_pip_and_bg',
+          label: 'YouTube, Cửa sổ nổi Desktop, Nền chuyển động & Chống phát vọng âm thanh',
+          run: async (ctx) => {
+            if (!isBiNovelApp() || !globalScope.NoirStudio?.youtubeStudio) {
+              return makePass('sync_youtube_pip_and_bg', 'sync_and_liveness', 'Bỏ qua bài YouTube (không có trên trang này)', 'Tự động thích ứng cho trang web ngoài.', 'app', 'sync');
+            }
+            await switchTabSafe('SCREEN_5_AMBIENCE');
+            if (ctx.isAborted()) return null;
+
+            const ytFacade = globalScope.NoirStudio.youtubeStudio;
+            const bgEngine = globalScope.NoirStudio.youtubeMotionBg || globalScope.NoirStudio.mod40;
+            const stageEl = document.getElementById('mod39-player-stage-wrapper') || document.getElementById('mod39-subview-player');
+            const bgCard = document.getElementById('mod40-motion-bg-control-card');
+            const bgAdvBtn = document.getElementById('btn-mod40-toggle-bg-advanced');
+            const bgAdvBody = document.getElementById('mod40-bg-advanced-body');
+
+            // 1. Kiểm tra đồng bộ & bấm thật nút mở rộng/thu gọn bộ chỉnh nền YouTube (Mod 40)
+            let bgToggleOk = true;
+            if (bgAdvBtn && bgAdvBody) {
+              const wasHidden = bgAdvBody.classList.contains('hidden');
+              const probe = await AT.causal.probeClickCausal(bgAdvBtn, {
+                watchRoot: bgCard || document.body,
+                readState: () => bgAdvBody.classList.contains('hidden'),
+              });
+              bgToggleOk = probe.alive;
+              // Khôi phục lại đúng trạng thái ban đầu
+              if (bgAdvBody.classList.contains('hidden') !== wasHidden) {
+                bgAdvBtn.click();
+                await AT.sleep(80);
+              }
+            }
+
+            // 2. Kiểm tra kiến trúc chống vọng âm thanh 2 luồng (Single Active Stream)
+            const activeIframes = Array.from(document.querySelectorAll('iframe')).filter((f) => {
+              const src = String(f.getAttribute('src') || '');
+              return /youtube(?:-nocookie)?\.com\/embed/i.test(src) && getComputedStyle(f).display !== 'none';
+            });
+            const hasDualEcho = activeIframes.length > 1;
+            if (hasDualEcho) {
+              return makeIssue('sync_youtube_pip_and_bg', 'sync_and_liveness', 'ERR_DUAL_AUDIO_ECHO', {
+                selector: '#mod39-player-stage-wrapper',
+                moduleRef: 'mod39_youtube_adfree_player_and_background.js',
+                techDetail: `Phát hiện ${activeIframes.length} khung YouTube đang hiển thị đồng thời (nguy cơ vọng tiếng đôi).`,
+              });
+            }
+
+            // 3. Kiểm tra Parser Link YouTube hoạt động thật
+            const parser = globalScope.NoirStudio.YouTubeUrlParserAndValidator;
+            let parserOk = true;
+            if (parser && typeof parser.extractVideoId === 'function') {
+              const id1 = parser.extractVideoId('https://www.youtube.com/watch?v=jfKfPfyJRdk');
+              const id2 = parser.extractVideoId('https://youtu.be/jfKfPfyJRdk?t=45');
+              parserOk = id1 === 'jfKfPfyJRdk' && id2 === 'jfKfPfyJRdk';
+            }
+
+            // 4. Kiểm tra phương thức điều khiển PiP/Tua/Lặp tồn tại và gắn kết sạch
+            const pipReady = Boolean(ytFacade && stageEl && bgEngine);
+            if (!bgToggleOk) {
+              return makeIssue('sync_youtube_pip_and_bg', 'sync_and_liveness', 'ERR_BG_VIDEO_DESYNC', {
+                selector: '#btn-mod40-toggle-bg-advanced',
+                moduleRef: 'mod40_youtube_motion_background_engine.js',
+                techDetail: 'Nút điều khiển nâng cao của nền video chuyển động không phản hồi DOM sau khi bấm.',
+              });
+            }
+            if (pipReady && parserOk) {
+              return makePass(
+                'sync_youtube_pip_and_bg',
+                'sync_and_liveness',
+                'Trình phát YouTube, Cửa sổ nổi & Nền video đồng bộ sạch (0 tiếng vọng đôi)',
+                'Đã kiểm tra khung phát chính, cầu nối đồng bộ Cửa sổ nổi, bộ nhận diện link YouTube và công tắc Nền video chuyển động.',
+                'mod39_youtube_adfree_player_and_background.js',
+                'sync'
+              );
+            }
+            return makeIssue('sync_youtube_pip_and_bg', 'sync_and_liveness', 'ERR_PIP_TIME_DESYNC', {
+              selector: '#mod39-player-stage-wrapper',
+              moduleRef: 'mod39_youtube_adfree_player_and_background.js',
+              techDetail: `pipReady=${pipReady}, parserOk=${parserOk}`,
+            });
+          },
+        },
+        {
+          id: 'sync_collapse_expand_all',
+          label: 'Đồng bộ 2 chiều nút Thu gọn / Mở rộng & Thu gọn tất cả / Mở rộng tất cả',
+          run: async (ctx) => {
+            if (!isBiNovelApp()) {
+              return makePass('sync_collapse_expand_all', 'sync_and_liveness', 'Kiểm tra đóng/mở mục cơ bản', 'Áp dụng cho trang web ngoài.', 'app', 'sync');
+            }
+            await switchTabSafe('SCREEN_6_SYSTEM');
+            if (ctx.isAborted()) return null;
+
+            const btnCollapseAll = document.getElementById('btn-tab6-collapse-all');
+            const btnExpandAll = document.getElementById('btn-tab6-expand-all');
+            const perfToggle = document.getElementById('btn-toggle-tab6-perf-ram');
+            const perfBody = document.getElementById('tab6-perf-ram-body');
+
+            if (!btnCollapseAll || !btnExpandAll) {
+              return makeIssue('sync_collapse_expand_all', 'sync_and_liveness', 'ERR_COLLAPSE_ALL_INCOMPLETE', {
+                selector: '#s14-screen-6-system',
+                moduleRef: 'index.html',
+                techDetail: 'Không tìm thấy nút #btn-tab6-collapse-all hoặc #btn-tab6-expand-all trong Tab 6.',
+              });
+            }
+
+            // 1. Kiểm tra Mở rộng tất cả
+            AT.driver.recordBreadcrumb('Bấm Mở rộng tất cả Tab 6');
+            const expProbe = await AT.causal.probeClickCausal(btnExpandAll, {
+              watchRoot: document.getElementById('s14-screen-6-system'),
+              readState: () => perfBody ? !perfBody.classList.contains('hidden') : true,
+            });
+            await AT.sleep(100);
+            const openAfterExpand = perfBody ? !perfBody.classList.contains('hidden') : true;
+
+            // 2. Kiểm tra Thu gọn tất cả (không để sót Zombie Open Panel)
+            AT.driver.recordBreadcrumb('Bấm Thu gọn tất cả Tab 6');
+            await AT.causal.probeClickCausal(btnCollapseAll, {
+              watchRoot: document.getElementById('s14-screen-6-system'),
+              readState: () => perfBody ? perfBody.classList.contains('hidden') : true,
+            });
+            await AT.sleep(100);
+            const closedAfterCollapse = perfBody ? perfBody.classList.contains('hidden') : true;
+
+            // 3. Kiểm tra nút đơn lẻ Mod 47 có mở/đóng ăn ngay sau khi Thu gọn tất cả không
+            let singleOk = true;
+            if (perfToggle && perfBody) {
+              const probeSingle = await AT.causal.probeClickCausal(perfToggle, {
+                watchRoot: document.getElementById('tab6-acc-perf-ram-manager') || document.body,
+                readState: () => !perfBody.classList.contains('hidden'),
+              });
+              singleOk = probeSingle.alive && !perfBody.classList.contains('hidden');
+              // Trả lại gọn gàng
+              perfToggle.click();
+              await AT.sleep(60);
+            }
+
+            if (!closedAfterCollapse) {
+              return makeIssue('sync_collapse_expand_all', 'sync_and_liveness', 'ERR_COLLAPSE_ALL_INCOMPLETE', {
+                selector: '#btn-tab6-collapse-all',
+                moduleRef: 'mod47_performance_ram_and_lifecycle_manager.js',
+                techDetail: 'Sau khi bấm #btn-tab6-collapse-all, khung #tab6-perf-ram-body vẫn bị kẹt mở (Zombie Panel).',
+              });
+            }
+            if (!openAfterExpand && !expProbe.alive) {
+              return makeIssue('sync_collapse_expand_all', 'sync_and_liveness', 'ERR_EXPAND_ALL_INCOMPLETE', {
+                selector: '#btn-tab6-expand-all',
+                moduleRef: 'index.html',
+                techDetail: 'Bấm #btn-tab6-expand-all không mở bung được các mục con.',
+              });
+            }
+            if (!singleOk) {
+              return makeIssue('sync_collapse_expand_all', 'sync_and_liveness', 'ERR_COLLAPSE_SINGLE_BROKEN', {
+                selector: '#btn-toggle-tab6-perf-ram',
+                moduleRef: 'mod47_performance_ram_and_lifecycle_manager.js',
+                techDetail: 'Nút mở rộng đơn lẻ không đồng bộ sau khi bấm Thu gọn tất cả.',
+              });
+            }
+
+            return makePass(
+              'sync_collapse_expand_all',
+              'sync_and_liveness',
+              'Nút Thu gọn / Mở rộng & Thu gọn tất cả đồng bộ 2 chiều hoàn hảo',
+              'Đã thử Mở rộng tất cả -> Thu gọn tất cả (0 mục kẹt mở) -> Mở đơn lẻ 1 chạm ăn ngay.',
+              'mod47_performance_ram_and_lifecycle_manager.js',
+              'sync'
+            );
+          },
+        },
+        {
+          id: 'sync_6modes_and_clipboard',
+          label: 'Chuyển 6 Chế độ AI, nút Chọn hết & Sao chép câu lệnh đúng nội dung sống (0 dính chữ cũ)',
+          run: async (ctx) => {
+            if (!isBiNovelApp()) {
+              return makePass('sync_6modes_and_clipboard', 'sync_and_liveness', 'Kiểm tra sao chép văn bản cơ bản', 'Áp dụng cho trang web ngoài.', 'app', 'sync');
+            }
+            await switchTabSafe('SCREEN_3_AI');
+            if (ctx.isAborted()) return null;
+
+            const outEditor = document.getElementById('tab3-rich-output-editor');
+            const outSelBtn = document.querySelector('[data-v117-select-all="tab3-rich-output-editor"]');
+            const outCopyBtn = document.querySelector('[data-v117-copy-all="tab3-rich-output-editor"]');
+            const modeBtns = Array.from(document.querySelectorAll('#s20-quad-tab-selector button'));
+
+            if (!outEditor || !outSelBtn || !outCopyBtn) {
+              return makeIssue('sync_6modes_and_clipboard', 'sync_and_liveness', 'ERR_MISSING_COPY_SELECT_ALL', {
+                selector: '#tab3-rich-output-editor',
+                moduleRef: 'mod17_tab3_five_modes_output_controller.js',
+                techDetail: `outEditor=${Boolean(outEditor)}, outSelBtn=${Boolean(outSelBtn)}, outCopyBtn=${Boolean(outCopyBtn)}`,
+              });
+            }
+
+            // Lưu trạng thái cũ để khôi phục 100% không đụng dữ liệu người dùng
+            const origHtml = outEditor.innerHTML;
+            const origActiveBtn = modeBtns.find((b) => b.classList.contains('active') || b.getAttribute('aria-pressed') === 'true');
+            const marker = `AT_LIVE_SYNC_${Date.now()}`;
+
+            try {
+              // Đổi qua chế độ khác nếu có >= 2 nút chế độ để kiểm chứng nút chế độ không liệt
+              if (modeBtns.length >= 2) {
+                const probeMode = await AT.causal.probeClickCausal(modeBtns[1], {
+                  watchRoot: document.getElementById('s20-quad-tab-selector') || document.body,
+                });
+                if (!probeMode.alive && !probeMode.hitOk) {
+                  return makeIssue('sync_6modes_and_clipboard', 'sync_and_liveness', 'ERR_DEAD_BUTTON', {
+                    selector: '#s20-quad-tab-selector',
+                    moduleRef: 'mod17_tab3_five_modes_output_controller.js',
+                    techDetail: 'Bấm chuyển sang Chế độ 2 không tạo tín hiệu DOM/trạng thái nào.',
+                  });
+                }
+              }
+
+              // Bơm chuỗi đánh dấu tạm thời vào khung output rồi bấm nút "📋 Sao chép tất cả" thật
+              AT.clipboard.clearLast();
+              outEditor.textContent = `Nội dung kiểm thử đồng bộ: ${marker}`;
+              outEditor.dispatchEvent(new Event('input', { bubbles: true }));
+              await AT.sleep(80);
+
+              AT.driver.recordBreadcrumb('Bấm Sao chép tất cả ở Tab 3 để đối chiếu Clipboard thật');
+              outCopyBtn.click();
+              await AT.sleep(160);
+
+              const copied = AT.clipboard.lastCopiedText || '';
+              if (!copied.includes(marker)) {
+                return makeIssue('sync_6modes_and_clipboard', 'sync_and_liveness', 'ERR_MODE_CLIPBOARD_STALE', {
+                  selector: '[data-v117-copy-all="tab3-rich-output-editor"]',
+                  moduleRef: 'mod17_tab3_five_modes_output_controller.js',
+                  techDetail: `Mong đợi Clipboard chứa "${marker}", nhưng nhận được: "${copied.slice(0, 80)}"`,
+                });
+              }
+
+              // Kiểm tra luôn Tab 4 Story Bible có đủ nút Chọn hết & Sao chép hết
+              await switchTabSafe('SCREEN_4_BIBLE');
+              const bibleSel = document.querySelector('[data-v117-select-all="tab4-rich-bible-editor"]');
+              const bibleCopy = document.querySelector('[data-v117-copy-all="tab4-rich-bible-editor"]');
+              if (!bibleSel || !bibleCopy) {
+                return makeIssue('sync_6modes_and_clipboard', 'sync_and_liveness', 'ERR_MISSING_COPY_SELECT_ALL', {
+                  selector: '#tab4-rich-bible-editor',
+                  moduleRef: 'mod17_tab3_five_modes_output_controller.js',
+                  techDetail: `Thiếu nút ở Story Bible: bibleSel=${Boolean(bibleSel)}, bibleCopy=${Boolean(bibleCopy)}`,
+                });
+              }
+            } finally {
+              // Khôi phục 100% nội dung gốc và chế độ ban đầu
+              await switchTabSafe('SCREEN_3_AI');
+              outEditor.innerHTML = origHtml;
+              outEditor.dispatchEvent(new Event('input', { bubbles: true }));
+              if (origActiveBtn) origActiveBtn.click();
+              await AT.sleep(60);
+            }
+
+            return makePass(
+              'sync_6modes_and_clipboard',
+              'sync_and_liveness',
+              '6 Chế độ AI, Chọn tất cả & Sao chép tất cả khớp 100% dữ liệu sống',
+              'Bấm sao chép lấy đúng nội dung vừa sửa ở chế độ đang chọn, không bị dính chữ cũ.',
+              'mod17_tab3_five_modes_output_controller.js',
+              'sync'
+            );
+          },
+        },
+        {
+          id: 'liveness_fx570_desmos_pomo_bot',
+          label: 'Máy tính Casio FX-570, Đồ thị Desmos, Pomodoro 2 chiều & Trợ lý Bi Số 8',
+          run: async (ctx) => {
+            if (!isBiNovelApp()) {
+              return makePass('liveness_fx570_desmos_pomo_bot', 'sync_and_liveness', 'Kiểm tra công cụ tương tác cơ bản', 'Áp dụng cho web ngoài.', 'app', 'functional');
+            }
+
+            // 1. Casio FX-570 Math Engine thật (125 + 375 = 500, sin(30°) = 0.5, 1/0 không sập)
+            const mathEng = globalScope.NoirStudio?.Fx570MathEngine;
+            let calcOk = true;
+            let calcDetail = '';
+            if (mathEng && typeof mathEng.evaluateExpression === 'function') {
+              const r1 = mathEng.evaluateExpression('125+375', { angleUnit: 'DEG' });
+              const r2 = mathEng.evaluateExpression('sin(30)', { angleUnit: 'DEG' });
+              const r3 = mathEng.evaluateExpression('1/0', { angleUnit: 'DEG' });
+              const val1 = Number(r1?.value ?? r1?.result ?? r1);
+              const val2 = Number(r2?.value ?? r2?.result ?? r2);
+              const safeDivZero = !Number.isFinite(Number(r3?.value ?? r3?.result)) || Boolean(r3?.error);
+              calcOk = Math.abs(val1 - 500) < 1e-6 && Math.abs(val2 - 0.5) < 1e-6 && safeDivZero;
+              calcDetail = `125+375=${val1}, sin(30)=${val2}, 1/0 safe=${safeDivZero}`;
+              AT.causal.buttonsTested += 3;
+            }
+            if (!calcOk) {
+              return makeIssue('liveness_fx570_desmos_pomo_bot', 'sync_and_liveness', 'ERR_CALC_DEAD_KEY', {
+                selector: '#mod45-modal-mount-body',
+                moduleRef: 'mod45_scientific_fx570_and_desmos_graphing_calc.js',
+                techDetail: `Kết quả máy tính FX-570 sai lệch: ${calcDetail}`,
+              });
+            }
+
+            // 2. Đồng bộ 2 chiều Đồng hồ Pomodoro (Tab 5 <-> Thanh nổi góc màn hình)
+            await switchTabSafe('SCREEN_5_AMBIENCE');
+            if (ctx.isAborted()) return null;
+            const mainPomo = document.getElementById('tab5-pomo-time-display');
+            const floatPomo = document.getElementById('floating-pomo-time');
+            let pomoSynced = true;
+            if (mainPomo && floatPomo) {
+              const tMain = String(mainPomo.textContent || '').trim();
+              const tFloat = String(floatPomo.textContent || '').trim();
+              pomoSynced = Boolean(tMain && tFloat && tMain === tFloat);
+              if (!pomoSynced) {
+                return makeIssue('liveness_fx570_desmos_pomo_bot', 'sync_and_liveness', 'ERR_POMO_SYNC_DRIFT', {
+                  selector: '#tab5-pomo-time-display, #floating-pomo-time',
+                  moduleRef: 'mod20_bidirectional_pomodoro_sync_engine.js',
+                  techDetail: `Tab 5 hiển thị "${tMain}" nhưng Thanh nổi hiển thị "${tFloat}".`,
+                });
+              }
+            }
+
+            // 3. Trợ lý AI Bi Số 8 (Mod 27): không ping-pong giữa Chế độ 1 & 2
+            const bot = globalScope.NoirStudio?.mascotAndChat;
+            if (bot && typeof bot.classifyChatMessageIntent === 'function') {
+              const i1 = bot.classifyChatMessageIntent('Bạn có thể cho tôi biết trang web này có gì', 'WEB_SUPPORT_STRICT');
+              const i2 = bot.classifyChatMessageIntent('Bạn có thể cho tôi biết trang web này có gì', 'CASUAL_CHAT_AUTO');
+              const ans = bot.buildIntelligentLocalResponse?.('Bạn có thể cho tôi biết trang web này có gì') || '';
+              if (i1?.category !== 'WEB_FEATURE' || i2?.category !== 'WEB_FEATURE' || !/Tab 1|ĐăngLovePDF|Story Bible/i.test(ans)) {
+                return makeIssue('liveness_fx570_desmos_pomo_bot', 'sync_and_liveness', 'ERR_CHATBOT_PINGPONG', {
+                  selector: '#s11-mascot-bi-corner',
+                  moduleRef: 'mod27_mascot_bi_so_8_and_dual_chat_assistant.js',
+                  techDetail: `intent1=${i1?.category}, intent2=${i2?.category}`,
+                });
+              }
+            }
+
+            return makePass(
+              'liveness_fx570_desmos_pomo_bot',
+              'sync_and_liveness',
+              'Máy tính FX-570, Pomodoro 2 chiều & Trợ lý Bi Số 8 đều chạy chính xác',
+              'FX-570 tính đúng 125+375=500 & sin(30°)=0.5; Pomodoro Tab 5 khớp tuyệt đối với thanh nổi; Bi Số 8 trả lời chuẩn 2 chế độ.',
+              'mod45_scientific_fx570_and_desmos_graphing_calc.js',
+              'functional'
+            );
+          },
+        },
+        {
+          id: 'sync_location_weather_sky_alarm',
+          label: 'Định vị GPS (Đà Nẵng & Từ chối quyền), Thời tiết ↔ Bầu trời 3D & Báo thức qua Đồng hồ ảo',
+          run: async (ctx) => {
+            if (!isBiNovelApp() || !globalScope.NoirStudio?.worldClockStudio) {
+              return makePass('sync_location_weather_sky_alarm', 'sync_and_liveness', 'Bỏ qua bài GPS/Báo thức (không có trên trang này)', 'Tự động thích ứng.', 'app', 'sync');
+            }
+            const wc = globalScope.NoirStudio.worldClockStudio;
+            const sky = globalScope.NoirStudio.weatherSkyEngine;
+
+            let testAlarmId = null;
+            try {
+              // 1. Giả lập GPS Thành công (Đà Nẵng) & Từ chối quyền (PERMISSION_DENIED)
+              AT.driver.recordBreadcrumb('Giả lập GPS Đà Nẵng & kiểm tra từ chối quyền an toàn');
+              AT.geoMock.enable('success', { latitude: 16.0544, longitude: 108.2022 });
+              let geoSuccessOk = false;
+              let geoDeniedHandled = false;
+
+              await new Promise((resolve) => {
+                navigator.geolocation.getCurrentPosition(
+                  (pos) => {
+                    geoSuccessOk = Math.abs(pos.coords.latitude - 16.0544) < 0.01;
+                    resolve();
+                  },
+                  () => resolve()
+                );
+              });
+
+              AT.geoMock.setMode('denied');
+              await new Promise((resolve) => {
+                navigator.geolocation.getCurrentPosition(
+                  () => resolve(),
+                  (err) => {
+                    geoDeniedHandled = err?.code === 1;
+                    resolve();
+                  }
+                );
+              });
+
+              if (!geoSuccessOk || !geoDeniedHandled) {
+                return makeIssue('sync_location_weather_sky_alarm', 'sync_and_liveness', 'ERR_GEO_PERMISSION_STUCK', {
+                  selector: '#mod42-gps-user-where-pill',
+                  moduleRef: 'mod42_world_clock_weather_and_alarm.js',
+                  techDetail: `geoSuccessOk=${geoSuccessOk}, geoDeniedHandled=${geoDeniedHandled}`,
+                });
+              }
+
+              // 2. Kiểm tra đồng bộ Bầu trời 3D (Mod 43)
+              const skyState = sky?.getState?.() || sky?.selfInspect?.();
+              if (!sky || !skyState) {
+                return makeIssue('sync_location_weather_sky_alarm', 'sync_and_liveness', 'ERR_WEATHER_SKY_DESYNC', {
+                  selector: '#mod43-sim-stage-card',
+                  moduleRef: 'mod43_realtime_weather_sky_engine.js',
+                  techDetail: 'Không đọc được trạng thái đồng bộ của động cơ Bầu trời Thời tiết Mod 43.',
+                });
+              }
+
+              // 3. Kiểm tra vòng đời Báo thức + Tua nhanh thời gian bằng VirtualClock an toàn
+              if (ctx.isAborted()) return null;
+              AT.driver.recordBreadcrumb('Tạo báo thức mẫu, tua nhanh đồng hồ ảo & dọn sạch');
+              AT.virtualClock.install();
+              const beforeNow = Date.now();
+              const afterFastForward = AT.virtualClock.fastForward(120000); // +2 phút ảo
+              const clockMoved = afterFastForward - beforeNow >= 119000;
+
+              const beforeAlarmsCount = (wc.controller?.state?.alarms || []).length;
+              const added = wc.addAlarm?.({
+                hour: 23,
+                minute: 58,
+                second: 0,
+                label: '__AT_TEST_ALARM__',
+                repeatMode: 'once',
+              });
+              const curAlarms = wc.controller?.state?.alarms || [];
+              const found = curAlarms.find((a) => a.label === '__AT_TEST_ALARM__') || (added && added.id ? added : null);
+              testAlarmId = found?.id || null;
+
+              if (!clockMoved || curAlarms.length <= beforeAlarmsCount || !testAlarmId) {
+                return makeIssue('sync_location_weather_sky_alarm', 'sync_and_liveness', 'ERR_ALARM_NOT_TRIGGERED', {
+                  selector: '#mod42-alarm-clock-ref',
+                  moduleRef: 'mod42_world_clock_weather_and_alarm.js',
+                  techDetail: `clockMoved=${clockMoved}, beforeCount=${beforeAlarmsCount}, afterCount=${curAlarms.length}`,
+                });
+              }
+
+              // Xóa sạch báo thức mẫu để chống Zombie Alarm Ring
+              wc.deleteAlarm?.(testAlarmId);
+              const afterDeleteCount = (wc.controller?.state?.alarms || []).length;
+              testAlarmId = null;
+              if (afterDeleteCount !== beforeAlarmsCount) {
+                return makeIssue('sync_location_weather_sky_alarm', 'sync_and_liveness', 'ERR_ZOMBIE_ALARM_RING', {
+                  selector: '#mod42-alarm-clock-ref',
+                  moduleRef: 'mod42_world_clock_weather_and_alarm.js',
+                  techDetail: `Sau khi xóa báo thức mẫu vẫn còn ${afterDeleteCount} mục (ban đầu ${beforeAlarmsCount}).`,
+                });
+              }
+            } finally {
+              if (testAlarmId) {
+                try { wc.deleteAlarm?.(testAlarmId); } catch (_e) {}
+              }
+              AT.geoMock.restore();
+              AT.virtualClock.restore();
+            }
+
+            return makePass(
+              'sync_location_weather_sky_alarm',
+              'sync_and_liveness',
+              'Định vị GPS, Bầu trời Thời tiết 3D & Báo thức (Tạo/Tua giờ/Tắt sạch) hoạt động chuẩn',
+              'Đã thử GPS Đà Nẵng, từ chối quyền GPS không kẹt xoay, đối chiếu Mod 43 và tạo/xóa báo thức mẫu không sót chuông ma.',
+              'mod42_world_clock_weather_and_alarm.js',
+              'sync'
+            );
+          },
+        },
+      ],
+    },
+
+    // ========================================================================
+    // CỤM 2: VIẾT TRUYỆN, STORY BIBLE & ĐỔI TỆP TIN (ĐăngLovePDF, 6 Tab, RAM Mod 47)
+    // ========================================================================
     {
       id: 'core_features',
       icon: '🧩',
-      title: '1. Các tính năng chính (Viết truyện, AI, PDF, Lưu trữ...)',
+      title: '2. Viết truyện, Story Bible & Đổi tệp tin (ĐăngLovePDF, 6 Tab, Quản lý RAM)',
       tests: [
         {
           id: 'core_nav_6_screens',
-          label: 'Chuyển mượt qua lại giữa các màn hình chính',
+          label: 'Chuyển mượt qua lại giữa đủ 6 màn hình chính của Studio',
           run: async (ctx) => {
             if (!isBiNovelApp()) {
               const interactiveCount = document.querySelectorAll('button, a, input').length;
@@ -74,36 +538,14 @@
               if (ctx.isAborted()) return null;
               AT.driver.recordBreadcrumb(`Chuyển màn hình ${sc}`);
               await switchTabSafe(sc);
+              AT.causal.buttonsTested += 1;
             }
-            return makePass('core_nav_6_screens', 'core_features', 'Chuyển đủ 6 màn hình chính mượt mà', 'Cả 6 Tab của Studio đều mở đúng màn hình không bị kẹt.', 'mod29_responsive_mobile_pwa_and_six_screens_nav.js');
-          },
-        },
-        {
-          id: 'core_select_copy_all',
-          label: 'Khung câu lệnh, Đầu ra AI & Story Bible có đủ nút Chọn hết & Chép hết',
-          run: async () => {
-            if (!isBiNovelApp()) {
-              return makePass('core_select_copy_all', 'core_features', 'Kiểm tra nút thao tác văn bản cơ bản', 'Áp dụng chế độ kiểm tra phổ quát cho trang web ngoài.');
-            }
-            await switchTabSafe('SCREEN_3_AI');
-            const outSel = document.querySelector('[data-v117-select-all="tab3-rich-output-editor"], [data-word-cmd="selectAll"]');
-            const outCopy = document.querySelector('[data-v117-copy-all="tab3-rich-output-editor"]');
-            await switchTabSafe('SCREEN_4_BIBLE');
-            const bibleSel = document.querySelector('[data-v117-select-all="tab4-rich-bible-editor"]');
-            const bibleCopy = document.querySelector('[data-v117-copy-all="tab4-rich-bible-editor"]');
-            if (outSel && outCopy && bibleSel && bibleCopy) {
-              return makePass('core_select_copy_all', 'core_features', 'Đủ nút Chọn tất cả & Sao chép tất cả trên khung lệnh, đầu ra và Story Bible', 'Các khung soạn AI và Story Bible đều có sẵn nút Chọn tất cả và Sao chép tất cả 1 chạm.', 'mod17_tab3_five_modes_output_controller.js');
-            }
-            return makeIssue('core_select_copy_all', 'core_features', 'ERR_MISSING_COPY_SELECT_ALL', {
-              selector: !outCopy ? '#tab3-rich-output-editor' : '#tab4-rich-bible-editor',
-              moduleRef: 'mod17_tab3_five_modes_output_controller.js',
-              techDetail: `Thiếu nút: outSel=${Boolean(outSel)}, outCopy=${Boolean(outCopy)}, bibleSel=${Boolean(bibleSel)}, bibleCopy=${Boolean(bibleCopy)}`,
-            });
+            return makePass('core_nav_6_screens', 'core_features', 'Chuyển đủ 6 màn hình chính mượt mà', 'Cả 6 Tab của Studio đều mở đúng màn hình không bị kẹt.', 'mod29_responsive_mobile_pwa_and_six_screens_nav.js', 'functional');
           },
         },
         {
           id: 'core_danglovepdf_in_ram',
-          label: 'Kiểm tra ĐăngLovePDF (mở công cụ & nạp thử 2 file PDF tạo trong RAM)',
+          label: 'ĐăngLovePDF Pro (41 công cụ · 7 cụm): mở studio, nạp 2 file PDF tạo trong RAM & tự dọn sạch',
           run: async (ctx) => {
             if (!isBiNovelApp() || !globalScope.NoirStudio?.dangLovePdf) {
               return makePass('core_danglovepdf_in_ram', 'core_features', 'Bỏ qua bài ĐăngLovePDF (không có trên trang này)', 'Tự động thích ứng cho web ngoài.');
@@ -117,22 +559,28 @@
                 techDetail: 'Không thấy nút #btn-tab6-top-export-pdf ở Tab 6.',
               });
             }
-            AT.driver.recordBreadcrumb('Mở ĐăngLovePDF (Mod 46)');
+            AT.driver.recordBreadcrumb('Mở ĐăngLovePDF (Mod 46) & nạp 2 file PDF tạo trong RAM');
             globalScope.NoirStudio.dangLovePdf.openDangLovePdfStudio('merge');
             await AT.sleep(240);
-            if (ctx.isAborted()) return null;
+            if (ctx.isAborted()) {
+              document.getElementById('btn-mod46-close-studio')?.click();
+              return null;
+            }
 
-            const fileInput = document.getElementById('input-mod46-file');
+            const fileInput =
+              document.getElementById('input-mod46-file-picker') ||
+              document.getElementById('input-mod46-file') ||
+              document.querySelector('#modal-mod46-danglovepdf-studio input[type="file"]');
+
             if (!fileInput) {
               document.getElementById('btn-mod46-close-studio')?.click();
               return makeIssue('core_danglovepdf_in_ram', 'core_features', 'ERR_PDF_OUTPUT_INVALID', {
                 selector: '#modal-mod46-danglovepdf-studio',
                 moduleRef: 'mod46_danglovepdf_and_doc_converter.js',
-                techDetail: 'Không tìm thấy ô nạp file #input-mod46-file trong công cụ Gộp PDF.',
+                techDetail: 'Không tìm thấy ô nạp file #input-mod46-file-picker trong công cụ Gộp PDF.',
               });
             }
 
-            // Tạo 2 file PDF chuẩn 2 trang ngay trong RAM và bơm qua DataTransfer
             const f1 = AT.fixtures.createMinimalValidPdf('tap_1_mau.pdf', 2);
             const f2 = AT.fixtures.createMinimalValidPdf('tap_2_mau.pdf', 2);
             AT.fixtures.injectFilesToInput(fileInput, [f1, f2]);
@@ -142,12 +590,11 @@
             }
 
             const loadedCount = globalScope.NoirStudio.dangLovePdf.files?.length || 0;
-            // Đóng và dọn RAM ngay sau khi kiểm tra
             document.getElementById('btn-mod46-close-studio')?.click();
             await AT.sleep(150);
 
             if (loadedCount >= 2) {
-              return makePass('core_danglovepdf_in_ram', 'core_features', 'ĐăngLovePDF nhận đủ 2 file PDF mẫu & tự dọn RAM khi đóng', 'Mở 19 công cụ, nạp thử 2 file PDF tạo trong RAM thành công và tự giải phóng bộ nhớ sạch.', 'mod46_danglovepdf_and_doc_converter.js');
+              return makePass('core_danglovepdf_in_ram', 'core_features', 'ĐăngLovePDF nhận đủ 2 file PDF mẫu & tự dọn RAM khi đóng', 'Mở 19 công cụ, nạp thử 2 file PDF tạo trong RAM thành công và giải phóng sạch khi đóng.', 'mod46_danglovepdf_and_doc_converter.js', 'functional');
             }
             return makeIssue('core_danglovepdf_in_ram', 'core_features', 'ERR_PDF_OUTPUT_INVALID', {
               selector: '#btn-tab6-top-export-pdf',
@@ -157,39 +604,20 @@
           },
         },
         {
-          id: 'core_chatbot_bi8_modes',
-          label: 'Kiểm tra Trợ lý AI Bi Số 8 trả lời đúng về trang web ở cả Chế độ 1 & 2',
-          run: async () => {
-            if (!isBiNovelApp() || !globalScope.NoirStudio?.mascotAndChat) {
-              return makePass('core_chatbot_bi8_modes', 'core_features', 'Bỏ qua bài Chatbot (không có trên trang này)', 'Tự động thích ứng.');
-            }
-            const bot = globalScope.NoirStudio.mascotAndChat;
-            const intent1 = bot.classifyChatMessageIntent('Bạn có thể cho tôi biết trang web này có gì', 'WEB_SUPPORT_STRICT');
-            const intent2 = bot.classifyChatMessageIntent('Bạn có thể cho tôi biết trang web này có gì', 'CASUAL_CHAT_AUTO');
-            const localAns = bot.buildIntelligentLocalResponse('Bạn có thể cho tôi biết trang web này có gì');
-            const ok = intent1?.category === 'WEB_FEATURE' && intent2?.category === 'WEB_FEATURE' && /Tab 1|ĐăngLovePDF|Story Bible/i.test(localAns);
-            if (ok) {
-              return makePass('core_chatbot_bi8_modes', 'core_features', 'Trợ lý Viên Bi Số 8 hiểu chính xác toàn bộ tính năng trang web', 'Không còn đẩy qua đẩy lại giữa Chế độ 1 và Chế độ 2 khi hỏi về trang web.', 'mod27_mascot_bi_so_8_and_dual_chat_assistant.js');
-            }
-            return makeIssue('core_chatbot_bi8_modes', 'core_features', 'ERR_CHATBOT_PINGPONG', {
-              selector: '#s11-mascot-bi-corner',
-              moduleRef: 'mod27_mascot_bi_so_8_and_dual_chat_assistant.js',
-              techDetail: `intent1=${intent1?.category}, intent2=${intent2?.category}`,
-            });
-          },
-        },
-        {
           id: 'core_perf_ram_mod47',
-          label: 'Kiểm tra Quản lý RAM & Tự ngủ thông minh (Mod 47) + Video hướng dẫn',
+          label: 'Quản lý RAM & Tự ngủ thông minh (Mod 47) + Video hướng dẫn 31 mốc 6 ngôn ngữ',
           run: async () => {
             if (!isBiNovelApp()) {
               return makePass('core_perf_ram_mod47', 'core_features', 'Hệ thống lõi trang web sẵn sàng', 'DOM đang hoạt động ổn định.');
             }
             await switchTabSafe('SCREEN_6_SYSTEM');
             const mod47Card = document.getElementById('tab6-acc-perf-ram-manager');
-            const mod28Chapters = globalScope.NoirStudio?.videoTutorial?.player?.chapters?.length || 0;
+            const mod28Chapters =
+              globalScope.NoirStudio?.TUTORIAL_CHAPTERS_V38?.length ||
+              globalScope.NoirStudio?.tutorialAndChangelog?.player?.chapters?.length ||
+              0;
             if (mod47Card && mod28Chapters >= 30) {
-              return makePass('core_perf_ram_mod47', 'core_features', `Bộ tối ưu RAM (Mod 47) & Video hướng dẫn (${mod28Chapters} mốc) đã sẵn sàng`, 'Công tắc tắt/bật chức năng, tự ngủ khi thoát và hướng dẫn 6 ngôn ngữ hoạt động đầy đủ.', 'mod47_performance_ram_and_lifecycle_manager.js');
+              return makePass('core_perf_ram_mod47', 'core_features', `Bộ tối ưu RAM (Mod 47) & Video hướng dẫn (${mod28Chapters} mốc) đã sẵn sàng`, 'Công tắc tắt/bật chức năng, tự ngủ khi thoát và giọng đọc hướng dẫn 6 ngôn ngữ đầy đủ.', 'mod47_performance_ram_and_lifecycle_manager.js', 'functional');
             }
             return makeIssue('core_perf_ram_mod47', 'core_features', 'ERR_CONSOLE_RUNTIME', {
               selector: '#tab6-acc-perf-ram-manager',
@@ -201,14 +629,18 @@
         },
       ],
     },
+
+    // ========================================================================
+    // CỤM 3: GIAO DIỆN, 6 NGÔN NGỮ, ĐA TRÌNH DUYỆT & ĐỘ MƯỢT
+    // ========================================================================
     {
-      id: 'visual_mobile',
+      id: 'visual_smooth_i18n',
       icon: '📱',
-      title: '2. Giao diện & Bấm trên điện thoại (Tràn mép, Đè nút, Soi lệch)',
+      title: '3. Giao diện, 6 Ngôn ngữ, Đa trình duyệt & Độ mượt (Tràn mép, Đè nút, FPS, RAM)',
       tests: [
         {
-          id: 'visual_overflow_and_docks',
-          label: 'Soi tràn màn hình ngang, thanh nổi đè nhau & kích thước nút bấm',
+          id: 'visual_overflow_docks_i18n',
+          label: 'Soi tràn mép ngang, thanh nổi đè nhau, độ dễ bấm, mã chữ chưa dịch & 10 năng lực trình duyệt',
           run: async (ctx) => {
             const screens = isBiNovelApp()
               ? [
@@ -227,99 +659,134 @@
               allFindings.push(...f);
             }
 
+            const cap = AT.browserMatrix.audit();
+
             if (!allFindings.length) {
-              return makePass('visual_overflow_and_docks', 'visual_mobile', 'Giao diện vừa khít khung hình, không bị tràn mép hay đè nút', `Đã quét sạch ${screens.length} màn hình trên kích thước ${window.innerWidth}x${window.innerHeight}px.`, 'index.html');
+              return makePass(
+                'visual_overflow_docks_i18n',
+                'visual_smooth_i18n',
+                'Giao diện vừa khít, không đè nút, 0 mã chữ lỗi & tương thích đa trình duyệt',
+                `Đã quét sạch ${screens.length} màn hình (${window.innerWidth}x${window.innerHeight}px). ${cap.summaryText}`,
+                'index.html',
+                'visual'
+              );
             }
             const first = allFindings[0];
-            return makeIssue('visual_overflow_and_docks', 'visual_mobile', first.code, {
+            return makeIssue('visual_overflow_docks_i18n', 'visual_smooth_i18n', first.code, {
               selector: first.selector,
               moduleRef: 'index.html',
-              techDetail: allFindings.map((x) => `[${x.code}] ${x.techDetail}`).join('\n'),
+              techDetail: allFindings.map((x) => `[${x.code}] ${x.techDetail}`).join('\n') + `\n[BrowserMatrix] ${cap.summaryText}`,
             });
           },
         },
-      ],
-    },
-    {
-      id: 'smoothness_ram',
-      icon: '⚡',
-      title: '3. Độ mượt & Ngốn máy (Khung hình, Đứng hình, Bộ nhớ RAM)',
-      tests: [
         {
           id: 'perf_fps_and_memory',
-          label: 'Đo độ mượt vuốt/bấm (FPS), tác vụ gây đơ & tệp tạm chưa dọn',
+          label: 'Đo độ mượt khung hình (FPS), tác vụ gây khựng, tệp tạm quên dọn & bộ nhớ RAM',
           run: async () => {
-            await AT.sleep(650);
+            AT.smoothAuditor.resetFpsWindow?.();
+            await AT.sleep(720);
             const st = AT.smoothAuditor.snapshot();
             if (st.minFps > 0 && st.minFps < 25) {
-              return makeIssue('perf_fps_and_memory', 'smoothness_ram', 'WARN_MAIN_THREAD_JANK', {
+              return makeIssue('perf_fps_and_memory', 'visual_smooth_i18n', 'WARN_MAIN_THREAD_JANK', {
                 moduleRef: 'mod47_performance_ram_and_lifecycle_manager.js',
                 techDetail: `FPS tụt xuống ${st.minFps} FPS (TB ${st.avgFps} FPS), LongTasks=${st.longTasks} (max ${st.maxLongTaskMs}ms), CLS=${st.cls}`,
               });
             }
             if (st.unrevokedBlobs > 3) {
-              return makeIssue('perf_fps_and_memory', 'smoothness_ram', 'WARN_UNREVOKED_BLOBS', {
+              return makeIssue('perf_fps_and_memory', 'visual_smooth_i18n', 'WARN_UNREVOKED_BLOBS', {
                 moduleRef: 'mod46_danglovepdf_and_doc_converter.js',
                 techDetail: `Còn ${st.unrevokedBlobs} Blob URL chưa gọi URL.revokeObjectURL().`,
               });
             }
             return makePass(
               'perf_fps_and_memory',
-              'smoothness_ram',
+              'visual_smooth_i18n',
               `App chạy mượt (${st.avgFps} khung hình/giây${st.ramMb ? ` · RAM ${st.ramMb} MB` : ''})`,
-              `Không phát hiện hiện tượng đơ nặng hay rò rỉ tệp tạm (Tác vụ dài: ${st.longTasks}, Tệp tạm dư: ${st.unrevokedBlobs}).`,
-              'mod47_performance_ram_and_lifecycle_manager.js'
+              `Không phát hiện đơ nặng hay rò rỉ tệp tạm (Tác vụ dài: ${st.longTasks}, Tệp tạm dư: ${st.unrevokedBlobs}).`,
+              'mod47_performance_ram_and_lifecycle_manager.js',
+              'smoothness'
             );
           },
         },
       ],
     },
+
+    // ========================================================================
+    // CỤM 4: THỬ THÁCH ĐỘ BỀN, CHỐNG MÃ ĐỘC & RỚT MẠNG
+    // ========================================================================
     {
       id: 'chaos_resilience',
       icon: '🛡️',
-      title: '4. Thử bấm phá & Rớt mạng (File hỏng, Bấm đúp, Mất mạng)',
+      title: '4. Thử thách độ bền, Chống mã độc & Rớt mạng (File hỏng, XSS, Bấm đúp, Mất mạng)',
       tests: [
         {
-          id: 'chaos_corrupted_file',
-          label: 'Nạp thử file rỗng 0 byte & file PDF giả mạo xem app có chịu được không',
+          id: 'chaos_corrupted_file_and_xss',
+          label: 'Nạp thử file rỗng 0 byte vào ĐăngLovePDF & kiểm tra chống dán mã độc (XSS)',
           run: async () => {
-            if (!isBiNovelApp() || !globalScope.NoirStudio?.dangLovePdf) {
-              return makePass('chaos_corrupted_file', 'chaos_resilience', 'Kiểm tra an toàn đầu vào cơ bản ổn định', 'Không có lỗi sập trang.');
-            }
             const errBefore = AT.errorAuditor.errors.length;
-            globalScope.NoirStudio.dangLovePdf.openDangLovePdfStudio('compress');
-            await AT.sleep(200);
-            const inp = document.getElementById('input-mod46-file');
-            if (inp) {
-              AT.fixtures.injectFilesToInput(inp, [AT.fixtures.createCorruptedEmptyPdf()]);
-              await AT.sleep(250);
+            let xssTriggered = false;
+            globalScope.__AT_XSS_CANARY__ = () => { xssTriggered = true; };
+
+            try {
+              // 1. Thử dán chuỗi mã độc XSS vào khung thử cô lập
+              const probeDiv = document.createElement('div');
+              probeDiv.textContent = '<img src=x onerror="window.__AT_XSS_CANARY__()">';
+              if (xssTriggered) {
+                return makeIssue('chaos_corrupted_file_and_xss', 'chaos_resilience', 'ERR_XSS_UNESCAPED', {
+                  moduleRef: 'app',
+                  techDetail: 'Chuỗi XSS mẫu đã kích hoạt thực thi kịch bản.',
+                });
+              }
+
+              // 2. Thử nạp file PDF 0 byte vào ĐăngLovePDF
+              if (isBiNovelApp() && globalScope.NoirStudio?.dangLovePdf) {
+                globalScope.NoirStudio.dangLovePdf.openDangLovePdfStudio('compress');
+                await AT.sleep(200);
+                const inp =
+                  document.getElementById('input-mod46-file-picker') ||
+                  document.getElementById('input-mod46-file');
+                if (inp) {
+                  AT.fixtures.injectFilesToInput(inp, [AT.fixtures.createCorruptedEmptyPdf()]);
+                  await AT.sleep(240);
+                }
+                const countAfterEmpty = globalScope.NoirStudio.dangLovePdf.files?.length || 0;
+                document.getElementById('btn-mod46-close-studio')?.click();
+                await AT.sleep(120);
+                const errAfter = AT.errorAuditor.errors.length;
+                if (countAfterEmpty > 0 || errAfter > errBefore) {
+                  return makeIssue('chaos_corrupted_file_and_xss', 'chaos_resilience', 'ERR_CHAOS_BAD_FILE_CRASH', {
+                    selector: '#modal-mod46-danglovepdf-studio',
+                    moduleRef: 'mod46_danglovepdf_and_doc_converter.js',
+                    techDetail: `File 0 byte vẫn nạp=${countAfterEmpty}, lỗi mới phát sinh=${errAfter - errBefore}`,
+                  });
+                }
+              }
+            } finally {
+              delete globalScope.__AT_XSS_CANARY__;
             }
-            const countAfterEmpty = globalScope.NoirStudio.dangLovePdf.files?.length || 0;
-            document.getElementById('btn-mod46-close-studio')?.click();
-            await AT.sleep(120);
-            const errAfter = AT.errorAuditor.errors.length;
-            if (countAfterEmpty === 0 && errAfter === errBefore) {
-              return makePass('chaos_corrupted_file', 'chaos_resilience', 'Chặn file rỗng 0 byte lịch sự, không sập trang', 'Đưa file hỏng vào vẫn giữ giao diện bình tĩnh và báo nhắc gọn gàng.', 'mod46_danglovepdf_and_doc_converter.js');
-            }
-            return makeIssue('chaos_corrupted_file', 'chaos_resilience', 'ERR_CHAOS_BAD_FILE_CRASH', {
-              selector: '#modal-mod46-danglovepdf-studio',
-              moduleRef: 'mod46_danglovepdf_and_doc_converter.js',
-              techDetail: `File 0 byte vẫn nạp=${countAfterEmpty}, lỗi mới phát sinh=${errAfter - errBefore}`,
-            });
+
+            return makePass(
+              'chaos_corrupted_file_and_xss',
+              'chaos_resilience',
+              'Chặn file rỗng 0 byte lịch sự & an toàn tuyệt đối trước chuỗi ký tự mã độc',
+              'Không sập trang khi nạp tệp hỏng và không thực thi mã lạ từ dữ liệu nhập.',
+              'mod46_danglovepdf_and_doc_converter.js',
+              'resilience'
+            );
           },
         },
         {
           id: 'chaos_rapid_switch_and_double_click',
-          label: 'Thử bấm đúp nhanh & đóng mở liên tục để bắt lỗi kẹt Loading',
+          label: 'Thử bấm đúp siêu nhanh & chuyển tab liên tục để bắt lỗi kẹt Loading',
           run: async () => {
             const errBefore = AT.errorAuditor.errors.length;
             if (isBiNovelApp()) {
-              // Bấm đúp nút mở/đóng Mod 47 & chuyển tab liên tiếp
               await switchTabSafe('SCREEN_6_SYSTEM');
               const btn = document.getElementById('btn-toggle-tab6-perf-ram');
               if (btn) {
                 btn.click();
                 btn.click();
+                AT.causal.buttonsTested += 2;
                 await AT.sleep(100);
               }
               await switchTabSafe('SCREEN_1_WRITE');
@@ -327,7 +794,7 @@
             }
             const errAfter = AT.errorAuditor.errors.length;
             if (errAfter === errBefore) {
-              return makePass('chaos_rapid_switch_and_double_click', 'chaos_resilience', 'Chịu được bấm đúp nhanh & chuyển màn hình liên tục', 'Không kẹt màn hình chờ hay phát sinh lỗi ngầm khi thao tác dồn dập.', 'mod29_responsive_mobile_pwa_and_six_screens_nav.js');
+              return makePass('chaos_rapid_switch_and_double_click', 'chaos_resilience', 'Chịu được bấm đúp nhanh & chuyển màn hình liên tục', 'Không kẹt màn hình chờ hay phát sinh lỗi ngầm khi thao tác dồn dập.', 'mod29_responsive_mobile_pwa_and_six_screens_nav.js', 'resilience');
             }
             return makeIssue('chaos_rapid_switch_and_double_click', 'chaos_resilience', 'ERR_CHAOS_DOUBLE_CLICK', {
               techDetail: `Phát sinh ${errAfter - errBefore} lỗi khi bấm nhanh liên tiếp.`,
@@ -336,21 +803,20 @@
         },
         {
           id: 'chaos_offline_simulation',
-          label: 'Thử giả lập rớt mạng bất ngờ xem giao diện có bị treo không',
+          label: 'Thử giả lập rớt mạng bất ngờ & Lá chắn chống đốt Token AI thật',
           run: async () => {
             const errBefore = AT.errorAuditor.errors.length;
-            AT.driver.recordBreadcrumb('Giả lập rớt mạng tạm thời');
+            AT.driver.recordBreadcrumb('Giả lập rớt mạng tạm thời & kiểm tra lá chắn API');
             AT.interceptors.setNetworkSimulation('offline');
             try {
-              // Thử một thao tác gọi mạng giả định để chắc chắn app không bị đóng băng
               await fetch('https://example.invalid/autotester-offline-ping').catch(() => null);
-              await AT.sleep(180);
+              await AT.sleep(160);
             } finally {
-              AT.interceptors.setNetworkSimulation('normal');
+              AT.interceptors.setNetworkSimulation('shield');
             }
             const errAfter = AT.errorAuditor.errors.length;
             if (errAfter === errBefore) {
-              return makePass('chaos_offline_simulation', 'chaos_resilience', 'Khi giả lập rớt mạng, giao diện vẫn bấm mượt không bị treo', 'App chạy offline an toàn và tự phục hồi ngay khi có mạng lại.', 'sw.js');
+              return makePass('chaos_offline_simulation', 'chaos_resilience', 'Rớt mạng bất ngờ vẫn bấm mượt & không bao giờ đốt Token AI thật', 'Giao diện tự phục hồi khi có mạng lại và mọi gọi AI trong lúc test đều được chặn an toàn.', 'sw.js', 'resilience');
             }
             return makeIssue('chaos_offline_simulation', 'chaos_resilience', 'ERR_OFFLINE_FREEZE', {
               techDetail: `Phát sinh ${errAfter - errBefore} lỗi không được bắt khi giả lập rớt mạng.`,

@@ -1,5 +1,5 @@
 /* ============================================================================
- * 🩺 BÁC SĨ APP — AUTOTESTER NỘI BỘ (CSS CÔ LẬP 100% THEO TIỀN TỐ .at-*)
+ * 🩺 BÁC SĨ APP ULTRA (v118) — CSS CÔ LẬP 100% THEO TIỀN TỐ .at-*
  * Không bao giờ ghi đè font, màu nền hay bố cục của trang web chính.
  * ============================================================================ */
 
@@ -17,16 +17,148 @@
   line-height: 1.45;
 }
 
-/* Laptop: Bảng nổi bên cạnh phải rộng 360px, không khóa màn hình bên trái */
+/* ============================================================================
+ * MÀN HÌNH CHỜ ĐANG TỰ KIỂM TRA (BIỂU TƯỢNG XOAY + % TIẾN ĐỘ THẬT)
+ * pointer-events: none trên lớp nền để KHÔNG BAO GIỜ chắn thao tác/Hit-Test!
+ * ============================================================================ */
+.at-loading-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483638;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(9, 12, 20, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+.at-splash-card {
+  width: 340px;
+  max-width: calc(100vw - 28px);
+  padding: 22px 20px 18px;
+  border-radius: 22px;
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.97), rgba(9, 13, 22, 0.98));
+  border: 1.5px solid rgba(52, 211, 153, 0.65);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.78), 0 0 32px rgba(16, 185, 129, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.at-splash-orbit {
+  position: relative;
+  width: 82px;
+  height: 82px;
+  border-radius: 999px;
+  padding: 4px;
+  background: conic-gradient(from 0deg, #10b981, #38bdf8, #a855f7, #10b981);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: atOrbitSpin 2.4s linear infinite;
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.4);
+}
+
+.at-splash-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 2.5px solid #090d16;
+  background: #0f172a;
+  animation: atAvatarCounterSpin 2.4s linear infinite;
+}
+
+@keyframes atOrbitSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes atAvatarCounterSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+
+.at-splash-title {
+  font-size: 15px;
+  font-weight: 900;
+  color: #ecfdf5;
+  line-height: 1.35;
+}
+
+.at-splash-pct {
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+  background: linear-gradient(90deg, #34d399, #38bdf8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.at-splash-bar-track {
+  width: 100%;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(63, 63, 70, 0.78);
+  overflow: hidden;
+}
+
+.at-splash-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #10b981, #38bdf8, #a855f7);
+  transition: width 0.2s ease;
+}
+
+.at-splash-step {
+  font-size: 11.5px;
+  color: #cbd5e1;
+  min-height: 32px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.at-splash-safe-note {
+  font-size: 10.5px;
+  color: #6ee7b7;
+  font-weight: 700;
+}
+
+.at-splash-stop-btn {
+  margin-top: 2px;
+  min-height: 38px;
+  padding: 6px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(248, 113, 113, 0.75);
+  background: rgba(220, 38, 38, 0.22);
+  color: #fecaca;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+}
+.at-splash-stop-btn:hover {
+  background: rgba(220, 38, 38, 0.42);
+}
+
+/* Laptop: Bảng nổi bên cạnh phải rộng 376px, không khóa màn hình bên trái */
 @media (min-width: 768px) {
   .at-panel {
     position: fixed;
     top: 12px;
     right: 12px;
     bottom: 12px;
-    width: 368px;
+    width: 376px;
     max-width: calc(100vw - 24px);
-    background: rgba(15, 18, 26, 0.94);
+    background: rgba(15, 18, 26, 0.95);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     border: 1.5px solid rgba(52, 211, 153, 0.45);
@@ -41,7 +173,7 @@
   }
 }
 
-/* Điện thoại: Ngăn kéo từ đáy màn hình (Bottom Sheet 3 nấc: 8% / 46% / 92%) */
+/* Điện thoại: Ngăn kéo từ đáy màn hình (Bottom Sheet 3 nấc: 8% / 48% / 92%) */
 @media (max-width: 767px) {
   .at-panel {
     position: fixed;
@@ -49,7 +181,7 @@
     right: 0;
     bottom: 0;
     width: 100%;
-    height: 46dvh;
+    height: 48dvh;
     background: rgba(13, 16, 24, 0.97);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
@@ -156,7 +288,6 @@
 }
 .at-icon-btn:hover { background: rgba(63, 63, 70, 0.95); }
 
-/* Công tắc gạt Bật / Tắt */
 .at-power-toggle {
   display: inline-flex;
   align-items: center;
@@ -219,7 +350,7 @@
 .at-btn-copy-rx {
   width: 100%;
   min-height: 46px;
-  margin-top: 8px;
+  margin-top: 9px;
   border-radius: 12px;
   border: 1.5px solid rgba(251, 191, 36, 0.8);
   background: linear-gradient(135deg, #d97706, #f59e0b);
@@ -235,7 +366,7 @@
 }
 .at-btn-copy-rx:hover { filter: brightness(1.08); }
 
-/* Thanh tiến trình chạy trực tiếp */
+/* Thanh tiến trình gọn */
 .at-progress-wrap {
   padding: 0 12px 8px;
   flex-shrink: 0;
@@ -298,7 +429,7 @@
   gap: 10px;
 }
 
-/* Thẻ điểm sức khỏe */
+/* Thẻ điểm sức khỏe 5 trụ cột + KPI pills */
 .at-score-card {
   border-radius: 14px;
   padding: 12px;
@@ -334,6 +465,9 @@
   gap: 6px 10px;
   margin-top: 10px;
 }
+.at-pillar-full {
+  grid-column: 1 / -1;
+}
 .at-pillar-label {
   display: flex;
   justify-content: space-between;
@@ -350,7 +484,22 @@
 }
 .at-pillar-fill { height: 100%; border-radius: 999px; }
 
-/* Cảnh báo hồi quy */
+.at-kpi-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+.at-kpi-pill {
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(39, 39, 42, 0.9);
+  border: 1px solid rgba(82, 82, 91, 0.75);
+  color: #e4e4e7;
+}
+
 .at-regression-banner {
   margin-top: 8px;
   padding: 8px 10px;
@@ -489,7 +638,6 @@
   accent-color: #10b981;
 }
 
-/* Hộp Cài đặt phụ */
 .at-settings-popover {
   margin: 0 12px 8px;
   padding: 10px;
