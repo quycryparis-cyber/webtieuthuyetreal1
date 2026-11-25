@@ -2591,6 +2591,7 @@
     reloadToMainGate() {
       if (NS.state) NS.state.isDirty = false;
       try {
+        globalScope.__NOIR_DISABLE_BEFOREUNLOAD_PROMPT__ = true;
         globalScope.onbeforeunload = null;
       } catch (_) {}
       if (typeof this.reloadHook === 'function') {

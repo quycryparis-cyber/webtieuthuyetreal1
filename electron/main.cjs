@@ -110,6 +110,25 @@ async function createMainWindow() {
   });
 
   await mainWindow.loadURL(startUrl);
+  let forceWindowClose = false;
+  mainWindow.on('close', (ev) => {
+    if (forceWindowClose || !mainWindow || mainWindow.isDestroyed()) return;
+    ev.preventDefault();
+    try {
+      mainWindow.webContents.send('app:request-exit-confirm');
+    } catch (_eSend) {
+      forceWindowClose = true;
+      mainWindow.destroy();
+    }
+  });
+  ipcMain.removeHandler?.('app:approve-exit-close');
+  ipcMain.handle('app:approve-exit-close', () => {
+    forceWindowClose = true;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.close();
+    }
+    return { ok: true };
+  });
   mainWindow.on('closed', () => {
     mainWindow = null;
   });

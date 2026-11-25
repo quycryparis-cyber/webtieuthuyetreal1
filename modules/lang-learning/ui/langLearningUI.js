@@ -77,8 +77,17 @@
       setupDone: state.step === 'studio',
     });
     LL.saveJson(LL.STORAGE_KEYS.STARS, [...state.starredIds]);
-    LL.saveJson(LL.STORAGE_KEYS.DECKS, state.decks);
     LL.saveJson(LL.STORAGE_KEYS.MASTERY, state.masteryMap);
+    try {
+      const jsonDecks = JSON.stringify(state.decks);
+      globalScope.localStorage?.setItem(LL.STORAGE_KEYS.DECKS, jsonDecks);
+    } catch (_eQuota) {
+      try {
+        // Nếu bộ thẻ quá lớn vượt ngưỡng 5MB localStorage, giữ nguyên trên RAM và chỉ lưu tóm tắt đầu tiên để không văng lỗi
+        const compact = state.decks.slice(0, 3).map((d) => ({ ...d, cards: (d.cards || []).slice(0, 300) }));
+        globalScope.localStorage?.setItem(LL.STORAGE_KEYS.DECKS, JSON.stringify(compact));
+      } catch (_e2) {}
+    }
   }
 
   function hydrateState() {
@@ -147,9 +156,10 @@
     } else if (sourceMode === 'starred') {
       pool = state.vocabList.filter((v) => state.starredIds.has(v.id));
     }
-    if (!pool.length) pool = state.vocabList.slice(0, 20);
+    if (!pool.length) pool = state.vocabList;
 
-    return pool.slice(0, 120).map((v) => {
+    // Xuất FULL 100% toàn bộ từ trong pool (kể cả trọn vẹn 3529+ từ — tuyệt đối không cắt 120 từ!)
+    return pool.map((v) => {
       const targetWord = v[targetLang] || v.en;
       const nativeWord = v[state.nativeLang] || v.vi;
       const phon = LL.getPhonetic(targetLang, targetWord);
@@ -530,7 +540,12 @@
   // RENDER TAB 4: XUẤT PDF & TẢI FLASHCARD (PDF IN CẮT / ANKI TSV / HTML OFFLINE)
   // ==========================================================================
   function renderExportTabHtml() {
-    const activeDeck = state.decks.find((d) => d.id === state.activeDeckId) || state.decks[0] || null;
+    const activeDeck = state.decks.find((d) => d.id === state.activeDeckId) || null;
+    const useActiveDeckByDefault = Boolean(activeDeck && activeDeck.cards?.length && activeDeck.cards.length >= state.vocabList.length);
+    const useQuickSelectedDefault = !useActiveDeckByDefault && state.selectedIds.size > 0 && state.selectedIds.size < state.vocabList.length;
+    const useAllVocabDefault = !useActiveDeckByDefault && !useQuickSelectedDefault;
+    const primaryTgt = state.targetLangs[0] || 'en';
+    const primaryMeta = getLangMeta(primaryTgt);
     return `
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="ll51-card space-y-3 border-rose-500/45">
@@ -547,11 +562,12 @@
         <div class="ll51-card space-y-3 border-sky-500/45">
           <div class="text-base font-black text-sky-300">🃏 2. Tải Bộ Flashcard về máy (3 Định dạng Tối ưu nhất)</div>
           <p class="text-xs text-slate-300 leading-relaxed">
-            Chọn bộ Flashcard đã tạo ở dưới (hoặc tự xuất nhanh từ <b>${state.selectedIds.size} từ đang chọn</b>):
+            Quét &amp; xuất trọn vẹn <b>${state.vocabList.length} từ vựng</b> (hoặc bộ đã tích chọn <b>${state.selectedIds.size} từ</b>) sang .PDF, .TSV &amp; .HTML tương tác Offline:
           </p>
           <select id="ll51-export-deck-sel" class="ll51-select w-full">
-            ${state.decks.map((d) => `<option value="${d.id}" ${activeDeck && d.id === activeDeck.id ? 'selected' : ''}>🃏 ${esc(d.title)} (${d.cards?.length || 0} thẻ)</option>`).join('')}
-            <option value="__quick_selected__">⚡ Xuất nhanh từ ${state.selectedIds.size} từ đang tích chọn (${getLangMeta(state.targetLangs[0] || 'en').name})</option>
+            <option value="__all_vocab__" ${useAllVocabDefault ? 'selected' : ''}>🌍 QUÉT FULL TOÀN BỘ TỪ VỰNG WEB (${state.vocabList.length} từ — ${esc(primaryMeta.name)})</option>
+            <option value="__quick_selected__" ${useQuickSelectedDefault ? 'selected' : ''}>⚡ Xuất toàn bộ từ đang tích chọn (${state.selectedIds.size}/${state.vocabList.length} từ — ${esc(primaryMeta.name)})</option>
+            ${state.decks.map((d) => `<option value="${d.id}" ${useActiveDeckByDefault && activeDeck?.id === d.id ? 'selected' : ''}>🃏 ${esc(d.title)} (${d.cards?.length || 0} thẻ)</option>`).join('')}
           </select>
           <div class="space-y-2 pt-1">
             <button type="button" id="ll51-exp-fc-pdf" class="ll51-btn ll51-btn-primary w-full py-2.5">🖨️ Tải .PDF Thẻ Flashcard In Cắt 2 Mặt (A4 khớp gương)</button>
@@ -564,13 +580,25 @@
   }
 
   function resolveDeckForExport() {
-    const selVal = state.modalEl?.querySelector('#ll51-export-deck-sel')?.value || '__quick_selected__';
+    const selVal = state.modalEl?.querySelector('#ll51-export-deck-sel')?.value || '__all_vocab__';
+    const tgt = state.targetLangs[0] || 'en';
+    if (selVal === '__all_vocab__') {
+      return {
+        title: `Flashcard Full ${state.vocabList.length} Từ (${getLangMeta(tgt).name})`,
+        cards: buildDeckCards({ sourceMode: 'all', targetLang: tgt, modeId: 'meaning' }),
+      };
+    }
+    if (selVal === '__quick_selected__') {
+      return {
+        title: `Flashcard (${getLangMeta(tgt).name})`,
+        cards: buildDeckCards({ sourceMode: 'selected', targetLang: tgt, modeId: 'meaning' }),
+      };
+    }
     const found = state.decks.find((d) => d.id === selVal);
     if (found) return found;
-    const tgt = state.targetLangs[0] || 'en';
     return {
-      title: `Flashcard (${getLangMeta(tgt).name})`,
-      cards: buildDeckCards({ sourceMode: 'selected', targetLang: tgt, modeId: 'meaning' }),
+      title: `Flashcard Full ${state.vocabList.length} Từ (${getLangMeta(tgt).name})`,
+      cards: buildDeckCards({ sourceMode: 'all', targetLang: tgt, modeId: 'meaning' }),
     };
   }
 
@@ -887,21 +915,36 @@
       const r = await LL.exportVocabAndGrammarPdf({ vocabItems: items, visibleLangs: state.visibleLangs, nativeLang: state.nativeLang, includeGrammar: true });
       toast(`✅ Đã tải PDF ${items.length} từ yêu thích (${r.pages} trang)!`, 'success', 3500);
     });
-    root.querySelector('#ll51-exp-fc-pdf')?.addEventListener('click', async () => {
+    root.querySelector('#ll51-exp-fc-pdf')?.addEventListener('click', async (ev) => {
+      const btn = ev.currentTarget;
+      const oldTxt = btn.textContent;
+      btn.disabled = true;
+      await LL.ensurePinyinPro?.();
       const deck = resolveDeckForExport();
-      toast('⏳ Đang dựng PDF Thẻ Flashcard In Cắt 2 Mặt A4...', 'info', 2400);
-      const r = await LL.exportFlashcardsPdf(deck);
-      toast(`✅ Đã tải PDF Flashcard 2 mặt (${r.pages} trang A4)!`, 'success', 3500);
+      toast(`⏳ Đang dựng PDF Flashcard FULL ${deck.cards.length} thẻ in cắt 2 mặt A4...`, 'info', 2800);
+      try {
+        const r = await LL.exportFlashcardsPdf(deck, {
+          onProgress: (done, tot) => {
+            btn.textContent = `⏳ Đang dựng PDF Flashcard... ${done}/${tot} thẻ`;
+          },
+        });
+        toast(`✅ Đã tải FULL ${r.count} thẻ Flashcard PDF (${r.pages} trang A4)!`, 'success', 4000);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = oldTxt;
+      }
     });
-    root.querySelector('#ll51-exp-fc-tsv')?.addEventListener('click', () => {
+    root.querySelector('#ll51-exp-fc-tsv')?.addEventListener('click', async () => {
+      await LL.ensurePinyinPro?.();
       const deck = resolveDeckForExport();
       const r = LL.exportFlashcardsTsv(deck);
-      toast(`✅ Đã tải ${r.count} thẻ chuẩn Anki / Quizlet (.TSV)!`, 'success', 3200);
+      toast(`✅ Đã tải FULL ${r.count} thẻ chuẩn Anki / Quizlet (.TSV)!`, 'success', 3400);
     });
-    root.querySelector('#ll51-exp-fc-html')?.addEventListener('click', () => {
+    root.querySelector('#ll51-exp-fc-html')?.addEventListener('click', async () => {
+      await LL.ensurePinyinPro?.();
       const deck = resolveDeckForExport();
       const r = LL.exportFlashcardsInteractiveHtml(deck);
-      toast(`✅ Đã tải Bộ Flashcard Tương Tác Offline (.HTML · ${r.count} thẻ)!`, 'success', 3400);
+      toast(`✅ Đã tải FULL Bộ Flashcard Tương Tác Offline (.HTML · ${r.count} thẻ)!`, 'success', 3600);
     });
   }
 

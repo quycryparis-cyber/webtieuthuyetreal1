@@ -559,16 +559,28 @@
   }
 
   function wrapCtx(ctx, txt, maxW) {
-    const words = String(txt || '').split(/\s+/);
+    const words = String(txt || '').trim().split(/\s+/).filter(Boolean);
     const lines = [];
     let cur = '';
+    const breakToken = (tok) => {
+      let sub = '';
+      for (const ch of tok) {
+        if (sub && ctx.measureText(sub + ch).width > maxW) {
+          lines.push(sub);
+          sub = ch;
+        } else {
+          sub += ch;
+        }
+      }
+      return sub;
+    };
     for (const w of words) {
       const test = cur ? `${cur} ${w}` : w;
-      if (ctx.measureText(test).width > maxW && cur) {
-        lines.push(cur);
-        cur = w;
-      } else {
+      if (ctx.measureText(test).width <= maxW) {
         cur = test;
+      } else {
+        if (cur) lines.push(cur);
+        cur = ctx.measureText(w).width > maxW ? breakToken(w) : w;
       }
     }
     if (cur) lines.push(cur);
@@ -714,18 +726,21 @@
   /**
    * Xuất Flashcard thành PDF In Cắt 2 Mặt A4 (8 thẻ/trang — Mặt trước + Mặt sau khớp nhau!)
    */
-  async function exportFlashcardsPdf(deck) {
+  async function exportFlashcardsPdf(deck, options = {}) {
+    await ensurePinyinPro();
     const PDFLib = await ensurePdfLib();
     const pdfDoc = await PDFLib.PDFDocument.create();
     const cards = Array.isArray(deck?.cards) ? deck.cards : [];
+    const onProgress = typeof options?.onProgress === 'function' ? options.onProgress : null;
     const fontCjk = '"Segoe UI", "Microsoft YaHei", "Malgun Gothic", "Yu Gothic", Arial, sans-serif';
     const c = document.createElement('canvas');
     c.width = 1240;
     c.height = 1754;
     const ctx = c.getContext('2d');
+    const jpgQuality = cards.length > 400 ? 0.8 : 0.91;
 
     const flush = async () => {
-      const dataUrl = c.toDataURL('image/jpeg', 0.91);
+      const dataUrl = c.toDataURL('image/jpeg', jpgQuality);
       const bin = atob(dataUrl.split(',')[1]);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -740,7 +755,7 @@
       ctx.fillStyle = isBack ? '#065f46' : '#1e3a8a';
       ctx.font = `900 24px ${fontCjk}`;
       ctx.textBaseline = 'top';
-      ctx.fillText(`${deck.title || 'Bộ Flashcard'} — ${isBack ? 'MẶT SAU (ĐÁP ÁN)' : 'MẶT TRƯỚC (CÂU HỎI)'}`, 56, 36);
+      ctx.fillText(`${deck.title || 'Bộ Flashcard'} (${cards.length} thẻ) — ${isBack ? 'MẶT SAU (ĐÁP ÁN)' : 'MẶT TRƯỚC (CÂU HỎI)'}`, 56, 36);
       const cardW = 550;
       const cardH = 385;
       slice.forEach((card, i) => {
@@ -761,16 +776,16 @@
         ctx.fillText(isBack ? card.backLabel || 'ĐÁP ÁN' : card.frontLabel || 'TỪ VỰNG', x + 22, y + 20);
 
         ctx.fillStyle = '#0f172a';
-        ctx.font = `900 32px ${fontCjk}`;
+        ctx.font = `900 30px ${fontCjk}`;
         const mainTxt = isBack ? card.back : card.front;
         wrapCtx(ctx, mainTxt, cardW - 44).slice(0, 4).forEach((ln, li) => {
-          ctx.fillText(ln, x + 22, y + 72 + li * 42);
+          ctx.fillText(ln, x + 22, y + 70 + li * 40);
         });
 
         const subTxt = isBack ? card.backSub : card.frontSub;
         if (subTxt) {
           ctx.fillStyle = '#475569';
-          ctx.font = `600 20px ${fontCjk}`;
+          ctx.font = `600 19px ${fontCjk}`;
           wrapCtx(ctx, subTxt, cardW - 44).slice(0, 3).forEach((ln, li) => {
             ctx.fillText(ln, x + 22, y + 255 + li * 28);
           });
@@ -784,16 +799,20 @@
       await flush();
       drawGridSide(slice, true);
       await flush();
+      if (onProgress) onProgress(Math.min(cards.length, i + slice.length), cards.length);
+      if ((i / 8) % 4 === 3) {
+        await new Promise((r) => setTimeout(r, 0));
+      }
     }
     c.width = 0;
     c.height = 0;
     const pdfBytes = await pdfDoc.save();
-    triggerDownload(new Blob([pdfBytes], { type: 'application/pdf' }), `Flashcard_In_Cat_${Date.now()}.pdf`);
-    return { ok: true, pages: pdfDoc.getPageCount() };
+    triggerDownload(new Blob([pdfBytes], { type: 'application/pdf' }), `Flashcard_In_Cat_${cards.length}The_${Date.now()}.pdf`);
+    return { ok: true, count: cards.length, pages: pdfDoc.getPageCount(), size: pdfBytes.byteLength };
   }
 
   /**
-   * Xuất Flashcard ra .TSV chuẩn Anki / Quizlet (UTF-8 BOM)
+   * Xuất Flashcard ra .TSV chuẩn Anki / Quizlet (UTF-8 BOM — Đầy đủ 100% toàn bộ thẻ!)
    */
   function exportFlashcardsTsv(deck) {
     const cards = Array.isArray(deck?.cards) ? deck.cards : [];
@@ -804,37 +823,45 @@
       return `${front}\t${back}`;
     });
     const content = '\uFEFF' + lines.join('\n');
-    triggerDownload(new Blob([content], { type: 'text/tab-separated-values;charset=utf-8' }), `Flashcard_Anki_Quizlet_${Date.now()}.tsv`);
+    triggerDownload(new Blob([content], { type: 'text/tab-separated-values;charset=utf-8' }), `Flashcard_Anki_Quizlet_${cards.length}Tu_${Date.now()}.tsv`);
     return { ok: true, count: cards.length };
   }
 
   /**
-   * Xuất Flashcard thành file .HTML tương tác chạy Offline 100% (lật thẻ 3D + nghe phát âm 🔊!)
+   * Xuất Flashcard thành file .HTML tương tác chạy Offline 100% (lật thẻ + tìm kiếm + nhảy số + nghe phát âm 🔊!)
    */
   function exportFlashcardsInteractiveHtml(deck) {
-    const safeJson = JSON.stringify(deck || { title: 'Flashcard', cards: [] }).replace(/</g, '\\u003c');
+    const cards = Array.isArray(deck?.cards) ? deck.cards : [];
+    const safeDeck = { ...(deck || {}), title: deck?.title || 'Flashcard Ngoại Ngữ', cards };
+    const safeJson = JSON.stringify(safeDeck).replace(/</g, '\\u003c');
     const html = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>${String(deck?.title || 'Flashcard Ngoại Ngữ').replace(/</g, '&lt;')}</title>
+<title>${String(safeDeck.title).replace(/</g, '&lt;')}</title>
 <style>body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:#0f172a;color:#f8fafc;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}
+.tools{width:100%;max-width:620px;display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.tools input{flex:1;min-width:140px;padding:9px 12px;border-radius:10px;border:1px solid #475569;background:#1e293b;color:#f8fafc;font-size:13px}.tools input[type=number]{max-width:96px;flex:0 0 96px}
 .card{width:100%;max-width:620px;min-height:280px;border-radius:22px;border:2px solid #38bdf8;background:#1e293b;padding:28px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;box-shadow:0 20px 50px rgba(0,0,0,.5)}
 .tag{font-size:12px;font-weight:800;color:#7dd3fc;text-transform:uppercase}.main{font-size:30px;font-weight:900;margin:16px 0;line-height:1.3}.sub{font-size:15px;color:#94a3b8}
 .bar{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center}button{padding:10px 16px;border-radius:12px;border:1px solid #475569;background:#334155;color:#fff;font-weight:800;cursor:pointer}
 button.pri{background:linear-gradient(135deg,#059669,#0284c7);border-color:#34d399}</style></head><body>
-<h2 id="title" style="margin:0 0 12px"></h2>
+<h2 id="title" style="margin:0 0 10px;text-align:center"></h2>
+<div class="tools"><input id="q" type="search" placeholder="🔍 Tìm trong tất cả ${cards.length} từ..."/><input id="jmp" type="number" min="1" max="${Math.max(1, cards.length)}" placeholder="#Thẻ"/><button id="shuf">🔀 Trộn</button></div>
 <div class="card" id="card"><div class="tag" id="tag"></div><div class="main" id="main"></div><div class="sub" id="sub"></div><div style="font-size:12px;color:#64748b">Bấm vào thẻ để lật Mặt trước / Mặt sau</div></div>
 <div class="bar"><button id="prev">◀ Trước</button><button id="speak">🔊 Nghe phát âm</button><button class="pri" id="flip">🔄 Lật thẻ</button><button id="next">Sau ▶</button></div>
 <p id="stat" style="font-size:13px;color:#94a3b8;margin-top:12px"></p>
-<script>const DECK=${safeJson};let idx=0,back=false;document.getElementById('title').textContent=DECK.title;
-function render(){const c=DECK.cards[idx]||{};document.getElementById('tag').textContent=back?(c.backLabel||'ĐÁP ÁN'):(c.frontLabel||'CÂU HỎI');
+<script>const DECK=${safeJson};let list=DECK.cards.slice(),idx=0,back=false;document.getElementById('title').textContent=DECK.title+' ('+DECK.cards.length+' thẻ)';
+function render(){if(!list.length){document.getElementById('tag').textContent='TRỐNG';document.getElementById('main').textContent='Không có thẻ khớp tìm kiếm';document.getElementById('sub').textContent='';document.getElementById('stat').textContent='0 / '+DECK.cards.length;return;}
+const c=list[idx]||{};document.getElementById('tag').textContent=back?(c.backLabel||'ĐÁP ÁN'):(c.frontLabel||'CÂU HỎI');
 document.getElementById('main').textContent=back?(c.back||''):(c.front||'');document.getElementById('sub').textContent=back?(c.backSub||''):(c.frontSub||'');
-document.getElementById('stat').textContent='Thẻ '+(idx+1)+' / '+DECK.cards.length;}
+document.getElementById('stat').textContent='Thẻ '+(idx+1)+' / '+list.length+' (Tổng gốc: '+DECK.cards.length+')';}
 document.getElementById('card').onclick=document.getElementById('flip').onclick=()=>{back=!back;render();};
-document.getElementById('prev').onclick=()=>{idx=(idx-1+DECK.cards.length)%DECK.cards.length;back=false;render();};
-document.getElementById('next').onclick=()=>{idx=(idx+1)%DECK.cards.length;back=false;render();};
-document.getElementById('speak').onclick=()=>{const c=DECK.cards[idx];if(!c||!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(c.speakText||c.front);u.lang=c.bcp47||'en-US';speechSynthesis.speak(u);};
+document.getElementById('prev').onclick=()=>{if(!list.length)return;idx=(idx-1+list.length)%list.length;back=false;render();};
+document.getElementById('next').onclick=()=>{if(!list.length)return;idx=(idx+1)%list.length;back=false;render();};
+document.getElementById('q').oninput=(e)=>{const kw=e.target.value.trim().toLowerCase();list=kw?DECK.cards.filter(c=>((c.front||'')+' '+(c.back||'')+' '+(c.frontSub||'')).toLowerCase().includes(kw)):DECK.cards.slice();idx=0;back=false;render();};
+document.getElementById('jmp').onchange=(e)=>{const n=Math.max(1,Math.min(list.length,parseInt(e.target.value,10)||1));idx=n-1;back=false;render();};
+document.getElementById('shuf').onclick=()=>{for(let i=list.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=list[i];list[i]=list[j];list[j]=t;}idx=0;back=false;render();};
+document.getElementById('speak').onclick=()=>{const c=list[idx];if(!c||!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(c.speakText||c.front);u.lang=c.bcp47||'en-US';speechSynthesis.speak(u);};
 render();</script></body></html>`;
-    triggerDownload(new Blob([html], { type: 'text/html;charset=utf-8' }), `Flashcard_Tuong_Tac_Offline_${Date.now()}.html`);
-    return { ok: true, count: deck?.cards?.length || 0 };
+    triggerDownload(new Blob([html], { type: 'text/html;charset=utf-8' }), `Flashcard_Tuong_Tac_Offline_${cards.length}Tu_${Date.now()}.html`);
+    return { ok: true, count: cards.length };
   }
 
   LL.LANGUAGES = LANGUAGES;

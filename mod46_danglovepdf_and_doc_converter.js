@@ -521,6 +521,7 @@
       this.collapsedGroups = {};
       this.allGroupsCollapsed = false;
       this.signatureDataUrl = '';
+      this.theme10ExtraImages = [];
       this._initialized = false;
     }
 
@@ -546,6 +547,7 @@
       this.pagesState = [];
       this.resultItems = [];
       this.resultZipItem = null;
+      this.theme10ExtraImages = [];
       this.cancelled = false;
       this.revokeAllUrls();
     }
@@ -636,16 +638,19 @@
     // MỞ CỬA SỔ CHÍNH ĐĂNGLOVEPDF STUDIO
     // ------------------------------------------------------------------------
     openDangLovePdfStudio(initialToolId = null) {
+      const isStandalone = Boolean(global.NOIR_DANGLOVEPDF_STANDALONE);
       let modal = document.getElementById('modal-mod46-danglovepdf-studio');
       if (!modal) {
         modal = document.createElement('div');
         modal.id = 'modal-mod46-danglovepdf-studio';
-        modal.className = 'fixed inset-0 z-[2147483590] bg-zinc-950/90 backdrop-blur-lg flex items-center justify-center p-1.5 sm:p-4 overflow-hidden text-zinc-100';
+        modal.className = isStandalone
+          ? 'fixed inset-0 z-[2147483590] bg-zinc-950 flex items-center justify-center p-0 overflow-hidden text-zinc-100'
+          : 'fixed inset-0 z-[2147483590] bg-zinc-950/90 backdrop-blur-lg flex items-center justify-center p-1.5 sm:p-4 overflow-hidden text-zinc-100';
         modal.style.cssText = 'position:fixed;inset:0;width:100vw;height:100dvh;align-items:center;justify-content:center;';
         modal.setAttribute('role', 'dialog');
         modal.setAttribute('aria-modal', 'true');
         modal.innerHTML = `
-          <div class="w-full max-w-[1440px] h-[96dvh] sm:h-[94dvh] mx-auto rounded-2xl border border-zinc-700/80 bg-zinc-950/98 shadow-2xl flex flex-col overflow-hidden">
+          <div class="${isStandalone ? 'w-full h-[100dvh] rounded-none border-0' : 'w-full max-w-[1440px] h-[96dvh] sm:h-[94dvh] mx-auto rounded-2xl border border-zinc-700/80'} bg-zinc-950/98 shadow-2xl flex flex-col overflow-hidden">
             <!-- Header gọn gàng căn giữa đầy đủ (relative z-20 chống bị che phủ nút Đóng!) -->
             <div class="relative z-20 w-full px-3 sm:px-6 py-3 border-b border-zinc-800 bg-zinc-900/95 flex flex-wrap items-center justify-between gap-2 shrink-0">
               <div class="flex items-center gap-2.5 min-w-0">
@@ -654,13 +659,21 @@
                   <div class="flex items-center gap-2 flex-wrap">
                     <h2 class="text-sm sm:text-base font-black text-rose-300 tracking-tight">ĐăngLovePDF ( ͡° ͜ʖ ͡°)</h2>
                     <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/50 text-emerald-300 text-[10px] font-extrabold">🔒 49 Công cụ Premium · Xử lý 100% trên máy</span>
+                    ${isStandalone ? '<span class="px-2 py-0.5 rounded-full bg-teal-500/15 border border-teal-400/50 text-teal-200 text-[10px] font-bold">🌐 Web Riêng · Tự động đồng bộ Web Gốc</span>' : ''}
                   </div>
                 </div>
               </div>
               <div class="flex items-center gap-2 flex-wrap">
                 <button type="button" id="btn-mod46-back-hub" class="hidden px-3 py-1.5 rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer">← Danh mục công cụ</button>
                 <button type="button" id="btn-mod46-header-new-file" class="hidden px-3 py-1.5 rounded-xl border border-emerald-500/60 bg-emerald-500/15 hover:bg-emerald-600 text-emerald-200 hover:text-white text-xs font-extrabold cursor-pointer">🔄 Làm tệp mới</button>
-                <button type="button" id="btn-mod46-close-studio" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
+                ${
+                  isStandalone
+                    ? `<button type="button" id="btn-mod46-copy-standalone-link" class="px-3 py-1.5 rounded-xl border border-sky-500/50 bg-sky-500/15 hover:bg-sky-600 text-sky-200 hover:text-white text-xs font-bold cursor-pointer">🔗 Chép Link</button>
+                       <a href="index.html" data-noir-internal-nav="1" class="px-3 py-1.5 rounded-xl border border-amber-400/50 bg-amber-500/15 hover:bg-amber-600 text-amber-200 hover:text-white text-xs font-bold">📖 Web Tiểu Thuyết</a>
+                       <button type="button" data-noir-exit-trigger="1" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">🚪 Thoát</button>`
+                    : `<a href="danglovepdf.html" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-xl border border-teal-500/50 bg-teal-500/15 hover:bg-teal-600 text-teal-200 hover:text-white text-xs font-bold" title="Mở trang web riêng chỉ dành cho ĐăngLovePDF (tự đồng bộ cập nhật)">🌐 Mở Web Riêng</a>
+                       <button type="button" id="btn-mod46-close-studio" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>`
+                }
               </div>
             </div>
 
@@ -672,12 +685,22 @@
 
         // Event delegation cấp root: Đóng / Làm tệp mới / Quay lại Danh mục KHÔNG BAO GIỜ bị liệt dù đang chạy tác vụ lỗi!
         const forceCloseStudio = () => {
+          if (isStandalone) return;
           this.cancelled = true;
           modal.classList.add('hidden');
           modal.style.display = 'none';
           try { this.resetWorkspaceState(); } catch (_eReset) {}
         };
         modal.addEventListener('click', (ev) => {
+          const copyBtn = ev.target?.closest?.('#btn-mod46-copy-standalone-link');
+          if (copyBtn) {
+            ev.preventDefault();
+            try {
+              global.navigator?.clipboard?.writeText?.(global.location.href);
+              this.toast('✅ Đã sao chép link trang Web ĐăngLovePDF (luôn đồng bộ từ web gốc)!', 'success', 3200);
+            } catch (_eCp) {}
+            return;
+          }
           const closeBtn = ev.target?.closest?.('#btn-mod46-close-studio');
           if (closeBtn) {
             ev.preventDefault();
@@ -704,7 +727,7 @@
           }
         });
         document.addEventListener('keydown', (ev) => {
-          if (ev.key === 'Escape' && !modal.classList.contains('hidden') && modal.style.display !== 'none') {
+          if (ev.key === 'Escape' && !isStandalone && !modal.classList.contains('hidden') && modal.style.display !== 'none') {
             forceCloseStudio();
           }
         });
@@ -1901,14 +1924,100 @@
 
         const renderTocPreviewSheet = () => {
           const st = readWordStyleBar('toc', { fontSize: 14, color: '#18181b', fontFamily: '"Times New Roman", Georgia, serif', bold: false });
-          const tocTitle = body.querySelector('#opt-pro-toc-title')?.value?.trim() || 'MỤC LỤC TÀI LIỆU';
-          const tocStyle = body.querySelector('#opt-pro-toc-style')?.value || 'dots';
-          const rawLines = (body.querySelector('#opt-pro-toc-lines')?.value || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+          const tocTitle = body.querySelector('#opt-pro-toc-title')?.value?.trim() || 'MỤC LỤC BÁO CÁO & TÀI LIỆU';
+          const tocStyle = body.querySelector('#opt-pro-toc-style')?.value || 'dang_report';
+          const allRaw = (body.querySelector('#opt-pro-toc-lines')?.value || '').split(/\r?\n/).filter((l) => l.trim());
           simCanvas.width = 460;
           simCanvas.height = 650;
           const c = simCanvas.getContext('2d');
           c.fillStyle = '#ffffff';
           c.fillRect(0, 0, simCanvas.width, simCanvas.height);
+
+          if (tocStyle === 'dang_report') {
+            c.fillStyle = '#0f2438';
+            c.fillRect(0, 0, simCanvas.width, 8);
+            c.fillStyle = '#0d9488';
+            c.fillRect(0, 8, simCanvas.width, 3);
+
+            c.fillStyle = '#0f2438';
+            c.fillRect(28, 28, simCanvas.width - 56, 32);
+            c.fillStyle = '#0d9488';
+            c.fillRect(28, 31, 5, 26);
+            c.fillStyle = '#ffffff';
+            c.font = '800 12px "Segoe UI", Arial, sans-serif';
+            c.fillText(tocTitle.toUpperCase().slice(0, 48), 42, 49);
+
+            const secRows = [];
+            const tblRows = [];
+            const figRows = [];
+            allRaw.forEach((line) => {
+              const trimmed = line.trim();
+              const parts = trimmed.split('|');
+              const label = (parts[0] || trimmed).trim();
+              const pg = (parts[1] || '1').trim();
+              if (/^\[Bảng\]/i.test(label) || /^BẢNG\s+\d/i.test(label)) {
+                tblRows.push({ label: label.replace(/^\[Bảng\]\s*/i, '').trim(), pg });
+              } else if (/^\[Hình\]/i.test(label) || /^HÌNH\s+\d/i.test(label)) {
+                figRows.push({ label: label.replace(/^\[Hình\]\s*/i, '').trim(), pg });
+              } else {
+                secRows.push({ label, pg, isSub: /^\s{2,}/.test(line) || /^\d+\.\d+/.test(label) });
+              }
+            });
+
+            let y = 78;
+            secRows.slice(0, 14).forEach((s) => {
+              c.fillStyle = s.isSub ? '#334155' : '#0f2438';
+              c.font = `${s.isSub ? '500 10.5px' : '700 11.5px'} "Segoe UI", Arial, sans-serif`;
+              const indent = s.isSub ? 12 : 0;
+              c.fillText(s.label.slice(0, 46), 30 + indent, y);
+              c.fillStyle = '#0d9488';
+              c.font = '800 11px "Segoe UI", Arial, sans-serif';
+              c.textAlign = 'right';
+              c.fillText(s.pg, simCanvas.width - 30, y);
+              c.textAlign = 'left';
+              c.fillStyle = '#e2e8f0';
+              c.fillRect(30 + indent, y + 6, simCanvas.width - 60 - indent, 1);
+              y += 22;
+            });
+
+            if (tblRows.length || figRows.length) {
+              const cardY = Math.max(y + 10, 415);
+              const cardW = tblRows.length && figRows.length ? 194 : 404;
+              const drawMiniCard = (cx, titleCard, rows) => {
+                c.fillStyle = '#f8fafc';
+                c.fillRect(cx, cardY, cardW, 175);
+                c.strokeStyle = '#cbd5e1';
+                c.strokeRect(cx, cardY, cardW, 175);
+                c.fillStyle = '#0f2438';
+                c.font = '800 9.5px "Segoe UI", Arial, sans-serif';
+                c.fillText(titleCard, cx + 10, cardY + 18);
+                c.fillStyle = '#0d9488';
+                c.fillRect(cx + 10, cardY + 24, cardW - 20, 1.5);
+                rows.slice(0, 6).forEach((it, i) => {
+                  const ry = cardY + 42 + i * 20;
+                  c.fillStyle = '#1e293b';
+                  c.font = '500 9px "Segoe UI", Arial, sans-serif';
+                  c.fillText(it.label.slice(0, 24), cx + 10, ry);
+                  c.fillStyle = '#0f2438';
+                  c.textAlign = 'right';
+                  c.fillText(it.pg, cx + cardW - 10, ry);
+                  c.textAlign = 'left';
+                });
+              };
+              if (tblRows.length && figRows.length) {
+                drawMiniCard(28, 'DANH MỤC BẢNG', tblRows);
+                drawMiniCard(238, 'DANH MỤC HÌNH', figRows);
+              } else if (tblRows.length) {
+                drawMiniCard(28, 'DANH MỤC BẢNG DỮ LIỆU', tblRows);
+              } else {
+                drawMiniCard(28, 'DANH MỤC BIỂU ĐỒ & HÌNH', figRows);
+              }
+            }
+            if (simBadge) simBadge.textContent = `Định dạng Đăng · ${secRows.length} mục · ${tblRows.length} bảng · ${figRows.length} hình`;
+            return;
+          }
+
+          const rawLines = allRaw.map((l) => l.trim());
           const headSize = Math.max(14, Math.round(st.fontSize * 1.25));
           c.fillStyle = st.color === '#18181b' ? '#065f46' : st.color;
           c.font = `${st.italic ? 'italic ' : ''}700 ${headSize}px ${st.fontFamily}`;
@@ -2052,10 +2161,46 @@
         });
 
         // Bắt sự kiện thay đổi tất cả ô chữ, font, cỡ, màu, B/I/U ở cột phải để cập nhật mô phỏng tức thì
-        body.querySelectorAll('#mod46-tool-options-wrap input, #mod46-tool-options-wrap select, #mod46-tool-options-wrap textarea').forEach((el) => {
+        body.querySelectorAll('#mod46-options-panel input, #mod46-options-panel select, #mod46-options-panel textarea').forEach((el) => {
           el.addEventListener('input', syncVisualOverlays);
           el.addEventListener('change', syncVisualOverlays);
         });
+
+        if (tid === 'bookmarks_toc') {
+          const runAutoTocDetect = async (silent = false) => {
+            const ta = body.querySelector('#opt-pro-toc-lines');
+            if (!ta || !this.files[0]) return;
+            const extractor = global.NoirExtractStructuredBlocksFromFile || NS.dangLovePdfPro?.extractStructuredBlocksFromFile;
+            const tocBuilder = global.NoirBuildTocFromBlocks || NS.dangLovePdfPro?.buildTocFromBlocks;
+            if (!extractor || !tocBuilder) return;
+            try {
+              const blocks = await extractor(this.files[0], { ensurePdfJs, ensureJsZip, ensureXlsx });
+              if (!ta.isConnected) return;
+              const toc = tocBuilder(blocks);
+              const lines = [
+                ...(toc.sections || []).map((s) => `${s.level >= 2 ? '  ' : ''}${s.text} | ${s.pageNo}`),
+                ...(toc.tables || []).map((t) => `[Bảng] ${t.label} | ${t.pageNo}`),
+                ...(toc.figures || []).map((fg) => `[Hình] ${fg.label} | ${fg.pageNo}`),
+              ];
+              if (lines.length) {
+                ta.value = lines.join('\n');
+                renderTocPreviewSheet();
+                if (!silent) {
+                  this.toast(`🔍 Đã quét được ${toc.sections.length} tiêu đề, ${toc.tables.length} bảng & ${toc.figures.length} hình!`, 'success', 2600);
+                }
+              } else if (!silent) {
+                this.toast('Chưa phát hiện dòng mục lục tự động trong file PDF — bạn có thể nhập thủ công.', 'info', 2500);
+              }
+            } catch (_eToc) {
+              if (!silent) this.toast('Không thể quét cấu trúc tự động từ tệp PDF này.', 'warning', 2500);
+            }
+          };
+          body.querySelector('#btn-pro-toc-autodetect')?.addEventListener('click', () => runAutoTocDetect(false));
+          const initialTaVal = body.querySelector('#opt-pro-toc-lines')?.value?.trim() || '';
+          if (!initialTaVal || /^Chương 1: Khởi đầu \| 1\s+Chương 2: Diễn biến chính \| 5\s+Chương 3: Tổng kết \| 12$/i.test(initialTaVal)) {
+            runAutoTocDetect(true);
+          }
+        }
 
         if (tid !== 'bookmarks_toc') {
           let dragTarget = null;
@@ -2252,9 +2397,12 @@
         })();
       }
 
-      // Gắn sự kiện click trực tiếp cho 10 ô chọn màu Theme & Live Preview cho công cụ beautify_10_themes
+      // Gắn sự kiện click trực tiếp cho 10+1 ô chọn màu Theme, Định dạng Đăng, Chèn ảnh & Live Preview cho beautify_10_themes
       if (this.activeTool?.id === 'beautify_10_themes') {
         const selEl = body.querySelector('#opt-pro-theme10-id');
+        const dangLayoutChk = body.querySelector('#opt-pro-theme10-dang-layout');
+        const authorCoverChk = body.querySelector('#opt-pro-theme10-author-cover');
+        const fontEl = body.querySelector('#opt-pro-theme10-font');
         const coverChk = body.querySelector('#opt-pro-theme10-cover');
         const hdrModeEl = body.querySelector('#opt-pro-theme10-hdr-mode');
         const hdrSubEl = body.querySelector('#opt-pro-theme10-hdr-sub');
@@ -2265,7 +2413,10 @@
         const ftrPresetEl = body.querySelector('#opt-pro-theme10-ftr-preset');
         const ftrAlignEl = body.querySelector('#opt-pro-theme10-ftr-align');
         const ftrTextEl = body.querySelector('#opt-pro-theme10-ftr-text');
+        const imgInp = body.querySelector('#opt-pro-theme10-images');
+        const imgListEl = body.querySelector('#opt-pro-theme10-images-list');
         const themes = NS.dangLovePdfPro?.REPORT_THEMES_10 || [];
+        if (!Array.isArray(this.theme10ExtraImages)) this.theme10ExtraImages = [];
 
         const renderLiveThemeSample = () => {
           const th = themes.find((t) => t.id === selEl?.value) || themes[0];
@@ -2284,7 +2435,15 @@
                 .replace(/\{total\}/gi, '12')
             );
 
-          const hasCover = Boolean(coverChk?.checked);
+          const hasAuthorCover = Boolean(authorCoverChk?.checked);
+          const hasSysCover = Boolean(coverChk?.checked);
+          const isDangLayout = Boolean(dangLayoutChk?.checked);
+          const fontMap = {
+            sans: '"Segoe UI", Arial, sans-serif',
+            serif: 'Georgia, "Times New Roman", serif',
+            classic: '"Palatino Linotype", Georgia, serif',
+          };
+          const pvFont = fontMap[fontEl?.value] || fontMap.sans;
           const hMode = hdrModeEl?.value || 'none';
           const hAlign = hdrAlignEl?.value || 'center';
           const fMode = ftrModeEl?.value || 'page_num';
@@ -2303,36 +2462,140 @@
             fMode !== 'none'
               ? `<div style="margin-top:8px;padding:7px 16px;border-top:1px solid #cbd5e1;color:#475569;font-size:10.5px;font-weight:700;text-align:${cssAlign(fAlign)};">${expTok(ftrTextEl?.value || 'Trang {page} / {total}')}</div>`
               : '';
-          const coverPreviewHtml = hasCover
+
+          const authorCoverPreviewHtml = hasAuthorCover
+            ? `<div style="background:linear-gradient(135deg,${th.primary},${th.secondary});border-bottom:4px solid ${th.accent};padding:12px 16px;color:#fff;display:flex;align-items:center;gap:12px;">
+                 <img src="assets/app-icon-192.png" alt="Icon Đăng" style="width:48px;height:48px;border-radius:10px;border:2px solid #f59e0b;object-fit:cover;background:#fff;flex-shrink:0;" onerror="this.style.display='none'" />
+                 <div style="min-width:0;">
+                   <div style="font-size:9px;font-weight:900;color:#5eead4;letter-spacing:0.06em;">TRANG BÌA GHI CÔNG TÁC GIẢ · ĐĂNGLOVEPDF STUDIO</div>
+                   <div style="font-size:13.5px;font-weight:900;margin-top:2px;">File được tạo bởi Mai Hải Đăng vip pro</div>
+                   <div style="font-size:10px;color:rgba(255,255,255,0.85);">Tài liệu: <strong>${fname}</strong> · Web Viết Tiểu Thuyết Của Bi</div>
+                 </div>
+               </div>`
+            : '';
+
+          const sysCoverPreviewHtml = hasSysCover && !hasAuthorCover
             ? `<div style="background:linear-gradient(135deg,${th.primary},${th.secondary});border-left:8px solid ${th.accent};padding:12px 18px;color:#fff;border-bottom:2px dashed rgba(255,255,255,0.25);">
                  <div style="font-size:9.5px;font-weight:800;letter-spacing:0.08em;color:${th.accent};">TRANG BÌA HỆ THỐNG (ĐÃ BẬT) · ĐĂNGLOVEPDF</div>
                  <div style="font-size:14px;font-weight:900;margin-top:2px;">${fname.toUpperCase()}</div>
                </div>`
             : '';
 
+          const dangTocPreviewHtml = isDangLayout
+            ? `<div style="padding:8px 10px;margin-bottom:8px;border-radius:8px;border:1px solid #cbd5e1;background:#f8fafc;">
+                 <div style="background:${th.primary};border-left:4px solid ${th.accent};color:#fff;padding:4px 8px;border-radius:4px;font-size:10.5px;font-weight:900;margin-bottom:6px;">MỤC LỤC BÁO CÁO &amp; HỆ THỐNG BẢNG – BIỂU ĐỒ</div>
+                 <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:${th.primary};border-bottom:1px solid #cbd5e1;padding-bottom:2px;margin-bottom:3px;"><span>PHẦN 1. TỔNG QUAN &amp; PHÂN TÍCH</span><span>3</span></div>
+                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:5px;">
+                   <div style="background:#fff;border:1px solid #cbd5e1;border-radius:5px;padding:4px 6px;font-size:9.5px;"><strong style="color:${th.primary};">DANH MỤC BẢNG</strong><div style="color:#334155;">Bảng 1.1: Số liệu... (4)</div></div>
+                   <div style="background:#fff;border:1px solid #cbd5e1;border-radius:5px;padding:4px 6px;font-size:9.5px;"><strong style="color:${th.primary};">DANH MỤC HÌNH</strong><div style="color:#334155;">Hình 1.1: Biểu đồ... (5)</div></div>
+                 </div>
+               </div>`
+            : '';
+
+          const firstExtra = this.theme10ExtraImages[0];
+          const extraImgPreviewHtml = firstExtra?.dataUrl
+            ? `<div style="margin-top:8px;border:1px solid #cbd5e1;border-radius:6px;padding:6px;background:#fff;text-align:center;">
+                 <img src="${firstExtra.dataUrl}" alt="" style="max-height:76px;margin:0 auto;border-radius:4px;object-fit:contain;" />
+                 <div style="font-size:10px;font-weight:700;font-style:italic;color:${th.primary};margin-top:4px;">${escHtml(firstExtra.caption || 'Hình 1: Ảnh chèn thêm')} (${this.theme10ExtraImages.length} ảnh)</div>
+               </div>`
+            : '';
+
           fullHost.innerHTML = `
             <div class="text-xs font-black text-amber-300">🎨 Xem trước trực tiếp bố cục Theme đã chọn (${escHtml(th.name)}):</div>
-            <div class="rounded-xl overflow-hidden border border-zinc-700 shadow-lg" style="background:${th.bg};color:${th.text};">
-              ${coverPreviewHtml}
+            <div class="rounded-xl overflow-hidden border border-zinc-700 shadow-lg" style="background:${th.bg};color:${th.text};font-family:${pvFont};">
+              ${authorCoverPreviewHtml}
+              ${sysCoverPreviewHtml}
               ${hdrPreviewHtml}
               <div style="padding:12px 18px;font-size:12px;line-height:1.55;">
-                <div style="background:${th.primary};border-left:5px solid ${th.accent};color:#fff;padding:7px 12px;border-radius:5px;font-weight:800;margin-bottom:8px;">1. TIÊU ĐỀ PHẦN CHÍNH (GỘP CHUNG 1 KHUNG)</div>
-                <p style="text-align:justify;margin:0 0 8px 0;">Văn bản được căn đều hai bên trái–phải chuẩn in ấn sách và Word; lề trái phải cân đối hài hòa trên khổ giấy A4.</p>
-                <div style="background:${th.zebra};border-left:4px solid ${th.accent};padding:7px 10px;border-radius:5px;margin-bottom:8px;text-align:justify;">💡 Khung nổi bật số liệu / Nhận định trọng tâm tự động phân tách mảng màu.</div>
+                ${dangTocPreviewHtml}
+                <div style="background:${th.primary};border-left:5px solid ${th.accent};color:#fff;padding:7px 12px;border-radius:5px;font-weight:800;margin-bottom:8px;">1. TIÊU ĐỀ PHẦN CHÍNH (TỰ NHẬN DIỆN TỪ FILE)</div>
+                <p style="text-align:justify;margin:0 0 8px 0;">Văn bản căn đều hai bên trái–phải, lọc bỏ dòng giả (như “phần SX...”, “USD.”); bảng &amp; hình tự động vào Danh mục có link nhảy trang.</p>
+                <div style="border-left:4px solid ${th.accent};padding-left:8px;font-weight:800;font-size:11.5px;color:${th.primary};margin-bottom:4px;">Bảng 1.1: Tổng hợp dữ liệu chính</div>
                 <table style="width:94%;margin:0 auto;border-collapse:collapse;font-size:11px;">
-                  <thead><tr style="background:${th.primary};color:#fff;"><th style="padding:5px 8px;text-align:left;">Chỉ tiêu</th><th style="padding:5px 8px;text-align:left;">Dữ liệu căn giữa trang</th></tr></thead>
+                  <thead><tr style="background:${th.primary};color:#fff;"><th style="padding:5px 8px;text-align:left;">Chỉ tiêu</th><th style="padding:5px 8px;text-align:left;">Giá trị</th></tr></thead>
                   <tbody>
-                    <tr style="background:${th.zebra};"><td style="padding:5px 8px;">Bảng số liệu</td><td style="padding:5px 8px;">Tự căn giữa khổ A4 &amp; kẻ sọc</td></tr>
+                    <tr style="background:${th.zebra};"><td style="padding:5px 8px;">Nhận diện Bảng / Ảnh</td><td style="padding:5px 8px;">Chuẩn hóa lưới &amp; link /GoTo</td></tr>
                   </tbody>
                 </table>
+                ${extraImgPreviewHtml}
               </div>
               ${ftrPreviewHtml}
             </div>
           `;
         };
+
+        const syncExtraImagesListDom = () => {
+          if (!imgListEl) return;
+          const imgs = this.theme10ExtraImages || [];
+          imgListEl.innerHTML = imgs.length
+            ? imgs.map((im, idx) => `
+              <div class="flex items-center gap-2 p-1.5 rounded-lg bg-zinc-900 border border-zinc-800">
+                <img src="${im.dataUrl}" alt="" class="w-9 h-9 rounded object-cover shrink-0 border border-zinc-700" />
+                <div class="flex-1 min-w-0 space-y-1">
+                  <input type="text" data-theme10-img-cap="${idx}" value="${escHtml(im.caption || '')}" placeholder="Chú thích: Hình ${idx + 1}: ..." class="w-full px-2 py-0.5 rounded bg-zinc-950 border border-zinc-700 text-[10.5px] text-zinc-100" />
+                  <select data-theme10-img-pos="${idx}" class="w-full px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-700 text-[10px] text-zinc-300">
+                    <option value="end" ${im.position !== 'after_intro' ? 'selected' : ''}>Đặt cuối báo cáo / Phụ lục Hình</option>
+                    <option value="after_intro" ${im.position === 'after_intro' ? 'selected' : ''}>Đặt ngay đầu nội dung (sau Mục lục)</option>
+                  </select>
+                </div>
+                <button type="button" data-theme10-img-del="${idx}" class="px-1.5 py-1 rounded bg-rose-900/60 hover:bg-rose-600 text-rose-200 hover:text-white text-[10px] font-bold cursor-pointer">✕</button>
+              </div>
+            `).join('')
+            : '<div class="text-[10.5px] text-zinc-500">Ảnh có sẵn trong DOCX / PDF tự động trích xuất vào Danh mục Hình; bạn có thể bấm "+ Chèn ảnh" để thêm ảnh ngoài.</div>';
+          renderLiveThemeSample();
+        };
+
+        imgInp?.addEventListener('change', (ev) => {
+          const filesArr = Array.from(ev.target?.files || []);
+          if (!filesArr.length) return;
+          filesArr.forEach((file) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              if (typeof reader.result === 'string' && reader.result.startsWith('data:image/')) {
+                const idxNext = this.theme10ExtraImages.length + 1;
+                const cleanTitle = String(file.name || '').replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
+                this.theme10ExtraImages.push({
+                  name: file.name,
+                  dataUrl: reader.result,
+                  caption: `Hình ${idxNext}: ${cleanTitle || 'Biểu đồ & Ảnh minh họa'}`,
+                  position: 'end',
+                });
+                syncExtraImagesListDom();
+              }
+            };
+            reader.readAsDataURL(file);
+          });
+          ev.target.value = '';
+        });
+
+        imgListEl?.addEventListener('input', (ev) => {
+          const capIdx = ev.target?.getAttribute?.('data-theme10-img-cap');
+          if (capIdx !== null && capIdx !== undefined && this.theme10ExtraImages[Number(capIdx)]) {
+            this.theme10ExtraImages[Number(capIdx)].caption = ev.target.value;
+            renderLiveThemeSample();
+          }
+        });
+        imgListEl?.addEventListener('change', (ev) => {
+          const posIdx = ev.target?.getAttribute?.('data-theme10-img-pos');
+          if (posIdx !== null && posIdx !== undefined && this.theme10ExtraImages[Number(posIdx)]) {
+            this.theme10ExtraImages[Number(posIdx)].position = ev.target.value;
+            renderLiveThemeSample();
+          }
+        });
+        imgListEl?.addEventListener('click', (ev) => {
+          const delBtn = ev.target?.closest?.('[data-theme10-img-del]');
+          if (!delBtn) return;
+          const idx = Number(delBtn.getAttribute('data-theme10-img-del'));
+          if (!Number.isNaN(idx)) {
+            this.theme10ExtraImages.splice(idx, 1);
+            syncExtraImagesListDom();
+          }
+        });
+
         body.querySelectorAll('[data-pro-theme10-chip]').forEach((chip) => {
           chip.addEventListener('click', () => {
-            if (selEl) selEl.value = chip.getAttribute('data-pro-theme10-chip') || 'navy_teal';
+            if (selEl) selEl.value = chip.getAttribute('data-pro-theme10-chip') || 'dang_signature';
+            if (dangLayoutChk && selEl.value === 'dang_signature') dangLayoutChk.checked = true;
             renderLiveThemeSample();
           });
         });
@@ -2342,7 +2605,9 @@
           }
           renderLiveThemeSample();
         });
-        [selEl, coverChk, hdrModeEl, hdrAlignEl, ftrModeEl, ftrAlignEl].forEach((el) => el?.addEventListener('change', renderLiveThemeSample));
+        [selEl, dangLayoutChk, authorCoverChk, fontEl, coverChk, hdrModeEl, hdrAlignEl, ftrModeEl, ftrAlignEl].forEach((el) =>
+          el?.addEventListener('change', renderLiveThemeSample)
+        );
         [hdrTextEl, ftrTextEl].forEach((el) => el?.addEventListener('input', renderLiveThemeSample));
         renderLiveThemeSample();
       }

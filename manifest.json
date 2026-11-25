@@ -38,6 +38,18 @@
       ]
     },
     {
+      "name": "ĐăngLovePDF (49 Công cụ PDF)",
+      "short_name": "ĐăngLovePDF",
+      "url": "./danglovepdf.html",
+      "icons": [
+        {
+          "src": "assets/app-icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
       "name": "Phiên Bản & Xuất File (Tab 6)",
       "short_name": "Tab 6 Hệ Thống",
       "url": "./index.html#SCREEN_6_SYSTEM",
