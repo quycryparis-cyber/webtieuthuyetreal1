@@ -967,8 +967,12 @@ ${checklistLines}`;
         ? mergedHeadlines
             .map((h) => `- [${h.date || asOfDate}] ${h.title}${h.snippet ? ` — "${h.snippet.slice(0, 160)}"` : ''} (Nguồn: ${h.source} | Link gốc: ${h.url})`)
             .join('\n') +
-          '\n\n[YÊU CẦU BẮT BUỘC VỀ PHÂN TÍCH TIN TỨC & TRÌNH BÀY]:\n' +
-          '1. BẮT BUỘC phân tích trực tiếp TỪNG tin nóng mới nhất ở trên: sự kiện đó tác động cụ thể thế nào đến Vàng, Chứng khoán, Nhà đất và Tiền mặt (cơ chế truyền dẫn -> mức độ tác động -> hành động phòng thủ/cơ hội).\n' +
+          '\n\n[YÊU CẦU BẮT BUỘC VỀ CHIỀU SÂU PHÂN TÍCH (TỐI THIỂU 1.000 TỪ CHO PHẦN TỔNG QUAN) & TRÌNH BÀY]:\n' +
+          '1. PHẦN TỔNG QUAN & PHÂN TÍCH VĨ MÔ – LIÊN THỊ TRƯỜNG PHẢI DÀI TỐI THIỂU 1.000 TỪ, đi sâu vào:\n' +
+          '   - Bức tranh vĩ mô toàn cầu & trong nước: cơ chế truyền dẫn giữa lãi suất Mỹ/TPCP, nợ công, tỷ giá USD/VND, lạm phát CPI, tăng trưởng GDP & dòng vốn ngoại.\n' +
+          '   - Phân tích trực tiếp TỪNG tin nóng mới nhất ở trên (ghi rõ tên nguồn & link gốc): sự kiện đó tác động cụ thể ra sao tới Vàng, Chứng khoán, Nhà đất và Tiền mặt (ngắn hạn 1–3 tháng và trung hạn 6–12 tháng).\n' +
+          '   - So sánh định giá & luân chuyển dòng tiền giữa 4 kênh (Tiền mặt/Tiết kiệm vs Vàng vs Chứng khoán vs Nhà đất), nêu rõ kịch bản Cơ sở / Tích cực / Tiêu cực kèm ngưỡng kích hoạt hành động cụ thể.\n' +
+          '   - Chiến lược phân bổ vốn, quản trị rủi ro đòn bẩy và danh sách chốt chặn kỷ luật (tuyệt đối KHÔNG viết qua loa vài gạch đầu dòng chung chung!).\n' +
           '2. Kết hợp trọn vẹn Khung phân tích 7 chương + Toàn bộ số liệu API sống ở trên + Nguồn thông tin thô để lập báo cáo chuyên sâu có Bảng Markdown rõ ràng.\n' +
           '3. Cuối bài BẮT BUỘC xuất đủ khối JSON INVEST_INTEL_SYNC_V2 để Web đồng bộ vẽ trọn bộ 6 biểu đồ & xuất PDF đầy đủ biểu đồ!'
         : '- [CHƯA CÓ DỮ LIỆU TIN TỨC TRONG PHIÊN] — Yêu cầu chỉ rõ các tin tức cần người dùng tự kiểm tra thêm.';

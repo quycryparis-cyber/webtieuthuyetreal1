@@ -2251,30 +2251,78 @@
       // Gắn sự kiện click trực tiếp cho 10 ô chọn màu Theme & Live Preview cho công cụ beautify_10_themes
       if (this.activeTool?.id === 'beautify_10_themes') {
         const selEl = body.querySelector('#opt-pro-theme10-id');
+        const coverChk = body.querySelector('#opt-pro-theme10-cover');
+        const hdrModeEl = body.querySelector('#opt-pro-theme10-hdr-mode');
+        const hdrSubEl = body.querySelector('#opt-pro-theme10-hdr-sub');
+        const hdrTextEl = body.querySelector('#opt-pro-theme10-hdr-text');
+        const hdrAlignEl = body.querySelector('#opt-pro-theme10-hdr-align');
+        const ftrModeEl = body.querySelector('#opt-pro-theme10-ftr-mode');
+        const ftrSubEl = body.querySelector('#opt-pro-theme10-ftr-sub');
+        const ftrPresetEl = body.querySelector('#opt-pro-theme10-ftr-preset');
+        const ftrAlignEl = body.querySelector('#opt-pro-theme10-ftr-align');
+        const ftrTextEl = body.querySelector('#opt-pro-theme10-ftr-text');
         const themes = NS.dangLovePdfPro?.REPORT_THEMES_10 || [];
+
         const renderLiveThemeSample = () => {
           const th = themes.find((t) => t.id === selEl?.value) || themes[0];
           if (!th || !fullHost) return;
           fullHost.classList.remove('hidden');
-          const fname = escHtml(this.files[0]?.name || 'Bao_Cao_Cua_Ban');
+          const rawFname = String(this.files[0]?.name || 'Bao_Cao_Cua_Ban').replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
+          const fname = escHtml(rawFname);
+          const dateStr = new Date().toLocaleDateString('vi-VN');
+          const expTok = (tpl) =>
+            escHtml(
+              String(tpl || '')
+                .replace(/\{filename\}/gi, rawFname)
+                .replace(/\{theme\}/gi, th.name)
+                .replace(/\{date\}/gi, dateStr)
+                .replace(/\{page\}|\{n\}/gi, '1')
+                .replace(/\{total\}/gi, '12')
+            );
+
+          const hasCover = Boolean(coverChk?.checked);
+          const hMode = hdrModeEl?.value || 'none';
+          const hAlign = hdrAlignEl?.value || 'center';
+          const fMode = ftrModeEl?.value || 'page_num';
+          const fAlign = ftrAlignEl?.value || 'center';
+          if (hdrSubEl) hdrSubEl.classList.toggle('hidden', hMode === 'none');
+          if (ftrSubEl) ftrSubEl.classList.toggle('hidden', fMode === 'none');
+
+          const cssAlign = (a) => (a === 'justify' ? 'justify' : a);
+          const hdrPreviewHtml =
+            hMode === 'band'
+              ? `<div style="background:${th.primary};border-bottom:3px solid ${th.accent};padding:8px 16px;color:#fff;font-size:11.5px;font-weight:800;text-align:${cssAlign(hAlign)};">${expTok(hdrTextEl?.value || '{filename}')}</div>`
+              : hMode === 'minimal'
+              ? `<div style="padding:8px 16px 6px;border-bottom:1.5px solid ${th.accent};color:${th.primary};font-size:11px;font-weight:800;text-align:${cssAlign(hAlign)};">${expTok(hdrTextEl?.value || '{filename}')}</div>`
+              : '';
+          const ftrPreviewHtml =
+            fMode !== 'none'
+              ? `<div style="margin-top:8px;padding:7px 16px;border-top:1px solid #cbd5e1;color:#475569;font-size:10.5px;font-weight:700;text-align:${cssAlign(fAlign)};">${expTok(ftrTextEl?.value || 'Trang {page} / {total}')}</div>`
+              : '';
+          const coverPreviewHtml = hasCover
+            ? `<div style="background:linear-gradient(135deg,${th.primary},${th.secondary});border-left:8px solid ${th.accent};padding:12px 18px;color:#fff;border-bottom:2px dashed rgba(255,255,255,0.25);">
+                 <div style="font-size:9.5px;font-weight:800;letter-spacing:0.08em;color:${th.accent};">TRANG BÌA HỆ THỐNG (ĐÃ BẬT) · ĐĂNGLOVEPDF</div>
+                 <div style="font-size:14px;font-weight:900;margin-top:2px;">${fname.toUpperCase()}</div>
+               </div>`
+            : '';
+
           fullHost.innerHTML = `
             <div class="text-xs font-black text-amber-300">🎨 Xem trước trực tiếp bố cục Theme đã chọn (${escHtml(th.name)}):</div>
             <div class="rounded-xl overflow-hidden border border-zinc-700 shadow-lg" style="background:${th.bg};color:${th.text};">
-              <div style="background:linear-gradient(135deg,${th.primary},${th.secondary});border-left:8px solid ${th.accent};padding:14px 18px;color:#fff;">
-                <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;color:${th.accent};">BÁO CÁO KHOA HỌC &amp; TÀI CHÍNH · ĐĂNGLOVEPDF</div>
-                <div style="font-size:15px;font-weight:900;margin-top:3px;">${fname}</div>
-              </div>
-              <div style="padding:12px 16px;font-size:12px;line-height:1.55;">
-                <div style="background:${th.primary};border-left:5px solid ${th.accent};color:#fff;padding:6px 10px;border-radius:5px;font-weight:800;margin-bottom:8px;">1. TIÊU ĐỀ PHẦN CHÍNH (TỰ NHẬN DIỆN TỪ TỆP GỐC)</div>
-                <div style="background:${th.zebra};border-left:4px solid ${th.accent};padding:7px 10px;border-radius:5px;margin-bottom:8px;">💡 Khung nổi bật số liệu / Nhận định trọng tâm tự động phân tách mảng màu.</div>
-                <table style="width:100%;border-collapse:collapse;font-size:11px;">
-                  <thead><tr style="background:${th.primary};color:#fff;"><th style="padding:5px 8px;text-align:left;">Chỉ tiêu</th><th style="padding:5px 8px;text-align:left;">Dữ liệu nhận diện</th></tr></thead>
+              ${coverPreviewHtml}
+              ${hdrPreviewHtml}
+              <div style="padding:12px 18px;font-size:12px;line-height:1.55;">
+                <div style="background:${th.primary};border-left:5px solid ${th.accent};color:#fff;padding:7px 12px;border-radius:5px;font-weight:800;margin-bottom:8px;">1. TIÊU ĐỀ PHẦN CHÍNH (GỘP CHUNG 1 KHUNG)</div>
+                <p style="text-align:justify;margin:0 0 8px 0;">Văn bản được căn đều hai bên trái–phải chuẩn in ấn sách và Word; lề trái phải cân đối hài hòa trên khổ giấy A4.</p>
+                <div style="background:${th.zebra};border-left:4px solid ${th.accent};padding:7px 10px;border-radius:5px;margin-bottom:8px;text-align:justify;">💡 Khung nổi bật số liệu / Nhận định trọng tâm tự động phân tách mảng màu.</div>
+                <table style="width:94%;margin:0 auto;border-collapse:collapse;font-size:11px;">
+                  <thead><tr style="background:${th.primary};color:#fff;"><th style="padding:5px 8px;text-align:left;">Chỉ tiêu</th><th style="padding:5px 8px;text-align:left;">Dữ liệu căn giữa trang</th></tr></thead>
                   <tbody>
-                    <tr style="background:${th.zebra};"><td style="padding:5px 8px;">Bảng số liệu &amp; Đề mục</td><td style="padding:5px 8px;">Tự kẻ sọc ngựa vằn &amp; đồng bộ font</td></tr>
-                    <tr style="background:${th.bg};"><td style="padding:5px 8px;">Đoạn văn &amp; Gạch đầu dòng</td><td style="padding:5px 8px;">Tự giãn dòng &amp; căn lề chuẩn in ấn A4</td></tr>
+                    <tr style="background:${th.zebra};"><td style="padding:5px 8px;">Bảng số liệu</td><td style="padding:5px 8px;">Tự căn giữa khổ A4 &amp; kẻ sọc</td></tr>
                   </tbody>
                 </table>
               </div>
+              ${ftrPreviewHtml}
             </div>
           `;
         };
@@ -2284,7 +2332,14 @@
             renderLiveThemeSample();
           });
         });
-        selEl?.addEventListener('change', renderLiveThemeSample);
+        ftrPresetEl?.addEventListener('change', () => {
+          if (ftrPresetEl.value !== 'custom' && ftrTextEl) {
+            ftrTextEl.value = ftrPresetEl.value;
+          }
+          renderLiveThemeSample();
+        });
+        [selEl, coverChk, hdrModeEl, hdrAlignEl, ftrModeEl, ftrAlignEl].forEach((el) => el?.addEventListener('change', renderLiveThemeSample));
+        [hdrTextEl, ftrTextEl].forEach((el) => el?.addEventListener('input', renderLiveThemeSample));
         renderLiveThemeSample();
       }
     }

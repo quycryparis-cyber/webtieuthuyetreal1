@@ -1014,6 +1014,34 @@
     body.noir-focus-writing-mode.noir-focus-bible-open #tab4-focus-bible-close-bar {
       display: flex !important;
     }
+    /* Chống tràn viền nút & khung trên màn hình điện thoại hẹp (v137) */
+    @media (max-width: 640px) {
+      html, body {
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+      }
+      [role="dialog"],
+      #w20-pdf-live-preview-modal,
+      #inv-pdf-live-preview-modal,
+      #modal-mod46-danglovepdf-studio,
+      #modal-mod51-lang-studio {
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+      }
+      [role="dialog"] button,
+      #w20-pdf-live-preview-modal button,
+      #inv-pdf-live-preview-modal button,
+      .inv-root button,
+      .wis20-root button {
+        max-width: 100% !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+      }
+      .inv-root, .wis20-root {
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+      }
+    }
   </style>
   <script>
     /* Lớp khiên sớm chặn mọi tín hiệu WebSocket Live-Server 'reload' làm văng người dùng ra ngoài Cổng kết nối khi đang gõ/lưu */

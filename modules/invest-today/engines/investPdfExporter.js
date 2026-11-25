@@ -498,7 +498,7 @@
       }
     };
 
-    const drawTableBlock = (headers, rows) => {
+    const drawTableBlock = (headers, rows, rowUrls = null) => {
       if (!rows.length) return;
       const cols = headers.length;
       const colW = Math.floor(maxW / cols);
@@ -513,9 +513,10 @@
       };
       drawHead();
       rows.forEach((row, ri) => {
+        const linkUrl = Array.isArray(rowUrls) ? rowUrls[ri] : '';
         cur.ctx.font = `500 ${Math.round(17 * sc)}px ${ff}`;
         const cellLines = headers.map((_, ci) => wrapText(cur.ctx, String(row[ci] ?? '—'), colW - 22));
-        const rowH = Math.max(38, Math.max(...cellLines.map((a) => a.length)) * Math.round(22 * sc) + 16);
+        const rowH = Math.max(40, Math.max(...cellLines.map((a) => a.length)) * Math.round(22 * sc) + (linkUrl ? 34 : 16));
         if (y + rowH > maxY) {
           pages.push(cur.canvas);
           cur = createA4(dark);
@@ -531,6 +532,13 @@
         cellLines.forEach((lines, ci) => {
           lines.forEach((ln, li) => cur.ctx.fillText(ln, 84 + ci * colW, y + 8 + li * Math.round(22 * sc)));
         });
+        if (linkUrl && /^https?:\/\//i.test(linkUrl)) {
+          cur.ctx.fillStyle = dark ? '#38bdf8' : '#0369a1';
+          cur.ctx.font = `700 ${Math.round(14.5 * sc)}px ${ff}`;
+          cur.ctx.fillText(`🔗 Bấm mở nguồn gốc: ${linkUrl.slice(0, 78)}`, 84, y + rowH - 24);
+          if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
+          cur.canvas.__pdfLinks.push({ x: 72, y, w: maxW, h: rowH, url: linkUrl });
+        }
         y += rowH;
       });
       y += 16;
@@ -551,7 +559,7 @@
       y += 64;
 
       if (sec.tableRows?.length) {
-        drawTableBlock(sec.tableHeaders || ['Chỉ tiêu', 'Giá trị', 'Tác động / Nhận định'], sec.tableRows);
+        drawTableBlock(sec.tableHeaders || ['Chỉ tiêu', 'Giá trị', 'Tác động / Nhận định'], sec.tableRows, sec.tableRowUrls || null);
       }
       if (Array.isArray(sec.tables)) {
         sec.tables.forEach((t) => drawTableBlock(t.headers, t.rows));
@@ -667,18 +675,20 @@
       ];
       scores.forEach((s) => coverMetrics.push({ label: s.label, value: `${s.value}/100`, note: s.badge }));
       chartPages.push(drawOverviewChartsPage(report, unified, readerOpts));
-      if (report?.narrative_summary) {
-        sections.push({
-          heading: '2. TỔNG QUAN CHU KỲ KINH TẾ, CƠ HỘI & RỦI RO TRỌNG TÂM',
-          paragraphs: [
-            `Pha chu kỳ hiện tại: ${report.cycle_phase?.label || ''} — ${report.cycle_phase?.plain_advice || ''}`,
-            ...(report.narrative_summary.opportunities || []).map((t) => `• Cơ hội: ${t}`),
-            ...(report.narrative_summary.risks || []).map((t) => `• Rủi ro cần phòng thủ: ${t}`),
-            report.narrative_summary.current_outlook ? `Triển vọng hiện tại: ${report.narrative_summary.current_outlook}` : '',
-            report.narrative_summary.upcoming_outlook ? `Triển vọng 6–12 tháng tới: ${report.narrative_summary.upcoming_outlook}` : '',
-          ],
-        });
-      }
+      const deepOverviewParagraphs = [
+        `CHẨN ĐOÁN CHU KỲ & BỐI CẢNH VĨ MÔ HIỆN TẠI: ${report?.cycle_phase?.label || 'Đang chuyển pha thận trọng'} — ${report?.cycle_phase?.plain_advice || 'Thị trường đang đan xen giữa áp lực lãi suất thực duy trì ở mặt bằng cao, nợ công toàn cầu lập đỉnh và biến động địa chính trị khó lường. Trong bối cảnh này, nguyên tắc tối thượng là giữ kỷ luật bảo toàn sức mua, tránh dùng đòn bẩy cao và chỉ giải ngân vào tài sản có biên an toàn định giá rõ ràng.'}`,
+        `1) CƠ CHẾ TRUYỀN DẪN DÒNG TIỀN LIÊN THỊ TRƯỜNG: Khi mặt bằng lãi suất thực và lợi suất trái phiếu chính phủ neo cao, chi phí vốn (Ke) của doanh nghiệp và chi phí vay mua bất động sản tăng mạnh, tạo lực cản trực tiếp lên nhóm tài sản tăng trưởng dựa vào đòn bẩy. Ngược lại, dòng tiền thông minh có xu hướng phân tầng: giữ một phần đệm Tiền mặt/Tiết kiệm (điểm hiện tại: ${ch.cash?.score ?? 65}/100 — ${ch.cash?.badge || 'Phòng thủ'}) để sẵn sàng chớp cơ hội khi thị trường điều chỉnh sâu, đồng thời sử dụng Vàng (${ch.gold?.score ?? 65}/100 — ${ch.gold?.badge || 'Trú ẩn'}) làm lớp bảo hiểm trước rủi ro tiền tệ và địa chính trị.`,
+        `2) PHÂN TÍCH SÂU TỪNG KÊNH TÀI SẢN: • Tiền mặt / Tiết kiệm: ${ch.cash?.reason || 'Đóng vai trò vùng đệm thanh khoản thiết yếu, giúp nhà đầu tư không bao giờ bị ép bán tháo tài sản tốt trong nhịp rung lắc.'} • Vàng: ${ch.gold?.reason || 'Hưởng lợi từ nhu cầu trú ẩn của ngân hàng trung ương và rủi ro nợ công, nhưng cần kiểm soát chặt chênh lệch giá nội–ngoại SJC để tránh mua đuổi vùng đỉnh.'} • Chứng khoán (${ch.stock?.score ?? 60}/100): ${ch.stock?.reason || 'Chỉ nên chọn lọc doanh nghiệp đầu ngành có bảng cân đối sạch (nợ thấp, CFO > LNST, ROE bền vững) thay vì lướt sóng margin.'} • Nhà đất / BĐS (${ch.real_estate?.score ?? 55}/100): ${ch.real_estate?.reason || 'Ưu tiên tài sản pháp lý chuẩn 100% có dòng tiền cho thuê thực tế, tuyệt đối kiểm tra Stress Test khả năng trả nợ ở mức lãi suất thả nổi 12%–15%/năm.'}`,
+        ...(report?.triggered_breakers || []).map((br) => `⚠️ CHỐT CHẶN RỦI RO ĐANG KÍCH HOẠT: ${br.title || br.name || ''} — ${br.detail || br.message || ''}`),
+        ...(report?.narrative_summary?.opportunities || []).map((t) => `• Động lực & Cơ hội cốt lõi: ${t}`),
+        ...(report?.narrative_summary?.risks || []).map((t) => `• Rủi ro trọng yếu cần kiểm soát: ${t}`),
+        `3) KỊCH BẢN HÀNH ĐỘNG 6–12 THÁNG TỚI: Hiện tại: ${report?.narrative_summary?.current_outlook || 'Ưu tiên phòng thủ chủ động, giải ngân chia nhỏ từng phần (DCA) vào tài sản chất lượng cao.'} | Giai đoạn 6–12 tháng tới: ${report?.narrative_summary?.upcoming_outlook || 'Theo dõi sát tín hiệu hạ nhiệt lãi suất thực, mức thanh khoản toàn sàn và tiến độ phục hồi lợi nhuận doanh nghiệp để tăng tỷ trọng tài sản rủi ro đúng thời điểm.'}`,
+      ].filter(Boolean);
+
+      sections.push({
+        heading: '2. PHÂN TÍCH TỔNG QUAN CHUYÊN SÂU: CHU KỲ VĨ MÔ, LIÊN THỊ TRƯỜNG & CHIẾN LƯỢC 4 KÊNH',
+        paragraphs: deepOverviewParagraphs,
+      });
       if ((report?.items || []).length) {
         sections.push({
           heading: `3. BẢNG KIỂM TOÁN ${report.items.length} ĐỀ MỤC VĨ MÔ – VI MÔ ĐÃ QUÉT`,
@@ -688,12 +698,13 @@
       }
     }
 
-    // TIN TỨC MỚI NHẤT & PHÂN TÍCH TÁC ĐỘNG (BẮT BUỘC CÓ Ở CẢ 4 CHẾ ĐỘ!)
+    // TIN TỨC MỚI NHẤT & PHÂN TÍCH TÁC ĐỘNG (BẮT BUỘC CÓ Ở CẢ 4 CHẾ ĐỘ + CHÈN HYPERLINK BẤM TRỰC TIẾP!)
     if (headlines.length) {
       sections.push({
-        heading: `TIN NÓNG VĨ MÔ, ĐỊA CHÍNH TRỊ & THỊ TRƯỜNG MỚI NHẤT (${headlines.length} TIN SỰ KIỆN)`,
+        heading: `TIN NÓNG VĨ MÔ, ĐỊA CHÍNH TRỊ & THỊ TRƯỜNG MỚI NHẤT (${headlines.length} NGUỒN BẤM MỞ TRỰC TIẾP)`,
         tableHeaders: ['Tin sự kiện mới nhất', 'Nguồn chính thống', 'Ngày & Phạm vi tác động'],
         tableRows: headlines.map((h) => [h.title, h.source || 'Báo chí chính thống', `${h.date || ''} · Tác động tâm lý dòng tiền & khẩu vị rủi ro`]),
+        tableRowUrls: headlines.map((h) => h.url || ''),
       });
     }
 
@@ -716,6 +727,17 @@
     allPages.forEach((cv, idx) => {
       if (idx > 0) pdf.addPage();
       pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
+      // Gắn Hyperlink bấm được thật trên jsPDF cho từng bài báo nguồn!
+      if (Array.isArray(cv.__pdfLinks)) {
+        cv.__pdfLinks.forEach((lk) => {
+          if (!lk?.url) return;
+          const xPt = (lk.x / 1240) * pw;
+          const yPt = (lk.y / 1754) * ph;
+          const wPt = (lk.w / 1240) * pw;
+          const hPt = (lk.h / 1754) * ph;
+          try { pdf.link(xPt, yPt, wPt, hPt, { url: String(lk.url) }); } catch (_eLk) {}
+        });
+      }
     });
     const stamp = new Date().toISOString().slice(0, 10);
     pdf.save(`DauTuHomNay_${slug}_${stamp}.pdf`);
@@ -737,33 +759,33 @@
     modal.id = 'inv-pdf-live-preview-modal';
     modal.className = 'fixed inset-0 z-[2147483645] bg-black/90 backdrop-blur-md flex flex-col text-zinc-100';
     modal.innerHTML = `
-      <div class="px-4 py-3 bg-[#0f2942] border-b border-teal-500/50 flex flex-wrap items-center justify-between gap-2 shrink-0">
-        <div>
-          <div class="text-sm sm:text-base font-black text-white">👁️ Xem Trước Báo Cáo PDF (${built.allPages.length} trang) — ${built.modeMeta.title}</div>
-          <div class="text-xs text-teal-200">Cuộn dọc để kiểm tra trọn bộ Trang Bìa, Biểu đồ, Tin tức &amp; Phân tích trước khi tải về</div>
+      <div class="px-3 py-2.5 bg-[#0f2942] border-b border-teal-500/50 flex flex-wrap items-center justify-between gap-2 shrink-0 max-w-full overflow-x-hidden">
+        <div class="min-w-0 flex-1">
+          <div class="text-xs sm:text-base font-black text-white truncate">👁️ Xem Trước PDF (${built.allPages.length} trang) — ${built.modeMeta.title}</div>
+          <div class="text-[11px] text-teal-200 truncate">Bìa · Biểu đồ · Tin tức bấm mở link trực tiếp · Phân tích chuyên sâu</div>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <select id="inv-pv-size" class="px-2 py-1.5 rounded-lg bg-zinc-950 border border-zinc-600 text-xs font-bold">
-            <option value="md" ${curOpts.size === 'md' ? 'selected' : ''}>Cỡ: Vừa</option>
-            <option value="lg" ${curOpts.size === 'lg' ? 'selected' : ''}>Cỡ: Lớn</option>
-            <option value="xl" ${curOpts.size === 'xl' ? 'selected' : ''}>Cỡ: Rất lớn</option>
-            <option value="xxl" ${curOpts.size === 'xxl' ? 'selected' : ''}>Cỡ: Cực đại</option>
+        <div class="flex flex-wrap items-center gap-1.5 shrink-0">
+          <select id="inv-pv-size" class="px-2 py-1 rounded-lg bg-zinc-950 border border-zinc-600 text-[11px] font-bold">
+            <option value="md" ${curOpts.size === 'md' ? 'selected' : ''}>Vừa</option>
+            <option value="lg" ${curOpts.size === 'lg' ? 'selected' : ''}>Lớn</option>
+            <option value="xl" ${curOpts.size === 'xl' ? 'selected' : ''}>Rất lớn</option>
+            <option value="xxl" ${curOpts.size === 'xxl' ? 'selected' : ''}>Cực đại</option>
           </select>
-          <select id="inv-pv-font" class="px-2 py-1.5 rounded-lg bg-zinc-950 border border-zinc-600 text-xs font-bold">
-            <option value="sans" ${curOpts.font === 'sans' ? 'selected' : ''}>Sans Hiện đại</option>
-            <option value="serif" ${curOpts.font === 'serif' ? 'selected' : ''}>Serif Báo chí</option>
-            <option value="classic" ${curOpts.font === 'classic' ? 'selected' : ''}>Classic Sách in</option>
-            <option value="mono" ${curOpts.font === 'mono' ? 'selected' : ''}>Mono Kỹ thuật</option>
+          <select id="inv-pv-font" class="px-2 py-1 rounded-lg bg-zinc-950 border border-zinc-600 text-[11px] font-bold">
+            <option value="sans" ${curOpts.font === 'sans' ? 'selected' : ''}>Sans</option>
+            <option value="serif" ${curOpts.font === 'serif' ? 'selected' : ''}>Serif</option>
+            <option value="classic" ${curOpts.font === 'classic' ? 'selected' : ''}>Classic</option>
+            <option value="mono" ${curOpts.font === 'mono' ? 'selected' : ''}>Mono</option>
           </select>
-          <select id="inv-pv-theme" class="px-2 py-1.5 rounded-lg bg-zinc-950 border border-zinc-600 text-xs font-bold">
-            <option value="light" ${curOpts.paperTheme === 'light' ? 'selected' : ''}>☀️ Nền giấy trắng</option>
-            <option value="dark" ${curOpts.paperTheme === 'dark' ? 'selected' : ''}>🌙 Nền tối</option>
+          <select id="inv-pv-theme" class="px-2 py-1 rounded-lg bg-zinc-950 border border-zinc-600 text-[11px] font-bold">
+            <option value="light" ${curOpts.paperTheme === 'light' ? 'selected' : ''}>☀️ Sáng</option>
+            <option value="dark" ${curOpts.paperTheme === 'dark' ? 'selected' : ''}>🌙 Tối</option>
           </select>
-          <button type="button" id="inv-pv-download" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs sm:text-sm font-black shadow-lg cursor-pointer">⬇️ Tải File PDF Ngay</button>
-          <button type="button" id="inv-pv-close" class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
+          <button type="button" id="inv-pv-download" class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-black shadow-lg cursor-pointer">⬇️ Tải PDF</button>
+          <button type="button" id="inv-pv-close" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
         </div>
       </div>
-      <div id="inv-pv-pages-scroll" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 flex flex-col items-center bg-zinc-950/95"></div>
+      <div id="inv-pv-pages-scroll" class="flex-1 overflow-y-auto p-3 sm:p-6 space-y-5 flex flex-col items-center bg-zinc-950/95"></div>
     `;
     document.body.appendChild(modal);
 

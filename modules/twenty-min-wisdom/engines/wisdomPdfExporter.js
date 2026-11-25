@@ -641,17 +641,18 @@
       y += 66;
 
       for (const it of items.slice(0, 4)) {
+        const hasUrl = typeof it.url === 'string' && /^https?:\/\//i.test(it.url);
         cur.ctx.font = '800 21px "Segoe UI", Arial, sans-serif';
         const tLines = wrapCanvasText(cur.ctx, `• ${it.title}`, maxW - 28).slice(0, 2);
         cur.ctx.font = '500 19px "Segoe UI", Arial, sans-serif';
         const sLines = wrapCanvasText(cur.ctx, it.summary || '', maxW - 36).slice(0, 3);
-        const boxH = tLines.length * 29 + sLines.length * 26 + 44;
+        const boxH = tLines.length * 29 + sLines.length * 26 + (hasUrl ? 68 : 44);
 
         ensureSpace(boxH + 14, `8 TRỤ CỘT TRI THỨC — ${cat.title.toUpperCase()}`);
         drawRoundedRect(cur.ctx, 72, y, maxW, boxH, 12);
         cur.ctx.fillStyle = '#f8fafc';
         cur.ctx.fill();
-        cur.ctx.strokeStyle = '#e2e8f0';
+        cur.ctx.strokeStyle = '#cbd5e1';
         cur.ctx.lineWidth = 1.5;
         cur.ctx.stroke();
 
@@ -671,6 +672,18 @@
         cur.ctx.fillStyle = '#64748b';
         cur.ctx.font = '700 16px "Segoe UI", Arial, sans-serif';
         cur.ctx.fillText(`Nguồn: ${it.source || 'Web'}  |  Mã SHA-256: #${it.sha256 || 'verified'}`, 96, iy + 4);
+        if (hasUrl) {
+          const linkY = iy + 28;
+          const shortLink = it.url.length > 88 ? `${it.url.slice(0, 85)}...` : it.url;
+          cur.ctx.fillStyle = '#0369a1';
+          cur.ctx.font = '700 15.5px "Segoe UI", Arial, sans-serif';
+          cur.ctx.fillText(`🔗 Bấm mở bài gốc: ${shortLink}`, 96, linkY);
+          const linkW = Math.min(maxW - 40, cur.ctx.measureText(`🔗 Bấm mở bài gốc: ${shortLink}`).width);
+          cur.ctx.fillRect(96, linkY + 19, linkW, 1.5);
+          // Lưu tọa độ vùng bấm Hyperlink thật để gắn PDF /Link /URI annotation cho toàn bộ hộp bài báo!
+          if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
+          cur.canvas.__pdfLinks.push({ x: 72, y, w: maxW, h: boxH, url: it.url });
+        }
         y += boxH + 14;
       }
       y += 12;
@@ -733,11 +746,18 @@
       ctx.fillStyle = '#0f2942';
       ctx.font = '900 23px "Segoe UI", Arial, sans-serif';
       ctx.fillText(`🕸️ Sơ Đồ Nhân Quả Đầy Đủ (Chuỗi #4 – #${3 + extraChains.length})`, 72, y);
-      y += 40;
-      const colW = 342;
-      const colX = [72, 449, 826];
+      y += 38;
+      const colW = 332;
+      const colX = [72, 454, 836];
       const strokes = ['#0ea5e9', '#8b5cf6', '#10b981'];
       const fills = ['#f0f9ff', '#f5f3ff', '#ecfdf5'];
+      const headers = ['⚡ NGUYÊN NHÂN GỐC', '🔗 CƠ CHẾ LAN TRUYỀN', '🎯 HỆ QUẢ ĐỜI SỐNG'];
+      headers.forEach((h, ci) => {
+        ctx.fillStyle = strokes[ci];
+        ctx.font = '900 17px "Segoe UI", Arial, sans-serif';
+        ctx.fillText(h, colX[ci] + 10, y);
+      });
+      y += 28;
       extraChains.forEach((ch) => {
         if (y > 1440) return;
         const vals = [ch.cause, ch.mechanism, ch.effect];
@@ -750,6 +770,25 @@
           wrapCanvasText(ctx, String(txt || '—').replace(/\*/g, ''), colW - 26).slice(0, 4).forEach((ln, li) => {
             ctx.fillText(ln, colX[ci] + 13, y + 14 + li * 25);
           });
+          // Vẽ mũi tên trực quan nối giữa 3 cột (Cột 1 -> Cột 2 -> Cột 3)!
+          if (ci < 2) {
+            const ax1 = colX[ci] + colW + 4;
+            const ax2 = colX[ci + 1] - 6;
+            const ay = y + 67;
+            ctx.strokeStyle = strokes[ci + 1];
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(ax1, ay);
+            ctx.lineTo(ax2 - 12, ay);
+            ctx.stroke();
+            ctx.fillStyle = strokes[ci + 1];
+            ctx.beginPath();
+            ctx.moveTo(ax2, ay);
+            ctx.lineTo(ax2 - 14, ay - 9);
+            ctx.lineTo(ax2 - 14, ay + 9);
+            ctx.closePath();
+            ctx.fill();
+          }
         });
         y += 150;
       });
@@ -787,6 +826,36 @@
       const jpgImg = await pdfDoc.embedJpg(jpgBytes);
       const pg = pdfDoc.addPage([595.28, 841.89]); // Chuẩn A4 (pt)
       pg.drawImage(jpgImg, { x: 0, y: 0, width: 595.28, height: 841.89 });
+      // Gắn Hyperlink bấm được thật (PDF /Subtype /Link /URI) lên từng bài báo nguồn!
+      if (Array.isArray(c.__pdfLinks) && c.__pdfLinks.length && PDFLib.PDFName && PDFLib.PDFString) {
+        try {
+          const annots = [];
+          for (const lk of c.__pdfLinks) {
+            if (!lk?.url) continue;
+            const x1 = (lk.x / 1240) * 595.28;
+            const x2 = ((lk.x + lk.w) / 1240) * 595.28;
+            const y2 = 841.89 - (lk.y / 1754) * 841.89;
+            const y1 = 841.89 - ((lk.y + lk.h) / 1754) * 841.89;
+            const linkAnnot = pdfDoc.context.register(
+              pdfDoc.context.obj({
+                Type: 'Annot',
+                Subtype: 'Link',
+                Rect: [x1, Math.max(0, y1), Math.min(595.28, x2), Math.min(841.89, y2)],
+                Border: [0, 0, 0],
+                A: {
+                  Type: 'Action',
+                  S: 'URI',
+                  URI: PDFLib.PDFString.of(String(lk.url)),
+                },
+              })
+            );
+            annots.push(linkAnnot);
+          }
+          if (annots.length) {
+            pg.node.set(PDFLib.PDFName.of('Annots'), pdfDoc.context.obj(annots));
+          }
+        } catch (_eLk) {}
+      }
     }
 
     const pdfBytes = await pdfDoc.save();
@@ -828,17 +897,17 @@
       modal.id = 'w20-pdf-live-preview-modal';
       modal.className = 'fixed inset-0 z-[2147483645] bg-black/90 backdrop-blur-md flex flex-col text-zinc-100';
       modal.innerHTML = `
-        <div class="px-4 py-3 bg-[#0f2942] border-b border-teal-500/50 flex flex-wrap items-center justify-between gap-2 shrink-0">
-          <div>
-            <div class="text-sm sm:text-base font-black text-white">👁️ Xem Trước Báo Cáo PDF 20 Phút Thông Thái (${totalPages} trang)</div>
-            <div class="text-xs text-teal-200">Đã bao gồm trọn bộ Trang Bìa, Phần 2 (Biểu đồ, Sơ đồ nhân quả đầy đủ, Dòng thời gian) &amp; 8 Trụ cột</div>
+        <div class="px-3 py-2.5 bg-[#0f2942] border-b border-teal-500/50 flex flex-wrap items-center justify-between gap-2 shrink-0 max-w-full overflow-x-hidden">
+          <div class="min-w-0 flex-1">
+            <div class="text-xs sm:text-base font-black text-white truncate">👁️ Xem Trước PDF (${totalPages} trang)</div>
+            <div class="text-[11px] text-teal-200 truncate">Bìa · Biểu đồ · Sơ đồ đủ 8 chuỗi · Link bài báo bấm trực tiếp</div>
           </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <button type="button" id="w20-pv-download" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs sm:text-sm font-black shadow-lg cursor-pointer">⬇️ Tải File PDF Ngay</button>
-            <button type="button" id="w20-pv-close" class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
+          <div class="flex flex-wrap items-center gap-1.5 shrink-0">
+            <button type="button" id="w20-pv-download" class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-black shadow-lg cursor-pointer">⬇️ Tải PDF</button>
+            <button type="button" id="w20-pv-close" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
           </div>
         </div>
-        <div id="w20-pv-pages-scroll" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 flex flex-col items-center bg-zinc-950/95"></div>
+        <div id="w20-pv-pages-scroll" class="flex-1 overflow-y-auto p-3 sm:p-6 space-y-5 flex flex-col items-center bg-zinc-950/95"></div>
       `;
       document.body.appendChild(modal);
       const box = modal.querySelector('#w20-pv-pages-scroll');

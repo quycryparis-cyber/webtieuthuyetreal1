@@ -112,7 +112,8 @@
         el.setAttribute('controlslist', 'nodownload nofullscreen noremoteplayback');
         el.setAttribute('x-webkit-airplay', 'allow');
         el.playsInline = true;
-        el.disablePictureInPicture = true;
+        el.disablePictureInPicture = false;
+        el.removeAttribute('disablepictureinpicture');
         el.disableRemotePlayback = true;
         if ('autoPictureInPicture' in el) el.autoPictureInPicture = false;
         el.preload = 'metadata';
@@ -129,7 +130,8 @@
         el.removeAttribute('controls');
         el.setAttribute('controlslist', 'nodownload nofullscreen noremoteplayback');
         el.playsInline = true;
-        el.disablePictureInPicture = true;
+        el.disablePictureInPicture = false;
+        el.removeAttribute('disablepictureinpicture');
         el.disableRemotePlayback = true;
         el.controls = false;
         if ('autoPictureInPicture' in el) el.autoPictureInPicture = false;
@@ -443,7 +445,8 @@
         el.muted = Boolean(this._prefs?.muted);
         el.volume = clampNum((this._prefs?.volume ?? 85) / 100, 0.05, 1, 1.0);
         el.removeAttribute('autopictureinpicture');
-        el.disablePictureInPicture = true;
+        el.disablePictureInPicture = false;
+        el.removeAttribute('disablepictureinpicture');
         if ('autoPictureInPicture' in el) el.autoPictureInPicture = false;
       } catch (_vErr) {}
       if (this.active) return true;
@@ -483,7 +486,8 @@
       el.setAttribute('aria-hidden', 'true');
       el.controls = false;
       el.removeAttribute('autopictureinpicture');
-      el.disablePictureInPicture = true;
+      el.disablePictureInPicture = false;
+      el.removeAttribute('disablepictureinpicture');
       if ('autoPictureInPicture' in el) el.autoPictureInPicture = false;
       el.className = '';
       // Quan trọng: không dùng display:none / visibility:hidden để giữ tiến trình audio nền trên iOS & Android
@@ -505,7 +509,8 @@
         el.volume = 0;
       }
       el.removeAttribute('autopictureinpicture');
-      el.disablePictureInPicture = true;
+      el.disablePictureInPicture = false;
+      el.removeAttribute('disablepictureinpicture');
       if ('autoPictureInPicture' in el) el.autoPictureInPicture = false;
       const inMini = Boolean(this.stageHostEl && this.stageHostEl.id === 'mod39-mini-video-host');
       el.style.cssText = inMini
@@ -993,7 +998,8 @@
 
       try {
         el.removeAttribute('autopictureinpicture');
-        el.disablePictureInPicture = true;
+        el.disablePictureInPicture = false;
+        el.removeAttribute('disablepictureinpicture');
         if ('autoPictureInPicture' in el) el.autoPictureInPicture = false;
       } catch (_pipAttrErr) {}
 
@@ -1574,7 +1580,8 @@
         if (caps.standardVideoPiP && typeof el.requestPictureInPicture === 'function') {
           if (typeof document !== 'undefined' && document.pictureInPictureElement === el) {
             await document.exitPictureInPicture();
-            el.disablePictureInPicture = true;
+            el.disablePictureInPicture = false;
+      el.removeAttribute('disablepictureinpicture');
             return { ok: true, exited: true, kind: 'video-pip' };
           }
           await el.requestPictureInPicture();
@@ -1586,7 +1593,8 @@
           return { ok: true, active: nextMode === 'picture-in-picture', kind: 'webkit-pip' };
         }
       } catch (err) {
-        el.disablePictureInPicture = true;
+        el.disablePictureInPicture = false;
+      el.removeAttribute('disablepictureinpicture');
         return { ok: false, reason: String(err?.message || 'pip-rejected') };
       }
       return { ok: false, reason: 'unsupported' };

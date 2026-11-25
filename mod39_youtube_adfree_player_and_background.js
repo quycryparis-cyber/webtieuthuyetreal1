@@ -3442,7 +3442,7 @@
 
       const box = document.createElement('div');
       box.id = 'mod39-mobile-floating-mini';
-      box.style.cssText = 'position:fixed;right:10px;bottom:76px;z-index:2147483560;width:min(342px,calc(100vw - 20px));border-radius:16px;overflow:hidden;border:2px solid #38bdf8;background:#09090b;color:#f4f4f5;box-shadow:0 18px 48px rgba(0,0,0,0.78);font-family:system-ui,-apple-system,sans-serif;';
+      box.style.cssText = 'position:fixed;right:8px;bottom:76px;z-index:2147483560;width:min(336px,calc(100vw - 16px));max-width:calc(100vw - 16px);border-radius:16px;overflow:hidden;border:2px solid #38bdf8;background:#09090b;color:#f4f4f5;box-shadow:0 10px 28px rgba(0,0,0,0.68);font-family:system-ui,-apple-system,sans-serif;transform:translate3d(0,0,0);will-change:transform;contain:layout style paint;';
       box.innerHTML = `
         <div id="mod39-mmini-header" style="display:flex;align-items:center;justify-content:space-between;gap:4px;padding:6px 8px;background:#18181b;border-bottom:1px solid #27272a;cursor:grab;touch-action:none;">
           <span style="font-size:11px;font-weight:900;color:#6ee7b7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🎬 Video Mini</span>
@@ -3485,16 +3485,33 @@
       document.body.appendChild(box);
 
       const slot = box.querySelector('#mod39-mmini-video-slot');
-      if (vidEl && slot) {
-        this._mminiOrigParent = vidEl.parentElement;
-        vidEl.style.width = '100%';
-        vidEl.style.height = '100%';
-        vidEl.style.objectFit = 'contain';
-        vidEl.playsInline = true;
-        vidEl.setAttribute('playsinline', '');
-        vidEl.setAttribute('webkit-playsinline', '');
-        vidEl.disablePictureInPicture = false;
-        slot.appendChild(vidEl);
+      // Chuyển giao TOÀN BỘ khung hình video sang Video Mini nổi (nhường khung chính Tab 5 để không bị 2 màn hình / đen hình!)
+      const activeVid = document.getElementById('core-media-player') || document.querySelector('#mod39-native-video-host video, #mod39-player-stage-wrapper video');
+      const mainStageWrap = document.getElementById('mod39-player-stage-wrapper');
+      const mainNativeHost = document.getElementById('mod39-native-video-host');
+      if (activeVid && slot) {
+        this._mminiOrigParent = activeVid.parentElement;
+        activeVid.removeAttribute('disablepictureinpicture');
+        activeVid.disablePictureInPicture = false;
+        activeVid.playsInline = true;
+        activeVid.setAttribute('playsinline', '');
+        activeVid.setAttribute('webkit-playsinline', '');
+        if (NS.nativePlayer && typeof NS.nativePlayer.attachStageHost === 'function') {
+          NS.nativePlayer.attachStageHost(slot);
+        } else {
+          slot.appendChild(activeVid);
+        }
+        activeVid.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;opacity:1;position:static;pointer-events:auto;background:#000;';
+        if (mainNativeHost) mainNativeHost.classList.add('hidden');
+        if (mainStageWrap) {
+          document.getElementById('mod39-mmini-stage-placeholder')?.remove();
+          const ph = document.createElement('div');
+          ph.id = 'mod39-mmini-stage-placeholder';
+          ph.style.cssText = 'position:absolute;inset:0;z-index:16;background:rgba(9,9,11,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:14px;text-align:center;';
+          ph.innerHTML = '<div style="font-size:24px;">🎬</div><div style="font-size:12.5px;font-weight:900;color:#6ee7b7;">Video đang phát ở Khung Video Mini nổi</div><button type="button" id="btn-mmini-return-stage" style="padding:6px 12px;border-radius:10px;border:0;background:#e11d48;color:#fff;font-size:11.5px;font-weight:900;cursor:pointer;">↩️ Trả video về khung chính</button>';
+          mainStageWrap.appendChild(ph);
+          ph.querySelector('#btn-mmini-return-stage')?.addEventListener('click', () => this.closeMobileFloatingMiniPlayer());
+        }
       } else if (slot) {
         const thumb = ctrl?.activeVideo?.thumbnailUrl || '';
         slot.innerHTML = `${thumb ? `<img src="${escapeHtml(thumb)}" style="width:100%;height:100%;object-fit:cover;opacity:0.65;" />` : ''}<div style="position:absolute;font-size:12px;font-weight:900;color:#6ee7b7;background:rgba(0,0,0,0.65);padding:4px 10px;border-radius:999px;">🎧 Đang phát Audio nền</div>`;
@@ -3548,47 +3565,64 @@
       };
 
       let isScrubbing = false;
-      const syncMiniControls = () => {
+      let lastRenderedSec = -1;
+      let lastRenderedDur = -1;
+      let lastRenderedPaused = null;
+      let lastRenderedLoop = null;
+      const syncMiniControls = (force = false) => {
         if (!box.isConnected) return;
         const m = getActiveMedia();
-        const t = getCurSec();
-        const d = getDurSec();
-        if (curEl) curEl.textContent = fmt(t);
-        if (durEl) durEl.textContent = fmt(d);
-        if (seekEl && !isScrubbing && d > 0) {
-          seekEl.max = String(Math.floor(d));
-          seekEl.value = String(Math.floor(t));
+        const t = Math.floor(getCurSec());
+        const d = Math.floor(getDurSec());
+        const paused = m ? m.paused : (ctrl?.bridge?.getCurrentPlaybackSnapshot?.()?.state !== 1);
+        const loopOn = Boolean(ctrl?.prefs?.repeatMode);
+        if (force || t !== lastRenderedSec) {
+          lastRenderedSec = t;
+          if (curEl) curEl.textContent = fmt(t);
+          if (seekEl && !isScrubbing && d > 0) seekEl.value = String(t);
         }
-        if (playBtn) {
-          const paused = m ? m.paused : (ctrl?.bridge?.getCurrentPlaybackSnapshot?.()?.state !== 1);
-          playBtn.textContent = paused ? '▶️ Phát tiếp' : '⏸️ Tạm dừng';
-          playBtn.style.background = paused ? '#059669' : '#e11d48';
+        if (force || d !== lastRenderedDur) {
+          lastRenderedDur = d;
+          if (durEl) durEl.textContent = fmt(d);
+          if (seekEl && d > 0) seekEl.max = String(d);
         }
-        if (loopBtn) {
-          const on = Boolean(ctrl?.prefs?.repeatMode);
-          loopBtn.style.background = on ? '#059669' : '#27272a';
-          loopBtn.style.borderColor = on ? '#34d399' : '#3f3f46';
+        if (force || paused !== lastRenderedPaused) {
+          lastRenderedPaused = paused;
+          if (playBtn) {
+            playBtn.textContent = paused ? '▶️ Phát tiếp' : '⏸️ Tạm dừng';
+            playBtn.style.background = paused ? '#059669' : '#e11d48';
+          }
         }
-        const ab = ctrl?.abLoop;
-        const fmtForDur = (sec) => {
-          const n = Math.max(0, Math.floor(Number(sec) || 0));
-          const p2 = (v) => String(v).padStart(2, '0');
-          return d >= 3600 ? `${p2(Math.floor(n / 3600))}:${p2(Math.floor((n % 3600) / 60))}:${p2(n % 60)}` : `${p2(Math.floor(n / 60))}:${p2(n % 60)}`;
-        };
-        if (abAInp && document.activeElement !== abAInp) {
-          abAInp.value = typeof ab?.startSec === 'number' ? fmtForDur(ab.startSec) : '';
-          abAInp.placeholder = d >= 3600 ? '00:00:00' : '00:00';
+        if (force || loopOn !== lastRenderedLoop) {
+          lastRenderedLoop = loopOn;
+          if (loopBtn) {
+            loopBtn.style.background = loopOn ? '#059669' : '#27272a';
+            loopBtn.style.borderColor = loopOn ? '#34d399' : '#3f3f46';
+          }
         }
-        if (abBInp && document.activeElement !== abBInp) {
-          abBInp.value = typeof ab?.endSec === 'number' ? fmtForDur(ab.endSec) : '';
-          abBInp.placeholder = d >= 3600 ? '00:00:00' : '00:00';
-        }
-        if (abApplyBtn) {
-          abApplyBtn.textContent = ab?.enabled ? '🔁 Đang Lặp A–B (Cập nhật)' : '✅ Áp dụng & Bật Lặp A–B';
+        if (force) {
+          const ab = ctrl?.abLoop;
+          const fmtForDur = (sec) => {
+            const n = Math.max(0, Math.floor(Number(sec) || 0));
+            const p2 = (v) => String(v).padStart(2, '0');
+            return d >= 3600 ? `${p2(Math.floor(n / 3600))}:${p2(Math.floor((n % 3600) / 60))}:${p2(n % 60)}` : `${p2(Math.floor(n / 60))}:${p2(n % 60)}`;
+          };
+          if (abAInp && document.activeElement !== abAInp) {
+            abAInp.value = typeof ab?.startSec === 'number' ? fmtForDur(ab.startSec) : '';
+            abAInp.placeholder = d >= 3600 ? '00:00:00' : '00:00';
+          }
+          if (abBInp && document.activeElement !== abBInp) {
+            abBInp.value = typeof ab?.endSec === 'number' ? fmtForDur(ab.endSec) : '';
+            abBInp.placeholder = d >= 3600 ? '00:00:00' : '00:00';
+          }
+          if (abApplyBtn) {
+            abApplyBtn.textContent = ab?.enabled ? '🔁 Đang Lặp A–B (Cập nhật)' : '✅ Áp dụng & Bật Lặp A–B';
+          }
         }
       };
-      syncMiniControls();
-      this._mminiSyncTimer = setInterval(syncMiniControls, 400);
+      syncMiniControls(true);
+      // Tối ưu 60FPS cho video dài trên Mobile: chỉ cập nhật mỗi 1000ms khi giây thực sự đổi (giảm 90% repaint chống giật lag!)
+      this._mminiSyncTimer = setInterval(() => syncMiniControls(false), 1000);
 
       // Gọi ĐÚNG hàm điều khiển thật của playerCtrl + đồng bộ trực tiếp thẻ <video> (0% liệt nút!)
       seekEl?.addEventListener('pointerdown', () => { isScrubbing = true; });
@@ -3687,7 +3721,7 @@
         syncMiniControls();
       });
 
-      // NÚT BẬT CỬA SỔ NỔI HỆ THỐNG (OS Picture-in-Picture) ĐỂ THOÁT RA MÀN HÌNH CHÍNH / APP KHÁC VẪN HIỆN VIDEO!
+      // NÚT BẬT CỬA SỔ NỔI NGOÀI APP: Ưu tiên Document PiP (chính khung Video Mini có nút của app nổi ra ngoài!), fallback chuẩn sang OS Video PiP (đã gỡ sạch disablePictureInPicture!)
       box.querySelector('#btn-mmini-os-pip')?.addEventListener('click', async () => {
         const m = getActiveMedia();
         if (!m) {
@@ -3695,19 +3729,47 @@
           return;
         }
         try {
+          m.removeAttribute('disablepictureinpicture');
+          m.disablePictureInPicture = false;
           if (m.paused) await m.play().catch(() => {});
+
+          // Ưu tiên 1: Document Picture-in-Picture (đưa CHÍNH khung Video Mini + nút Tua/Lặp/A-B của App nổi ra ngoài trình duyệt!)
+          if (window.documentPictureInPicture && typeof window.documentPictureInPicture.requestWindow === 'function') {
+            try {
+              const dPip = await window.documentPictureInPicture.requestWindow({ width: 380, height: 320 });
+              dPip.document.body.style.cssText = 'margin:0;padding:0;background:#09090b;overflow:hidden;';
+              box.style.position = 'static';
+              box.style.width = '100%';
+              box.style.maxWidth = '100%';
+              box.style.borderRadius = '0';
+              dPip.document.body.appendChild(box);
+              dPip.addEventListener('pagehide', () => {
+                if (box && document.body) {
+                  box.style.position = 'fixed';
+                  box.style.right = '8px';
+                  box.style.bottom = '76px';
+                  box.style.width = 'min(336px,calc(100vw - 16px))';
+                  box.style.borderRadius = '16px';
+                  document.body.appendChild(box);
+                }
+              });
+              NS.utils?.showToast?.('✅ Đã đưa CHÍNH khung Video Mini của App nổi ra ngoài màn hình!', 'success', 3800);
+              return;
+            } catch (_eDocPipMob) {}
+          }
+
+          // Ưu tiên 2: OS Native Picture-in-Picture trên Android/iOS (đã gỡ triệt để disablePictureInPicture!)
           if (document.pictureInPictureElement === m) {
             await document.exitPictureInPicture();
           } else if (typeof m.requestPictureInPicture === 'function') {
             await m.requestPictureInPicture();
-            NS.utils?.showToast?.('✅ Đã bật Cửa sổ nổi Hệ thống (OS PiP)! Bạn có thể thoát ra màn hình chính hoặc mở app khác mà video vẫn nổi!', 'success', 4200);
+            NS.utils?.showToast?.('✅ Đã bật Cửa sổ nổi Hệ thống (OS PiP)! Bạn có thể thoát ra màn hình chính mà video vẫn nổi!', 'success', 4200);
           } else if (typeof m.webkitSetPresentationMode === 'function') {
             m.webkitSetPresentationMode('picture-in-picture');
             NS.utils?.showToast?.('✅ Đã bật Cửa sổ nổi iOS PiP! Thoát ra màn hình chính video vẫn chạy nổi!', 'success', 4200);
           } else {
-            NS.utils?.showToast?.('💡 Trình duyệt này không hỗ trợ OS PiP trực tiếp — hãy mở bằng Chrome/Safari hoặc dùng chế độ phát nền Audio!', 'info', 4000);
+            NS.utils?.showToast?.('💡 Trình duyệt di động hiện tại chỉ hỗ trợ nổi trong ứng dụng (Android giới hạn trình duyệt web nổi khung tùy chỉnh ngoài app).', 'info', 4200);
           }
-          // Đăng ký MediaSession để màn hình khóa & cửa sổ PiP điều khiển được đầy đủ
           if ('mediaSession' in navigator) {
             try {
               navigator.mediaSession.setActionHandler('play', () => ctrl?.togglePlayPause?.());
@@ -3734,10 +3796,16 @@
         clearInterval(this._mminiSyncTimer);
         this._mminiSyncTimer = null;
       }
+      document.getElementById('mod39-mmini-stage-placeholder')?.remove();
       const vidEl = document.getElementById('core-media-player');
       const nativeHost = document.getElementById('mod39-native-video-host');
-      if (vidEl && nativeHost && vidEl.parentElement !== nativeHost) {
-        nativeHost.appendChild(vidEl);
+      if (nativeHost) {
+        nativeHost.classList.remove('hidden');
+        if (NS.nativePlayer && typeof NS.nativePlayer.attachStageHost === 'function') {
+          NS.nativePlayer.attachStageHost(nativeHost);
+        } else if (vidEl && vidEl.parentElement !== nativeHost) {
+          nativeHost.appendChild(vidEl);
+        }
       }
       document.getElementById('mod39-mobile-floating-mini')?.remove();
     }
@@ -12593,6 +12661,17 @@
       const emptyCard = document.getElementById('mod39-empty-stage-card');
 
       this.playerCtrl.mobileBgAudio?.syncAudioBridgeStageCard?.();
+      // Nếu Video Mini nổi Mobile đang mở -> GIỮ video gắn trên Video Mini, tuyệt đối không giật ngược về khung chính Tab 5!
+      const mobileMiniSlot = document.getElementById('mod39-mmini-video-slot');
+      if (mobileMiniSlot && NS.nativePlayer?.isActive?.()) {
+        if (NS.nativePlayer.stageHostEl !== mobileMiniSlot) {
+          NS.nativePlayer.attachStageHost(mobileMiniSlot);
+        }
+        mainStageHost?.classList.add('hidden');
+        iframeEl?.classList.add('hidden');
+        return;
+      }
+
       if (engine === 'MOD21_AUDIO' && NS.nativePlayer?.isActive?.() && NS.nativePlayer.visualMutedCompanion && NS.nativePlayer.mode === 'video' && !this.playerCtrl?.prefs?.audioOnlyMode && !NS.nativePlayer._provisionalStageTakeover) {
         if (mainStageHost) {
           mainStageHost.classList.remove('hidden');

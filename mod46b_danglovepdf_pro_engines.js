@@ -328,6 +328,63 @@
               <option value="classic">Sách in cổ điển (Palatino Classic)</option>
             </select>
           </label>
+
+          <!-- Tùy chọn Trang bìa, Header & Footer linh hoạt (v138) -->
+          <div class="p-2.5 rounded-xl bg-zinc-950/85 border border-zinc-800 space-y-2.5">
+            <div class="font-extrabold text-teal-300">📑 Tùy chỉnh Trang Bìa, Header &amp; Footer (PDF / DOCX)</div>
+
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input id="opt-pro-theme10-cover" type="checkbox" class="accent-teal-500 rounded cursor-pointer" />
+              <span class="font-bold text-zinc-200">📘 Tạo thêm Trang bìa mặc định của hệ thống ở đầu file</span>
+            </label>
+
+            <div class="pt-1.5 border-t border-zinc-800/80 space-y-1.5">
+              <label class="block space-y-1"><span class="font-bold text-zinc-200">🔼 Tiêu đề đầu trang (Header):</span>
+                <select id="opt-pro-theme10-hdr-mode" class="w-full px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 font-bold text-zinc-100">
+                  <option value="none" selected>🚫 Không tạo Header mặc định (Giữ trang sạch)</option>
+                  <option value="minimal">📏 Header chữ gọn + đường kẻ mảnh (Mặc định căn giữa tên file)</option>
+                  <option value="band">🎨 Header thanh dải màu Theme</option>
+                </select>
+              </label>
+              <div id="opt-pro-theme10-hdr-sub" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                <input id="opt-pro-theme10-hdr-text" type="text" value="{filename}" placeholder="Tên file ({filename}) hoặc nhập chữ..." class="px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px]" title="Dùng {filename}, {theme}, {date}, {page}, {total} hoặc gõ tùy ý" />
+                <select id="opt-pro-theme10-hdr-align" class="px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 font-bold text-zinc-100 text-[11px]">
+                  <option value="center" selected>Căn giữa Header</option>
+                  <option value="left">Căn trái</option>
+                  <option value="right">Căn phải</option>
+                  <option value="justify">Căn đều 2 bên (Tên file ⟷ Ngày/Trang)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="pt-1.5 border-t border-zinc-800/80 space-y-1.5">
+              <label class="block space-y-1"><span class="font-bold text-zinc-200">🔽 Chân trang &amp; Số trang (Footer):</span>
+                <select id="opt-pro-theme10-ftr-mode" class="w-full px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 font-bold text-zinc-100">
+                  <option value="page_num" selected>🔢 Bật Footer (Mặc định số trang căn giữa)</option>
+                  <option value="none">🚫 Không hiển thị Footer</option>
+                </select>
+              </label>
+              <div id="opt-pro-theme10-ftr-sub" class="space-y-1.5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  <select id="opt-pro-theme10-ftr-preset" class="px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 font-bold text-zinc-100 text-[11px]">
+                    <option value="Trang {page} / {total}" selected>Mẫu: Trang 1 / 10</option>
+                    <option value="{page} / {total}">Mẫu: 1 / 10</option>
+                    <option value="- {page} -">Mẫu: - 1 -</option>
+                    <option value="Trang {page}">Mẫu: Trang 1</option>
+                    <option value="{filename} | Trang {page}/{total}">Mẫu: Tên file | Trang 1/10</option>
+                    <option value="custom">✏️ Tự nhập định dạng bên cạnh</option>
+                  </select>
+                  <select id="opt-pro-theme10-ftr-align" class="px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 font-bold text-zinc-100 text-[11px]">
+                    <option value="center" selected>Căn giữa Footer</option>
+                    <option value="left">Căn trái</option>
+                    <option value="right">Căn phải</option>
+                    <option value="justify">Căn đều 2 bên (Tên file ⟷ Số trang)</option>
+                  </select>
+                </div>
+                <input id="opt-pro-theme10-ftr-text" type="text" value="Trang {page} / {total}" placeholder="VD: Tài liệu nội bộ — Trang {page}/{total}" class="w-full px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 text-[11px]" title="Biến hỗ trợ: {page}, {total}, {filename}, {date}, {theme}" />
+              </div>
+            </div>
+          </div>
         </div>
       `;
     }
@@ -704,6 +761,13 @@ Chương 3: Tổng kết | 12</textarea>
       theme10Id: document.getElementById('opt-pro-theme10-id')?.value || 'navy_teal',
       theme10OutFmt: document.getElementById('opt-pro-theme10-fmt')?.value || 'pdf',
       theme10Font: document.getElementById('opt-pro-theme10-font')?.value || 'sans',
+      theme10IncludeCover: Boolean(document.getElementById('opt-pro-theme10-cover')?.checked),
+      theme10HdrMode: document.getElementById('opt-pro-theme10-hdr-mode')?.value || 'none',
+      theme10HdrText: document.getElementById('opt-pro-theme10-hdr-text')?.value ?? '{filename}',
+      theme10HdrAlign: document.getElementById('opt-pro-theme10-hdr-align')?.value || 'center',
+      theme10FtrMode: document.getElementById('opt-pro-theme10-ftr-mode')?.value || 'page_num',
+      theme10FtrText: document.getElementById('opt-pro-theme10-ftr-text')?.value ?? 'Trang {page} / {total}',
+      theme10FtrAlign: document.getElementById('opt-pro-theme10-ftr-align')?.value || 'center',
       // Mở rộng cho Split / Watermark / Page Numbers / Sign / OCR / PDF->DOCX
       splitEveryN: Math.max(1, Number(document.getElementById('opt-mod46-split-everyn')?.value || 2)),
       splitMaxMb: Math.max(0.2, Number(document.getElementById('opt-mod46-split-maxmb')?.value || 5)),
@@ -927,6 +991,34 @@ Chương 3: Tổng kết | 12</textarea>
         });
       }
 
+      // Gộp thông minh các dòng tiêu đề nhiều dòng vào CHUNG 1 KHUNG & ghép liền các dòng văn bản bị ngắt cứng trong PDF để căn đều 2 bên!
+      const isStandaloneNewSection = (s) => /^(MỤC LỤC|DANH MỤC|CHƯƠNG\s|PHẦN\s|[IVXLCDM]+\.\s|\d+\.\s)/i.test(String(s || '').trim());
+      const coalesced = [];
+      for (const blk of blocks) {
+        const prev = coalesced[coalesced.length - 1];
+        if (prev && prev.type === 'heading' && blk.type === 'heading' && !isStandaloneNewSection(blk.text)) {
+          prev.text = `${prev.text} ${blk.text}`.replace(/\s+/g, ' ').trim();
+          continue;
+        }
+        if (prev && prev.type === 'subheading' && blk.type === 'subheading' && !/^\d+\.\d+/.test(blk.text)) {
+          prev.text = `${prev.text} ${blk.text}`.replace(/\s+/g, ' ').trim();
+          continue;
+        }
+        if (
+          ext === 'pdf' &&
+          prev &&
+          prev.type === 'paragraph' &&
+          blk.type === 'paragraph' &&
+          !(prev.text.length < 52 && /[.!?:”"»)]$/.test(prev.text))
+        ) {
+          prev.text = `${prev.text} ${blk.text}`.replace(/\s+/g, ' ').trim();
+          continue;
+        }
+        coalesced.push({ ...blk });
+      }
+      blocks.length = 0;
+      coalesced.forEach((b) => blocks.push(b));
+
       if (!blocks.length) {
         blocks.push({ type: 'heading', text: docTitle });
         blocks.push({ type: 'paragraph', text: 'Tài liệu đã được nạp thành công nhưng không có văn bản thuần (có thể là ảnh scan). Hãy chạy OCR trước rồi áp dụng 10 Theme!' });
@@ -965,6 +1057,24 @@ Chương 3: Tổng kết | 12</textarea>
         return outputs;
       }
 
+      const includeCover = Boolean(pro.theme10IncludeCover);
+      const hdrMode = pro.theme10HdrMode || 'none';
+      const hdrRawTpl = String(pro.theme10HdrText ?? '{filename}');
+      const hdrAlign = pro.theme10HdrAlign || 'center';
+      const ftrMode = pro.theme10FtrMode || 'page_num';
+      const ftrRawTpl = String(pro.theme10FtrText ?? 'Trang {page} / {total}');
+      const ftrAlign = pro.theme10FtrAlign || 'center';
+      const dateStr = new Date().toLocaleDateString('vi-VN');
+      const expandTokens = (tpl, pageNum, totalNum) =>
+        String(tpl || '')
+          .replace(/\{filename\}/gi, docTitle)
+          .replace(/\{file\}/gi, safeBase)
+          .replace(/\{theme\}/gi, theme.name)
+          .replace(/\{date\}/gi, dateStr)
+          .replace(/\{page\}|\{n\}/gi, String(pageNum))
+          .replace(/\{total\}/gi, String(totalNum))
+          .trim();
+
       if (outFmt === 'docx') {
         const JSZip = await ensureJsZip();
         const zip = new JSZip();
@@ -972,10 +1082,20 @@ Chương 3: Tổng kết | 12</textarea>
         const aHex = theme.accent.replace('#', '').toUpperCase();
         const zHex = theme.zebra.replace('#', '').toUpperCase();
         const escXml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const bodyXml = [
-          `<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="${pHex}"/><w:spacing w:before="120" w:after="200"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="36"/></w:rPr><w:t>${escXml(docTitle.toUpperCase())}</w:t></w:r></w:p>`,
-          `<w:p><w:pPr><w:spacing w:after="200"/></w:pPr><w:r><w:rPr><w:i/><w:color w:val="${aHex}"/><w:sz w:val="20"/></w:rPr><w:t>${escXml(`Theme: ${theme.name} · Xuất bởi ĐăngLovePDF`)}</w:t></w:r></w:p>`,
-        ];
+        const mapJc = (al) => (al === 'left' ? 'left' : al === 'right' ? 'right' : al === 'justify' ? 'both' : 'center');
+        const bodyXml = [];
+        if (includeCover) {
+          bodyXml.push(
+            `<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="${pHex}"/><w:spacing w:before="120" w:after="200"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="36"/></w:rPr><w:t>${escXml(docTitle.toUpperCase())}</w:t></w:r></w:p>`,
+            `<w:p><w:pPr><w:spacing w:after="240"/></w:pPr><w:r><w:rPr><w:i/><w:color w:val="${aHex}"/><w:sz w:val="20"/></w:rPr><w:t>${escXml(`Theme: ${theme.name} · ${dateStr}`)}</w:t></w:r></w:p>`
+          );
+        }
+        if (hdrMode !== 'none') {
+          const hTxt = expandTokens(hdrRawTpl || '{filename}', 1, 1);
+          if (hTxt) {
+            bodyXml.push(`<w:p><w:pPr><w:jc w:val="${mapJc(hdrAlign)}"/><w:pBdr><w:bottom w:val="single" w:sz="8" w:space="4" w:color="${aHex}"/></w:pBdr><w:spacing w:after="160"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="${pHex}"/><w:sz w:val="20"/></w:rPr><w:t>${escXml(hTxt)}</w:t></w:r></w:p>`);
+          }
+        }
         for (const b of blocks) {
           if (b.type === 'heading') {
             bodyXml.push(`<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="${pHex}"/><w:pBdr><w:left w:val="single" w:sz="24" w:space="6" w:color="${aHex}"/></w:pBdr><w:spacing w:before="200" w:after="100"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="26"/></w:rPr><w:t>${escXml(b.text)}</w:t></w:r></w:p>`);
@@ -987,20 +1107,40 @@ Chương 3: Tổng kết | 12</textarea>
               const tcs = row.slice(0, 10).map((cell) => `<w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr><w:p><w:r><w:rPr>${boldTag}<w:color w:val="${txtCol}"/><w:sz w:val="20"/></w:rPr><w:t>${escXml(cell)}</w:t></w:r></w:p></w:tc>`).join('');
               return `<w:tr>${tcs}</w:tr>`;
             }).join('');
-            bodyXml.push(`<w:tbl><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:color="CBD5E1"/><w:bottom w:val="single" w:sz="4" w:color="CBD5E1"/><w:insideH w:val="single" w:sz="4" w:color="CBD5E1"/></w:tblBorders></w:tblPr>${trs}</w:tbl>`);
+            bodyXml.push(`<w:tbl><w:tblPr><w:jc w:val="center"/><w:tblBorders><w:top w:val="single" w:sz="4" w:color="CBD5E1"/><w:bottom w:val="single" w:sz="4" w:color="CBD5E1"/><w:insideH w:val="single" w:sz="4" w:color="CBD5E1"/></w:tblBorders></w:tblPr>${trs}</w:tbl>`);
           } else {
-            bodyXml.push(`<w:p><w:pPr><w:spacing w:after="100"/></w:pPr><w:r><w:rPr><w:color w:val="1E293B"/><w:sz w:val="22"/></w:rPr><w:t>${escXml(b.text)}</w:t></w:r></w:p>`);
+            bodyXml.push(`<w:p><w:pPr><w:jc w:val="both"/><w:spacing w:after="100"/></w:pPr><w:r><w:rPr><w:color w:val="1E293B"/><w:sz w:val="22"/></w:rPr><w:t>${escXml(b.text)}</w:t></w:r></w:p>`);
           }
         }
-        zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+        const sectExtras = [];
+        let ftrRelXml = '';
+        let ftrCtXml = '';
+        if (ftrMode !== 'none') {
+          const tplRaw = expandTokens(ftrRawTpl || 'Trang {page} / {total}', '__PAGE__', '__TOTAL__');
+          const runsXml = tplRaw
+            .split(/(__PAGE__|__TOTAL__)/)
+            .filter(Boolean)
+            .map((tok) => {
+              if (tok === '__PAGE__') return '<w:fldSimple w:instr="PAGE"/>';
+              if (tok === '__TOTAL__') return '<w:fldSimple w:instr="NUMPAGES"/>';
+              return `<w:r><w:rPr><w:color w:val="475569"/><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">${escXml(tok)}</w:t></w:r>`;
+            })
+            .join('');
+          zip.file('word/footer1.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:jc w:val="${mapJc(ftrAlign)}"/><w:pBdr><w:top w:val="single" w:sz="4" w:space="4" w:color="${aHex}"/></w:pBdr></w:pPr>${runsXml}</w:p></w:ftr>`);
+          zip.file('word/_rels/document.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdFtr1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>');
+          sectExtras.push('<w:sectPr><w:footerReference w:type="default" r:id="rIdFtr1"/></w:sectPr>');
+          ftrRelXml = ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+          ftrCtXml = '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>';
+        }
+        zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>${ftrCtXml}</Types>`);
         zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
-        zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${bodyXml.join('')}</w:body></w:document>`);
+        zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"${ftrRelXml}><w:body>${bodyXml.join('')}${sectExtras.join('')}</w:body></w:document>`);
         const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
         outputs.push({ name: `${safeBase}_${theme.id}.docx`, blob });
         return outputs;
       }
 
-      // Mặc định: Xuất PDF Sắc Nét Có Trang Bìa + Banner Màu + Bảng Kẻ Sọc
+      // Mặc định: Xuất PDF Sắc Nét (Tùy chọn Trang Bìa, Header & Footer linh hoạt)
       const { PDFDocument } = await ensurePdfLib();
       const outPdf = await PDFDocument.create();
       const W = 1240;
@@ -1029,69 +1169,98 @@ Chương 3: Tổng kết | 12</textarea>
         return out;
       };
       const canvases = [];
-      // Trang bìa
-      const cover = makePageCanvas();
-      const cg = cover.c.createLinearGradient(0, 0, W, H);
-      cg.addColorStop(0, theme.primary);
-      cg.addColorStop(1, theme.secondary);
-      cover.c.fillStyle = cg;
-      cover.c.fillRect(0, 0, W, H);
-      cover.c.fillStyle = theme.accent;
-      cover.c.fillRect(0, 0, 22, H);
-      cover.c.fillStyle = '#ffffff';
-      cover.c.font = `900 54px ${ff}`;
-      let cy = 320;
-      wrapCv(cover.c, docTitle.toUpperCase(), W - 200).forEach((ln) => { cover.c.fillText(ln, 100, cy); cy += 68; });
-      cover.c.fillStyle = theme.accent;
-      cover.c.fillRect(100, cy + 20, 240, 8);
-      cover.c.fillStyle = 'rgba(255,255,255,0.85)';
-      cover.c.font = `700 24px ${ff}`;
-      cover.c.fillText(`Bộ phối màu: ${theme.name}`, 100, cy + 64);
-      cover.c.fillText(`Ngày định dạng: ${new Date().toLocaleDateString('vi-VN')} · ĐăngLovePDF 10-Theme Studio`, 100, H - 110);
-      canvases.push(cover.cv);
+      let hasCoverPage = false;
 
-      // Các trang nội dung
+      // Chỉ tạo Trang Bìa mặc định khi người dùng TICK chọn!
+      if (includeCover) {
+        hasCoverPage = true;
+        const cover = makePageCanvas();
+        const cg = cover.c.createLinearGradient(0, 0, W, H);
+        cg.addColorStop(0, theme.primary);
+        cg.addColorStop(1, theme.secondary);
+        cover.c.fillStyle = cg;
+        cover.c.fillRect(0, 0, W, H);
+        cover.c.fillStyle = theme.accent;
+        cover.c.fillRect(0, 0, 22, H);
+        cover.c.fillStyle = '#ffffff';
+        cover.c.font = `900 54px ${ff}`;
+        let cy = 320;
+        wrapCv(cover.c, docTitle.toUpperCase(), W - 200).forEach((ln) => { cover.c.fillText(ln, 100, cy); cy += 68; });
+        cover.c.fillStyle = theme.accent;
+        cover.c.fillRect(100, cy + 20, 240, 8);
+        cover.c.fillStyle = 'rgba(255,255,255,0.85)';
+        cover.c.font = `700 24px ${ff}`;
+        cover.c.fillText(`Bộ phối màu: ${theme.name}`, 100, cy + 64);
+        cover.c.fillText(`Ngày định dạng: ${dateStr} · ĐăngLovePDF 10-Theme Studio`, 100, H - 110);
+        canvases.push(cover.cv);
+      }
+
+      const contentStartY = hdrMode === 'band' ? 120 : hdrMode === 'minimal' ? 104 : 84;
+      const maxY = ftrMode !== 'none' ? H - 104 : H - 76;
+      const contentPages = [];
       let curP = makePageCanvas();
-      const paintHdr = (c) => {
-        c.fillStyle = theme.primary;
-        c.fillRect(0, 0, W, 86);
-        c.fillStyle = theme.accent;
-        c.fillRect(0, 82, W, 4);
-        c.fillStyle = '#ffffff';
-        c.font = `800 24px ${ff}`;
-        c.fillText(docTitle.slice(0, 68), 72, 28);
-      };
-      paintHdr(curP.c);
-      let y = 122;
-      const maxW = W - 144;
-      const maxY = H - 100;
+      contentPages.push(curP.cv);
+      let y = contentStartY;
       const ensureSp = (need) => {
         if (y + need > maxY) {
-          canvases.push(curP.cv);
           curP = makePageCanvas();
-          paintHdr(curP.c);
-          y = 122;
+          contentPages.push(curP.cv);
+          y = contentStartY;
         }
       };
 
+      // Hàm vẽ văn bản căn đều 2 bên trái–phải chuẩn sách in & Word (Justified Text)
+      const drawJustifiedLine = (c, line, x, yy, targetW, isLastLine) => {
+        const words = String(line || '').trim().split(/\s+/).filter(Boolean);
+        if (isLastLine || words.length <= 1) {
+          c.fillText(line, x, yy);
+          return;
+        }
+        const totalWordsW = words.reduce((s, w) => s + c.measureText(w).width, 0);
+        const spaceLeft = targetW - totalWordsW;
+        const avgWordSpace = c.measureText(' ').width;
+        // Chỉ căn đều khi khoảng giãn tự nhiên (tránh kéo giãn quá thưa ở dòng ngắn)
+        if (spaceLeft <= 0 || spaceLeft / (words.length - 1) > avgWordSpace * 3.8) {
+          c.fillText(line, x, yy);
+          return;
+        }
+        const gap = spaceLeft / (words.length - 1);
+        let curX = x;
+        for (let wi = 0; wi < words.length; wi++) {
+          c.fillText(words[wi], curX, yy);
+          curX += c.measureText(words[wi]).width + gap;
+        }
+      };
+
+      const marginX = 84;
+      const bodyMaxW = W - marginX * 2; // 1072px căn giữa đối xứng hoàn hảo trái & phải!
+
       for (const b of blocks) {
         if (b.type === 'heading') {
-          ensureSp(72);
-          y += 8;
-          const bgGrad = curP.c.createLinearGradient(72, y, 72 + maxW, y);
+          // BẮT BUỘC gộp toàn bộ tiêu đề nhiều dòng vào CHUNG 1 KHUNG BANNER DUY NHẤT!
+          curP.c.font = `900 22px ${ff}`;
+          const hLines = wrapCv(curP.c, b.text, bodyMaxW - 44);
+          const bannerH = Math.max(52, hLines.length * 30 + 24);
+          ensureSp(bannerH + 18);
+          y += 10;
+          const bgGrad = curP.c.createLinearGradient(marginX, y, marginX + bodyMaxW, y);
           bgGrad.addColorStop(0, theme.primary);
           bgGrad.addColorStop(1, theme.secondary);
           curP.c.fillStyle = bgGrad;
-          curP.c.fillRect(72, y, maxW, 50);
+          curP.c.fillRect(marginX, y, bodyMaxW, bannerH);
           curP.c.fillStyle = theme.accent;
-          curP.c.fillRect(72, y, 10, 50);
+          curP.c.fillRect(marginX, y, 10, bannerH);
           curP.c.fillStyle = '#ffffff';
           curP.c.font = `900 22px ${ff}`;
-          curP.c.fillText(b.text.slice(0, 84), 96, y + 12);
-          y += 64;
+          hLines.forEach((ln, li) => curP.c.fillText(ln, marginX + 24, y + 12 + li * 30));
+          y += bannerH + 14;
         } else if (b.type === 'table') {
           const cols = Math.min(8, Math.max(1, ...(b.rows.map((r) => r.length))));
-          const colW = Math.floor(maxW / cols);
+          const tableW = bodyMaxW;
+          const tableX = Math.round((W - tableW) / 2); // Căn giữa tuyệt đối bảng biểu trên khổ giấy A4!
+          const colW = Math.floor(tableW / cols);
+          const actualTableW = colW * cols;
+          const centeredX = Math.round((W - actualTableW) / 2);
           for (let ri = 0; ri < b.rows.length; ri++) {
             const row = b.rows[ri];
             curP.c.font = `${ri === 0 ? '800' : '500'} 17px ${ff}`;
@@ -1099,61 +1268,127 @@ Chương 3: Tổng kết | 12</textarea>
             const rh = Math.max(36, Math.max(...cellLines.map((a) => a.length)) * 22 + 14);
             ensureSp(rh + 4);
             curP.c.fillStyle = ri === 0 ? theme.primary : ri % 2 === 0 ? theme.zebra : theme.bg;
-            curP.c.fillRect(72, y, maxW, rh);
+            curP.c.fillRect(centeredX, y, actualTableW, rh);
             curP.c.strokeStyle = '#cbd5e1';
-            curP.c.strokeRect(72, y, maxW, rh);
+            curP.c.strokeRect(centeredX, y, actualTableW, rh);
             curP.c.fillStyle = ri === 0 ? '#ffffff' : theme.text;
             cellLines.forEach((lns, ci) => {
-              lns.forEach((ln, li) => curP.c.fillText(ln, 82 + ci * colW, y + 8 + li * 22));
+              lns.forEach((ln, li) => curP.c.fillText(ln, centeredX + 10 + ci * colW, y + 8 + li * 22));
             });
             y += rh;
           }
-          y += 14;
+          y += 16;
         } else if (b.type === 'subheading') {
-          ensureSp(46);
-          y += 6;
-          curP.c.fillStyle = theme.accent;
-          curP.c.fillRect(72, y + 3, 6, 26);
-          curP.c.fillStyle = theme.primary;
           curP.c.font = `800 21px ${ff}`;
-          curP.c.fillText(b.text.slice(0, 88), 90, y + 4);
-          y += 38;
+          const shLines = wrapCv(curP.c, b.text, bodyMaxW - 24);
+          const shH = shLines.length * 28 + 10;
+          ensureSp(shH + 10);
+          y += 8;
+          curP.c.fillStyle = theme.accent;
+          curP.c.fillRect(marginX, y + 2, 6, shH - 6);
+          curP.c.fillStyle = theme.primary;
+          shLines.forEach((ln, li) => curP.c.fillText(ln, marginX + 18, y + 3 + li * 28));
+          y += shH + 8;
         } else if (b.type === 'callout') {
           curP.c.font = `600 19px ${ff}`;
-          const cLines = wrapCv(curP.c, b.text, maxW - 44);
+          const cLines = wrapCv(curP.c, b.text, bodyMaxW - 44);
           const ch = cLines.length * 28 + 24;
-          ensureSp(ch + 10);
+          ensureSp(ch + 12);
           curP.c.fillStyle = theme.zebra;
-          curP.c.fillRect(72, y, maxW, ch);
+          curP.c.fillRect(marginX, y, bodyMaxW, ch);
           curP.c.fillStyle = theme.accent;
-          curP.c.fillRect(72, y, 8, ch);
+          curP.c.fillRect(marginX, y, 8, ch);
           curP.c.fillStyle = theme.text;
-          cLines.forEach((ln, li) => curP.c.fillText(ln, 96, y + 12 + li * 28));
-          y += ch + 10;
+          cLines.forEach((ln, li) => drawJustifiedLine(curP.c, ln, marginX + 24, y + 12 + li * 28, bodyMaxW - 44, li === cLines.length - 1));
+          y += ch + 12;
         } else if (b.type === 'bullet') {
           curP.c.font = `500 19.5px ${ff}`;
-          const bLines = wrapCv(curP.c, `• ${b.text}`, maxW - 24);
-          for (const ln of bLines) {
+          const bLines = wrapCv(curP.c, `• ${b.text}`, bodyMaxW - 20);
+          bLines.forEach((ln, li) => {
             ensureSp(30);
             curP.c.fillStyle = theme.text;
-            curP.c.fillText(ln, 88, y);
+            drawJustifiedLine(curP.c, ln, marginX + 16, y, bodyMaxW - 20, li === bLines.length - 1);
             y += 28;
-          }
+          });
           y += 4;
         } else {
           curP.c.font = `500 20px ${ff}`;
-          const lines = wrapCv(curP.c, b.text, maxW);
-          for (const ln of lines) {
+          const lines = wrapCv(curP.c, b.text, bodyMaxW);
+          lines.forEach((ln, li) => {
             ensureSp(32);
             curP.c.fillStyle = theme.text;
             curP.c.font = `500 20px ${ff}`;
-            curP.c.fillText(ln, 72, y);
+            drawJustifiedLine(curP.c, ln, marginX, y, bodyMaxW, li === lines.length - 1);
             y += 30;
-          }
-          y += 6;
+          });
+          y += 10;
         }
       }
-      canvases.push(curP.cv);
+      // Đóng dấu Header & Footer tùy biến lên toàn bộ trang nội dung (sau khi đã biết chính xác tổng số trang!)
+      const totalContentPages = contentPages.length;
+      const drawAlignedBandText = (c, textLeftOrFull, alignMode, yy, colorHex, fontCss, barW = bodyMaxW, barX = marginX) => {
+        c.fillStyle = colorHex;
+        c.font = fontCss;
+        c.textBaseline = 'middle';
+        const txt = String(textLeftOrFull || '').trim();
+        if (!txt) return;
+        if (alignMode === 'justify' && (txt.includes('|') || txt.includes('·'))) {
+          const sep = txt.includes('|') ? '|' : '·';
+          const parts = txt.split(sep).map((p) => p.trim()).filter(Boolean);
+          if (parts.length >= 2) {
+            c.textAlign = 'left';
+            c.fillText(parts[0], barX, yy);
+            c.textAlign = 'right';
+            c.fillText(parts.slice(1).join(` ${sep} `), barX + barW, yy);
+            c.textAlign = 'left';
+            c.textBaseline = 'top';
+            return;
+          }
+        }
+        if (alignMode === 'justify') {
+          c.textBaseline = 'top';
+          c.textAlign = 'left';
+          drawJustifiedLine(c, txt, barX, yy - 10, barW, false);
+          return;
+        }
+        if (alignMode === 'left') {
+          c.textAlign = 'left';
+          c.fillText(txt, barX, yy);
+        } else if (alignMode === 'right') {
+          c.textAlign = 'right';
+          c.fillText(txt, barX + barW, yy);
+        } else {
+          c.textAlign = 'center';
+          c.fillText(txt, barX + barW / 2, yy);
+        }
+        c.textAlign = 'left';
+        c.textBaseline = 'top';
+      };
+
+      contentPages.forEach((cv, idx) => {
+        const c = cv.getContext('2d');
+        const pageNo = idx + 1;
+        if (hdrMode === 'band') {
+          c.fillStyle = theme.primary;
+          c.fillRect(0, 0, W, 84);
+          c.fillStyle = theme.accent;
+          c.fillRect(0, 80, W, 4);
+          const hStr = expandTokens(hdrRawTpl || '{filename}', pageNo, totalContentPages);
+          drawAlignedBandText(c, hStr, hdrAlign, 42, '#ffffff', `800 22px ${ff}`, bodyMaxW, marginX);
+        } else if (hdrMode === 'minimal') {
+          const hStr = expandTokens(hdrRawTpl || '{filename}', pageNo, totalContentPages);
+          drawAlignedBandText(c, hStr, hdrAlign, 46, theme.primary, `800 20px ${ff}`, bodyMaxW, marginX);
+          c.fillStyle = theme.accent;
+          c.fillRect(marginX, 68, bodyMaxW, 2);
+        }
+        if (ftrMode !== 'none') {
+          const fStr = expandTokens(ftrRawTpl || 'Trang {page} / {total}', pageNo, totalContentPages);
+          c.fillStyle = '#cbd5e1';
+          c.fillRect(marginX, H - 72, bodyMaxW, 1.5);
+          drawAlignedBandText(c, fStr, ftrAlign, H - 46, '#475569', `700 18px ${ff}`, bodyMaxW, marginX);
+        }
+        canvases.push(cv);
+      });
 
       for (let i = 0; i < canvases.length; i++) {
         prog(60 + Math.round(((i + 1) / canvases.length) * 36), `Đang đóng gói trang PDF ${i + 1}/${canvases.length}...`);
