@@ -390,7 +390,11 @@
         wrapped.push({ text: '', isHeading: false });
         continue;
       }
-      const isHeading = /^#{1,3}\s+/.test(line);
+      const isSmartHeading =
+        /^#{1,3}\s+/.test(line) ||
+        (/^(MỤC LỤC|DANH MỤC(\s+(BẢNG|BIỂU ĐỒ|HÌNH))?|LỜI MỞ ĐẦU|KẾT LUẬN|TÀI LIỆU THAM KHẢO|CHƯƠNG\s+[IVXLCDM\d]+|PHẦN\s+[IVXLCDM\d]+|Phần\s+[IVXLCDM\d]+|[IVXLCDM]{1,5}\.\s+[A-ZÀ-Ỹ0-9]|(?:[1-9]|[1-3]\d)\.\s+[A-ZÀ-Ỹ]|\d{1,2}\.\d{1,2}\.?\s+[A-ZÀ-Ỹ])/.test(line.trim()) && line.trim().length <= 120) ||
+        (line.trim().length >= 10 && line.trim().length <= 90 && line.trim().split(/\s+/).length >= 2 && line.trim() === line.trim().toUpperCase() && /[A-ZÀ-Ỹ]/.test(line) && !/[.,;!?]$/.test(line.trim()));
+      const isHeading = isSmartHeading;
       const cleanLine = isHeading ? line.replace(/^#{1,3}\s+/, '') : line;
       ctx.font = isHeading
         ? `${bodyStyle}700 ${headPx}px ${fam}`

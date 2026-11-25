@@ -892,6 +892,8 @@
       ],
     }, null, 2));
     lines.push('```');
+    lines.push('');
+    lines.push('*(Lưu ý: Bắt buộc kết thúc phần phân tích phía trên bằng đúng câu nguyên văn: "Tất cả thông tin, phân tích chỉ mang tính chất tham khảo.")*');
     return lines.join('\n');
   }
 

@@ -11,7 +11,7 @@
   const NS = (globalScope.NoirStudio = globalScope.NoirStudio || {});
 
   const TTL_REPORT_MS = 30 * 60 * 1000; // 30 phút
-  const MANDATORY_DISCLAIMER = 'Nhận xét chỉ mang tính tham khảo thôi';
+  const MANDATORY_DISCLAIMER = 'Tất cả thông tin, phân tích chỉ mang tính chất tham khảo';
 
   function getActiveGeminiApiKey() {
     try {
@@ -1368,7 +1368,10 @@ ${knowledgeDigest}
           <div class="p-4 overflow-y-auto flex-1 space-y-3">
             <!-- Thanh trạng thái đã copy -->
             <div id="inv-gconf-copy-banner" class="px-3 py-2 rounded-xl border border-amber-400/50 bg-amber-500/15 flex flex-wrap items-center justify-between gap-2 text-xs">
-              <span class="font-extrabold text-amber-200">✅ ${tr('Đã tự động sao chép toàn bộ câu lệnh vào bộ nhớ tạm! Bạn có thể thêm mục tiêu/ghi chú rồi bấm mở Gemini hoặc xuất file .MD.')}</span>
+              <div class="space-y-1 flex-1 min-w-[200px]">
+                <div class="font-extrabold text-amber-200">✅ ${tr('Đã tự động sao chép toàn bộ câu lệnh vào bộ nhớ tạm! Bạn có thể thêm mục tiêu/ghi chú rồi bấm mở Gemini hoặc xuất file .MD.')}</div>
+                <div class="text-[11px] text-amber-100/90">📱 ${tr('Trên Điện thoại (Mobile): Hãy CHẠM GIỮ ngón tay 1–2 giây vào khung nhập rồi bấm nút "Dán" hiện ra (KHÔNG dùng nút gợi ý nhanh của bàn phím vì dễ cắt thiếu dòng văn bản dài!).')}</div>
+              </div>
               <div class="flex items-center gap-1.5 shrink-0">
                 <button type="button" id="inv-gconf-recopy" class="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-[11px] cursor-pointer">📋 ${tr('Copy 1 Chạm')}</button>
                 <button type="button" id="inv-gconf-export-md" class="px-3 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-black text-[11px] cursor-pointer">📥 ${tr('Xuất File .MD')}</button>

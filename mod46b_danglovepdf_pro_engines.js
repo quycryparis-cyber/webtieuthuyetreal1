@@ -13,6 +13,88 @@
 
   const NS = (global.NoirStudio = global.NoirStudio || {});
 
+  // Bộ phân loại cấu trúc tài liệu & mục lục dùng chung toàn App (Mod 46/48/49/50)
+  // Trả về cả `type` (mod46b theme renderer) lẫn `kind` ('h1'|'h2'|'h3'|'toc_item'|'callout'|'bullet'|'paragraph').
+  function noirClassifyDocLine(txt, meta = {}) {
+    const s = String(txt || '').replace(/\*\*/g, '').replace(/\*/g, '').trim();
+    if (!s) return null;
+    const medSize = Number(meta.medianFontSize) || 0;
+    const fSize = Number(meta.fontSize) || 0;
+    const isBold = Boolean(meta.isBold);
+
+    // Chặn tuyệt đối các đơn vị ngắn / từ viết tắt (USD., VND, LINK...) hoặc mảnh câu viết thường đầu dòng!
+    if (/^[\(\[]?(USD|VND|EUR|JPY|GBP|LINK|TRANG|STT)\.?[\)\]]?$/i.test(s)) {
+      return { type: 'paragraph', kind: 'paragraph', text: s };
+    }
+    if (/^[a-zà-ỹ]/.test(s) && !/^[a-z]\)\s+[A-ZÀ-Ỹa-zà-ỹ]/.test(s) && !/^phần\s+(\d+|[IVXLCDM]+)\b/i.test(s)) {
+      return { type: 'paragraph', kind: 'paragraph', text: s };
+    }
+
+    // Nhận diện Mục lục / Danh mục trang (dấu .... hoặc . . . số trang ở cuối)
+    if (/(?:\.{4,}|(?:\.\s){3,}\.?)\s*\d{1,4}\s*$/.test(s)) {
+      return { type: 'toc_item', kind: 'toc_item', text: s };
+    }
+
+    // Mục mở đầu / Mục lục chính thức (cả dòng là tên mục)
+    if (/^(MỤC LỤC|DANH MỤC(\s+(BẢNG|BIỂU ĐỒ|HÌNH|CHỮ VIẾT TẮT|TÀI LIỆU))?|LỜI MỞ ĐẦU|LỜI NÓI ĐẦU|TÓM TẮT|TỔNG QUAN|KẾT LUẬN(\s+VÀ\s+KIẾN\s+NGHỊ)?|KIẾN NGHỊ|TÀI LIỆU THAM KHẢO|PHỤ LỤC(\s+[A-Z0-9]+)?)$/i.test(s)) {
+      return { type: 'heading', kind: 'h1', text: s };
+    }
+
+    // Tiêu đề Lớn Cấp 1: CHƯƠNG ..., PHẦN 1/I/A..., hoặc Cỡ chữ PDF lớn >= 1.26x thân bài
+    if (
+      s.length <= 125 &&
+      (
+        /^CHƯƠNG\s+([IVXLCDM]+|\d{1,2})\b/i.test(s) ||
+        /^(PHẦN|MỤC)\s+([IVXLCDM]+|\d{1,2})\b/.test(s) ||
+        /^Phần\s+([IVXLCDM]+|\d{1,2})\b(?:\s*[:.\-–—]|\s|$)/.test(s) ||
+        (medSize > 0 && fSize >= medSize * 1.26 && s.length >= 4 && !/[,;]$/.test(s))
+      )
+    ) {
+      return { type: 'heading', kind: 'h1', text: s };
+    }
+
+    // Tiêu đề Cấp 2: Số La Mã (I., II., III.), Số thứ tự 1..39 (Chữ hoa đầu từ), hoặc Chữ In Hoa >= 2 từ không kết thúc dấu chấm
+    if (
+      s.length <= 125 &&
+      (/^[IVXLCDM]{1,5}\.\s+[A-ZÀ-Ỹ0-9]/.test(s) || /^(?:[1-9]|[1-3]\d)\.\s+[A-ZÀ-Ỹ]/.test(s))
+    ) {
+      return { type: 'heading', kind: 'h2', text: s };
+    }
+    if (
+      s.length >= 10 &&
+      s.length <= 95 &&
+      s.split(/\s+/).length >= 2 &&
+      s === s.toUpperCase() &&
+      /[A-ZÀ-Ỹ]/.test(s) &&
+      !/[.,;!?]$/.test(s) &&
+      !/^[\d.,\s%$+\-–—()]+$/.test(s)
+    ) {
+      return { type: 'heading', kind: 'h2', text: s };
+    }
+
+    // Tiểu mục Cấp 3 (1.1., 1.2.3., a), A., hoặc In đậm cỡ chữ >= 1.1x)
+    if (
+      s.length <= 125 &&
+      (
+        /^\d{1,2}\.\d{1,2}(?:\.\d{1,2})?\.?\s+[A-ZÀ-Ỹ0-9]/.test(s) ||
+        /^[a-z]\)\s+[A-ZÀ-Ỹa-zà-ỹ]/.test(s) ||
+        /^[A-Z]\.\s+[A-ZÀ-Ỹ]/.test(s) ||
+        (medSize > 0 && fSize >= medSize * 1.1 && isBold && s.length >= 4 && !/[.,;]$/.test(s))
+      )
+    ) {
+      return { type: 'subheading', kind: 'h3', text: s };
+    }
+
+    if (/^(>|💡|⚠️|📌|LƯU Ý|NHẬN ĐỊNH|KEY TAKEAWAY|SUMMARY)\s*[:.\-–—]/i.test(s) || s.startsWith('>')) {
+      return { type: 'callout', kind: 'callout', text: s.replace(/^>\s*/, '') };
+    }
+    if (/^([-•▪◦+])\s+/.test(s) || /^\*\s+/.test(s)) {
+      return { type: 'bullet', kind: 'bullet', text: s.replace(/^([-•*▪◦+])\s+/, '') };
+    }
+    return { type: 'paragraph', kind: 'paragraph', text: s };
+  }
+  global.NoirClassifyDocLine = noirClassifyDocLine;
+
   const PAPER_SIZES = Object.freeze({
     a4: [595.28, 841.89],
     a3: [841.89, 1190.55],
@@ -888,27 +970,8 @@ Chương 3: Tổng kết | 12</textarea>
       const docTitle = safeBase.replace(/[_-]+/g, ' ');
       prog(15, `Đang phân tích cấu trúc ngữ nghĩa tài liệu (${ext.toUpperCase()})...`);
 
-      // Bộ phân loại ngữ nghĩa sâu: Heading (H1/H2), Subheading (H3), Callout/KPI, Bullet, Table, Paragraph
-      const classifyLine = (txt) => {
-        const s = String(txt || '').replace(/\*\*/g, '').replace(/\*/g, '').trim();
-        if (!s) return null;
-        if (/^(CHƯƠNG|PHẦN|MỤC|BÁO CÁO|TỔNG QUAN|[IVXLCDM]+\.\s|\d+\.\s+[A-ZÀ-Ỹ])/i.test(s) && s.length < 110) {
-          return { type: 'heading', text: s };
-        }
-        if (/^(\d+\.\d+\.?\s|[a-z]\)\s)/i.test(s) && s.length < 110) {
-          return { type: 'subheading', text: s };
-        }
-        if (/^(>|💡|⚠️|📌|LƯU Ý|KẾT LUẬN|NHẬN ĐỊNH|TÓM TẮT|KEY TAKEAWAY|SUMMARY)/i.test(s)) {
-          return { type: 'callout', text: s.replace(/^>\s*/, '') };
-        }
-        if (/^([-•*▪◦+])\s+/.test(s)) {
-          return { type: 'bullet', text: s.replace(/^([-•*▪◦+])\s+/, '') };
-        }
-        if (s.length < 72 && s === s.toUpperCase() && /[A-ZÀ-Ỹ]{3,}/.test(s)) {
-          return { type: 'heading', text: s };
-        }
-        return { type: 'paragraph', text: s };
-      };
+      // Dùng trực tiếp Bộ phân loại cấu trúc tài liệu & mục lục dùng chung (global.NoirClassifyDocLine)
+      const classifyLine = global.NoirClassifyDocLine;
 
       // Bước 1: Trích xuất cấu trúc thống nhất: [{ type: 'heading'|'paragraph'|'table', text?, rows? }]
       const blocks = [];
@@ -962,6 +1025,8 @@ Chương 3: Tổng kết | 12</textarea>
         const pdfjsLib = await ensurePdfJs();
         const pdfDoc = await pdfjsLib.getDocument({ data: f.bytes.slice(0) }).promise;
         const maxP = Math.min(pdfDoc.numPages, 60);
+        const rawPdfLines = [];
+        const allFontSizes = [];
         for (let pno = 1; pno <= maxP; pno++) {
           const page = await pdfDoc.getPage(pno);
           const tc = await page.getTextContent();
@@ -970,29 +1035,61 @@ Chương 3: Tổng kết | 12</textarea>
             const s = String(it.str || '').trim();
             if (!s) continue;
             const yKey = Math.round((it.transform?.[5] || 0) / 6) * 6;
+            const fSz = Math.max(6, Math.hypot(it.transform?.[0] || 0, it.transform?.[1] || 0));
+            const boldFlag = /bold|black|heavy|demi|semibold/i.test(String(it.fontName || '') + String(tc.styles?.[it.fontName]?.fontFamily || ''));
             if (!lineMap.has(yKey)) lineMap.set(yKey, []);
-            lineMap.get(yKey).push({ x: it.transform?.[4] || 0, s });
+            lineMap.get(yKey).push({ x: it.transform?.[4] || 0, s, fSz, boldFlag });
           }
           const sortedY = [...lineMap.keys()].sort((a, b) => b - a);
           for (const yk of sortedY) {
-            const lineTxt = lineMap.get(yk).sort((a, b) => a.x - b.x).map((o) => o.s).join(' ').trim();
+            const items = lineMap.get(yk).sort((a, b) => a.x - b.x);
+            const lineTxt = items.map((o) => o.s).join(' ').replace(/\s+/g, ' ').trim();
             if (!lineTxt) continue;
-            const cls = classifyLine(lineTxt);
-            if (cls) blocks.push(cls);
+            const avgSz = items.reduce((sum, o) => sum + o.fSz, 0) / items.length;
+            const anyBold = items.some((o) => o.boldFlag);
+            allFontSizes.push(avgSz);
+            rawPdfLines.push({ text: lineTxt, fontSize: avgSz, isBold: anyBold });
           }
+        }
+        // Tính cỡ chữ phổ biến nhất (thân bài) để phân biệt chuẩn Heading với thân bài!
+        const sortedSz = allFontSizes.slice().sort((a, b) => a - b);
+        const medianFontSize = sortedSz.length ? sortedSz[Math.floor(sortedSz.length / 2)] : 11;
+        // Bước tiền gộp thông minh: Ghép các dòng bị ngắt giữa chừng (như "... Công ty Cổ" + "phần SX-TM...", hoặc "44 triệu" + "USD.") TRƯỚC khi phân loại!
+        const mergedPdfLines = [];
+        for (const cur of rawPdfLines) {
+          const prev = mergedPdfLines[mergedPdfLines.length - 1];
+          const isExplicitBreak =
+            /^(MỤC LỤC|DANH MỤC|CHƯƠNG\s+[IVXLCDM\d]+|PHẦN\s+[IVXLCDM\d]+|Phần\s+[IVXLCDM\d]+|[IVXLCDM]{1,5}\.\s|\d{1,2}\.\d{1,2}|\d{1,2}\.\s+[A-ZÀ-Ỹ]|[-•*▪◦+]\s)/i.test(cur.text) &&
+            !/^phần\s+(?!\d|[IVXLCDM]+\b)/i.test(cur.text);
+          const sameSize = prev && Math.abs(prev.fontSize - cur.fontSize) < medianFontSize * 0.14;
+          const prevIncomplete = prev && !/[.!?:"»)]$/.test(prev.text);
+          const curIsContinuation = /^[a-zà-ỹ]/.test(cur.text) || /^[\(\[]?(USD|VND|EUR|triệu|tỷ)\.?$/i.test(cur.text);
+          if (prev && sameSize && !isExplicitBreak && (prevIncomplete || curIsContinuation) && prev.text.length < 700) {
+            prev.text = `${prev.text} ${cur.text}`.replace(/\s+/g, ' ').trim();
+            continue;
+          }
+          mergedPdfLines.push({ ...cur });
+        }
+        for (const ln of mergedPdfLines) {
+          const cls = classifyLine(ln.text, { medianFontSize, fontSize: ln.fontSize, isBold: ln.isBold });
+          if (cls) blocks.push(cls);
         }
       } else {
         const rawTxt = new TextDecoder('utf-8').decode(f.bytes);
         rawTxt.split(/\r?\n/).forEach((ln) => {
           const t = ln.trim();
           if (!t) return;
-          if (/^#{1,6}\s+/.test(t)) blocks.push({ type: 'heading', text: t.replace(/^#{1,6}\s+/, '').replace(/\*/g, '') });
-          else blocks.push({ type: 'paragraph', text: t.replace(/\*/g, '') });
+          if (/^#{1,2}\s+/.test(t)) blocks.push({ type: 'heading', text: t.replace(/^#{1,2}\s+/, '').replace(/\*/g, '') });
+          else if (/^#{3,6}\s+/.test(t)) blocks.push({ type: 'subheading', text: t.replace(/^#{3,6}\s+/, '').replace(/\*/g, '') });
+          else {
+            const cls = classifyLine(t);
+            if (cls) blocks.push(cls);
+          }
         });
       }
 
-      // Gộp thông minh các dòng tiêu đề nhiều dòng vào CHUNG 1 KHUNG & ghép liền các dòng văn bản bị ngắt cứng trong PDF để căn đều 2 bên!
-      const isStandaloneNewSection = (s) => /^(MỤC LỤC|DANH MỤC|CHƯƠNG\s|PHẦN\s|[IVXLCDM]+\.\s|\d+\.\s)/i.test(String(s || '').trim());
+      // Gộp thông minh các dòng tiêu đề nhiều dòng vào CHUNG 1 KHUNG & ghép liền các dòng văn bản còn sót!
+      const isStandaloneNewSection = (s) => /^(MỤC LỤC|DANH MỤC|CHƯƠNG\s+[IVXLCDM\d]+|PHẦN\s+[IVXLCDM\d]+|Phần\s+[IVXLCDM\d]+|[IVXLCDM]{1,5}\.\s|[1-9]\d?\.\s+[A-ZÀ-Ỹ])/i.test(String(s || '').trim());
       const coalesced = [];
       for (const blk of blocks) {
         const prev = coalesced[coalesced.length - 1];
@@ -1278,6 +1375,23 @@ Chương 3: Tổng kết | 12</textarea>
             y += rh;
           }
           y += 16;
+        } else if (b.type === 'toc_item') {
+          ensureSp(34);
+          curP.c.font = `600 18.5px ${ff}`;
+          curP.c.fillStyle = theme.primary;
+          const mToc = b.text.match(/^(.*?)\s*\.{3,}\s*(\d{1,4})$/);
+          if (mToc) {
+            const leftT = mToc[1].trim();
+            const pgT = mToc[2].trim();
+            curP.c.fillText(leftT.slice(0, 74), marginX + 12, y);
+            const pgW = curP.c.measureText(pgT).width;
+            curP.c.fillText(pgT, marginX + bodyMaxW - pgW - 12, y);
+          } else {
+            curP.c.fillText(b.text.slice(0, 86), marginX + 12, y);
+          }
+          curP.c.fillStyle = '#e2e8f0';
+          curP.c.fillRect(marginX + 12, y + 26, bodyMaxW - 24, 1);
+          y += 32;
         } else if (b.type === 'subheading') {
           curP.c.font = `800 21px ${ff}`;
           const shLines = wrapCv(curP.c, b.text, bodyMaxW - 24);

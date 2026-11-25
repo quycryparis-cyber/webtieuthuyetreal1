@@ -433,8 +433,40 @@
     return canvas;
   }
 
+  function extractLinkFromRaw(raw) {
+    let foundUrl = '';
+    const textWithoutMd = String(raw ?? '').replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi, (_m, label, u) => {
+      if (!foundUrl) foundUrl = u.trim();
+      return label;
+    });
+    if (!foundUrl) {
+      const bm = textWithoutMd.match(/https?:\/\/[^\s<>)\]"']+/i);
+      if (bm) foundUrl = bm[0].replace(/[.,;:!?]+$/, '');
+    }
+    return { text: cleanStr(textWithoutMd), url: foundUrl };
+  }
+
+  function isSmartInvestHeading(rawLine) {
+    const t = cleanStr(rawLine);
+    if (!t || t.length < 3 || t.length > 98) return false;
+    if (typeof globalScope.NoirClassifyDocLine === 'function') {
+      const cls = globalScope.NoirClassifyDocLine(t);
+      if (cls?.kind === 'h1' || cls?.kind === 'h2' || cls?.kind === 'h3') return true;
+      if (cls?.kind === 'paragraph' || cls?.kind === 'toc_item') return false;
+    }
+    if (/^[a-zà-ỹ]/.test(t)) return false; // tuyệt đối bỏ qua mảnh văn xuôi chữ thường ("phần SX-TM...")
+    if (/^(USD|VND|EUR|JPY|GBP|LINK)\.?$/i.test(t)) return false;
+    if (/^(MỤC\s+LỤC|DANH\s+MỤC|CHƯƠNG|PHẦN|MỤC|BÀI)\s*(?:[IVXLCDM]+|\d+)?(?:[\s.:–—-]|$)/i.test(t) && /^[A-ZĐÂĂÊÔƠƯ]/u.test(t) && !/\.\s*\.+\s*\d+\s*$/.test(t)) return true;
+    if (/^[IVXLCDM]+\.\s+\S+/.test(t)) return true;
+    if (/^\d+(?:\.\d+){0,3}\.?\s+\S+/.test(t) && !/^\d+\.\s*\d{3}/.test(t) && t.length <= 92) return true;
+    const words = t.split(/\s+/);
+    const alpha = t.replace(/[^a-zA-ZÀ-ỹ]/g, '');
+    if (words.length >= 2 && alpha.length >= 6 && alpha === alpha.toUpperCase() && !/[.,;!?]$/.test(t)) return true;
+    return false;
+  }
+
   /**
-   * PHÂN TÍCH MARKDOWN GEMINI THÀNH CÁC SECTION CHUẨN (Banner + Bảng thật + Callout + Đoạn văn sạch)
+   * PHÂN TÍCH MARKDOWN GEMINI THÀNH CÁC SECTION CHUẨN (Banner + Bảng thật + Callout + Đoạn văn sạch + Hyperlink thật)
    */
   function parseProseToSections(proseText, fallbackHeading) {
     const raw = String(proseText || '')
@@ -452,22 +484,33 @@
       const hm = ln.match(/^(#{1,6})\s+(.+)$/);
       if (hm) {
         if (cur.paragraphs.length || cur.tables.length) secs.push(cur);
-        cur = { heading: cleanStr(hm[2]), paragraphs: [], tables: [] };
+        const hEx = extractLinkFromRaw(hm[2]);
+        cur = { heading: hEx.text, headingUrl: hEx.url || '', paragraphs: [], tables: [] };
+        i++; continue;
+      }
+      if (!ln.includes('|') && isSmartInvestHeading(ln)) {
+        if (cur.paragraphs.length || cur.tables.length) secs.push(cur);
+        const hEx = extractLinkFromRaw(ln);
+        cur = { heading: hEx.text, headingUrl: hEx.url || '', paragraphs: [], tables: [] };
         i++; continue;
       }
       if (ln.includes('|') && i + 1 < lines.length && /^\s*\|?[\s:-]+\|[\s|:-]*$/.test(lines[i + 1].trim())) {
-        const parseR = (r) => r.replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => cleanStr(c));
-        const headers = parseR(ln);
+        const parseR = (r) => r.replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => extractLinkFromRaw(c));
+        const headers = parseR(ln).map((x) => x.text);
         i += 2;
         const rows = [];
+        const rowUrls = [];
         while (i < lines.length && lines[i].trim().includes('|') && !/^#{1,6}\s/.test(lines[i].trim())) {
-          rows.push(parseR(lines[i].trim()));
+          const cells = parseR(lines[i].trim());
+          rows.push(cells.map((x) => x.text));
+          rowUrls.push((cells.find((x) => x.url) || {}).url || '');
           i++;
         }
-        cur.tables.push({ headers, rows });
+        cur.tables.push({ headers, rows, rowUrls });
         continue;
       }
-      cur.paragraphs.push(cleanStr(ln.replace(/^[-•*]\s+/, '• ')));
+      const pEx = extractLinkFromRaw(ln.replace(/^[-•*]\s+/, '• '));
+      cur.paragraphs.push(pEx.url ? { text: pEx.text, url: pEx.url } : pEx.text);
       i++;
     }
     if (cur.paragraphs.length || cur.tables.length) secs.push(cur);
@@ -545,6 +588,21 @@
     };
 
     for (const sec of sections) {
+      if (sec.isDisclaimerBox) {
+        ensure(96);
+        y += 10;
+        rr(cur.ctx, 72, y, maxW, 70, 12);
+        cur.ctx.fillStyle = dark ? '#451a03' : '#fffbeb';
+        cur.ctx.fill();
+        cur.ctx.strokeStyle = '#f59e0b';
+        cur.ctx.lineWidth = 2;
+        cur.ctx.stroke();
+        cur.ctx.fillStyle = dark ? '#fde68a' : '#92400e';
+        cur.ctx.font = `800 ${Math.round(19 * sc)}px ${ff}`;
+        cur.ctx.fillText(cleanStr(sec.paragraphs?.[0] || '⚠️ Tất cả thông tin, phân tích chỉ mang tính chất tham khảo.'), 94, y + 22);
+        y += 84;
+        continue;
+      }
       ensure(76);
       y += 8;
       const g = cur.ctx.createLinearGradient(72, y, 72 + maxW, y);
@@ -556,26 +614,47 @@
       cur.ctx.fillStyle = '#14b8a6'; cur.ctx.fillRect(72, y, 10, 50);
       cur.ctx.fillStyle = '#ffffff'; cur.ctx.font = `900 22px ${ff}`;
       cur.ctx.fillText(cleanStr(sec.heading).slice(0, 82), 96, y + 13);
+      if (sec.headingUrl && /^https?:\/\//i.test(sec.headingUrl)) {
+        if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
+        cur.canvas.__pdfLinks.push({ x: 72, y, w: maxW, h: 50, url: sec.headingUrl });
+      }
       y += 64;
 
       if (sec.tableRows?.length) {
         drawTableBlock(sec.tableHeaders || ['Chỉ tiêu', 'Giá trị', 'Tác động / Nhận định'], sec.tableRows, sec.tableRowUrls || null);
       }
       if (Array.isArray(sec.tables)) {
-        sec.tables.forEach((t) => drawTableBlock(t.headers, t.rows));
+        sec.tables.forEach((t) => drawTableBlock(t.headers, t.rows, t.rowUrls || null));
       }
       if (Array.isArray(sec.paragraphs)) {
         for (const p of sec.paragraphs) {
-          const clean = cleanStr(p);
+          const pObj = typeof p === 'object' && p !== null ? p : extractLinkFromRaw(p);
+          const clean = cleanStr(pObj.text || '');
+          const pUrl = /^https?:\/\//i.test(pObj.url || '') ? pObj.url : '';
           if (!clean) continue;
           cur.ctx.font = `500 ${bodyPx}px ${ff}`;
           const lines = wrapText(cur.ctx, clean, maxW);
+          if (pUrl) ensure(lines.length * lineH + 34);
+          const paraStartY = y;
+          let paraStartPage = cur.canvas;
           for (const ln of lines) {
             ensure(lineH + 6);
-            cur.ctx.fillStyle = dark ? '#e2e8f0' : '#1e293b';
+            if (cur.canvas !== paraStartPage) {
+              paraStartPage = cur.canvas;
+            }
+            cur.ctx.fillStyle = pUrl ? (dark ? '#38bdf8' : '#0369a1') : (dark ? '#e2e8f0' : '#1e293b');
             cur.ctx.font = `500 ${bodyPx}px ${ff}`;
             cur.ctx.fillText(ln, 72, y);
             y += lineH;
+          }
+          if (pUrl) {
+            ensure(26);
+            cur.ctx.fillStyle = dark ? '#38bdf8' : '#0369a1';
+            cur.ctx.font = `700 ${Math.round(14.5 * sc)}px ${ff}`;
+            cur.ctx.fillText(`🔗 Bấm mở nguồn: ${pUrl.slice(0, 82)}`, 72, y);
+            y += 22;
+            if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
+            cur.canvas.__pdfLinks.push({ x: 72, y: Math.min(paraStartY, y - 24), w: maxW, h: Math.max(30, y - paraStartY), url: pUrl });
           }
           y += 8;
         }
@@ -663,6 +742,9 @@
         tableRows: (re?.liveAds || []).length
           ? re.liveAds.map((a) => [a.title, `${a.price} ${a.size || ''}`, a.ppm2 || a.area || area])
           : [['Mặt bằng giá bán tham chiếu', re?.benchmark?.priceRangeM2 || '45 – 95 tr/m²', area], ['Mặt bằng giá thuê', re?.benchmark?.rentRangeMo || '10 – 18 tr/tháng', `Tỷ suất ~${re?.benchmark?.aptYield || 3.2}%/năm`]],
+        tableRowUrls: (re?.liveAds || []).length
+          ? re.liveAds.map((a) => /^https?:\/\//i.test(String(a.url || a.link || '').trim()) ? String(a.url || a.link).trim() : '')
+          : null,
       });
     } else {
       // overview
@@ -690,13 +772,22 @@
         paragraphs: deepOverviewParagraphs,
       });
       if ((report?.items || []).length) {
+        const slicedItems = report.items.slice(0, 18);
         sections.push({
           heading: `3. BẢNG KIỂM TOÁN ${report.items.length} ĐỀ MỤC VĨ MÔ – VI MÔ ĐÃ QUÉT`,
           tableHeaders: ['Đề mục kiểm tra', 'Số liệu / Trạng thái', 'Tác động thị trường'],
-          tableRows: report.items.slice(0, 18).map((it) => [it.title || it.label || it.id, it.display_value || it.value || '—', it.plain_explanation || it.impact || '']),
+          tableRows: slicedItems.map((it) => [it.title || it.label || it.id, it.display_value || it.value || '—', it.plain_explanation || it.impact || '']),
+          tableRowUrls: slicedItems.map((it) => /^https?:\/\//i.test(String(it.url || it.official_url || '').trim()) ? String(it.url || it.official_url).trim() : ''),
         });
       }
     }
+
+    const normalizeHttpUrl = (raw) => {
+      const s = String(raw || '').trim();
+      if (/^https?:\/\//i.test(s)) return s;
+      if (/^www\./i.test(s)) return `https://${s}`;
+      return '';
+    };
 
     // TIN TỨC MỚI NHẤT & PHÂN TÍCH TÁC ĐỘNG (BẮT BUỘC CÓ Ở CẢ 4 CHẾ ĐỘ + CHÈN HYPERLINK BẤM TRỰC TIẾP!)
     if (headlines.length) {
@@ -704,7 +795,7 @@
         heading: `TIN NÓNG VĨ MÔ, ĐỊA CHÍNH TRỊ & THỊ TRƯỜNG MỚI NHẤT (${headlines.length} NGUỒN BẤM MỞ TRỰC TIẾP)`,
         tableHeaders: ['Tin sự kiện mới nhất', 'Nguồn chính thống', 'Ngày & Phạm vi tác động'],
         tableRows: headlines.map((h) => [h.title, h.source || 'Báo chí chính thống', `${h.date || ''} · Tác động tâm lý dòng tiền & khẩu vị rủi ro`]),
-        tableRowUrls: headlines.map((h) => h.url || ''),
+        tableRowUrls: headlines.map((h) => normalizeHttpUrl(h.url || h.link || h.official_url || '')),
       });
     }
 
@@ -713,6 +804,13 @@
       const geminiSecs = parseProseToSections(prose, 'PHÂN TÍCH CHUYÊN SÂU TỪ CHUYÊN GIA GEMINI');
       geminiSecs.forEach((s) => sections.push(s));
     }
+
+    // DÒNG LƯU Ý MIỄN TRỪ TRÁCH NHIỆM BẮT BUỘC Ở CUỐI MỌI BÁO CÁO
+    sections.push({
+      heading: 'LƯU Ý MIỄN TRỪ TRÁCH NHIỆM',
+      isDisclaimerBox: true,
+      paragraphs: ['⚠️ Tất cả thông tin, phân tích chỉ mang tính chất tham khảo.'],
+    });
 
     const coverCanvas = drawCoverPage(modeMeta, subtitle, coverMetrics, readerOpts);
     const contentPages = drawSectionsToPages(modeMeta.title, sections, readerOpts);
@@ -730,11 +828,12 @@
       // Gắn Hyperlink bấm được thật trên jsPDF cho từng bài báo nguồn!
       if (Array.isArray(cv.__pdfLinks)) {
         cv.__pdfLinks.forEach((lk) => {
-          if (!lk?.url) return;
-          const xPt = (lk.x / 1240) * pw;
-          const yPt = (lk.y / 1754) * ph;
-          const wPt = (lk.w / 1240) * pw;
-          const hPt = (lk.h / 1754) * ph;
+          if (!lk?.url || !/^(https?:\/\/|mailto:)/i.test(String(lk.url))) return;
+          const xPt = Math.max(0, (lk.x / 1240) * pw);
+          const yPt = Math.max(0, (lk.y / 1754) * ph);
+          const wPt = Math.min(pw - xPt, (lk.w / 1240) * pw);
+          const hPt = Math.min(ph - yPt, (lk.h / 1754) * ph);
+          if (wPt <= 2 || hPt <= 2) return;
           try { pdf.link(xPt, yPt, wPt, hPt, { url: String(lk.url) }); } catch (_eLk) {}
         });
       }
@@ -799,12 +898,35 @@
         const lbl = document.createElement('div');
         lbl.className = 'text-xs font-extrabold text-teal-300 text-center';
         lbl.textContent = `— Trang ${idx + 1} / ${built.allPages.length} —`;
+        const sheetBox = document.createElement('div');
+        sheetBox.className = 'relative w-full overflow-hidden rounded-[10px] shadow-[0_14px_40px_rgba(0,0,0,0.65)]';
+        cv.style.display = 'block';
         cv.style.width = '100%';
         cv.style.height = 'auto';
-        cv.style.borderRadius = '10px';
-        cv.style.boxShadow = '0 14px 40px rgba(0,0,0,0.65)';
+        sheetBox.appendChild(cv);
+        if (Array.isArray(cv.__pdfLinks) && cv.__pdfLinks.length) {
+          const linkLayer = document.createElement('div');
+          linkLayer.className = 'absolute inset-0 pointer-events-none';
+          cv.__pdfLinks.forEach((lk) => {
+            if (!lk?.url || !/^(https?:\/\/|mailto:)/i.test(String(lk.url))) return;
+            const a = document.createElement('a');
+            a.href = String(lk.url);
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.title = `Bấm để mở nguồn gốc: ${lk.url}`;
+            a.setAttribute('aria-label', `Mở nguồn gốc ${lk.url}`);
+            a.className = 'block pointer-events-auto cursor-pointer rounded transition-colors hover:bg-cyan-400/15 hover:ring-2 hover:ring-cyan-400/60 active:bg-cyan-400/25';
+            a.style.position = 'absolute';
+            a.style.left = `${((lk.x / 1240) * 100).toFixed(3)}%`;
+            a.style.top = `${((lk.y / 1754) * 100).toFixed(3)}%`;
+            a.style.width = `${((lk.w / 1240) * 100).toFixed(3)}%`;
+            a.style.height = `${((lk.h / 1754) * 100).toFixed(3)}%`;
+            linkLayer.appendChild(a);
+          });
+          sheetBox.appendChild(linkLayer);
+        }
         wrap.appendChild(lbl);
-        wrap.appendChild(cv);
+        wrap.appendChild(sheetBox);
         box.appendChild(wrap);
       });
     };

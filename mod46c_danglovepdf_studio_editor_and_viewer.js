@@ -732,6 +732,49 @@
       } catch (_eTxt) {}
       wrap.appendChild(textLayer);
 
+      // Layer 4: Annotation Link Overlay (giúp bấm thẳng liên kết trong file PDF)
+      try {
+        const annos = await page.getAnnotations({ intent: 'display' });
+        if (isClosed || !pdfDoc || expectedToken !== renderToken) return;
+        if (Array.isArray(annos) && annos.length > 0) {
+          const linkVp = page.getViewport({ scale: renderScale, rotation: rot });
+          const linkLayer = document.createElement('div');
+          linkLayer.className = 'noir-pdf-link-layer absolute inset-0 pointer-events-none select-none';
+          linkLayer.style.zIndex = '4';
+          let linkCount = 0;
+          for (const anno of annos) {
+            if (!anno || anno.subtype !== 'Link' || !Array.isArray(anno.rect) || anno.rect.length < 4) continue;
+            const rawUrl = String(anno.url || anno.unsafeUrl || '').trim();
+            if (!/^(https?:\/\/|mailto:)/i.test(rawUrl)) continue;
+            const vr = linkVp.convertToViewportRectangle(anno.rect);
+            if (!Array.isArray(vr) || vr.length < 4) continue;
+            const lx = Math.min(vr[0], vr[2]);
+            const ty = Math.min(vr[1], vr[3]);
+            const lw = Math.abs(vr[2] - vr[0]);
+            const lh = Math.abs(vr[3] - vr[1]);
+            if (lw < 4 || lh < 4) continue;
+            const a = document.createElement('a');
+            a.href = rawUrl;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.title = `Mở liên kết: ${rawUrl}`;
+            a.setAttribute('aria-label', `Mở liên kết ${rawUrl}`);
+            a.className = 'noir-pdf-link-hitbox block pointer-events-auto cursor-pointer rounded transition-colors hover:bg-cyan-400/20 active:bg-cyan-400/30';
+            a.style.position = 'absolute';
+            a.style.left = `${lx.toFixed(1)}px`;
+            a.style.top = `${ty.toFixed(1)}px`;
+            a.style.width = `${lw.toFixed(1)}px`;
+            a.style.height = `${lh.toFixed(1)}px`;
+            a.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+            });
+            linkLayer.appendChild(a);
+            linkCount++;
+          }
+          if (linkCount > 0) wrap.appendChild(linkLayer);
+        }
+      } catch (_eLink) {}
+
       // Nhãn số trang góc dưới
       const badge = document.createElement('div');
       badge.className = 'absolute bottom-1.5 right-2 px-2 py-0.5 rounded bg-black/70 text-[10px] font-bold text-white pointer-events-none';

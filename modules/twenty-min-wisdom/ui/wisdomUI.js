@@ -87,6 +87,11 @@
 
   function formatInlineMd(str) {
     return esc(str)
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>"')\]]+?)(?=&(?:quot|lt|gt);|[.,;:!?]*(?:\s|$))/g, (_m, lbl, mdUrl, bareUrl) => {
+        const u = mdUrl || bareUrl || '';
+        const text = lbl || u;
+        return `<a href="${u}" target="_blank" rel="noopener noreferrer" class="text-sky-600 dark:text-sky-400 underline font-bold">${text} ↗</a>`;
+      })
       .replace(/\*\*\*(.+?)\*\*\*/g, '<strong style="font-weight:800;"><em>$1</em></strong>')
       .replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:800;">$1</strong>')
       .replace(/\*([^*\n]+?)\*/g, '<em style="opacity:0.86;">$1</em>')
@@ -305,11 +310,32 @@
       customTopic: state.customTopic,
     });
     state.lastCopiedPrompt = promptText;
+    let copiedOk = false;
     try {
-      await globalScope.navigator?.clipboard?.writeText(promptText);
-      toast('✅ Đã sao chép câu lệnh 20 phút thông thái (kèm chuẩn vẽ Biểu đồ & Sơ đồ)! Đang mở Gemini...', 'success', 3800);
-    } catch (_eClip) {
-      toast('ℹ️ Trình duyệt chặn tự copy — bấm "Xem trước câu lệnh" để copy thủ công.', 'warning', 3500);
+      if (globalScope.navigator?.clipboard?.writeText) {
+        await globalScope.navigator.clipboard.writeText(promptText);
+        copiedOk = true;
+      }
+    } catch (_eClip) {}
+    if (!copiedOk && typeof document !== 'undefined') {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = promptText;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, promptText.length);
+        copiedOk = document.execCommand('copy');
+        ta.remove();
+      } catch (_eExec) {}
+    }
+    if (copiedOk) {
+      toast('✅ Đã copy câu lệnh! Trên Điện thoại: CHẠM GIỮ 1–2 giây vào ô chat Gemini rồi bấm nút "Dán" (tránh gợi ý bàn phím hay cắt thiếu dòng).', 'success', 5500);
+    } else {
+      toast('ℹ️ Trình duyệt chặn tự copy — bấm "Xem trước câu lệnh", chạm giữ để Chọn tất cả & Sao chép.', 'warning', 4500);
     }
     try {
       globalScope.open('https://gemini.google.com/app', '_blank', 'noopener');
@@ -538,6 +564,9 @@
                 👁️ Xem trước câu lệnh
               </button>
             </div>
+            <div class="p-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-[11px] leading-relaxed text-amber-900 dark:text-amber-200">
+              📱 <b>Lưu ý riêng trên Điện thoại (Mobile):</b> Câu lệnh dài nên khi sang Gemini, hãy <b>CHẠM GIỮ ngón tay 1–2 giây</b> vào khung nhập rồi bấm nút <b>"Dán"</b> hiện ra ngay trên ô chữ <i>(không bấm vào thanh gợi ý nhanh trên bàn phím điện thoại vì rất dễ bị cắt thiếu dòng!)</i>.
+            </div>
             <div id="wis20-prompt-preview-box" class="hidden">
               <textarea readonly rows="6" class="wis20-textarea text-[11px] font-mono"></textarea>
             </div>
@@ -547,10 +576,13 @@
           <div class="p-3 rounded-xl bg-white/75 dark:bg-zinc-950/65 border border-sky-500/35 space-y-2.5">
             <div class="text-xs font-black text-sky-700 dark:text-sky-300">Bước 2: Dán câu trả lời từ Gemini vào đây để vẽ Biểu đồ &amp; Sơ đồ</div>
             <div class="wis20-copy-mockup text-[11px]">
-              <span>💡 Ở cuối câu trả lời trên Gemini, hãy bấm nút <b>Sao chép phản hồi</b> như hình minh họa bên cạnh rồi dán (Ctrl+V) vào ô dưới:</span>
+              <span>💡 Ở cuối câu trả lời trên Gemini, hãy bấm nút <b>Sao chép phản hồi</b> như hình minh họa bên cạnh rồi dán (Ctrl+V trên PC hoặc chạm giữ → <b>"Dán"</b> trên Mobile) vào ô dưới:</span>
               <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 text-white font-bold shrink-0 text-[10.5px]">📋 Sao chép</span>
             </div>
-            <textarea id="wis20-gemini-paste-box" rows="5" class="wis20-textarea" placeholder="Dán toàn bộ câu trả lời của Gemini (bao gồm cả khối JSON WISDOM_20MIN_SYNC_V1 ở cuối) vào đây...">${esc(state.geminiReplyRaw)}</textarea>
+            <div class="p-2.5 rounded-lg border border-sky-500/40 bg-sky-500/10 text-[11px] leading-relaxed text-sky-900 dark:text-sky-200">
+              📱 <b>Mẹo Dán đủ 100% dòng trên Điện thoại:</b> Chạm giữ ngón tay <b>1–2 giây</b> vào ô trống bên dưới cho đến khi hiện menu chữ đen rồi bấm đúng nút <b>"Dán"</b> (nếu bấm gợi ý trên bàn phím Samsung/Gboard/iOS đôi khi chỉ dán được một phần văn bản dài!).
+            </div>
+            <textarea id="wis20-gemini-paste-box" rows="5" class="wis20-textarea" placeholder="PC: nhấn Ctrl + V | Mobile: CHẠM GIỮ 1–2 giây vào đây rồi bấm nút Dán...">${esc(state.geminiReplyRaw)}</textarea>
             <div class="flex flex-wrap items-center gap-2">
               <button type="button" id="wis20-btn-sync-gemini" class="wis20-btn wis20-btn-primary flex-1 py-2.5">
                 ✨ Đồng bộ Bản tin 20 phút, Biểu đồ &amp; Sơ đồ ngay
@@ -619,8 +651,15 @@
           </div>
           ${items.length ? `
             <div class="wis20-news-grid">
-              ${items.map((it) => `
-                <article class="wis20-news-item">
+              ${items.map((it) => {
+                const rawUrl = String(it?.url || it?.link || it?.official_url || '').trim();
+                const safeUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : (/^www\./i.test(rawUrl) ? `https://${rawUrl}` : '');
+                const tagOpen = safeUrl
+                  ? `<a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer" title="Mở bài báo gốc: ${esc(safeUrl)}" class="wis20-news-item group block hover:border-sky-500 transition cursor-pointer no-underline text-inherit">`
+                  : `<article class="wis20-news-item">`;
+                const tagClose = safeUrl ? `</a>` : `</article>`;
+                return `
+                ${tagOpen}
                   ${it.imageUrl ? `<img src="${esc(it.imageUrl)}" alt="${esc(it.title)}" loading="lazy" referrerpolicy="no-referrer" class="wis20-news-thumb" onerror="this.style.display='none'" />` : ''}
                   <div class="p-3 space-y-1.5 flex-1 flex flex-col justify-between">
                     <div class="space-y-1">
@@ -628,16 +667,18 @@
                         <span class="truncate">${esc(it.source)}</span>
                         <span class="shrink-0 font-mono" title="Mã dấu vân tay xác thực nguồn (SHA-256)">#${esc(it.sha256 || '')}</span>
                       </div>
-                      <h5 class="text-xs font-extrabold leading-snug">${esc(it.title)}</h5>
+                      <h5 class="text-xs font-extrabold leading-snug ${safeUrl ? 'text-sky-700 dark:text-sky-300 group-hover:underline' : ''}">${esc(it.title)}</h5>
                       <p class="text-[11.5px] leading-relaxed opacity-80">${esc(it.summary)}</p>
                     </div>
                     <div class="flex items-center justify-between gap-2 pt-2 border-t border-zinc-200/50 dark:border-zinc-800/80 text-[11px]">
                       <span class="opacity-65">⏱️ ~${it.readMinutes || 1} phút</span>
-                      <a href="${esc(it.url)}" target="_blank" rel="noopener noreferrer" class="font-extrabold text-sky-600 dark:text-sky-400 hover:underline">↗️ Mở nguồn gốc</a>
+                      ${safeUrl
+                        ? `<span class="font-extrabold text-sky-600 dark:text-sky-400 group-hover:underline">↗️ Bấm mở nguồn gốc</span>`
+                        : `<span class="opacity-60">Nguồn cục bộ</span>`}
                     </div>
                   </div>
-                </article>
-              `).join('')}
+                ${tagClose}`;
+              }).join('')}
             </div>
           ` : '<div class="text-xs opacity-70">Không có mục mới trong nhóm này lúc này.</div>'}
           ${c.id === 'local_region' && Array.isArray(profile.newsLinks) && profile.newsLinks.length ? `
@@ -751,6 +792,11 @@
           ${state.activeTab === 'raw' ? renderRawTabHtml() : ''}
           ${state.activeTab === 'briefing' ? renderBriefingTabHtml() : ''}
           ${state.activeTab === 'visuals' ? W20.charts.renderAllChartsHtml(syncData, state.scanResult) : ''}
+        </div>
+
+        <div class="mt-3 p-3 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200 text-xs font-bold flex items-center gap-2">
+          <span>⚠️</span>
+          <span><strong>Lưu ý:</strong> Tất cả thông tin, phân tích chỉ mang tính chất tham khảo.</span>
         </div>
       </div>
     `;

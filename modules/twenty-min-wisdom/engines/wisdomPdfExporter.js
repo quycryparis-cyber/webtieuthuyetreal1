@@ -502,14 +502,34 @@
           continue;
         }
 
+        // Helper trích URL markdown [title](url) hoặc bare https://... để bấm mở ngay trên PDF & Preview
+        const stripMdLinksAndExtractUrl = (raw) => {
+          let foundUrl = '';
+          let txt = String(raw || '').replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi, (_m, label, u) => {
+            if (!foundUrl) foundUrl = u.trim();
+            return label;
+          });
+          if (!foundUrl) {
+            const bm = txt.match(/https?:\/\/[^\s<>)\]"']+/i);
+            if (bm) foundUrl = bm[0].replace(/[.,;:!?]+$/, '');
+          }
+          return { text: txt, url: foundUrl };
+        };
+
         // 1. Bảng Markdown chuẩn `| col | col |` -> Vẽ BẢNG TÀI CHÍNH THẬT trên PDF!
         if (trimmed.startsWith('|') && trimmed.endsWith('|') && li + 1 < rawLines.length && /^\|\s*[-:]+/.test(rawLines[li + 1].trim())) {
-          const parseRow = (ln) => ln.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.replace(/\*\*/g, '').replace(/`/g, '').trim());
-          const headers = parseRow(trimmed);
+          const parseRow = (ln) => ln.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => {
+            const ex = stripMdLinksAndExtractUrl(c);
+            return { text: ex.text.replace(/\*\*/g, '').replace(/`/g, '').trim(), url: ex.url };
+          });
+          const headers = parseRow(trimmed).map((x) => x.text);
           li += 2;
           const rows = [];
+          const rowUrls = [];
           while (li < rawLines.length && rawLines[li].trim().startsWith('|') && rawLines[li].trim().endsWith('|')) {
-            rows.push(parseRow(rawLines[li]));
+            const cells = parseRow(rawLines[li]);
+            rows.push(cells.map((x) => x.text));
+            rowUrls.push((cells.find((x) => x.url) || {}).url || '');
             li++;
           }
           const colCount = Math.max(1, headers.length);
@@ -530,9 +550,10 @@
           ensureSpace(100, 'BẢN TIN 20 PHÚT THÔNG THÁI (BẢNG TỔNG HỢP)');
           drawTableHead();
           rows.forEach((row, rIdx) => {
+            const rUrl = rowUrls[rIdx] || '';
             cur.ctx.font = '600 17px "Segoe UI", Arial, sans-serif';
             const cellLines = Array.from({ length: colCount }, (_, ci) => wrapCanvasText(cur.ctx, row[ci] || '—', colW - 20).slice(0, 3));
-            const rowH = Math.max(36, Math.max(...cellLines.map((cl) => cl.length)) * 24 + 14);
+            const rowH = Math.max(36, Math.max(...cellLines.map((cl) => cl.length)) * 24 + (rUrl ? 28 : 14));
             if (y + rowH > maxY) {
               pages.push(cur.canvas);
               cur = createA4Canvas();
@@ -550,18 +571,51 @@
             cellLines.forEach((cl, ci) => {
               cl.forEach((ln, k) => cur.ctx.fillText(ln, 84 + ci * colW, y + 9 + k * 24));
             });
+            if (rUrl && /^https?:\/\//i.test(rUrl)) {
+              cur.ctx.fillStyle = '#0369a1';
+              cur.ctx.font = '700 14.5px "Segoe UI", Arial, sans-serif';
+              cur.ctx.fillText(`🔗 Bấm mở nguồn: ${rUrl.slice(0, 76)}`, 84, y + rowH - 22);
+              if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
+              cur.canvas.__pdfLinks.push({ x: 72, y, w: maxW, h: rowH, url: rUrl });
+            }
             y += rowH;
           });
           y += 18;
           continue;
         }
 
-        // 2. Tiêu đề Markdown (# đến ######) -> Vẽ Banner Xanh Navy-Teal chuẩn Báo Cáo Tài Chính (0 còn dấu ####!)
-        const hMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
-        if (hMatch) {
-          const lvl = hMatch[1].length;
-          const cleanTitle = hMatch[2].replace(/\*\*/g, '').replace(/`/g, '').trim();
-          if (lvl <= 2) {
+        // 2. Bộ phân loại Tiêu đề / Mục lục thông minh (chống nhận nhầm mảnh câu chữ thường / "USD.")
+        const exLine = stripMdLinksAndExtractUrl(trimmed);
+        const hMatch = exLine.text.match(/^(#{1,6})\s+(.+)$/);
+        const cleanRawForClassify = exLine.text.replace(/\*\*/g, '').replace(/`/g, '').trim();
+        const sharedCls = !hMatch && typeof globalScope.NoirClassifyDocLine === 'function'
+          ? globalScope.NoirClassifyDocLine(cleanRawForClassify)
+          : null;
+        const isTocDots = /\.\s*\.+\s*\d+\s*$/.test(cleanRawForClassify) || /^(MỤC\s+LỤC|DANH\s+MỤC|TABLE\s+OF\s+CONTENTS)\b/i.test(cleanRawForClassify);
+        const looksHeadingFallback = !hMatch && !sharedCls && (() => {
+          const t = cleanRawForClassify;
+          if (!t || t.length < 3 || t.length > 98) return false;
+          if (/^[a-zà-ỹ]/.test(t)) return false; // mảnh văn xuôi chữ thường ("phần SX-TM...")
+          if (/^(USD|VND|EUR|JPY|GBP|LINK)\.?$/i.test(t)) return false;
+          if (/^(CHƯƠNG|PHẦN|MỤC|BÀI)\s+(?:[IVXLCDM]+|\d+)(?:[\s.:–—-]|$)/i.test(t) && /^[\p{Lu}]/u.test(t)) return true;
+          if (/^[IVXLCDM]+\.\s+\S+/.test(t)) return true;
+          if (/^\d+(?:\.\d+){0,3}\.?\s+\S+/.test(t) && !/^\d+\.\s*\d{3}/.test(t) && t.length <= 92) return true;
+          const words = t.split(/\s+/);
+          const alpha = t.replace(/[^a-zA-ZÀ-ỹ]/g, '');
+          if (words.length >= 2 && alpha.length >= 6 && alpha === alpha.toUpperCase() && !/[.,;!?]$/.test(t)) return true;
+          return false;
+        })();
+
+        const effectiveHeadingKind = hMatch
+          ? (hMatch[1].length <= 2 ? 'h1' : 'h2')
+          : (sharedCls?.kind === 'h1' || sharedCls?.kind === 'h2' || sharedCls?.kind === 'h3'
+              ? sharedCls.kind
+              : (looksHeadingFallback ? (/^(CHƯƠNG|PHẦN)\b|^MỤC\s+LỤC/i.test(cleanRawForClassify) ? 'h1' : 'h2') : null));
+
+        if (effectiveHeadingKind) {
+          const cleanTitle = (hMatch ? hMatch[2] : cleanRawForClassify).replace(/\*\*/g, '').replace(/`/g, '').trim();
+          const startHeadingY = y;
+          if (effectiveHeadingKind === 'h1') {
             ensureSpace(74, 'BẢN TIN 20 PHÚT THÔNG THÁI (TIẾP THEO)');
             y += 8;
             const g = cur.ctx.createLinearGradient(72, y, 72 + maxW, y);
@@ -576,49 +630,54 @@
             cur.ctx.fillStyle = '#ffffff';
             cur.ctx.font = '900 24px "Segoe UI", Arial, sans-serif';
             cur.ctx.fillText(cleanTitle.slice(0, 82), 96, y + 14);
+            if (exLine.url) {
+              if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
+              cur.canvas.__pdfLinks.push({ x: 72, y, w: maxW, h: 54, url: exLine.url });
+            }
             y += 68;
           } else {
             ensureSpace(50, 'BẢN TIN 20 PHÚT THÔNG THÁI (TIẾP THEO)');
             y += 6;
             cur.ctx.fillStyle = '#0d9488';
             cur.ctx.fillRect(72, y + 2, 6, 30);
-            cur.ctx.fillStyle = '#0f2942';
+            cur.ctx.fillStyle = exLine.url ? '#0369a1' : '#0f2942';
             cur.ctx.font = '900 23px "Segoe UI", Arial, sans-serif';
             cur.ctx.fillText(cleanTitle.slice(0, 84), 90, y + 4);
+            if (exLine.url) {
+              if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
+              cur.canvas.__pdfLinks.push({ x: 72, y, w: maxW, h: 38, url: exLine.url });
+            }
             y += 42;
           }
           li++;
           continue;
         }
 
-        // 3. Đoạn chữ thường / Gạch đầu dòng sạch sẽ (loại bỏ sạch dấu ** và *)
-        const isBullet = /^[-*•]\s+/.test(trimmed);
-        const clean = trimmed
+        // 3. Đoạn chữ thường / Gạch đầu dòng sạch sẽ / Mục lục chấm dẫn (gắn link nếu có URL!)
+        const isBullet = /^[-*•]\s+/.test(exLine.text);
+        const clean = exLine.text
           .replace(/^[-*•]\s+/, '• ')
           .replace(/\*/g, '')
           .replace(/`/g, '');
-        const isSubNum = /^\d+\.\s+/.test(clean) && clean.length < 95;
-        if (isSubNum) {
-          ensureSpace(46, 'BẢN TIN 20 PHÚT THÔNG THÁI (TIẾP THEO)');
-          cur.ctx.fillStyle = '#0d9488';
-          cur.ctx.fillRect(72, y + 3, 6, 28);
-          cur.ctx.fillStyle = '#0f2942';
-          cur.ctx.font = '900 22px "Segoe UI", Arial, sans-serif';
-          cur.ctx.fillText(clean, 90, y + 4);
-          y += 40;
-          li++;
-          continue;
-        }
-
-        cur.ctx.font = '500 20px "Segoe UI", Arial, sans-serif';
+        cur.ctx.font = (sharedCls?.kind === 'toc_item' || isTocDots) ? '700 20px "Segoe UI", Arial, sans-serif' : '500 20px "Segoe UI", Arial, sans-serif';
         const indentX = isBullet ? 90 : 72;
         const wrapped = wrapCanvasText(cur.ctx, clean, maxW - (indentX - 72));
-        ensureSpace(wrapped.length * 30 + 10, 'BẢN TIN 20 PHÚT THÔNG THÁI (TIẾP THEO)');
-        cur.ctx.fillStyle = '#1e293b';
-        cur.ctx.font = '500 20px "Segoe UI", Arial, sans-serif';
+        const blockH = wrapped.length * 30 + (exLine.url ? 22 : 0);
+        ensureSpace(blockH + 10, 'BẢN TIN 20 PHÚT THÔNG THÁI (TIẾP THEO)');
+        const startParaY = y;
+        cur.ctx.fillStyle = exLine.url ? '#0369a1' : ((sharedCls?.kind === 'toc_item' || isTocDots) ? '#0f2942' : '#1e293b');
+        cur.ctx.font = (sharedCls?.kind === 'toc_item' || isTocDots) ? '700 20px "Segoe UI", Arial, sans-serif' : '500 20px "Segoe UI", Arial, sans-serif';
         for (const ln of wrapped) {
           cur.ctx.fillText(ln, indentX, y);
           y += 30;
+        }
+        if (exLine.url && /^https?:\/\//i.test(exLine.url)) {
+          cur.ctx.fillStyle = '#0369a1';
+          cur.ctx.font = '700 15px "Segoe UI", Arial, sans-serif';
+          cur.ctx.fillText(`🔗 Bấm mở nguồn: ${exLine.url.slice(0, 82)}`, indentX, y);
+          y += 22;
+          if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
+          cur.canvas.__pdfLinks.push({ x: 72, y: startParaY, w: maxW, h: Math.max(32, y - startParaY), url: exLine.url });
         }
         y += 6;
         li++;
@@ -641,7 +700,9 @@
       y += 66;
 
       for (const it of items.slice(0, 4)) {
-        const hasUrl = typeof it.url === 'string' && /^https?:\/\//i.test(it.url);
+        const rawItUrl = String(it?.url || it?.link || it?.official_url || '').trim();
+        const itemUrl = /^https?:\/\//i.test(rawItUrl) ? rawItUrl : (/^www\./i.test(rawItUrl) ? `https://${rawItUrl}` : '');
+        const hasUrl = Boolean(itemUrl);
         cur.ctx.font = '800 21px "Segoe UI", Arial, sans-serif';
         const tLines = wrapCanvasText(cur.ctx, `• ${it.title}`, maxW - 28).slice(0, 2);
         cur.ctx.font = '500 19px "Segoe UI", Arial, sans-serif';
@@ -652,12 +713,12 @@
         drawRoundedRect(cur.ctx, 72, y, maxW, boxH, 12);
         cur.ctx.fillStyle = '#f8fafc';
         cur.ctx.fill();
-        cur.ctx.strokeStyle = '#cbd5e1';
+        cur.ctx.strokeStyle = hasUrl ? '#93c5fd' : '#cbd5e1';
         cur.ctx.lineWidth = 1.5;
         cur.ctx.stroke();
 
         let iy = y + 12;
-        cur.ctx.fillStyle = '#0f172a';
+        cur.ctx.fillStyle = hasUrl ? '#0369a1' : '#0f172a';
         cur.ctx.font = '800 21px "Segoe UI", Arial, sans-serif';
         for (const ln of tLines) {
           cur.ctx.fillText(ln, 88, iy);
@@ -674,7 +735,7 @@
         cur.ctx.fillText(`Nguồn: ${it.source || 'Web'}  |  Mã SHA-256: #${it.sha256 || 'verified'}`, 96, iy + 4);
         if (hasUrl) {
           const linkY = iy + 28;
-          const shortLink = it.url.length > 88 ? `${it.url.slice(0, 85)}...` : it.url;
+          const shortLink = itemUrl.length > 88 ? `${itemUrl.slice(0, 85)}...` : itemUrl;
           cur.ctx.fillStyle = '#0369a1';
           cur.ctx.font = '700 15.5px "Segoe UI", Arial, sans-serif';
           cur.ctx.fillText(`🔗 Bấm mở bài gốc: ${shortLink}`, 96, linkY);
@@ -682,12 +743,26 @@
           cur.ctx.fillRect(96, linkY + 19, linkW, 1.5);
           // Lưu tọa độ vùng bấm Hyperlink thật để gắn PDF /Link /URI annotation cho toàn bộ hộp bài báo!
           if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
-          cur.canvas.__pdfLinks.push({ x: 72, y, w: maxW, h: boxH, url: it.url });
+          cur.canvas.__pdfLinks.push({ x: 72, y, w: maxW, h: boxH, url: itemUrl });
         }
         y += boxH + 14;
       }
       y += 12;
     }
+
+    // Dòng lưu ý miễn trừ trách nhiệm bắt buộc ở cuối báo cáo
+    ensureSpace(88, 'LƯU Ý MIỄN TRỪ TRÁCH NHIỆM');
+    y += 10;
+    drawRoundedRect(cur.ctx, 72, y, maxW, 64, 12);
+    cur.ctx.fillStyle = '#fffbeb';
+    cur.ctx.fill();
+    cur.ctx.strokeStyle = '#f59e0b';
+    cur.ctx.lineWidth = 2;
+    cur.ctx.stroke();
+    cur.ctx.fillStyle = '#92400e';
+    cur.ctx.font = '800 20px "Segoe UI", Arial, sans-serif';
+    cur.ctx.fillText('⚠️ Lưu ý: Tất cả thông tin, phân tích chỉ mang tính chất tham khảo.', 96, y + 20);
+    y += 76;
 
     pages.push(cur.canvas);
     return pages;
@@ -826,32 +901,38 @@
       const jpgImg = await pdfDoc.embedJpg(jpgBytes);
       const pg = pdfDoc.addPage([595.28, 841.89]); // Chuẩn A4 (pt)
       pg.drawImage(jpgImg, { x: 0, y: 0, width: 595.28, height: 841.89 });
-      // Gắn Hyperlink bấm được thật (PDF /Subtype /Link /URI) lên từng bài báo nguồn!
+      // Gắn Hyperlink bấm được thật (PDF /Subtype /Link /URI chuẩn Adobe & Chrome/Android) lên từng bài báo nguồn!
       if (Array.isArray(c.__pdfLinks) && c.__pdfLinks.length && PDFLib.PDFName && PDFLib.PDFString) {
         try {
           const annots = [];
           for (const lk of c.__pdfLinks) {
-            if (!lk?.url) continue;
-            const x1 = (lk.x / 1240) * 595.28;
-            const x2 = ((lk.x + lk.w) / 1240) * 595.28;
-            const y2 = 841.89 - (lk.y / 1754) * 841.89;
-            const y1 = 841.89 - ((lk.y + lk.h) / 1754) * 841.89;
+            if (!lk?.url || !/^(https?:\/\/|mailto:)/i.test(String(lk.url))) continue;
+            const x1 = Math.max(0, (lk.x / 1240) * 595.28);
+            const x2 = Math.min(595.28, ((lk.x + lk.w) / 1240) * 595.28);
+            const y2 = Math.min(841.89, 841.89 - (lk.y / 1754) * 841.89);
+            const y1 = Math.max(0, 841.89 - ((lk.y + lk.h) / 1754) * 841.89);
+            if (x2 <= x1 || y2 <= y1) continue;
             const linkAnnot = pdfDoc.context.register(
               pdfDoc.context.obj({
-                Type: 'Annot',
-                Subtype: 'Link',
-                Rect: [x1, Math.max(0, y1), Math.min(595.28, x2), Math.min(841.89, y2)],
+                Type: PDFLib.PDFName.of('Annot'),
+                Subtype: PDFLib.PDFName.of('Link'),
+                Rect: [x1, y1, x2, y2],
                 Border: [0, 0, 0],
+                F: 4,
+                H: PDFLib.PDFName.of('I'),
                 A: {
-                  Type: 'Action',
-                  S: 'URI',
+                  Type: PDFLib.PDFName.of('Action'),
+                  S: PDFLib.PDFName.of('URI'),
                   URI: PDFLib.PDFString.of(String(lk.url)),
                 },
               })
             );
             annots.push(linkAnnot);
+            if (typeof pg.node.addAnnot === 'function') {
+              pg.node.addAnnot(linkAnnot);
+            }
           }
-          if (annots.length) {
+          if (annots.length && typeof pg.node.addAnnot !== 'function') {
             pg.node.set(PDFLib.PDFName.of('Annots'), pdfDoc.context.obj(annots));
           }
         } catch (_eLk) {}
@@ -917,12 +998,36 @@
         const lbl = document.createElement('div');
         lbl.className = 'text-xs font-extrabold text-teal-300 text-center';
         lbl.textContent = `— Trang ${idx + 1} / ${totalPages} —`;
+        const sheetBox = document.createElement('div');
+        sheetBox.className = 'relative w-full overflow-hidden rounded-[10px] shadow-[0_14px_40px_rgba(0,0,0,0.65)]';
+        cv.style.display = 'block';
         cv.style.width = '100%';
         cv.style.height = 'auto';
-        cv.style.borderRadius = '10px';
-        cv.style.boxShadow = '0 14px 40px rgba(0,0,0,0.65)';
+        sheetBox.appendChild(cv);
+        // Phủ lớp <a> hitbox lên từng khung bài báo & liên kết để bấm mở ngay trong cửa sổ Xem trước!
+        if (Array.isArray(cv.__pdfLinks) && cv.__pdfLinks.length) {
+          const linkLayer = document.createElement('div');
+          linkLayer.className = 'absolute inset-0 pointer-events-none';
+          cv.__pdfLinks.forEach((lk) => {
+            if (!lk?.url || !/^(https?:\/\/|mailto:)/i.test(String(lk.url))) return;
+            const a = document.createElement('a');
+            a.href = String(lk.url);
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.title = `Bấm để mở bài báo gốc: ${lk.url}`;
+            a.setAttribute('aria-label', `Mở bài báo gốc ${lk.url}`);
+            a.className = 'block pointer-events-auto cursor-pointer rounded-lg transition-colors hover:bg-cyan-400/15 hover:ring-2 hover:ring-cyan-400/60 active:bg-cyan-400/25';
+            a.style.position = 'absolute';
+            a.style.left = `${((lk.x / 1240) * 100).toFixed(3)}%`;
+            a.style.top = `${((lk.y / 1754) * 100).toFixed(3)}%`;
+            a.style.width = `${((lk.w / 1240) * 100).toFixed(3)}%`;
+            a.style.height = `${((lk.h / 1754) * 100).toFixed(3)}%`;
+            linkLayer.appendChild(a);
+          });
+          sheetBox.appendChild(linkLayer);
+        }
         wrap.appendChild(lbl);
-        wrap.appendChild(cv);
+        wrap.appendChild(sheetBox);
         box.appendChild(wrap);
       });
       modal.querySelector('#w20-pv-close')?.addEventListener('click', () => modal.remove());

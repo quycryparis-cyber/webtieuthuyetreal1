@@ -471,6 +471,9 @@
             <span class="text-[11px] text-zinc-500 dark:text-zinc-400 max-w-xl">
               100% miễn phí — câu lệnh yêu cầu Gemini trả lời dễ hiểu kèm khối cấu trúc chuẩn <code>INVEST_INTEL_SYNC_V2</code> để Web đọc hiểu &amp; vẽ trọn bộ 6 biểu đồ chuyên nghiệp!
             </span>
+            <div class="p-2 rounded-lg border border-amber-500/40 bg-amber-500/10 text-[11px] text-amber-900 dark:text-amber-200 max-w-xl text-left">
+              📱 <b>Mẹo riêng trên Điện thoại (Mobile):</b> Khi dán văn bản dài sang Gemini hoặc dán lại vào Bước 3, hãy <b>CHẠM GIỮ ngón tay 1–2 giây vào khung nhập → bấm nút "Dán"</b> hiện ra <i>(tránh bấm vào gợi ý nhanh trên bàn phím điện thoại vì dễ cắt thiếu dòng!)</i>.
+            </div>
           </div>
 
           <!-- BƯỚC 3 -->
@@ -480,7 +483,10 @@
               <span class="underline">▼ Mở ô dán</span>
             </summary>
             <div class="mt-2.5 space-y-2 max-w-2xl mx-auto">
-              <textarea id="inv-inp-gemini-paste-ov" rows="4" placeholder="Dán nguyên câu trả lời của Gemini (có đoạn mã JSON cuối bài) vào đây rồi bấm nút Đồng bộ bên dưới..." class="w-full p-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white/90 dark:bg-zinc-950 text-xs font-mono"></textarea>
+              <div class="p-2 rounded-lg border border-sky-500/35 bg-sky-500/10 text-[11px] text-sky-900 dark:text-sky-200">
+                📱 <b>Trên Điện thoại:</b> Chạm giữ <b>1–2 giây</b> vào khung dưới rồi bấm đúng nút <b>"Dán"</b> (không dùng nút dán gợi ý trên bàn phím để tránh thiếu dòng).
+              </div>
+              <textarea id="inv-inp-gemini-paste-ov" rows="4" placeholder="PC: nhấn Ctrl + V | Mobile: CHẠM GIỮ 1–2 giây vào ô này rồi bấm nút 'Dán'..." class="w-full p-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white/90 dark:bg-zinc-950 text-xs font-mono"></textarea>
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <span class="text-[11px] text-zinc-500">Web chỉ đọc đúng cấu trúc chuẩn <code>INVEST_INTEL_SYNC_V2</code> — an toàn, không làm sai lệch số liệu.</span>
                 <button type="button" id="inv-btn-sync-gemini-ov" class="inv-primary-btn py-1.5 px-3.5 text-xs">⚡ Đồng bộ dữ liệu &amp; Mở Biểu đồ chuyên nghiệp</button>
@@ -1224,10 +1230,14 @@
     if (!raw) return '';
     const formatInline = (s) =>
       esc(s)
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>"')\]]+?)(?=&(?:quot|lt|gt);|[.,;:!?]*(?:\s|$))/g, (_m, lbl, mdUrl, bareUrl) => {
+          const u = mdUrl || bareUrl || '';
+          const label = lbl || u;
+          return `<a href="${u}" target="_blank" rel="noopener noreferrer" class="text-teal-700 dark:text-teal-400 underline font-semibold">${label} ↗</a>`;
+        })
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
         .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
-        .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-[11.5px]">$1</code>')
-        .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-teal-700 dark:text-teal-400 underline font-semibold">$1 ↗</a>');
+        .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-[11.5px]">$1</code>');
 
     const lines = raw.split(/\r?\n/);
     const out = [];
@@ -1639,6 +1649,9 @@
               </button>
               <button type="button" id="inv-w2-btn-preview-prompt" class="inv-secondary-btn text-xs">👁️ Xem câu lệnh / Tải .MD</button>
             </div>
+            <div class="p-2.5 rounded-xl border border-amber-500/45 bg-amber-500/10 text-[11px] leading-relaxed text-amber-900 dark:text-amber-200 text-left max-w-2xl mx-auto">
+              📱 <b>Lưu ý riêng cho Điện thoại (Mobile):</b> Vì văn bản câu lệnh dài, khi sang Gemini (hoặc khi dán kết quả về Bước 2), bạn hãy <b>CHẠM GIỮ ngón tay 1–2 giây vào khung nhập → bấm nút "Dán"</b> hiện ra trên màn hình <i>(KHÔNG bấm vào thanh gợi ý nhanh của bàn phím vì điện thoại hay copy/dán thiếu dòng!)</i>.
+            </div>
           </div>
 
           <!-- BƯỚC 2: DÁN CÂU TRẢ LỜI GEMINI + HÌNH MÔ PHỎNG NÚT SAO CHÉP + ĐẾM NGƯỢC 3 GIÂY -->
@@ -1670,7 +1683,10 @@
 
             <!-- Ô dán câu trả lời Gemini + Nút Đồng bộ -->
             <div class="space-y-2 max-w-2xl mx-auto">
-              <textarea id="inv-w2-gemini-paste" rows="4" placeholder="Dán toàn bộ câu trả lời bạn vừa copy từ Gemini vào đây (nhấn Ctrl + V hoặc chạm giữ -> Dán)..." class="w-full p-3 rounded-xl border-2 border-sky-500/45 bg-white dark:bg-zinc-950 text-xs font-mono focus:outline-none focus:border-emerald-400"></textarea>
+              <div class="p-2.5 rounded-xl border border-sky-500/40 bg-sky-500/10 text-[11px] text-sky-900 dark:text-sky-200 text-left">
+                📱 <b>Cách Dán đúng 100% trên Điện thoại:</b> Chạm giữ ngón tay <b>1–2 giây</b> vào khung dưới cho đến khi hiện nút chữ <b>"Dán"</b> rồi mới bấm — giúp giữ nguyên toàn bộ dòng phân tích và khối JSON ở cuối!
+              </div>
+              <textarea id="inv-w2-gemini-paste" rows="4" placeholder="PC: nhấn Ctrl + V | Mobile: CHẠM GIỮ 1–2 giây vào ô này rồi bấm nút 'Dán'..." class="w-full p-3 rounded-xl border-2 border-sky-500/45 bg-white dark:bg-zinc-950 text-xs font-mono focus:outline-none focus:border-emerald-400"></textarea>
 
               ${
                 countdown
@@ -2156,9 +2172,9 @@
         window.open('https://gemini.google.com/app', '_blank', 'noopener,noreferrer');
       }
       NS.utils?.showToast?.(
-        '✅ Đã copy sẵn toàn bộ câu lệnh đầu tư! Sang Gemini bên cạnh bấm Dán (Ctrl + V) -> Gửi, rồi copy kết quả dán vào Bước 2 nhé.',
+        '✅ Đã copy sẵn toàn bộ câu lệnh đầu tư! Trên Điện thoại: CHẠM GIỮ 1–2 giây vào ô nhập Gemini rồi bấm "Dán" (tránh gợi ý bàn phím hay cắt thiếu dòng!).',
         'success',
-        5200
+        6000
       );
     });
 
