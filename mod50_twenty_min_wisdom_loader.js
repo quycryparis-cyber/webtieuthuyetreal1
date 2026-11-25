@@ -65,7 +65,7 @@
       return globalScope.NoirWisdom20;
     })().catch((err) => {
       loadingPromise = null;
-      NS.utils?.showToast?.('⚠️ Không thể mở 20 phút thông thái lúc này: ' + (err?.message || err), 'error', 3600);
+      NS.utils?.showToast?.('⚠️ Không thể mở 30 phút thông thái lúc này: ' + (err?.message || err), 'error', 3600);
       throw err;
     });
 
@@ -81,7 +81,7 @@
       if (!hostEl) return;
       if (!loaded) {
         hostEl.innerHTML =
-          '<div class="p-6 text-center text-xs text-zinc-500 dark:text-zinc-400">⏳ Đang nạp giao diện 20 phút thông thái mỗi ngày...</div>';
+          '<div class="p-6 text-center text-xs text-zinc-500 dark:text-zinc-400">⏳ Đang nạp giao diện 30 phút thông thái mỗi ngày...</div>';
       }
       try {
         const mod = await ensureEngineLoaded();
@@ -89,7 +89,7 @@
         await mod.mountIntoContainer(hostEl);
       } catch (err) {
         if (hostEl.isConnected) {
-          hostEl.innerHTML = `<div class="p-4 rounded-xl border border-rose-500/40 bg-rose-500/10 text-xs text-rose-700 dark:text-rose-300">⚠️ Không nạp được phân hệ 20 phút thông thái (${err?.message || err}). Vui lòng tải lại trang rồi thử lại.</div>`;
+          hostEl.innerHTML = `<div class="p-4 rounded-xl border border-rose-500/40 bg-rose-500/10 text-xs text-rose-700 dark:text-rose-300">⚠️ Không nạp được phân hệ 30 phút thông thái (${err?.message || err}). Vui lòng tải lại trang rồi thử lại.</div>`;
         }
       }
     },

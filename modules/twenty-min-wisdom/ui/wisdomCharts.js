@@ -45,13 +45,16 @@
    * 1. Biểu đồ Tròn (Donut SVG) — Phân bổ 20 phút đọc thông thái
    */
   function renderReadingDonutSvg(planItems) {
-    const palette = ['#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981', '#ec4899', '#06b6d4'];
+    const palette = ['#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4', '#a855f7', '#ec4899'];
     const items = (Array.isArray(planItems) && planItems.length ? planItems : [
-      { label: 'Thế giới', minutes: 5, color: '#0ea5e9' },
-      { label: 'Công nghệ & AI', minutes: 5, color: '#8b5cf6' },
-      { label: 'Kinh tế', minutes: 4, color: '#f59e0b' },
-      { label: 'Khu vực', minutes: 3, color: '#10b981' },
-      { label: 'Tri thức nền', minutes: 3, color: '#ec4899' },
+      { label: 'Thế giới', minutes: 3, color: '#0ea5e9' },
+      { label: 'Công nghệ & AI', minutes: 3, color: '#8b5cf6' },
+      { label: 'Kinh tế', minutes: 3, color: '#f59e0b' },
+      { label: 'Khu vực (Chuyên sâu 13p)', minutes: 13, color: '#10b981' },
+      { label: 'Sức khỏe & Y học', minutes: 2, color: '#ef4444' },
+      { label: 'Pháp luật & Xã hội', minutes: 2, color: '#06b6d4' },
+      { label: 'Tâm lý & Quản trị', minutes: 2, color: '#a855f7' },
+      { label: 'Tri thức & Vũ trụ', minutes: 2, color: '#ec4899' },
     ]).map((it, i) => ({
       label: String(it.label || `Mục ${i + 1}`),
       minutes: Math.max(1, Number(it.minutes) || 2),
@@ -85,11 +88,11 @@
     return `
       <div class="wis20-chart-box space-y-3 overflow-hidden">
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <h4 class="text-sm font-black">⏱️ Biểu đồ Lộ trình 20 Phút Đọc Thông Thái</h4>
-          <span class="wis20-badge">Tổng ${total} phút</span>
+          <h4 class="text-sm font-black">⏱️ Biểu đồ Lộ trình 30 Phút Đọc Thông Thái</h4>
+          <span class="wis20-badge">Tổng ${total} phút (Trụ cột 4: +10p)</span>
         </div>
         <div class="flex flex-col sm:flex-row items-center gap-4 min-w-0">
-          <svg viewBox="0 0 180 180" class="w-36 h-36 sm:w-40 sm:h-40 shrink-0" role="img" aria-label="Biểu đồ phân bổ 20 phút đọc">
+          <svg viewBox="0 0 180 180" class="w-36 h-36 sm:w-40 sm:h-40 shrink-0" role="img" aria-label="Biểu đồ phân bổ 30 phút đọc">
             <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(113,113,122,0.18)" stroke-width="22" />
             ${slices}
             <text x="${cx}" y="${cy - 4}" text-anchor="middle" fill="currentColor" font-size="24" font-weight="900">${total}p</text>
@@ -272,7 +275,7 @@
           </div>
         `}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          ${renderReadingDonutSvg(data.reading_plan_20m)}
+          ${renderReadingDonutSvg(data.reading_plan_30m || data.reading_plan_20m)}
           ${renderImpactBarsSvg(data.impact_scores)}
         </div>
         ${renderCausalMindmapSvg(data.causal_mindmap)}

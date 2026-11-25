@@ -6,7 +6,7 @@
  * (Windows / macOS / Linux) ngay cả khi mất kết nối mạng.
  * ============================================================================
  */
-const CACHE_NAME = 'bi-novel-studio-pwa-v141';
+const CACHE_NAME = 'bi-novel-studio-pwa-v142e';
 const OFFLINE_CDN_HOSTS = [
   'cdn.tailwindcss.com',
   'cdnjs.cloudflare.com',
@@ -17,6 +17,7 @@ const CORE_ASSETS = [
   './danglovepdf.html',
   './yt_pip_frame.html',
   './noir_exit_guard.js',
+  './assets/pdf.worker.shim.js',
   './manifest.json',
   './favicon.ico',
   './assets/favicon-portrait.ico',

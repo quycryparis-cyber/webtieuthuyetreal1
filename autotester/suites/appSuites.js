@@ -524,6 +524,190 @@
       title: '2. Viết truyện, Story Bible & Đổi tệp tin (ĐăngLovePDF, 6 Tab, Quản lý RAM)',
       tests: [
         {
+          id: 'omni_scan_all_modules_buttons',
+          label: '🔍 Omni-Scan tự động khám phá & thử tương tác mọi Tab, Mod 42/46/47/49/50/51 & Nút bấm toàn app',
+          run: async (ctx) => {
+            if (!isBiNovelApp()) {
+              const allBtns = Array.from(document.querySelectorAll('button:not([disabled]), [role="button"]'))
+                .filter((b) => !b.closest('[data-autotester-ui="true"]') && getComputedStyle(b).display !== 'none');
+              let tested = 0;
+              const blocked = [];
+              for (const b of allBtns.slice(0, 60)) {
+                AT.causal.buttonsTested += 1;
+                tested += 1;
+                const hit = AT.causal.physicalHitTest(b);
+                if (!hit.ok) blocked.push(`${b.id ? '#' + b.id : b.tagName.toLowerCase()} (che bởi ${hit.blocker})`);
+                if (tested % 8 === 0) await AT.sleep(16);
+              }
+              if (blocked.length) {
+                return makeIssue('omni_scan_all_modules_buttons', 'core_features', 'ERR_CLICK_INTERCEPTED', {
+                  techDetail: `Phát hiện ${blocked.length} nút bị che khuất: ${blocked.slice(0, 5).join(', ')}`,
+                });
+              }
+              return makePass('omni_scan_all_modules_buttons', 'core_features', `Omni-Scan xong ${tested} nút trên trang`, 'Mọi nút đang hiển thị đều sạch sẽ, không bị che khuất.', 'app', 'functional');
+            }
+
+            const prevScreen = globalScope.NoirStudio?.navigator?.getCurrentScreen?.() || 'SCREEN_1_WRITE';
+            const unsafeRe = /(xóa|delete|clear|reset|thoát|exit|gemini|tải|download|autotester|play|phát tất|gửi báo|nạp file|chọn tệp)/i;
+            const visitedScreens = [];
+            const deadButtons = [];
+            const interceptedButtons = [];
+            let totalTested = 0;
+
+            const safeProbeContainer = async (rootEl, scopeLabel) => {
+              if (!rootEl) return;
+              const candidates = Array.from(rootEl.querySelectorAll('button:not([disabled]), [role="button"], [data-mod42-tab], .ll51-tab, .inv-tab-btn, .wis20-subtab, .mod46-tab-btn'))
+                .filter((b) => {
+                  if (b.closest('[data-autotester-ui="true"]') || b.closest('.hidden')) return false;
+                  const st = getComputedStyle(b);
+                  if (st.display === 'none' || st.visibility === 'hidden' || st.pointerEvents === 'none') return false;
+                  const r = b.getBoundingClientRect();
+                  if (r.width < 4 || r.height < 4) return false;
+                  const txt = `${b.textContent || ''} ${b.getAttribute('aria-label') || ''} ${b.title || ''}`.trim();
+                  if (unsafeRe.test(txt)) return false;
+                  return true;
+                });
+
+              for (let i = 0; i < candidates.length; i++) {
+                if (ctx.isAborted()) break;
+                const el = candidates[i];
+                if (!el.isConnected || el.closest('[data-autotester-ui="true"]') || el.closest('.hidden')) continue;
+                const curSt = getComputedStyle(el);
+                if (curSt.display === 'none' || curSt.visibility === 'hidden' || curSt.pointerEvents === 'none') continue;
+                const sel = el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}[${(el.textContent || '').trim().slice(0, 18)}]`;
+                AT.causal.buttonsTested += 1;
+                totalTested += 1;
+
+                const hit = AT.causal.physicalHitTest(el);
+                if (!hit.ok) {
+                  interceptedButtons.push(`${scopeLabel} -> ${sel} (che bởi ${hit.blocker || 'overlay'})`);
+                } else {
+                  const isSafeToggleOrTab =
+                    el.hasAttribute('data-s14-tab') ||
+                    el.hasAttribute('data-nav-tab') ||
+                    el.hasAttribute('data-mod42-tab') ||
+                    el.hasAttribute('data-mod46-toggle-group') ||
+                    el.hasAttribute('aria-expanded') ||
+                    el.classList.contains('inv-tab-btn') ||
+                    el.classList.contains('ll51-tab');
+                  if (isSafeToggleOrTab) {
+                    const isPureTab =
+                      el.hasAttribute('data-s14-tab') ||
+                      el.hasAttribute('data-nav-tab') ||
+                      el.hasAttribute('data-mod42-tab') ||
+                      el.classList.contains('inv-tab-btn') ||
+                      el.classList.contains('ll51-tab');
+                    const beforeExp = el.getAttribute('aria-expanded');
+                    const pr = await AT.causal.probeClickCausal(el, { watchRoot: rootEl });
+                    if (!pr.alive && el.isConnected) {
+                      deadButtons.push(`${scopeLabel} -> ${sel}`);
+                    }
+                    if (!isPureTab && el.isConnected) {
+                      const afterExp = el.getAttribute('aria-expanded');
+                      if ((beforeExp !== null && afterExp !== beforeExp) || el.getAttribute('aria-haspopup')) {
+                        try { el.click(); } catch (_eRst) {}
+                        await AT.sleep(20);
+                      }
+                      document.getElementById('btn-close-header-font-popover')?.click();
+                      const lb = document.querySelector('[role="listbox"][aria-label="Language Selector"]:not(.hidden)');
+                      if (lb) document.getElementById('btn-header-lang-switcher')?.click();
+                    }
+                  }
+                }
+                if (i % 5 === 4) await AT.sleep(16);
+              }
+            };
+
+            try {
+              // 1. Tự động khám phá mọi Tab màn hình từ DOM (tương thích module mới sau này)
+              const tabIds = Array.from(document.querySelectorAll('[data-s14-tab]'))
+                .map((b) => b.getAttribute('data-s14-tab'))
+                .filter(Boolean);
+              const uniqueTabs = Array.from(new Set(tabIds));
+
+              for (const tKey of uniqueTabs) {
+                if (ctx.isAborted()) break;
+                await switchTabSafe(tKey);
+                visitedScreens.push(tKey);
+                await safeProbeContainer(document.body, tKey);
+                await AT.sleep(18);
+              }
+
+              // 2. Mở & quét các Pop-up Studio lớn (Mod 42 Clock/Weather/Invest/Wisdom, Mod 46 ĐăngLovePDF, Mod 47 RAM, Mod 51 Ngoại ngữ)
+              if (globalScope.NoirStudio?.worldClockStudio?.openModal) {
+                for (const m42Tab of ['timezone', 'weather', 'alarm', 'invest', 'wisdom']) {
+                  if (ctx.isAborted()) break;
+                  globalScope.NoirStudio.worldClockStudio.openModal(m42Tab);
+                  await AT.sleep(120);
+                  visitedScreens.push(`Mod42:${m42Tab}`);
+                  await safeProbeContainer(document.getElementById('mod42-world-clock-modal'), `Mod42:${m42Tab}`);
+                }
+                globalScope.NoirStudio.worldClockStudio.closeModal?.();
+                await AT.sleep(40);
+              }
+
+              if (globalScope.NoirStudio?.dangLovePdf?.openDangLovePdfStudio) {
+                globalScope.NoirStudio.dangLovePdf.openDangLovePdfStudio();
+                await AT.sleep(120);
+                visitedScreens.push('Mod46:DangLovePDF');
+                await safeProbeContainer(document.getElementById('modal-mod46-danglovepdf-studio'), 'Mod46');
+                document.getElementById('btn-mod46-close-studio')?.click();
+                await AT.sleep(40);
+              }
+
+              if (globalScope.NoirStudio?.ramManager?.openModal) {
+                globalScope.NoirStudio.ramManager.openModal();
+                await AT.sleep(100);
+                visitedScreens.push('Mod47:RAM');
+                const m47 = document.querySelector('[id*="mod47"][id*="modal"]:not(.hidden), #modal-mod47-performance');
+                await safeProbeContainer(m47, 'Mod47');
+                m47?.querySelector('[id*="close"], button')?.click?.();
+                await AT.sleep(30);
+              }
+
+              if (globalScope.NoirStudio?.langLearning?.open) {
+                await globalScope.NoirStudio.langLearning.open();
+                await AT.sleep(120);
+                visitedScreens.push('Mod51:LangLearning');
+                const m51 = document.getElementById('modal-mod51-lang-studio');
+                await safeProbeContainer(m51, 'Mod51');
+                globalScope.NoirStudio.langLearning.close?.();
+                await AT.sleep(40);
+              }
+            } finally {
+              try {
+                globalScope.NoirStudio?.worldClockStudio?.closeModal?.();
+                document.getElementById('btn-mod46-close-studio')?.click();
+                globalScope.NoirStudio?.langLearning?.close?.();
+                await switchTabSafe(prevScreen);
+              } catch (_eRestore) {}
+            }
+
+            if (deadButtons.length > 0) {
+              return makeIssue('omni_scan_all_modules_buttons', 'core_features', 'ERR_DEAD_BUTTON', {
+                selector: deadButtons[0].split('->').pop().trim(),
+                moduleRef: 'app',
+                techDetail: `Omni-Scan (${visitedScreens.length} màn hình, ${totalTested} nút) phát hiện ${deadButtons.length} nút liệt: ${deadButtons.slice(0, 6).join('; ')}`,
+              });
+            }
+            if (interceptedButtons.length > 0) {
+              return makeIssue('omni_scan_all_modules_buttons', 'core_features', 'ERR_CLICK_INTERCEPTED', {
+                selector: interceptedButtons[0].split('->').pop().trim(),
+                moduleRef: 'app',
+                techDetail: `Omni-Scan (${visitedScreens.length} màn hình, ${totalTested} nút) phát hiện ${interceptedButtons.length} nút bị che khuất: ${interceptedButtons.slice(0, 6).join('; ')}`,
+              });
+            }
+            return makePass(
+              'omni_scan_all_modules_buttons',
+              'core_features',
+              `Omni-Scan thông suốt 100% (${visitedScreens.length} màn hình & pop-up, ${totalTested} nút bấm)`,
+              `Đã tự động dò mọi Tab & các Module mở rộng (Mod 42/46/47/49/50/51) — 0 nút liệt, 0 nút bị che.`,
+              'autotester/suites/appSuites.js',
+              'functional'
+            );
+          },
+        },
+        {
           id: 'core_nav_6_screens',
           label: 'Chuyển mượt qua lại giữa đủ 6 màn hình chính của Studio',
           run: async (ctx) => {
@@ -837,23 +1021,60 @@
       tests: [
         {
           id: 'visual_overflow_docks_i18n',
-          label: 'Soi tràn mép ngang, thanh nổi đè nhau, độ dễ bấm, mã chữ chưa dịch & 10 năng lực trình duyệt',
+          label: 'Soi tràn mép ngang, thanh nổi đè nhau, độ dễ bấm, mã chữ chưa dịch & Giả lập chéo Mobile/Desktop',
           run: async (ctx) => {
             const screens = isBiNovelApp()
-              ? [
-                  { key: 'SCREEN_1_WRITE', name: 'Tab 1 (Bàn viết)' },
-                  { key: 'SCREEN_3_AI', name: 'Tab 3 (AI)' },
-                  { key: 'SCREEN_5_AMBIENCE', name: 'Tab 5 (Nhạc & YT)' },
-                  { key: 'SCREEN_6_SYSTEM', name: 'Tab 6 (Hệ thống)' },
-                ]
+              ? Array.from(new Set(Array.from(document.querySelectorAll('[data-s14-tab]')).map((b) => b.getAttribute('data-s14-tab')).filter(Boolean)))
+                  .map((key) => ({ key, name: `Tab ${key}` }))
               : [{ key: null, name: 'Trang hiện tại' }];
 
             const allFindings = [];
-            for (const s of screens) {
-              if (ctx.isAborted()) return null;
-              if (s.key) await switchTabSafe(s.key);
-              const f = AT.visualAuditor.scanCurrentScreen(s.name);
-              allFindings.push(...f);
+            const crossSweep = AT.shell?.crossViewportAuto !== false && typeof AT.viewportSim?.runDualSweep === 'function';
+
+            const runVisualPass = async (vpTag) => {
+              for (const s of screens) {
+                if (ctx.isAborted()) return;
+                if (s.key) await switchTabSafe(s.key);
+                AT.viewportSim?.syncMedia?.();
+                const f = AT.visualAuditor.scanCurrentScreen(`${vpTag} · ${s.name}`);
+                allFindings.push(...f);
+                await AT.sleep(16);
+              }
+              if (isBiNovelApp() && globalScope.NoirStudio?.worldClockStudio?.openModal) {
+                for (const m42Tab of ['invest', 'wisdom']) {
+                  if (ctx.isAborted()) return;
+                  globalScope.NoirStudio.worldClockStudio.openModal(m42Tab);
+                  await AT.sleep(110);
+                  AT.viewportSim?.syncMedia?.();
+                  const f = AT.visualAuditor.scanCurrentScreen(`${vpTag} · Mod42:${m42Tab}`);
+                  allFindings.push(...f);
+                }
+                globalScope.NoirStudio.worldClockStudio.closeModal?.();
+                await AT.sleep(30);
+              }
+              if (isBiNovelApp() && globalScope.NoirStudio?.langLearning?.open) {
+                await globalScope.NoirStudio.langLearning.open();
+                await AT.sleep(100);
+                AT.viewportSim?.syncMedia?.();
+                const f51 = AT.visualAuditor.scanCurrentScreen(`${vpTag} · Mod51:Lang`);
+                allFindings.push(...f51);
+                globalScope.NoirStudio.langLearning.close?.();
+                await AT.sleep(30);
+              }
+            };
+
+            if (crossSweep) {
+              AT.smoothAuditor?.setPauseCls?.(true);
+              try {
+                await AT.viewportSim.runDualSweep(async (vpInfo) => {
+                  await runVisualPass(vpInfo.mode === 'mobile' ? '📱 Mobile 375px' : '💻 Desktop 1280px');
+                });
+              } finally {
+                AT.smoothAuditor?.setPauseCls?.(false);
+              }
+            } else {
+              const curW = AT.viewportSim?.getWidth?.() || window.innerWidth;
+              await runVisualPass(`${curW < 768 ? '📱 Mobile' : '💻 Desktop'} ${curW}px`);
             }
 
             const cap = AT.browserMatrix.audit();
@@ -862,8 +1083,8 @@
               return makePass(
                 'visual_overflow_docks_i18n',
                 'visual_smooth_i18n',
-                'Giao diện vừa khít, không đè nút, 0 mã chữ lỗi & tương thích đa trình duyệt',
-                `Đã quét sạch ${screens.length} màn hình (${window.innerWidth}x${window.innerHeight}px). ${cap.summaryText}`,
+                `Giao diện vừa khít trên cả Mobile & Desktop, không đè nút, 0 mã chữ lỗi`,
+                `Đã quét chéo ${crossSweep ? 'Mobile (375x812) & Desktop (1280x800)' : `${window.innerWidth}px`} qua ${screens.length} màn hình + Mod 49/50/51. ${cap.summaryText}`,
                 'index.html',
                 'visual'
               );
@@ -872,7 +1093,7 @@
             return makeIssue('visual_overflow_docks_i18n', 'visual_smooth_i18n', first.code, {
               selector: first.selector,
               moduleRef: 'index.html',
-              techDetail: allFindings.map((x) => `[${x.code}] ${x.techDetail}`).join('\n') + `\n[BrowserMatrix] ${cap.summaryText}`,
+              techDetail: allFindings.slice(0, 10).map((x) => `[${x.code}] ${x.techDetail}`).join('\n') + `\n[BrowserMatrix] ${cap.summaryText}`,
             });
           },
         },
@@ -880,19 +1101,31 @@
           id: 'perf_fps_and_memory',
           label: 'Đo độ mượt khung hình (FPS), tác vụ gây khựng, tệp tạm quên dọn & bộ nhớ RAM',
           run: async () => {
+            await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+            await AT.sleep(80);
             AT.smoothAuditor.resetFpsWindow?.();
-            await AT.sleep(720);
+            // Đo đồng thời Event-Loop responsiveness (không bị ảnh hưởng bởi OS rAF throttle khi cửa sổ không active)
+            let maxLoopLagMs = 0;
+            const probeStart = performance.now();
+            while (performance.now() - probeStart < 720) {
+              const t0 = performance.now();
+              await AT.sleep(45);
+              const lag = Math.max(0, Math.round(performance.now() - t0 - 45));
+              if (lag > maxLoopLagMs) maxLoopLagMs = lag;
+            }
             const st = AT.smoothAuditor.snapshot();
-            if (st.minFps > 0 && st.minFps < 25) {
+            const isWindowFocused = Boolean(!document.hidden && (typeof document.hasFocus !== 'function' || document.hasFocus()));
+            const realFpsDrop = isWindowFocused && st.minFps > 0 && st.minFps < 25;
+            if (st.longTasks > 0 || maxLoopLagMs >= 55 || realFpsDrop) {
               return makeIssue('perf_fps_and_memory', 'visual_smooth_i18n', 'WARN_MAIN_THREAD_JANK', {
                 moduleRef: 'mod47_performance_ram_and_lifecycle_manager.js',
-                techDetail: `FPS tụt xuống ${st.minFps} FPS (TB ${st.avgFps} FPS), LongTasks=${st.longTasks} (max ${st.maxLongTaskMs}ms), CLS=${st.cls}`,
+                techDetail: `FPS tụt xuống ${st.minFps} FPS (TB ${st.avgFps} FPS), EventLoopLagMax=${maxLoopLagMs}ms, LongTasks=${st.longTasks} (max ${st.maxLongTaskMs}ms), CLS=${st.cls}`,
               });
             }
-            if (st.unrevokedBlobs > 3) {
+            if (st.unrevokedBlobs > 0) {
               return makeIssue('perf_fps_and_memory', 'visual_smooth_i18n', 'WARN_UNREVOKED_BLOBS', {
                 moduleRef: 'mod46_danglovepdf_and_doc_converter.js',
-                techDetail: `Còn ${st.unrevokedBlobs} Blob URL chưa gọi URL.revokeObjectURL().`,
+                techDetail: `Còn ${st.unrevokedBlobs} Blob URL chưa gọi URL.revokeObjectURL(): ${(st.blobOrigins || []).join(' | ')}`,
               });
             }
             return makePass(
@@ -916,8 +1149,9 @@
             const origLang = i18n.getLanguage?.() || 'vi';
             const targetLangs = ['en', 'zh-CN', 'zh-TW', 'ko', 'ja'];
             const VN_DIACRITICS_RE = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
-            const ALLOWED_BRAND_RE = /^(Tiếng Việt|ĐăngLovePDF|Mai Hải Đăng|Việt Nam|Hà Nội|Đà Nẵng|TP\.?\s*HCM|Hồ Chí Minh|Bi|NoirStudio|VietQR)/i;
-            const SKIP_ANCESTOR_SEL = '[data-i18n-ignore="true"], #at-shell-root, #novel-editor, #s18-rich-prompt-editor, #chapter-title-input, textarea, pre, code, script, style, #modal-mod51-lang-studio';
+            const ALLOWED_BRAND_RE = /(Tiếng Việt|ĐăngLovePDF|Mai Hải Đăng|Buy Đăng|Đăng's|Tiếng Nhật|Việt Nam|Hà Nội|Đà Nẵng|TP\.?\s*HCM|Hồ Chí Minh|NoirStudio|VietQR)/gi;
+            const STANDALONE_DANG_RE = /(?<!\p{L})Đăng(?=$|[\s.,!?:;)<」"'에게의는이을를가와과는에にをはがでのへと])/gu;
+            const SKIP_ANCESTOR_SEL = '[data-autotester-ui="true"], [data-i18n-ignore="true"], #at-shell-root, #novel-editor, #s18-rich-prompt-editor, #chapter-title-input, textarea, pre, code, script, style, #modal-mod51-lang-studio';
             const leaks = [];
 
             const scanDomForViLeaks = (langCode, scopeLabel, rootEl) => {
@@ -927,11 +1161,16 @@
               let foundInScope = 0;
               while (node && foundInScope < 8) {
                 const txt = String(node.nodeValue || '').replace(/\s+/g, ' ').trim();
-                if (txt.length >= 3 && VN_DIACRITICS_RE.test(txt) && !ALLOWED_BRAND_RE.test(txt)) {
+                const cleanCheck = txt.replace(ALLOWED_BRAND_RE, '').replace(STANDALONE_DANG_RE, '').trim();
+                if (cleanCheck.length >= 3 && VN_DIACRITICS_RE.test(cleanCheck)) {
                   const el = node.parentElement;
                   if (el && !el.closest(SKIP_ANCESTOR_SEL)) {
                     const st = globalScope.getComputedStyle?.(el);
-                    if (st && st.display !== 'none' && st.visibility !== 'hidden' && el.offsetParent !== null) {
+                    const ownerHtml = el instanceof HTMLElement ? el : el.closest?.('svg')?.parentElement;
+                    const isShown = ownerHtml
+                      ? (ownerHtml.offsetParent !== null && (!ownerHtml.checkVisibility || ownerHtml.checkVisibility()))
+                      : false;
+                    if (st && st.display !== 'none' && st.visibility !== 'hidden' && isShown) {
                       leaks.push({ lang: langCode, scope: scopeLabel, text: txt.slice(0, 70), selector: el.id ? `#${el.id}` : el.tagName.toLowerCase() });
                       foundInScope += 1;
                     }

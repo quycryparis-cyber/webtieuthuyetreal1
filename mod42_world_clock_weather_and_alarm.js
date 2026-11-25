@@ -3038,7 +3038,7 @@
             <button type="button" data-mod42-tab="weather" class="mod42-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition">🌤️ Xem Thời Tiết</button>
             <button type="button" data-mod42-tab="alarm" class="mod42-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition">⏰ Báo Thức &amp; Chuông MP3</button>
             <button type="button" data-mod42-tab="market" class="mod42-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition inline-flex items-center gap-1.5"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg><span>Đầu tư hôm nay</span></button>
-            <button type="button" data-mod42-tab="wisdom" class="mod42-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition inline-flex items-center gap-1.5"><span>🧠</span><span>20 phút thông thái</span></button>
+            <button type="button" data-mod42-tab="wisdom" class="mod42-tab-btn px-3 py-1.5 rounded-xl text-xs font-extrabold transition inline-flex items-center gap-1.5"><span>🧠</span><span>30 phút thông thái</span></button>
           </div>
 
           <!-- Nội dung cuộn -->

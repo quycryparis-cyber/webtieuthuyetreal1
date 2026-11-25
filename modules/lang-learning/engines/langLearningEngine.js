@@ -175,12 +175,20 @@
       if (typeof document === 'undefined') return resolve(null);
       const existing = document.querySelector('script[data-mod51-pinyin="1"]');
       if (existing && globalScope.pinyinPro?.pinyin) return resolve(globalScope.pinyinPro);
+      let settled = false;
+      const done = (val) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(guardTimer);
+        resolve(val);
+      };
+      const guardTimer = setTimeout(() => done(globalScope.pinyinPro || null), 3800);
       const s = document.createElement('script');
       s.src = 'https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/dist/index.js';
       s.async = true;
       s.dataset.mod51Pinyin = '1';
-      s.onload = () => resolve(globalScope.pinyinPro || null);
-      s.onerror = () => resolve(null);
+      s.onload = () => done(globalScope.pinyinPro || null);
+      s.onerror = () => done(null);
       document.head.appendChild(s);
     });
     return pinyinProPromise;
@@ -505,7 +513,7 @@
     if (items.length < 5) {
       const fallback = [
         { id: 'v_fb_1', topic: '⚙️ Điều khiển & Giao diện', vi: 'Lưu ngay', en: 'Save now', zh_cn: '立即保存', zh_tw: '立即儲存', ko: '지금 저장', ja: '今すぐ保存' },
-        { id: 'v_fb_2', topic: '📈 Tài chính & Tri thức', vi: '20 phút thông thái', en: '20-Min Daily Wisdom', zh_cn: '每日20分钟智慧', zh_tw: '每日20分鐘智慧', ko: '매일 20분 지혜', ja: '毎日20分の知恵' },
+        { id: 'v_fb_2', topic: '📈 Tài chính & Tri thức', vi: '30 phút thông thái', en: '30-Min Daily Wisdom', zh_cn: '每日30分钟智慧', zh_tw: '每日30分鐘智慧', ko: '매일 30분 지혜', ja: '毎日30分の知恵' },
         { id: 'v_fb_3', topic: '📈 Tài chính & Tri thức', vi: 'Đầu tư hôm nay', en: 'Invest Today', zh_cn: '今日投资', zh_tw: '今日投資', ko: '오늘의 투자', ja: '今日の投資' },
         { id: 'v_fb_4', topic: '🎵 Giải trí, Thời tiết & Giờ', vi: 'Xem Thời Tiết', en: 'Weather', zh_cn: '查看天气', zh_tw: '查看天氣', ko: '날씨 보기', ja: '天気を見る' },
         { id: 'v_fb_5', topic: '⚙️ Điều khiển & Giao diện', vi: 'Chọn Ngôn Ngữ', en: 'Select Language', zh_cn: '选择语言', zh_tw: '選擇語言', ko: '언어 선택', ja: '言語を選択' },

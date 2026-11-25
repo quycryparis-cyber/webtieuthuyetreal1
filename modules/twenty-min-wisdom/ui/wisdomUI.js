@@ -39,7 +39,7 @@
     geminiParsed: null,
     redirectCountdown: 0,
     redirectTimer: null,
-    studySecondsLeft: 20 * 60,
+    studySecondsLeft: 30 * 60,
     studyRunning: false,
     studyTimer: null,
     abortCtrl: null,
@@ -277,7 +277,7 @@
           <button type="button" id="wis20-chg-x" class="w-7 h-7 rounded-lg border border-zinc-400/40 hover:bg-rose-500 hover:text-white font-black text-xs cursor-pointer">✕</button>
         </div>
         <p class="text-xs leading-relaxed opacity-85">
-          Nếu bạn đổi vị trí ngay lúc này, toàn bộ dữ liệu tin tức khu vực, bản tin 20 phút và biểu đồ đã đồng bộ hiện tại sẽ được <b>xóa sạch để quét lại từ đầu</b> theo khu vực mới. Bạn có chắc chắn muốn đổi vị trí không?
+          Nếu bạn đổi vị trí ngay lúc này, toàn bộ dữ liệu tin tức khu vực, bản tin 30 phút và biểu đồ đã đồng bộ hiện tại sẽ được <b>xóa sạch để quét lại từ đầu</b> theo khu vực mới. Bạn có chắc chắn muốn đổi vị trí không?
         </p>
         <div class="flex items-center justify-end gap-2 pt-1">
           <button type="button" id="wis20-chg-no" class="wis20-btn">Không, giữ nguyên</button>
@@ -381,7 +381,7 @@
       render();
       return;
     }
-    if (state.studySecondsLeft <= 0) state.studySecondsLeft = 20 * 60;
+    if (state.studySecondsLeft <= 0) state.studySecondsLeft = 30 * 60;
     state.studyRunning = true;
     state.studyTimer = setInterval(() => {
       state.studySecondsLeft -= 1;
@@ -391,7 +391,7 @@
         clearInterval(state.studyTimer);
         state.studyTimer = null;
         state.studyRunning = false;
-        toast('🎉 Chúc mừng! Bạn đã hoàn thành trọn vẹn 20 phút thông thái hôm nay!', 'success', 5000);
+        toast('🎉 Chúc mừng! Bạn đã hoàn thành trọn vẹn 30 phút thông thái hôm nay!', 'success', 5000);
         render();
       }
     }, 1000);
@@ -408,10 +408,10 @@
         <div class="wis20-card text-center space-y-4 py-5">
           <div class="text-4xl">🧠</div>
           <div class="space-y-1">
-            <h3 class="text-base sm:text-lg font-black">20 Phút Thông Thái Mỗi Ngày — Xác nhận Vị trí & Khu vực</h3>
+            <h3 class="text-base sm:text-lg font-black">30 Phút Thông Thái Mỗi Ngày — Xác nhận Vị trí & Khu vực</h3>
             <p class="text-xs opacity-80 max-w-xl mx-auto">
-              Hệ thống sẽ quét tin tức & tri thức xác thực hôm nay (Thế giới, Công nghệ/AI, Kinh tế, Khu vực của bạn & Tri thức nền) theo đúng quốc gia bạn đang ở.
-              Bạn có thể đọc <b>Thông tin thô (5 mục khoa học)</b> ngay lập tức hoặc đồng bộ <b>Gemini</b> để vẽ Biểu đồ & Sơ đồ Nhân Quả!
+              Hệ thống sẽ quét tin tức & tri thức xác thực hôm nay đủ <b>8 Trụ cột (30 phút — dành trọn 13 phút chuyên sâu riêng cho Trụ cột 4 Khu vực & Quốc gia của bạn)</b> theo đúng vị trí hiện tại.
+              Bạn có thể đọc <b>Thông tin thô</b> ngay lập tức hoặc đồng bộ <b>Gemini</b> để vẽ Biểu đồ & Sơ đồ Nhân Quả!
             </p>
           </div>
 
@@ -444,7 +444,7 @@
                 <input id="wis20-manual-city" type="text" class="wis20-input" placeholder="Tùy chọn: Hà Nội, Đà Nẵng, Tokyo..." value="${esc(state.manualCity)}" />
               </div>
               <button type="button" id="wis20-btn-confirm-manual" class="wis20-btn w-full py-2.5 border-emerald-500/50">
-                🚀 Xác nhận Quốc gia &amp; Quét 20 phút thông thái hôm nay
+                🚀 Xác nhận Quốc gia &amp; Quét 30 phút thông thái hôm nay
               </button>
             </div>
           </div>
@@ -472,7 +472,7 @@
             </div>
           </div>
           <div id="wis20-scan-log" class="max-w-md mx-auto text-left p-3 rounded-xl bg-zinc-100/70 dark:bg-zinc-900/70 border border-zinc-300/50 dark:border-zinc-800 space-y-1 min-h-[76px]">
-            ${state.scanLog.map((x) => `<div class="text-[11px] opacity-85">${esc(x)}</div>`).join('') || '<div class="text-[11px] opacity-60">Đang mở kết nối trực tiếp tới Wikipedia, DEV.to, Hacker News, GitHub, Binance &amp; World Bank...</div>'}
+            ${state.scanLog.map((x) => `<div class="text-[11px] opacity-85">${esc(x)}</div>`).join('') || '<div class="text-[11px] opacity-60">Đang mở kết nối trực tiếp tới World Bank, Reuters, BBC, VnExpress, Open-Meteo &amp; NIH PubMed...</div>'}
           </div>
         </div>
       </div>
@@ -490,10 +490,10 @@
         </div>
         <div class="flex flex-wrap items-center gap-1.5">
           ${showStudyTimer ? `
-            <span class="wis20-timer-pill" title="Đồng hồ đếm ngược 20 phút đọc sâu mỗi ngày">
+            <span class="wis20-timer-pill" title="Đồng hồ đếm ngược 30 phút đọc sâu mỗi ngày (gồm 13p riêng Trụ cột 4)">
               ⏱️ <span id="wis20-study-clock" class="tabular-nums">${formatMmSs(state.studySecondsLeft)}</span>
               <button type="button" id="wis20-btn-timer-toggle" class="px-1.5 py-0.5 rounded-md bg-emerald-600 text-white text-[10px] font-black cursor-pointer">${state.studyRunning ? '⏸️ Dừng' : '▶️ Chạy'}</button>
-              <button type="button" id="wis20-btn-timer-reset" class="px-1 py-0.5 rounded-md border border-emerald-500/40 text-[10px] font-black cursor-pointer" title="Đặt lại 20:00">🔄</button>
+              <button type="button" id="wis20-btn-timer-reset" class="px-1 py-0.5 rounded-md border border-emerald-500/40 text-[10px] font-black cursor-pointer" title="Đặt lại 30:00">🔄</button>
             </span>
           ` : ''}
           <button type="button" id="wis20-btn-export-pdf" class="wis20-btn wis20-btn-pdf text-xs py-1.5">📄 Xuất Báo Cáo PDF</button>
@@ -541,9 +541,9 @@
         <div class="wis20-gemini-card space-y-3.5">
           <div class="space-y-1">
             <div class="text-xs font-black uppercase tracking-wide text-violet-700 dark:text-violet-300">✨ Nâng cấp khoa học hơn nữa với Gemini (Miễn phí · 0 API key)</div>
-            <h3 class="text-sm sm:text-base font-black">🤖 Đồng bộ Gemini để Tổng hợp Bản tin 20 Phút + Vẽ Biểu đồ &amp; Sơ đồ Nhân Quả</h3>
+            <h3 class="text-sm sm:text-base font-black">🤖 Đồng bộ Gemini để Tổng hợp Bản tin 30 Phút + Vẽ Biểu đồ &amp; Sơ đồ Nhân Quả</h3>
             <p class="text-xs opacity-80">
-              Thực hiện 2 bước gọn nhẹ dưới đây để Gemini phân tích toàn bộ dữ liệu thật vừa quét, rút ra <b>Mô hình Tư duy</b> và tự động vẽ <b>Biểu đồ 20 phút, Cột tác động, Sơ đồ Mindmap SVG &amp; Dòng thời gian</b>!
+              Thực hiện 2 bước gọn nhẹ dưới đây để Gemini phân tích toàn bộ dữ liệu thật vừa quét, rút ra <b>Mô hình Tư duy</b> và tự động vẽ <b>Biểu đồ 30 phút (riêng 13p Trụ cột 4 Khu vực), Cột tác động, Sơ đồ Mindmap SVG &amp; Dòng thời gian</b>!
             </p>
           </div>
 
@@ -585,7 +585,7 @@
             <textarea id="wis20-gemini-paste-box" rows="5" class="wis20-textarea" placeholder="PC: nhấn Ctrl + V | Mobile: CHẠM GIỮ 1–2 giây vào đây rồi bấm nút Dán...">${esc(state.geminiReplyRaw)}</textarea>
             <div class="flex flex-wrap items-center gap-2">
               <button type="button" id="wis20-btn-sync-gemini" class="wis20-btn wis20-btn-primary flex-1 py-2.5">
-                ✨ Đồng bộ Bản tin 20 phút, Biểu đồ &amp; Sơ đồ ngay
+                ✨ Đồng bộ Bản tin 30 phút, Biểu đồ &amp; Sơ đồ ngay
               </button>
               ${state.redirectCountdown > 0 ? `
                 <button type="button" id="wis20-btn-skip-cd" class="wis20-btn wis20-btn-gemini py-2.5">
@@ -725,7 +725,7 @@
       <div class="space-y-3">
         ${sync.headline ? `
           <div class="wis20-raw-hero">
-            <div class="text-[11px] font-black uppercase text-emerald-700 dark:text-emerald-300">🧠 Tiêu điểm 20 Phút Thông Thái Hôm nay</div>
+            <div class="text-[11px] font-black uppercase text-emerald-700 dark:text-emerald-300">🧠 Tiêu điểm 30 Phút Thông Thái Hôm nay</div>
             <div class="text-sm sm:text-base font-black mt-0.5">${esc(sync.headline)}</div>
           </div>
         ` : ''}
@@ -748,7 +748,7 @@
         <div class="exec-report-paper">
           <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding-bottom:12px;margin-bottom:14px;border-bottom:2px solid #0f2942;">
             <div>
-              <div style="font-size:11px;font-weight:900;letter-spacing:0.06em;color:#0d9488;text-transform:uppercase;">BÁO CÁO TRI THỨC CHÍNH THỐNG · 20 PHÚT THÔNG THÁI MỖI NGÀY</div>
+              <div style="font-size:11px;font-weight:900;letter-spacing:0.06em;color:#0d9488;text-transform:uppercase;">BÁO CÁO TRI THỨC CHÍNH THỐNG · 30 PHÚT THÔNG THÁI MỖI NGÀY</div>
               <div style="font-size:18px;font-weight:900;color:#0f2942;margin-top:2px;">${esc(sync.headline || `Bản tin 8 Trụ cột — ${state.scanResult?.dateLabel || ''}`)}</div>
             </div>
             <span style="padding:4px 10px;border-radius:999px;background:#0f2942;color:#ffffff;font-size:11px;font-weight:800;">📅 ${esc(state.scanResult?.dateLabel || '')}</span>
@@ -756,9 +756,9 @@
           ${renderSimpleMarkdown(state.geminiParsed.markdownBody)}
         </div>
 
-        <!-- PHẦN 2: SƠ ĐỒ & BIỂU ĐỒ BẢN TIN 20 PHÚT (HIỂN THỊ TRỰC TIẾP NGAY TRONG BÁO CÁO!) -->
+        <!-- PHẦN 2: SƠ ĐỒ & BIỂU ĐỒ BẢN TIN 30 PHÚT (HIỂN THỊ TRỰC TIẾP NGAY TRONG BÁO CÁO!) -->
         <div class="wis20-card space-y-3">
-          <div class="exec-sec-banner" style="margin-top:0;">PHẦN 2 — SƠ ĐỒ, BIỂU ĐỒ &amp; HÌNH ẢNH BẢN TIN 20 PHÚT</div>
+          <div class="exec-sec-banner" style="margin-top:0;">PHẦN 2 — SƠ ĐỒ, BIỂU ĐỒ &amp; HÌNH ẢNH BẢN TIN 30 PHÚT</div>
           ${W20.charts.renderAllChartsHtml(sync, state.scanResult)}
         </div>
 
@@ -778,7 +778,7 @@
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="flex flex-wrap gap-1.5">
             <button type="button" data-wis20-tab="raw" class="wis20-subtab ${state.activeTab === 'raw' ? 'is-active' : ''}">📰 Thông tin thô (8 trụ cột)</button>
-            <button type="button" data-wis20-tab="briefing" class="wis20-subtab ${state.activeTab === 'briefing' ? 'is-active' : ''}">🧠 Bản tin 20 phút (Gemini)${state.geminiParsed ? ' ✅' : ''}</button>
+            <button type="button" data-wis20-tab="briefing" class="wis20-subtab ${state.activeTab === 'briefing' ? 'is-active' : ''}">🧠 Bản tin 30 phút (Gemini)${state.geminiParsed ? ' ✅' : ''}</button>
             <button type="button" data-wis20-tab="visuals" class="wis20-subtab ${state.activeTab === 'visuals' ? 'is-active' : ''}">📊 Biểu đồ, Sơ đồ &amp; Hình ảnh</button>
           </div>
           ${!state.geminiParsed ? `
@@ -857,7 +857,7 @@
     });
     root.querySelector('#wis20-btn-timer-toggle')?.addEventListener('click', () => toggleStudyTimer());
     root.querySelector('#wis20-btn-timer-reset')?.addEventListener('click', () => {
-      state.studySecondsLeft = 20 * 60;
+      state.studySecondsLeft = 30 * 60;
       const el = root.querySelector('#wis20-study-clock');
       if (el) el.textContent = formatMmSs(state.studySecondsLeft);
     });
@@ -869,7 +869,7 @@
       render();
     });
     root.querySelector('#wis20-focus-mode')?.addEventListener('change', (ev) => {
-      state.focusMode = ev.target.value || 'balanced_20m';
+      state.focusMode = ev.target.value || 'balanced_30m';
     });
     root.querySelector('#wis20-custom-topic')?.addEventListener('input', (ev) => {
       state.customTopic = ev.target.value || '';

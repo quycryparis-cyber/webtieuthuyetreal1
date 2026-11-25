@@ -1792,8 +1792,12 @@
           view.setInt16(44 + i * 2, i % 2 === 0 ? 1 : -1, true);
         }
 
-        const blob = new Blob([buffer], { type: 'audio/wav' });
-        this.keepAliveUrl = URL.createObjectURL(blob);
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i += 0x8000) {
+          binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+        }
+        this.keepAliveUrl = 'data:audio/wav;base64,' + btoa(binary);
       } catch (_err) {
         this.keepAliveUrl = '';
       }

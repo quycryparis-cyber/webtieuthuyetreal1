@@ -207,8 +207,8 @@
       severity: 'P2',
       pillar: 'visual',
       plainTitle: 'Có nút bấm hơi nhỏ trên điện thoại, dễ bấm trượt',
-      plainDesc: 'Một số nút nhỏ hơn đầu ngón tay chuẩn nên trên màn hình cảm ứng hơi khó chạm.',
-      fixAdvice: 'Tăng vùng chạm lên tối thiểu `min-width: 44px; min-height: 44px` trên di động và cách nút kế bên ít nhất `8px`.',
+      plainDesc: 'Nút nhỏ hơn chuẩn chạm (< 28px hoặc < 32px trên Mobile 375px; < 20px trên Desktop) nên rất dễ bấm nhầm hoặc bị che chữ.',
+      fixAdvice: 'Đảm bảo mọi nút tương tác trên Mobile đạt tối thiểu `32x32px` (khuyến nghị `44x44px`), font `>= 12px` và cách nút kế bên ít nhất `6–8px`.',
     },
     ERR_I18N_KEY_LEAK: {
       severity: 'P2',
@@ -508,14 +508,21 @@
           : '- Không ghi nhận mục nào.';
 
       const p = report.pillars;
+      const vpSimLabel = AT.viewportSim?.isSimulated?.() ? ` [Đang giả lập ${AT.viewportSim.mode === 'mobile' ? 'Mobile 375x812' : 'Desktop 1280x800'}]` : '';
       return [
         `# ĐƠN THUỐC SỬA LỖI & TỐI ƯU TỰ ĐỘNG TỪ AUTOTESTER ULTRA (VÒNG LẶP #${String(report.runNumber).padStart(2, '0')})`,
-        `- **Môi trường kiểm thử:** ${report.browserSignature} (${report.viewport}px)`,
+        `- **Môi trường kiểm thử:** ${report.browserSignature} (${report.viewport}px${vpSimLabel})`,
         `- **Điểm sức khỏe tổng:** ${report.totalScore}/100${deltaTxt}`,
         `- **5 Trụ cột:** Chức năng ${p.functional.score}/${p.functional.max} | Đồng bộ ${p.sync.score}/${p.sync.max} | Độ mượt ${p.smoothness.score}/${p.smoothness.max} | Giao diện ${p.visual.score}/${p.visual.max} | Độ bền ${p.resilience.score}/${p.resilience.max}`,
         `- **Chỉ số thật:** Nút đã kiểm: ${report.kpis.buttonsTested} (Liệt: ${report.kpis.deadButtonsFound}) · Đồng bộ đạt: ${report.kpis.syncPassed}/${report.kpis.syncTotal} · FPS TB ${report.perfStats.avgFps} (Thấp nhất ${report.perfStats.minFps}) · Long Tasks: ${report.perfStats.longTasks} · Blob chưa dọn: ${report.perfStats.unrevokedBlobs}${report.perfStats.ramMb ? ` · RAM: ${report.perfStats.ramMb} MB` : ''}`,
         `- **Tiến bộ từ vòng trước:** ${fixedTxt}`,
         `- **Cảnh báo hồi quy (Regression):** ${regTxt}`,
+        '',
+        '## [TIÊU CHUẨN ĐO LƯỜNG NGHIÊM NGẶT DÀNH CHO AI SỬA CODE]',
+        '- **Ngưỡng Tràn Ngang (`ERR_MOBILE_OVERFLOW`):** Sai số `<= 2px` trên Mobile (`375px`), `<= 4px` trên Desktop; mọi nút/nhãn KHÔNG được vượt mép phải `viewport`, KHÔNG được cắt chữ (`scrollWidth > clientWidth + 6px` với `nowrap`).',
+        '- **Ngưỡng Nút Bấm (`WARN_SMALL_TOUCH_TARGET` / `ERR_DEAD_BUTTON`):** Mọi nút Mobile phải rộng/cao `>= 28px` (chuẩn `>= 36–44px`), Desktop `>= 20px`; mọi nút kích hoạt an toàn đều phải phản ứng DOM/Trạng thái (`>= 1` tín hiệu nhân quả) & pass Hit-Test (`ERR_CLICK_INTERCEPTED`).',
+        '- **Ngưỡng Độ Mượt & Bộ Nhớ (`WARN_MAIN_THREAD_JANK` / `WARN_UNREVOKED_BLOBS`):** `FPS TB >= 45 FPS`, `Long Tasks (>50ms) = 0`, `Blob chưa dọn = 0` (mọi PDF.js dùng `disableCreateObjectURL: true`, manifest/WAV dùng Data URI hoặc revoke trong `finally`).',
+        '- **Ngưỡng Đa Ngôn Ngữ (`ERR_I18N_UNTRANSLATED`):** 0 chữ Việt sót lại trên 5 gói ngôn ngữ (`EN/zh-CN/zh-TW/KO/JA`), kể cả tiêu đề pop-up Mod 42/46/47/49/50/51.',
         '',
         '## [ƯU TIÊN 1 — P0: LỖI NẶNG, LIỆT NÚT & LỆCH ĐỒNG BỘ CẦN SỬA NGAY]',
         fmtGroup(p0),
@@ -534,13 +541,24 @@
         `## TIÊU CHÍ NGHIỆM THU CHO VÒNG LẶP #${String(report.runNumber + 1).padStart(2, '0')}`,
         `1. Giữ nguyên toàn bộ ${report.passed.length} mục đang PASS (0 hồi quy).`,
         `2. Xử lý dứt điểm ${p0.length} lỗi P0 và ${p1.length} cảnh báo P1.`,
-        '3. Nâng FPS tối thiểu >= 45 FPS, 0 nút liệt, 0 lệch đồng bộ và 0 tràn ngang trên màn hình di động.',
+        '3. Nâng FPS tối thiểu >= 45 FPS, Long Tasks = 0, Blob chưa dọn = 0, 0 nút liệt, 0 lệch đồng bộ và 0 tràn ngang trên cả Mobile 375px lẫn Desktop 1280px.',
       ].join('\n');
     }
   }
 
   AT.PLAIN_VI_MAP = PLAIN_VI_MAP;
   AT.RULE_KNOWLEDGE_BASE = RULE_KNOWLEDGE_BASE;
+  AT.DETECTION_STANDARDS = Object.freeze({
+    MOBILE_OVERFLOW_TOLERANCE_PX: 2,
+    DESKTOP_OVERFLOW_TOLERANCE_PX: 4,
+    MOBILE_MIN_TOUCH_TARGET_PX: 28,
+    MOBILE_IDEAL_TOUCH_TARGET_PX: 44,
+    DESKTOP_MIN_TOUCH_TARGET_PX: 20,
+    CLIPPED_TEXT_TOLERANCE_PX: 6,
+    LONG_TASK_MS: 50,
+    TARGET_FPS: 45,
+    MAX_UNREVOKED_BLOBS: 0,
+  });
   AT.SNAPSHOT_KEY = SNAPSHOT_KEY;
   AT.loopEngine = new ImprovementLoopEngine();
 })(typeof window !== 'undefined' ? window : globalThis);

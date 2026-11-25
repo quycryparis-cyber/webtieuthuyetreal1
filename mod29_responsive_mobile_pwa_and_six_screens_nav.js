@@ -2505,6 +2505,13 @@
     constructor() {
       this.liveRegionId = 'mod29-aria-screen-announcer';
       this.isMobileFullReadingActive = false;
+      this._lastScreenId = null;
+      if (typeof window !== 'undefined' && !window.__mod29I18nAnnounceBound) {
+        window.__mod29I18nAnnounceBound = true;
+        window.addEventListener('noir:i18n:changed', () => {
+          if (this._lastScreenId) this.announceScreenChange(this._lastScreenId);
+        });
+      }
     }
 
     ensureLiveRegionElement() {
@@ -2524,9 +2531,13 @@
     announceScreenChange(screenId) {
       const cfg = SIX_SCREENS_ROUTING_TABLE[screenId];
       if (!cfg) return;
+      this._lastScreenId = screenId;
       const el = this.ensureLiveRegionElement();
       if (el) {
-        el.textContent = `Đã chuyển sang màn hình ${cfg.order}: ${cfg.title}.`;
+        const tr = window.NoirStudio?.i18n?.translateText || window.NoirNovel?.i18n?.translateText;
+        const localizedTitle = typeof tr === 'function' ? tr(cfg.title) : cfg.title;
+        const raw = `Đã chuyển sang màn hình ${cfg.order}: ${localizedTitle}.`;
+        el.textContent = typeof tr === 'function' ? tr(raw) : raw;
       }
     }
 
@@ -3546,7 +3557,7 @@
     }
 
     resolveNoteForElement(el) {
-      if (!el) return null;
+      if (!el || el.closest?.('[data-autotester-ui="true"]')) return null;
       const tr = (s) => {
         const text = String(s || '');
         return window.NoirNovel?.i18n?.translateText ? window.NoirNovel.i18n.translateText(text) : text;

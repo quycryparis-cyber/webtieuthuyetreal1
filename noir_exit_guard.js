@@ -60,6 +60,7 @@
       </div>
     `;
     document.body.appendChild(modal);
+    try { NS.i18n?.translateElement?.(modal); } catch (_eTrExit) {}
 
     const handleNo = () => {
       removeModal();

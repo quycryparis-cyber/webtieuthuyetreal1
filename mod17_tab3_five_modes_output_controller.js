@@ -4056,7 +4056,7 @@
         const bSel = document.createElement('button');
         bSel.type = 'button';
         bSel.dataset.v117SelectAll = id;
-        bSel.className = 'px-2 py-0.5 rounded-lg border border-emerald-500/45 bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-200 font-bold text-[10.5px] transition cursor-pointer';
+        bSel.className = 'px-2.5 py-1 min-h-[28px] sm:min-h-[24px] inline-flex items-center rounded-lg border border-emerald-500/45 bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-200 font-bold text-[10.5px] transition cursor-pointer';
         bSel.textContent = '☑️ Chọn tất cả';
         bSel.addEventListener('click', (ev) => {
           ev.preventDefault();
@@ -4065,7 +4065,7 @@
         const bCopy = document.createElement('button');
         bCopy.type = 'button';
         bCopy.dataset.v117CopyAll = id;
-        bCopy.className = 'px-2 py-0.5 rounded-lg border border-sky-500/45 bg-sky-500/15 hover:bg-sky-500/30 text-sky-200 font-bold text-[10.5px] transition cursor-pointer';
+        bCopy.className = 'px-2.5 py-1 min-h-[28px] sm:min-h-[24px] inline-flex items-center rounded-lg border border-sky-500/45 bg-sky-500/15 hover:bg-sky-500/30 text-sky-200 font-bold text-[10.5px] transition cursor-pointer';
         bCopy.textContent = '📋 Sao chép tất cả';
         bCopy.addEventListener('click', (ev) => {
           ev.preventDefault();
@@ -4110,7 +4110,7 @@
         b.type = 'button';
         b.textContent = label;
         b.title = title;
-        b.className = `px-1.5 py-0.5 rounded-md border border-zinc-700 bg-zinc-900/90 hover:bg-zinc-800 hover:border-emerald-400/60 text-zinc-200 font-bold text-[10.5px] transition cursor-pointer ${extraCls}`;
+        b.className = `px-2 py-1 min-w-[28px] min-h-[28px] sm:min-w-[24px] sm:min-h-[24px] inline-flex items-center justify-center rounded-md border border-zinc-700 bg-zinc-900/90 hover:bg-zinc-800 hover:border-emerald-400/60 text-zinc-200 font-bold text-[10.5px] transition cursor-pointer ${extraCls}`;
         b.addEventListener('mousedown', (ev) => ev.preventDefault());
         b.addEventListener('click', (ev) => {
           ev.preventDefault();

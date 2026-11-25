@@ -305,12 +305,55 @@
      * liệu có lớp nào CỦA ỨNG DỤNG đang che mất nút hay không.
      */
     physicalHitTest(el) {
-      if (!el || !el.isConnected) return { ok: false, reason: 'Element detached' };
-      const rect = el.getBoundingClientRect();
-      if (rect.width < 2 || rect.height < 2) return { ok: false, reason: 'Kích thước bằng 0' };
+      if (!el || !el.isConnected) return { ok: false, blocker: 'detached', reason: 'Element detached' };
+      let rect = el.getBoundingClientRect();
+      if (rect.width < 2 || rect.height < 2) return { ok: true, skippedHidden: true, blocker: '' };
 
-      const cx = Math.min(window.innerWidth - 2, Math.max(2, rect.left + rect.width / 2));
-      const cy = Math.min(window.innerHeight - 2, Math.max(2, rect.top + rect.height / 2));
+      const vw = AT.viewportSim?.isSimulated?.() ? AT.viewportSim.getWidth() : (window.innerWidth || 1024);
+      const vh = AT.viewportSim?.isSimulated?.() ? AT.viewportSim.getHeight() : (window.innerHeight || 768);
+
+      // Nếu nút nằm ngoài vùng hiển thị của khung cuộn cha (vd: overflow-y-auto), cuộn vào giữa trước khi Hit-Test
+      let p = el.parentElement;
+      let clippedByScrollParent = false;
+      while (p && p !== document.body && p !== document.documentElement) {
+        const pst = getComputedStyle(p);
+        if (/(auto|scroll|hidden|clip)/.test(pst.overflowY) || /(auto|scroll|hidden|clip)/.test(pst.overflowX)) {
+          const pr = p.getBoundingClientRect();
+          if (rect.bottom > pr.bottom + 1 || rect.top < pr.top - 1 || rect.right > pr.right + 1 || rect.left < pr.left - 1) {
+            clippedByScrollParent = true;
+            break;
+          }
+        }
+        p = p.parentElement;
+      }
+
+      if (clippedByScrollParent || rect.bottom <= 2 || rect.top >= vh - 2 || rect.right <= 2 || rect.left >= vw - 2) {
+        try {
+          el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+          rect = el.getBoundingClientRect();
+        } catch (_eScr) {}
+      }
+      if (rect.bottom <= 2 || rect.top >= vh - 2 || rect.right <= 2 || rect.left >= vw - 2) {
+        return { ok: true, offscreen: true, blocker: '' };
+      }
+
+      p = el.parentElement;
+      while (p && p !== document.body && p !== document.documentElement) {
+        const pst = getComputedStyle(p);
+        if (/(auto|scroll)/.test(pst.overflowY) && p.scrollHeight > p.clientHeight + 2) {
+          const pr = p.getBoundingClientRect();
+          if (rect.bottom > pr.bottom + 2 || rect.top < pr.top - 2) {
+            return { ok: true, offscreen: true, blocker: '' };
+          }
+        }
+        p = p.parentElement;
+      }
+
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      if (cx < 1 || cy < 1 || cx > window.innerWidth - 1 || cy > window.innerHeight - 1) {
+        return { ok: true, offscreen: true, blocker: '' };
+      }
 
       const atNodes = Array.from(document.querySelectorAll('[data-autotester-ui="true"]'));
       const savedVis = atNodes.map((n) => n.style.visibility);
@@ -321,11 +364,13 @@
           n.style.pointerEvents = 'none';
         });
         const topEl = document.elementFromPoint(cx, cy);
-        if (!topEl) return { ok: true, topEl: null };
+        if (!topEl) return { ok: true, topEl: null, blocker: '' };
         const isHit = el === topEl || el.contains(topEl) || topEl.contains(el);
+        const topCls = String(topEl.className || '').trim().split(/\s+/).filter(Boolean)[0] || '';
+        const blockerSel = topEl.id ? `#${topEl.id}` : `${topEl.tagName.toLowerCase()}${topCls ? '.' + topCls : ''}`;
         return {
           ok: isHit,
-          blocker: isHit ? '' : topEl.id ? `#${topEl.id}` : `${topEl.tagName.toLowerCase()}.${String(topEl.className || '').split(/\s+/)[0] || ''}`,
+          blocker: isHit ? '' : (blockerSel || 'overlay'),
         };
       } finally {
         atNodes.forEach((n, idx) => {
@@ -903,6 +948,283 @@
 
   AT.sleep = sleep;
   AT.sandbox = new SandboxGuard();
+  // --------------------------------------------------------------------------
+  // 8. DUAL-VIEWPORT SIMULATOR (Desktop <-> Mobile 375x812 / 1280x800 Live)
+  // --------------------------------------------------------------------------
+  class ViewportSimulator {
+    constructor() {
+      this.mode = 'real'; // 'real' | 'mobile' | 'desktop'
+      this._savedInnerW = null;
+      this._savedInnerH = null;
+      this._savedMatchMedia = null;
+      this._savedMediaRules = new Map();
+      this._savedHtmlStyle = '';
+      this._savedBodyStyle = '';
+      this._mmListeners = [];
+    }
+
+    isSimulated() {
+      return this.mode === 'mobile' || this.mode === 'desktop';
+    }
+
+    getWidth() {
+      if (this.mode === 'mobile') return 375;
+      if (this.mode === 'desktop') return 1280;
+      return window.innerWidth || document.documentElement.clientWidth || 1024;
+    }
+
+    getHeight() {
+      if (this.mode === 'mobile') return 812;
+      if (this.mode === 'desktop') return 800;
+      return window.innerHeight || document.documentElement.clientHeight || 768;
+    }
+
+    _evalMediaWidthCondition(mediaText, w) {
+      const mText = String(mediaText || '').trim();
+      if (!mText || !/(width|pointer|hover)/i.test(mText)) return null;
+      if (/^print$/i.test(mText)) return null;
+      const toPx = (val, unit) => {
+        const n = parseFloat(val);
+        if (!Number.isFinite(n)) return NaN;
+        return /^r?em$/i.test(unit) ? n * 16 : n;
+      };
+      let matched = true;
+      let touched = false;
+      const minRe = /\(\s*min-width\s*:\s*([\d.]+)\s*(px|r?em)\s*\)/gi;
+      let mm;
+      while ((mm = minRe.exec(mText)) !== null) {
+        touched = true;
+        const px = toPx(mm[1], mm[2]);
+        if (w < px) matched = false;
+      }
+      const maxRe = /\(\s*max-width\s*:\s*([\d.]+)\s*(px|r?em)\s*\)/gi;
+      while ((mm = maxRe.exec(mText)) !== null) {
+        touched = true;
+        const px = toPx(mm[1], mm[2]);
+        if (w > px) matched = false;
+      }
+      const geRe = /\(\s*width\s*>=\s*([\d.]+)\s*(px|r?em)\s*\)/gi;
+      while ((mm = geRe.exec(mText)) !== null) {
+        touched = true;
+        const px = toPx(mm[1], mm[2]);
+        if (w < px) matched = false;
+      }
+      const leRe = /\(\s*width\s*<=\s*([\d.]+)\s*(px|r?em)\s*\)/gi;
+      while ((mm = leRe.exec(mText)) !== null) {
+        touched = true;
+        const px = toPx(mm[1], mm[2]);
+        if (w > px) matched = false;
+      }
+      if (!touched) {
+        if (/\(pointer\s*:\s*coarse\)/i.test(mText) || /\(hover\s*:\s*none\)/i.test(mText)) {
+          return this.mode === 'mobile';
+        }
+        return null;
+      }
+      return matched;
+    }
+
+    _syncCssMediaRules(targetW) {
+      const walkRules = (ruleList) => {
+        if (!ruleList) return;
+        for (let i = 0; i < ruleList.length; i++) {
+          const rule = ruleList[i];
+          if (!rule) continue;
+          if (typeof CSSMediaRule !== 'undefined' && rule instanceof CSSMediaRule && rule.media) {
+            if (!this._savedMediaRules.has(rule)) {
+              this._savedMediaRules.set(rule, rule.media.mediaText);
+            }
+            const origText = this._savedMediaRules.get(rule);
+            const ev = this._evalMediaWidthCondition(origText, targetW);
+            if (ev !== null) {
+              try {
+                rule.media.mediaText = ev ? 'all' : 'not all';
+              } catch (_eMt) {}
+            }
+          }
+          if (rule.cssRules) walkRules(rule.cssRules);
+        }
+      };
+      try {
+        for (const sheet of Array.from(document.styleSheets || [])) {
+          if (sheet.ownerNode?.closest?.('[data-autotester-ui="true"]')) continue;
+          try {
+            if (sheet.cssRules) walkRules(sheet.cssRules);
+          } catch (_eCors) {}
+        }
+      } catch (_eSheets) {}
+    }
+
+    _restoreCssMediaRules() {
+      this._savedMediaRules.forEach((origText, rule) => {
+        try {
+          if (rule?.media) rule.media.mediaText = origText;
+        } catch (_eR) {}
+      });
+      this._savedMediaRules.clear();
+    }
+
+    syncMedia() {
+      if (this.isSimulated()) {
+        this._syncCssMediaRules(this.getWidth());
+      }
+    }
+
+    apply(mode = 'real') {
+      const next = mode === 'mobile' || mode === 'desktop' ? mode : 'real';
+      if (next === 'real') {
+        this.restore();
+        return { mode: 'real', width: this.getWidth(), height: this.getHeight() };
+      }
+      const targetW = next === 'mobile' ? 375 : 1280;
+      const targetH = next === 'mobile' ? 812 : 800;
+
+      if (!this.isSimulated()) {
+        this._realWinW = window.innerWidth || document.documentElement.clientWidth || 1280;
+        this._savedInnerW = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+        this._savedInnerH = Object.getOwnPropertyDescriptor(window, 'innerHeight');
+        this._savedMatchMedia = typeof window.matchMedia === 'function' ? window.matchMedia.bind(window) : null;
+        this._savedHtmlStyle = document.documentElement.getAttribute('style') || '';
+        this._savedBodyStyle = document.body?.getAttribute('style') || '';
+      }
+      this.mode = next;
+
+      try {
+        Object.defineProperty(window, 'innerWidth', { configurable: true, get: () => targetW });
+        Object.defineProperty(window, 'innerHeight', { configurable: true, get: () => targetH });
+      } catch (_eDim) {}
+
+      const self = this;
+      try {
+        window.matchMedia = function simMatchMedia(query) {
+          const evalRes = self._evalMediaWidthCondition(query, targetW);
+          const matches = evalRes !== null ? evalRes : (self._savedMatchMedia ? self._savedMatchMedia(query).matches : false);
+          return {
+            matches,
+            media: String(query || ''),
+            onchange: null,
+            addListener(cb) { if (typeof cb === 'function') self._mmListeners.push({ q: query, cb }); },
+            removeListener() {},
+            addEventListener(_ev, cb) { if (typeof cb === 'function') self._mmListeners.push({ q: query, cb }); },
+            removeEventListener() {},
+            dispatchEvent() { return true; },
+          };
+        };
+      } catch (_eMm) {}
+
+      document.documentElement.setAttribute('data-at-sim-viewport', next);
+      const smartTip = document.getElementById('noir-smart-delayed-tooltip');
+      if (smartTip) {
+        smartTip.style.display = 'none';
+        smartTip.style.left = '-9999px';
+      }
+      const shell = document.getElementById('at-shell-root');
+      if (next === 'mobile' && (this._realWinW || 1280) > 640 && shell && shell.parentElement === document.body) {
+        try { document.documentElement.appendChild(shell); } catch (_eMv) {}
+      } else if (next !== 'mobile' && shell && shell.parentElement !== document.body && document.body) {
+        try { document.body.appendChild(shell); } catch (_eMvBack) {}
+      }
+
+      let stEl = document.getElementById('at-sim-viewport-style');
+      if (!stEl) {
+        stEl = document.createElement('style');
+        stEl.id = 'at-sim-viewport-style';
+        stEl.setAttribute('data-autotester-ui', 'true');
+        document.head.appendChild(stEl);
+      }
+      if (next === 'mobile') {
+        stEl.textContent = `
+          html[data-at-sim-viewport="mobile"] {
+            width: 375px !important; max-width: 375px !important; min-width: 375px !important;
+            margin: 0 auto !important; outline: 3px solid #10b981 !important; overflow-x: clip !important;
+          }
+          html[data-at-sim-viewport="mobile"] body {
+            width: 375px !important; max-width: 375px !important; position: relative !important;
+            contain: layout !important; overflow-x: auto !important;
+          }
+          html[data-at-sim-viewport="mobile"] .fixed:not([data-autotester-ui="true"]):not([data-autotester-ui="true"] *),
+          html[data-at-sim-viewport="mobile"] [role="dialog"]:not([data-autotester-ui="true"]) {
+            max-width: 375px !important; margin-left: auto !important; margin-right: auto !important;
+          }
+          html[data-at-sim-viewport="mobile"] #btn-approve-chapter,
+          html[data-at-sim-viewport="mobile"] #btn-tab1-quick-new-chapter,
+          html[data-at-sim-viewport="mobile"] #btn-mod41-banner-jump-tab1,
+          html[data-at-sim-viewport="mobile"] #btn-tab3-split-gemini,
+          html[data-at-sim-viewport="mobile"] #btn-tab1-split-gemini {
+            white-space: normal !important;
+            height: auto !important;
+          }
+        `;
+      } else {
+        stEl.textContent = `
+          html[data-at-sim-viewport="desktop"] {
+            width: 1280px !important; min-width: 1280px !important; max-width: 1280px !important;
+            outline: 3px solid #38bdf8 !important; overflow-x: clip !important;
+          }
+          html[data-at-sim-viewport="desktop"] body {
+            width: 1280px !important; min-width: 1280px !important; contain: layout !important;
+          }
+        `;
+      }
+
+      this._syncCssMediaRules(targetW);
+      try { window.dispatchEvent(new Event('resize')); } catch (_eR) {}
+      this._mmListeners.forEach((item) => {
+        try {
+          const m = self._evalMediaWidthCondition(item.q, targetW);
+          if (m !== null) item.cb?.({ matches: m, media: item.q });
+        } catch (_eCb) {}
+      });
+      return { mode: next, width: targetW, height: targetH };
+    }
+
+    restore() {
+      if (!this.isSimulated() && !document.documentElement.hasAttribute('data-at-sim-viewport')) return;
+      this.mode = 'real';
+      const shell = document.getElementById('at-shell-root');
+      if (shell && shell.parentElement !== document.body && document.body) {
+        try { document.body.appendChild(shell); } catch (_eMvRestore) {}
+      }
+      try {
+        if (this._savedInnerW) Object.defineProperty(window, 'innerWidth', this._savedInnerW);
+        else delete window.innerWidth;
+      } catch (_eW) {}
+      try {
+        if (this._savedInnerH) Object.defineProperty(window, 'innerHeight', this._savedInnerH);
+        else delete window.innerHeight;
+      } catch (_eH) {}
+      try {
+        if (this._savedMatchMedia) window.matchMedia = this._savedMatchMedia;
+      } catch (_eM) {}
+      this._restoreCssMediaRules();
+      document.documentElement.removeAttribute('data-at-sim-viewport');
+      document.getElementById('at-sim-viewport-style')?.remove();
+      if (this._savedHtmlStyle) document.documentElement.setAttribute('style', this._savedHtmlStyle);
+      else document.documentElement.removeAttribute('style');
+      if (document.body) {
+        if (this._savedBodyStyle) document.body.setAttribute('style', this._savedBodyStyle);
+        else document.body.removeAttribute('style');
+      }
+      this._mmListeners = [];
+      try { window.dispatchEvent(new Event('resize')); } catch (_eR) {}
+    }
+
+    async runDualSweep(callback) {
+      const prevMode = this.mode;
+      const results = [];
+      try {
+        for (const vp of ['mobile', 'desktop']) {
+          this.apply(vp);
+          await AT.sleep(45);
+          results.push(await callback({ mode: vp, width: this.getWidth(), height: this.getHeight(), label: vp === 'mobile' ? 'Giả lập Mobile (375x812)' : 'Giả lập Desktop (1280x800)' }));
+        }
+      } finally {
+        this.apply(prevMode);
+      }
+      return results;
+    }
+  }
+
   AT.virtualClock = new VirtualClockEngine();
   AT.geoMock = new GeolocationMockController();
   AT.clipboard = new ClipboardInterceptor();
@@ -912,4 +1234,5 @@
   AT.fixtures = FixtureFactory;
   AT.interceptors = new TestInterceptors();
   AT.recorder = new ZeroCodeRecorder();
+  AT.viewportSim = new ViewportSimulator();
 })(typeof window !== 'undefined' ? window : globalThis);

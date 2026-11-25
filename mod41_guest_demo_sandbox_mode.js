@@ -1536,7 +1536,7 @@
           </span>
         </div>
         <div class="w-full lg:w-auto flex flex-wrap items-center gap-1.5 min-w-0 max-w-full">
-          <button type="button" id="btn-mod41-banner-jump-tab1" class="max-w-full whitespace-nowrap text-center px-2.5 py-1 rounded-lg bg-teal-600/85 hover:bg-teal-500 text-white font-extrabold text-[10.5px] transition">
+          <button type="button" id="btn-mod41-banner-jump-tab1" class="max-w-full whitespace-normal lg:whitespace-nowrap leading-snug text-center px-2.5 py-1 rounded-lg bg-teal-600/85 hover:bg-teal-500 text-white font-extrabold text-[10.5px] transition">
             ✍️ Vào Bàn Viết (Tab 1)
           </button>
           <button type="button" id="${ids.BANNER_QUICK_5MODES_BTN}" class="max-w-full whitespace-normal text-center px-2.5 py-1 rounded-lg bg-sky-600/80 hover:bg-sky-500 text-white font-extrabold text-[10.5px] transition">

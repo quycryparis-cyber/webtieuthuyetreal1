@@ -752,7 +752,7 @@
 
       if (window.pdfjsLib) {
         try {
-          const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer, disableCreateObjectURL: true }).promise;
           metadata.pageCount = pdf.numPages;
           const reconstructedPages = [];
 

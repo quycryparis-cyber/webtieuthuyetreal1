@@ -2709,8 +2709,8 @@
             { src: AUTHOR_ICON_EMBEDDED_DATA_URI, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
           ]
         };
-        const blobUrl = URL.createObjectURL(new Blob([JSON.stringify(fallbackManifest)], { type: 'application/manifest+json' }));
-        manifestLink.setAttribute('href', blobUrl);
+        const manifestUri = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(fallbackManifest));
+        manifestLink.setAttribute('href', manifestUri);
         updatedCount++;
       } catch (_mErr) {}
     }

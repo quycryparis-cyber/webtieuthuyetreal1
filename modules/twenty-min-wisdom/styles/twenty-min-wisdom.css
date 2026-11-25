@@ -10,6 +10,8 @@
   color: inherit;
   font-size: 14px;
   line-height: 1.6;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .wis20-card {
@@ -77,6 +79,10 @@
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+  overflow-wrap: anywhere;
   border: 1px solid rgba(113, 113, 122, 0.38);
   background: rgba(255, 255, 255, 0.90);
   color: #18181b;
@@ -130,6 +136,10 @@
   padding: 8px 14px;
   font-size: 13px;
   font-weight: 800;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+  overflow-wrap: anywhere;
   border: 1px solid rgba(113, 113, 122, 0.35);
   background: rgba(255, 255, 255, 0.75);
   color: #3f3f46;
@@ -192,7 +202,7 @@
 
 .wis20-news-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 265px), 1fr));
   gap: 12px;
 }
 
@@ -310,8 +320,19 @@
 
 .wis20-gallery-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
   gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .wis20-card {
+    padding: 12px;
+  }
+  .wis20-btn,
+  .wis20-subtab {
+    padding: 8px 11px;
+    font-size: 12px;
+  }
 }
 
 .wis20-md-body {

@@ -144,6 +144,8 @@
       this._active = true;
       this.stats = this._emptyStats();
       this.activeBlobs.clear();
+      this.blobOrigins = new Map();
+      this._pauseCls = false;
 
       this._frames = 0;
       this._lastSample = performance.now();
@@ -153,10 +155,13 @@
         this._frames += 1;
         const dt = now - this._lastSample;
         if (dt >= 250) {
-          const fps = Math.min(120, Math.round((this._frames * 1000) / dt));
-          this._fpsSamples.push(fps);
-          this.stats.minFps = Math.min(this.stats.minFps, fps);
-          this.stats.avgFps = Math.round(this._fpsSamples.reduce((a, b) => a + b, 0) / this._fpsSamples.length);
+          const occluded = Boolean(document.hidden || (typeof document.hasFocus === 'function' && !document.hasFocus()));
+          if (!occluded || dt < 450) {
+            const fps = Math.min(120, Math.round((this._frames * 1000) / dt));
+            this._fpsSamples.push(fps);
+            this.stats.minFps = Math.min(this.stats.minFps, fps);
+            this.stats.avgFps = Math.round(this._fpsSamples.reduce((a, b) => a + b, 0) / this._fpsSamples.length);
+          }
           this._frames = 0;
           this._lastSample = now;
         }
@@ -190,7 +195,7 @@
         ) {
           this._clsObs = new PerformanceObserver((list) => {
             for (const entry of list.getEntries()) {
-              if (!entry.hadRecentInput) {
+              if (!entry.hadRecentInput && !this._pauseCls) {
                 this.stats.cls = Number((this.stats.cls + (entry.value || 0)).toFixed(3));
               }
             }
@@ -207,16 +212,25 @@
           URL.createObjectURL = function trackedCreateObjectURL(obj) {
             const url = self._origCreateBlob.call(URL, obj);
             self.activeBlobs.add(url);
+            try {
+              const stackLines = String(new Error().stack || '').split('\n').slice(1, 5).map((s) => s.trim()).filter(Boolean).join(' <- ');
+              self.blobOrigins?.set(url, `${obj?.type || typeof obj} (${obj?.size || 0}B) @ ${stackLines.slice(0, 140)}`);
+            } catch (_eSt) {}
             self.stats.unrevokedBlobs = self.activeBlobs.size;
             return url;
           };
           URL.revokeObjectURL = function trackedRevokeObjectURL(url) {
             self.activeBlobs.delete(url);
+            self.blobOrigins?.delete(url);
             self.stats.unrevokedBlobs = self.activeBlobs.size;
             return self._origRevokeBlob.call(URL, url);
           };
         }
       } catch (_eBlob) {}
+    }
+
+    setPauseCls(v) {
+      this._pauseCls = Boolean(v);
     }
 
     resetFpsWindow() {
@@ -227,6 +241,7 @@
       this.stats.minFps = 60;
       this.stats.longTasks = 0;
       this.stats.maxLongTaskMs = 0;
+      this.stats.cls = 0;
     }
 
     snapshot() {
@@ -237,7 +252,9 @@
         }
       } catch (_eMem) {}
       this.stats.unrevokedBlobs = this.activeBlobs.size;
-      return { ...this.stats };
+      const origins = [];
+      this.blobOrigins?.forEach((v) => { if (origins.length < 6) origins.push(v); });
+      return { ...this.stats, blobOrigins: origins };
     }
 
     stop() {
@@ -422,29 +439,65 @@
 
     scanCurrentScreen(screenLabel = 'Màn hình hiện tại') {
       const findings = [];
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
+      const isSim = Boolean(AT.viewportSim?.isSimulated?.());
+      const vw = isSim ? AT.viewportSim.getWidth() : window.innerWidth;
+      const vh = isSim ? AT.viewportSim.getHeight() : window.innerHeight;
       const isMobile = vw < 768;
+      const tol = isMobile ? 2 : 4;
+      const rootMeasureEl = isSim && document.body ? document.body : document.documentElement;
+      const rootRect = rootMeasureEl.getBoundingClientRect();
 
-      // 1. Tràn ngang (Horizontal Overflow)
-      const docOverflow = document.documentElement.scrollWidth - vw;
-      if (docOverflow > 4) {
-        let offenderSel = 'body';
-        let maxRight = vw;
-        const nodes = document.querySelectorAll('section:not(.hidden) *, header *, main *');
-        for (let i = 0; i < Math.min(nodes.length, 400); i++) {
-          const n = nodes[i];
-          if (n.closest('[data-autotester-ui="true"]')) continue;
-          const r = n.getBoundingClientRect();
-          if (r.width > 0 && r.right > maxRight + 3) {
-            maxRight = r.right;
-            offenderSel = n.id ? `#${n.id}` : `${n.tagName.toLowerCase()}.${String(n.className || '').split(/\s+/)[0] || ''}`;
-          }
+      // 1. Tràn ngang cấp trang & từng nút/thẻ (Horizontal Overflow & Element Clipping)
+      const docOverflow = rootMeasureEl.scrollWidth - vw;
+      const overflowOffenders = [];
+      const nodes = document.querySelectorAll('body > *, section:not(.hidden) *, header *, main *, nav *, [role="dialog"]:not(.hidden) *, [id*="modal"]:not(.hidden) *');
+      let maxOverflowPx = Math.max(0, docOverflow);
+
+      const describeEl = (el) => {
+        if (!el) return 'body';
+        if (el.id) return `#${el.id}`;
+        const cls = String(el.className || '').trim().split(/\s+/).filter(Boolean)[0] || '';
+        return `${el.tagName.toLowerCase()}${cls ? '.' + cls : ''}`;
+      };
+
+      for (let i = 0; i < Math.min(nodes.length, 2200); i++) {
+        const n = nodes[i];
+        if (n.closest('[data-autotester-ui="true"]') || n.closest('.hidden') || n.id === 'ambient-backdrop-layer' || n.classList?.contains('sr-only')) continue;
+        const st = getComputedStyle(n);
+        if (st.display === 'none' || st.visibility === 'hidden' || st.opacity === '0') continue;
+        const r = n.getBoundingClientRect();
+        if (r.width <= 1 || r.height <= 1) continue;
+
+        // Cho phép bảng cuộn ngang có chủ đích (.overflow-x-auto / .ll51-table-wrap)
+        const inScrollWrap = n.closest('.overflow-x-auto, .ll51-table-wrap, [style*="overflow-x: auto"], [style*="overflow-x:auto"]');
+        if (inScrollWrap && n !== inScrollWrap) continue;
+
+        const relRight = r.right - rootRect.left;
+        const relLeft = r.left - rootRect.left;
+        const overRight = relRight - vw;
+        const overLeft = -relLeft;
+        if (overRight > tol || overLeft > tol) {
+          const px = Math.round(Math.max(overRight, overLeft));
+          if (px > maxOverflowPx) maxOverflowPx = px;
+          overflowOffenders.push(`${describeEl(n)} (+${px}px)`);
+        } else if (
+          (n.tagName === 'BUTTON' || n.tagName === 'A' || n.getAttribute('role') === 'button' || n.classList.contains('inv-pill')) &&
+          st.whiteSpace === 'nowrap' &&
+          n.scrollWidth > n.clientWidth + 6 &&
+          n.clientWidth > 0
+        ) {
+          overflowOffenders.push(`${describeEl(n)} (cắt chữ ${n.scrollWidth}/${n.clientWidth}px)`);
         }
+        if (overflowOffenders.length >= 6) break;
+      }
+
+      if (docOverflow > tol || overflowOffenders.length > 0) {
+        const uniq = Array.from(new Set(overflowOffenders));
+        const firstSel = uniq[0] ? uniq[0].split(' ')[0] : 'body';
         findings.push({
           code: 'ERR_MOBILE_OVERFLOW',
-          selector: offenderSel,
-          techDetail: `${screenLabel}: scrollWidth=${document.documentElement.scrollWidth}px > viewport=${vw}px (dư +${Math.round(docOverflow)}px tại ${offenderSel})`,
+          selector: firstSel,
+          techDetail: `${screenLabel} (${vw}x${vh}px): scrollWidth=${rootMeasureEl.scrollWidth}px (${docOverflow > 0 ? `+${Math.round(docOverflow)}px` : 'cắt phần tử'}) — Tràn/cắt tại: ${uniq.slice(0, 4).join(', ') || 'body'}`,
         });
       }
 
@@ -517,28 +570,33 @@
         });
       }
 
-      // 4. Nút quá nhỏ trên màn hình điện thoại
-      if (isMobile) {
+      // 4. Nút quá nhỏ theo chuẩn thiết bị (Mobile < 28x28px / 22px; Desktop < 18px)
+      {
         const tinyButtons = [];
-        const btns = document.querySelectorAll('section:not(.hidden) button:not(.hidden)');
-        for (let i = 0; i < Math.min(btns.length, 120); i++) {
+        const btns = document.querySelectorAll('section:not(.hidden) button, header button, nav button, [role="dialog"]:not(.hidden) button, [id*="modal"]:not(.hidden) button, [role="button"]');
+        for (let i = 0; i < Math.min(btns.length, 240); i++) {
           const b = btns[i];
           if (b.closest('[data-autotester-ui="true"]') || b.closest('.hidden')) continue;
+          const st = getComputedStyle(b);
+          if (st.display === 'none' || st.visibility === 'hidden') continue;
           const r = b.getBoundingClientRect();
           if (r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < vh) {
-            if (r.height < 28 && r.width < 28) {
+            const tooTiny = isMobile
+              ? (r.height < 28 && r.width < 28) || r.height < 22 || r.width < 22
+              : (r.width < 18 || r.height < 18);
+            if (tooTiny) {
               tinyButtons.push({
-                sel: b.id ? `#${b.id}` : (b.textContent || '').trim().slice(0, 20),
+                sel: b.id ? `#${b.id}` : (b.textContent || '').trim().slice(0, 22) || b.tagName.toLowerCase(),
                 size: `${Math.round(r.width)}x${Math.round(r.height)}px`,
               });
             }
           }
         }
-        if (tinyButtons.length >= 3) {
+        if (tinyButtons.length >= 1) {
           findings.push({
             code: 'WARN_SMALL_TOUCH_TARGET',
             selector: tinyButtons[0].sel,
-            techDetail: `Phát hiện ${tinyButtons.length} nút nhỏ dưới 28px trên màn hình ${vw}px (vd: ${tinyButtons.slice(0, 3).map((x) => `${x.sel} ${x.size}`).join(', ')})`,
+            techDetail: `${screenLabel} (${vw}px): Phát hiện ${tinyButtons.length} nút nhỏ dưới chuẩn (vd: ${tinyButtons.slice(0, 4).map((x) => `${x.sel} ${x.size}`).join(', ')})`,
           });
         }
       }

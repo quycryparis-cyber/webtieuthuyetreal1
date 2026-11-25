@@ -19,7 +19,9 @@
   const CDN_URLS = Object.freeze({
     pdfLib: 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
     pdfJs: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
-    pdfJsWorker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+    pdfJsWorker: (typeof global.location !== 'undefined' && /^https?:$/i.test(global.location.protocol))
+      ? './assets/pdf.worker.shim.js'
+      : 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
     jsZip: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
     mammoth: 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js',
     xlsx: 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
@@ -134,10 +136,31 @@
   async function ensurePdfJs() {
     if (!global.pdfjsLib) await loadScriptOnce(CDN_URLS.pdfJs);
     if (!global.pdfjsLib) throw new Error('Không thể khởi tạo bộ đọc PDF (PDF.js).');
-    if (global.pdfjsLib.GlobalWorkerOptions) {
-      global.pdfjsLib.GlobalWorkerOptions.workerSrc = CDN_URLS.pdfJsWorker;
+    try {
+      if (global.pdfjsLib.GlobalWorkerOptions) {
+        global.pdfjsLib.GlobalWorkerOptions.workerSrc = CDN_URLS.pdfJsWorker;
+      }
+    } catch (_eW) {}
+    const lib = global.pdfjsLib;
+    if (typeof Proxy === 'function' && typeof lib.getDocument === 'function') {
+      return new Proxy(lib, {
+        get(target, prop) {
+          if (prop === 'getDocument') {
+            return (src) => {
+              if (src && typeof src === 'object' && !(src instanceof Uint8Array) && !Array.isArray(src)) {
+                if (src.disableCreateObjectURL === undefined) {
+                  src = { ...src, disableCreateObjectURL: true };
+                }
+              }
+              return target.getDocument(src);
+            };
+          }
+          const val = Reflect.get(target, prop, target);
+          return val;
+        }
+      });
     }
-    return global.pdfjsLib;
+    return lib;
   }
 
   async function ensureJsZip() {
@@ -542,6 +565,19 @@
       }
     }
 
+    revokeResultUrls() {
+      const urlsToRevoke = new Set();
+      (this.resultItems || []).forEach((it) => { if (it?.url) urlsToRevoke.add(it.url); });
+      if (this.resultZipItem?.url) urlsToRevoke.add(this.resultZipItem.url);
+      urlsToRevoke.forEach((u) => {
+        try { URL.revokeObjectURL(u); } catch (_e) {}
+        const idx = this.objectUrls.indexOf(u);
+        if (idx >= 0) this.objectUrls.splice(idx, 1);
+      });
+      this.resultItems = [];
+      this.resultZipItem = null;
+    }
+
     resetWorkspaceState() {
       this.files = [];
       this.pagesState = [];
@@ -657,7 +693,7 @@
                 <img src="assets/app-icon-192.png" alt="Logo ĐăngLovePDF" class="w-9 h-9 rounded-xl object-cover border-2 border-rose-400/80 shadow-md shrink-0" />
                 <div class="min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
-                    <h2 class="text-sm sm:text-base font-black text-rose-300 tracking-tight">ĐăngLovePDF ( ͡° ͜ʖ ͡°)</h2>
+                    <h2 class="text-sm sm:text-base font-black text-rose-300 tracking-tight">ĐăngLovePDF <span class="whitespace-nowrap">( ͡° ͜ʖ ͡°)</span></h2>
                     <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/50 text-emerald-300 text-[10px] font-extrabold">🔒 49 Công cụ Premium · Xử lý 100% trên máy</span>
                     ${isStandalone ? '<span class="px-2 py-0.5 rounded-full bg-teal-500/15 border border-teal-400/50 text-teal-200 text-[10px] font-bold">🌐 Web Riêng · Tự động đồng bộ Web Gốc</span>' : ''}
                   </div>
@@ -734,6 +770,7 @@
       }
       modal.classList.remove('hidden');
       modal.style.display = 'flex';
+      try { NS.i18n?.translateElement?.(modal); } catch (_eTrModal) {}
 
       if (initialToolId) {
         const found = getActiveAllTools().find((t) => t.id === initialToolId);
@@ -833,7 +870,7 @@
         <div class="max-w-6xl mx-auto space-y-3.5">
           <!-- Thanh tìm kiếm & Nút rút gọn tổng -->
           <div class="flex flex-wrap items-center justify-between gap-2.5 p-3 rounded-2xl border border-zinc-800 bg-zinc-900/80">
-            <div class="flex-1 min-w-[220px] flex items-center gap-2">
+            <div class="flex-1 min-w-0 w-full sm:w-auto sm:min-w-[220px] flex items-center gap-2">
               <input id="input-mod46-search" type="text" value="${escHtml(searchQuery)}" placeholder="🔍 Tìm nhanh: gộp, tách, nén, word, ảnh, excel, ký tên, ocr..." class="w-full px-3.5 py-2 rounded-xl border border-zinc-700 bg-zinc-950 text-xs sm:text-sm text-zinc-100 focus:outline-none focus:border-rose-400" />
             </div>
             <button type="button" id="btn-mod46-toggle-all-groups" class="px-3.5 py-2 rounded-xl border border-amber-400/60 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 text-xs font-extrabold whitespace-nowrap cursor-pointer">
@@ -1146,6 +1183,7 @@
       `;
 
       this.bindWorkspaceInteractions(body);
+      try { NS.i18n?.translateElement?.(body); } catch (_eTrBody) {}
     }
 
     buildPreviewAreaHtml() {
@@ -2653,8 +2691,7 @@
       const tool = this.activeTool;
       if (!tool || (!this.files.length && !tool.noFileRequired)) return;
       this.cancelled = false;
-      this.resultItems = [];
-      this.resultZipItem = null;
+      this.revokeResultUrls();
 
       // Đọc toàn bộ tùy chọn từ DOM TRƯỚC khi chuyển sang màn hình Processing
       const wmLogoFile = document.getElementById('opt-wm-logo-file')?.files?.[0] || null;
@@ -3552,10 +3589,12 @@
         </div>
       `;
       document.body.appendChild(pv);
+      try { NS.i18n?.translateElement?.(pv); } catch (_eTrPv) {}
 
       let pdfDoc = null;
       const closePreview = () => {
         pv.querySelectorAll('canvas').forEach((c) => { c.width = 0; c.height = 0; });
+        pv.querySelectorAll('img').forEach((im) => { im.removeAttribute('src'); });
         try { pdfDoc?.destroy?.(); } catch (_e) {}
         pdfDoc = null;
         pv.remove();

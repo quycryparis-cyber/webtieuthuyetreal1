@@ -1368,7 +1368,7 @@ ${knowledgeDigest}
           <div class="p-4 overflow-y-auto flex-1 space-y-3">
             <!-- Thanh trạng thái đã copy -->
             <div id="inv-gconf-copy-banner" class="px-3 py-2 rounded-xl border border-amber-400/50 bg-amber-500/15 flex flex-wrap items-center justify-between gap-2 text-xs">
-              <div class="space-y-1 flex-1 min-w-[200px]">
+              <div class="space-y-1 flex-1 min-w-0 w-full sm:w-auto sm:min-w-[200px]">
                 <div class="font-extrabold text-amber-200">✅ ${tr('Đã tự động sao chép toàn bộ câu lệnh vào bộ nhớ tạm! Bạn có thể thêm mục tiêu/ghi chú rồi bấm mở Gemini hoặc xuất file .MD.')}</div>
                 <div class="text-[11px] text-amber-100/90">📱 ${tr('Trên Điện thoại (Mobile): Hãy CHẠM GIỮ ngón tay 1–2 giây vào khung nhập rồi bấm nút "Dán" hiện ra (KHÔNG dùng nút gợi ý nhanh của bàn phím vì dễ cắt thiếu dòng văn bản dài!).')}</div>
               </div>

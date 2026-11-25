@@ -212,7 +212,8 @@
 
       const tr = (s) => {
         const text = String(s || '');
-        return window.NoirNovel?.i18n?.translateText ? window.NoirNovel.i18n.translateText(text) : text;
+        const i18n = window.NoirStudio?.i18n || window.NoirNovel?.i18n;
+        return i18n?.translateText ? i18n.translateText(text) : text;
       };
       this.currentCustomMessage = customMessage || '';
 
@@ -293,7 +294,8 @@
 
       const tr = (s) => {
         const text = String(s || '');
-        return window.NoirNovel?.i18n?.translateText ? window.NoirNovel.i18n.translateText(text) : text;
+        const i18n = window.NoirStudio?.i18n || window.NoirNovel?.i18n;
+        return i18n?.translateText ? i18n.translateText(text) : text;
       };
       if (undoBtn) {
         undoBtn.disabled = !canUndo;

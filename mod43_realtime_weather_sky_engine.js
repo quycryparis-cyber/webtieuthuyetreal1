@@ -2341,21 +2341,34 @@
     start() {
       if (this.running) return;
       this.running = true;
-      const tick = () => {
+      this._lastDrawMs = 0;
+      const tick = (nowTs) => {
         if (!this.running) return;
+        const overlayCovering = Boolean(
+          typeof document !== 'undefined' &&
+          this.roleName !== 'mini' &&
+          document.querySelector('[role="dialog"]:not(.hidden), #at-shell-root:not(.at-hidden)')
+        );
         const canvasHidden = Boolean(
           (typeof document !== 'undefined' && document.hidden) ||
+          overlayCovering ||
           !this.canvas ||
           this.canvas.offsetParent === null
         );
-        // Khi tab ẩn hoặc khung canvas thời tiết đang tắt -> ngủ đông 850ms để giải phóng 100% GPU/CPU
+        // Khi tab ẩn hoặc khung canvas thời tiết đang bị hộp thoại che -> ngủ đông 850ms để giải phóng 100% GPU/CPU
         if (canvasHidden) {
           this._sleepTimer = setTimeout(() => {
             if (this.running) this.animFrameId = requestAnimationFrame(tick);
           }, 850);
           return;
         }
-        this.renderFrame();
+        const now = typeof nowTs === 'number' ? nowTs : performance.now();
+        // Mây trời trôi êm chỉ cần vẽ lại ~20FPS (trừ lúc có tia chớp) để tiết kiệm GPU/Compositor trên mobile & desktop
+        const minGap = this.flashAlpha > 0.05 ? 16 : 48;
+        if (now - (this._lastDrawMs || 0) >= minGap) {
+          this._lastDrawMs = now;
+          this.renderFrame();
+        }
         this.animFrameId = requestAnimationFrame(tick);
       };
       this.animFrameId = requestAnimationFrame(tick);

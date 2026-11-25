@@ -35,6 +35,7 @@
       this.enabledTestIds = new Set(AT.SUITE_GROUPS.flatMap((g) => g.tests.map((t) => t.id)));
       this.speedMode = 'fast'; // 'fast' | 'visual'
       this.chaosEnabled = true;
+      this.crossViewportAuto = true;
       this.recordings = [];
       this._spotlightTimer = null;
     }
@@ -208,6 +209,13 @@
             }
           </div>
 
+          <!-- Bộ Giả Lập Màn Hình Hai Chiều (Desktop <-> Mobile 375px / 1280px) -->
+          <div class="at-vp-bar">
+            <button type="button" class="at-vp-chip ${(!AT.viewportSim?.isSimulated?.() ? 'is-active' : '')}" data-at-sim-vp="real">🖥️ Thật (${AT.viewportSim?.getWidth?.() || window.innerWidth}px)</button>
+            <button type="button" class="at-vp-chip ${(AT.viewportSim?.mode === 'mobile' ? 'is-active' : '')}" data-at-sim-vp="mobile">📱 Giả Mobile (375px)</button>
+            <button type="button" class="at-vp-chip ${(AT.viewportSim?.mode === 'desktop' ? 'is-active' : '')}" data-at-sim-vp="desktop">💻 Giả Desktop (1280px)</button>
+          </div>
+
           <!-- Thanh tiến độ gọn -->
           ${
             isRunning || prog.text
@@ -248,6 +256,10 @@
           <label class="at-check-row">
             <input type="checkbox" id="at-chk-chaos" ${this.chaosEnabled ? 'checked' : ''} />
             <span>Bật chế độ Thử bấm phá &amp; nạp file hỏng</span>
+          </label>
+          <label class="at-check-row">
+            <input type="checkbox" id="at-chk-cross-vp" ${this.crossViewportAuto ? 'checked' : ''} />
+            <span>Tự giả lập quét chéo cả Mobile (375px) &amp; Desktop (1280px)</span>
           </label>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button type="button" id="at-btn-export-json" class="at-small-btn">⬇️ Tải báo cáo (.json)</button>
@@ -492,6 +504,21 @@ Chi tiết: ${escHtml(it.techDetail || '')}
       r.querySelector('#at-btn-run-all')?.addEventListener('click', () => this.ctrl.runAllSelected());
       r.querySelector('#at-btn-run-current')?.addEventListener('click', () => this.ctrl.runCurrentScreenOnly());
       r.querySelector('#at-btn-stop')?.addEventListener('click', () => this.ctrl.abortRun());
+
+      r.querySelectorAll('[data-at-sim-vp]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const mode = b.dataset.atSimVp || 'real';
+          const res = AT.viewportSim?.apply?.(mode);
+          if (res) {
+            const label = mode === 'mobile' ? '📱 Đang giả lập Mobile (375x812px)' : mode === 'desktop' ? '💻 Đang giả lập Desktop (1280x800px)' : '🖥️ Đã về kích thước màn hình thật';
+            this.ctrl.notify(label);
+          }
+          this.render();
+        });
+      });
+      r.querySelector('#at-chk-cross-vp')?.addEventListener('change', (e) => {
+        this.crossViewportAuto = Boolean(e.target.checked);
+      });
 
       r.querySelectorAll('[data-at-tab]').forEach((b) => {
         b.addEventListener('click', () => {

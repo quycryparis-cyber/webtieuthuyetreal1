@@ -764,7 +764,7 @@
         <!-- Thanh tìm kiếm mã gọn gàng -->
         <div class="inv-card space-y-3">
           <div class="flex flex-wrap gap-2">
-            <input type="text" id="inv-inp-stock-sym" value="${esc(uiState.stockInput || st?.symbol || '')}" placeholder="Nhập mã cổ phiếu cần xem (ví dụ: FPT, VNM, VCB, HPG...)" class="flex-1 min-w-[200px] px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-bold uppercase" />
+            <input type="text" id="inv-inp-stock-sym" value="${esc(uiState.stockInput || st?.symbol || '')}" placeholder="Nhập mã cổ phiếu cần xem (ví dụ: FPT, VNM, VCB, HPG...)" class="flex-1 min-w-0 w-full sm:w-auto sm:min-w-[200px] px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-bold uppercase" />
             <button type="button" id="inv-btn-lookup-stock" class="inv-primary-btn" ${uiState.stockLoading ? 'disabled' : ''}>
               ${uiState.stockLoading ? '⏳ Đang tra...' : '🔍 Tra cứu'}
             </button>
@@ -973,13 +973,13 @@
                 Ứng dụng chỉ dùng tọa độ ngay lúc bạn bấm để tìm tên đường/phường gần bạn và tra mặt bằng giá khu vực đó — không lưu hay theo dõi vị trí.
               </p>
             </div>
-            <button type="button" id="inv-btn-gps-re" class="inv-primary-btn shrink-0" ${uiState.reLoading ? 'disabled' : ''}>
+            <button type="button" id="inv-btn-gps-re" class="inv-primary-btn w-full sm:w-auto shrink-0" ${uiState.reLoading ? 'disabled' : ''}>
               ${uiState.reLoading ? '⏳ Đang định vị...' : '📍 Bật vị trí để xem giá nhà đất quanh tôi'}
             </button>
           </div>
 
           <div class="pt-2 border-t border-zinc-200/70 dark:border-zinc-800 flex flex-wrap gap-2">
-            <input type="text" id="inv-inp-manual-area" value="${esc(uiState.reManualInput || re?.areaLabel || '')}" placeholder="Hoặc tự gõ tên Đường / Phường / Quận bạn quan tâm (vd: Phường Mỹ An, Ngũ Hành Sơn, Đà Nẵng)" class="flex-1 min-w-[220px] px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs" />
+            <input type="text" id="inv-inp-manual-area" value="${esc(uiState.reManualInput || re?.areaLabel || '')}" placeholder="Hoặc tự gõ tên Đường / Phường / Quận bạn quan tâm (vd: Phường Mỹ An, Ngũ Hành Sơn, Đà Nẵng)" class="flex-1 min-w-0 w-full sm:w-auto sm:min-w-[220px] px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs" />
             <button type="button" id="inv-btn-manual-area" class="inv-secondary-btn text-xs font-extrabold">Tra cứu khu vực này</button>
           </div>
         </div>

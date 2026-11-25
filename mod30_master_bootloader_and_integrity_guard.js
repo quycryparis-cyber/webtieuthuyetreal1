@@ -4356,7 +4356,9 @@
     setLanguage(code, options = {}) {
       const targetCode = code === 'vi' || this.getPack(code) ? code : 'vi';
       this.currentLang = targetCode;
-      this.saveStoredLang(targetCode);
+      if (options.persist !== false) {
+        this.saveStoredLang(targetCode);
+      }
       this.emitLanguageChanged(targetCode);
       this.refreshDom(document.body);
       if (!options.keepPopoverOpen) {

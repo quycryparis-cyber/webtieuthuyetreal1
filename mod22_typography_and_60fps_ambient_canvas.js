@@ -823,7 +823,11 @@
           (this.particles && this.particles.length > 0) ||
           (this.meteors && this.meteors.length > 0)
         );
-        if (document.hidden || !hasParticles || (this.canvas && this.canvas.offsetParent === null)) {
+        const overlayCovering = Boolean(
+          typeof document !== 'undefined' &&
+          document.querySelector('[role="dialog"]:not(.hidden), #at-shell-root:not(.at-hidden)')
+        );
+        if (document.hidden || !hasParticles || overlayCovering || (this.canvas && this.canvas.offsetParent === null)) {
           this._idleSleepTimer = setTimeout(() => {
             if (this.isRunning) this.rafId = requestAnimationFrame(loop);
           }, 800);

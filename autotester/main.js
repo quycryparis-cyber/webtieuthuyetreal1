@@ -205,6 +205,8 @@
 
     async runCurrentScreenOnly() {
       const perfSuite = AT.SUITE_GROUPS.find((g) => g.id === 'visual_smooth_i18n')?.tests.find((t) => t.id === 'perf_fps_and_memory');
+      const simW = AT.viewportSim?.getWidth?.() || window.innerWidth;
+      const simH = AT.viewportSim?.getHeight?.() || window.innerHeight;
       const quickTests = [
         {
           id: 'current_screen_visual',
@@ -221,7 +223,7 @@
                 severity: 'OK',
                 pillar: 'visual',
                 plainTitle: 'Màn hình đang mở hiển thị gọn đẹp, không bị cắt hay tràn mép',
-                plainDesc: `Đã kiểm tra sạch trên khung hình ${window.innerWidth}x${window.innerHeight}px. ${cap.summaryText}`,
+                plainDesc: `Đã kiểm tra sạch trên khung hình ${simW}x${simH}px${AT.viewportSim?.isSimulated?.() ? ` (Giả lập ${AT.viewportSim.mode})` : ''}. ${cap.summaryText}`,
               };
             }
             const first = findings[0];

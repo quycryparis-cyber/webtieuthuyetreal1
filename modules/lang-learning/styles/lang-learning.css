@@ -66,6 +66,10 @@
   padding: 8px 14px;
   font-size: 13px;
   font-weight: 800;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+  overflow-wrap: anywhere;
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: rgba(30, 41, 59, 0.92);
   color: #f8fafc;
@@ -103,6 +107,10 @@
   padding: 8px 14px;
   font-size: 13px;
   font-weight: 800;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+  overflow-wrap: anywhere;
   border: 1px solid rgba(148, 163, 184, 0.3);
   background: rgba(30, 41, 59, 0.8);
   color: #cbd5e1;
@@ -123,6 +131,10 @@
   padding: 6px 12px;
   font-size: 12.5px;
   font-weight: 800;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+  overflow-wrap: anywhere;
   border: 1.5px solid rgba(148, 163, 184, 0.35);
   background: rgba(30, 41, 59, 0.75);
   color: #cbd5e1;
@@ -136,9 +148,32 @@
 }
 
 .ll51-table-wrap {
+  max-width: 100%;
   overflow-x: auto;
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+@media (max-width: 640px) {
+  #modal-mod51-lang-studio {
+    padding: 4px;
+  }
+  .ll51-shell {
+    height: 98dvh;
+    border-radius: 14px;
+  }
+  .ll51-header,
+  .ll51-body {
+    padding: 10px 12px;
+  }
+  .ll51-card {
+    padding: 12px;
+  }
+  .ll51-btn,
+  .ll51-tab {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
 }
 
 .ll51-table {

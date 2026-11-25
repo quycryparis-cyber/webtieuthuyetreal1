@@ -95,7 +95,7 @@
     ctx.fillStyle = '#64748b';
     ctx.font = '600 20px "Segoe UI", Arial, sans-serif';
     ctx.textBaseline = 'top';
-    ctx.fillText(`Sổ Tay Tiểu Thuyết Của Bi — 20 Phút Thông Thái Mỗi Ngày (${dateStr})`, 72, 1694);
+    ctx.fillText(`Sổ Tay Tiểu Thuyết Của Bi — 30 Phút Thông Thái Mỗi Ngày (${dateStr})`, 72, 1694);
     const pgTxt = `Trang ${pageNo} / ${totalPages}`;
     const tw = ctx.measureText(pgTxt).width;
     ctx.fillText(pgTxt, 1168 - tw, 1694);
@@ -154,7 +154,7 @@
     // Tiêu đề chính khổ lớn
     ctx.fillStyle = '#ffffff';
     ctx.font = '900 84px "Segoe UI", Arial, sans-serif';
-    ctx.fillText('20 PHÚT', 84, 290);
+    ctx.fillText('30 PHÚT', 84, 290);
     ctx.fillStyle = '#34d399';
     ctx.fillText('THÔNG THÁI', 84, 392);
     ctx.fillStyle = '#e2e8f0';
@@ -262,14 +262,15 @@
 
     ctx.fillStyle = '#0f172a';
     ctx.font = '900 24px "Segoe UI", Arial, sans-serif';
-    ctx.fillText('1. Lộ trình 20 Phút Đọc Thông Thái', 100, 174);
+    ctx.fillText('1. Lộ trình 30 Phút Đọc Thông Thái', 100, 174);
 
     const palette = ['#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4', '#a855f7', '#ec4899'];
-    const plan = (Array.isArray(syncData?.reading_plan_20m) && syncData.reading_plan_20m.length
-      ? syncData.reading_plan_20m
+    const rawPlan = syncData?.reading_plan_30m || syncData?.reading_plan_20m;
+    const plan = (Array.isArray(rawPlan) && rawPlan.length
+      ? rawPlan
       : W20.CATEGORIES.map((c) => ({ label: c.title.replace(/^\d+\.\s*/, ''), minutes: c.minutes, color: c.color }))
     ).slice(0, 8);
-    const totalMin = plan.reduce((s, x) => s + Math.max(1, Number(x.minutes) || 2), 0) || 20;
+    const totalMin = plan.reduce((s, x) => s + Math.max(1, Number(x.minutes) || 2), 0) || 30;
 
     const cx = 232;
     const cy = 408;
@@ -479,7 +480,7 @@
       ctx.textBaseline = 'top';
     };
 
-    paintHeader(cur.ctx, geminiParsed ? 'BẢN TIN 20 PHÚT (GEMINI) & 8 TRỤ CỘT TRI THỨC' : 'BÁO CÁO 8 TRỤ CỘT THÔNG TIN THÔ KHOA HỌC HÔM NAY');
+    paintHeader(cur.ctx, geminiParsed ? 'BẢN TIN 30 PHÚT (GEMINI) & 8 TRỤ CỘT TRI THỨC' : 'BÁO CÁO 8 TRỤ CỘT THÔNG TIN THÔ KHOA HỌC HÔM NAY');
 
     const ensureSpace = (neededH, headerTitle) => {
       if (y + neededH > maxY) {
@@ -547,7 +548,7 @@
             y += 46;
           };
 
-          ensureSpace(100, 'BẢN TIN 20 PHÚT THÔNG THÁI (BẢNG TỔNG HỢP)');
+          ensureSpace(100, 'BẢN TIN 30 PHÚT THÔNG THÁI (BẢNG TỔNG HỢP)');
           drawTableHead();
           rows.forEach((row, rIdx) => {
             const rUrl = rowUrls[rIdx] || '';
@@ -557,7 +558,7 @@
             if (y + rowH > maxY) {
               pages.push(cur.canvas);
               cur = createA4Canvas();
-              paintHeader(cur.ctx, 'BẢN TIN 20 PHÚT THÔNG THÁI (TIẾP THEO)');
+              paintHeader(cur.ctx, 'BẢN TIN 30 PHÚT THÔNG THÁI (TIẾP THEO)');
               y = minY;
               drawTableHead();
             }
@@ -616,7 +617,7 @@
           const cleanTitle = (hMatch ? hMatch[2] : cleanRawForClassify).replace(/\*\*/g, '').replace(/`/g, '').trim();
           const startHeadingY = y;
           if (effectiveHeadingKind === 'h1') {
-            ensureSpace(74, 'BẢN TIN 20 PHÚT THÔNG THÁI (TIẾP THEO)');
+            ensureSpace(74, 'BẢN TIN 30 PHÚT THÔNG THÁI (TIẾP THEO)');
             y += 8;
             const g = cur.ctx.createLinearGradient(72, y, 72 + maxW, y);
             g.addColorStop(0, '#0b2239');
@@ -636,7 +637,7 @@
             }
             y += 68;
           } else {
-            ensureSpace(50, 'BẢN TIN 20 PHÚT THÔNG THÁI (TIẾP THEO)');
+            ensureSpace(50, 'BẢN TIN 30 PHÚT THÔNG THÁI (TIẾP THEO)');
             y += 6;
             cur.ctx.fillStyle = '#0d9488';
             cur.ctx.fillRect(72, y + 2, 6, 30);
@@ -663,7 +664,7 @@
         const indentX = isBullet ? 90 : 72;
         const wrapped = wrapCanvasText(cur.ctx, clean, maxW - (indentX - 72));
         const blockH = wrapped.length * 30 + (exLine.url ? 22 : 0);
-        ensureSpace(blockH + 10, 'BẢN TIN 20 PHÚT THÔNG THÁI (TIẾP THEO)');
+        ensureSpace(blockH + 10, 'BẢN TIN 30 PHÚT THÔNG THÁI (TIẾP THEO)');
         const startParaY = y;
         cur.ctx.fillStyle = exLine.url ? '#0369a1' : ((sharedCls?.kind === 'toc_item' || isTocDots) ? '#0f2942' : '#1e293b');
         cur.ctx.font = (sharedCls?.kind === 'toc_item' || isTocDots) ? '700 20px "Segoe UI", Arial, sans-serif' : '500 20px "Segoe UI", Arial, sans-serif';
@@ -893,7 +894,7 @@
   async function saveWisdomCanvasesToPdf(allCanvases, fileDate) {
     const PDFLib = await ensurePdfLib();
     const pdfDoc = await PDFLib.PDFDocument.create();
-    pdfDoc.setTitle(`20 Phút Thông Thái Mỗi Ngày - ${fileDate}`);
+    pdfDoc.setTitle(`30 Phút Thông Thái Mỗi Ngày - ${fileDate}`);
     pdfDoc.setAuthor('Sổ Tay Tiểu Thuyết Của Bi - NoirStudio');
 
     for (const c of allCanvases) {
@@ -944,7 +945,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `20_Phut_Thong_Thai_${fileDate}.pdf`;
+    a.download = `30_Phut_Thong_Thai_${fileDate}.pdf`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -953,7 +954,7 @@
   }
 
   async function exportWisdomReportPdf(scanResult, geminiParsed, readerOpts = {}) {
-    if (!scanResult) throw new Error('Chưa có dữ liệu 20 phút thông thái để xuất PDF.');
+    if (!scanResult) throw new Error('Chưa có dữ liệu 30 phút thông thái để xuất PDF.');
     const syncData = geminiParsed?.syncData || W20.buildDefaultChartDataFromRaw(scanResult);
     const now = new Date();
     const todayFullStr = now.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });

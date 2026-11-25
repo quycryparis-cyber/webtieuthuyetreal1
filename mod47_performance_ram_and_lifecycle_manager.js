@@ -1087,7 +1087,7 @@
                 </div>
 
                 ${visibleFiles.length ? `
-                  <div class="max-h-72 overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-950/90">
+                  <div class="max-h-72 max-w-full overflow-x-auto overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-950/90">
                     <table class="w-full text-left text-xs border-collapse">
                       <thead class="sticky top-0 bg-zinc-900 text-zinc-300">
                         <tr>
@@ -1289,7 +1289,7 @@
           this.refreshPanelUI();
         });
       });
-      NS.i18n?.translateElement?.(body);
+      NS.i18n?.translateElement?.(body.closest('[role="dialog"]') || document.getElementById('modal-mod47-performance') || body);
     }
 
     init() {

@@ -1,7 +1,8 @@
 /**
  * ============================================================================
- * 🧠 20 PHÚT THÔNG THÁI MỖI NGÀY — AUTHORITATIVE OFFICIAL & PRESS ENGINE (v132.0)
+ * 🧠 30 PHÚT THÔNG THÁI MỖI NGÀY — AUTHORITATIVE OFFICIAL & PRESS ENGINE (v142.0)
  * ============================================================================
+ * - Nâng cấp 30 Phút Thông Thái (+10 phút chuyên sâu riêng Trụ cột 4 Khu vực & Quốc gia = 13p/30p).
  * NGUYÊN TẮC NGUỒN TIN TUYỆT ĐỐI:
  * - TUYỆT ĐỐI KHÔNG dùng Wikipedia, blog cá nhân, diễn đàn hay mạng xã hội!
  * - 100% dữ liệu sống & checklist tra cứu chỉ trỏ thẳng tới:
@@ -28,16 +29,19 @@
     VN: {
       code: 'VN', name: 'Việt Nam', flag: '🇻🇳', currency: 'VND', wbIso2: 'VN', defaultCity: 'Hà Nội / TP.HCM',
       rssFeeds: [
-        { name: 'VnExpress (Báo chính thống)', url: 'https://vnexpress.net/rss/tin-moi-nhat.rss', cat: 'local_region' },
-        { name: 'Tuổi Trẻ (Báo chính thống)', url: 'https://tuoitre.vn/rss/tin-moi-nhat.rss', cat: 'local_region' },
+        { name: 'VnExpress Thời sự (Báo chính thống)', url: 'https://vnexpress.net/rss/tin-moi-nhat.rss', cat: 'local_region' },
+        { name: 'VnExpress Kinh doanh (Khu vực & Doanh nghiệp)', url: 'https://vnexpress.net/rss/kinh-doanh.rss', cat: 'local_region' },
+        { name: 'Tuổi Trẻ Online (Báo chính thống)', url: 'https://tuoitre.vn/rss/tin-moi-nhat.rss', cat: 'local_region' },
+        { name: 'Thanh Niên Thời sự (Báo chính thống)', url: 'https://thanhnien.vn/rss/thoi-su.rss', cat: 'local_region' },
         { name: 'VnExpress Pháp luật', url: 'https://vnexpress.net/rss/phap-luat.rss', cat: 'law_society' },
         { name: 'VnExpress Sức khỏe', url: 'https://vnexpress.net/rss/suc-khoe.rss', cat: 'health_science' },
       ],
       newsLinks: [
-        { label: 'Báo Điện tử Chính phủ (Chính thức)', url: 'https://baochinhphu.vn/', tier: 'Cơ quan Nhà nước' },
-        { label: 'VnExpress — Thời sự 24h mới nhất', url: 'https://vnexpress.net/tin-tuc-24h', tier: 'Báo chính thống' },
-        { label: 'Tuổi Trẻ Online — Tin nóng hôm nay', url: 'https://tuoitre.vn/tin-moi-nhat.htm', tier: 'Báo chính thống' },
-        { label: 'Thanh Niên — Kinh tế & Xã hội', url: 'https://thanhnien.vn/tin-24h.htm', tier: 'Báo chính thống' },
+        { label: 'Báo Điện tử Chính phủ (Chính thức & Địa phương)', url: 'https://baochinhphu.vn/', tier: 'Cơ quan Nhà nước' },
+        { label: 'VnExpress — Thời sự & Đời sống 24h', url: 'https://vnexpress.net/tin-tuc-24h', tier: 'Báo chính thống' },
+        { label: 'Tuổi Trẻ Online — Kinh tế, Hạ tầng & Xã hội', url: 'https://tuoitre.vn/tin-moi-nhat.htm', tier: 'Báo chính thống' },
+        { label: 'Thanh Niên — Việc làm, Giáo dục & Đô thị', url: 'https://thanhnien.vn/tin-24h.htm', tier: 'Báo chính thống' },
+        { label: 'Tổng cục Thống kê Việt Nam (CPI, GDP, Thu nhập)', url: 'https://www.gso.gov.vn/', tier: 'Cơ quan Thống kê Quốc gia' },
         { label: 'Ngân hàng Nhà nước VN (Tỷ giá & Lãi suất)', url: 'https://www.sbv.gov.vn/', tier: 'Ngân hàng Trung ương' },
         { label: 'Thư Viện Pháp Luật (Nghị định & Luật mới)', url: 'https://thuvienphapluat.vn/', tier: 'Cổng Pháp luật' },
         { label: 'Báo Sức Khỏe & Đời Sống (Bộ Y tế)', url: 'https://suckhoedoisong.vn/', tier: 'Cơ quan Bộ Y tế' },
@@ -129,7 +133,7 @@
     { id: 'world_geo', icon: '🌍', title: '1. Thế giới & Địa chính trị', minutes: 3, color: '#0ea5e9', desc: 'Checklist thời sự quốc tế từ Reuters, AP News, BBC World, Financial Times & Liên Hợp Quốc (UN).' },
     { id: 'tech_science', icon: '🚀', title: '2. Công nghệ, AI & Khoa học', minutes: 3, color: '#8b5cf6', desc: 'Công bố khoa học bình duyệt Crossref/Nature/IEEE & tin công nghệ từ MIT Tech Review, Reuters Tech, BBC.' },
     { id: 'economy_markets', icon: '💰', title: '3. Kinh tế, Tài chính & Vĩ mô', minutes: 3, color: '#f59e0b', desc: 'Số liệu trực tiếp Bộ Tài chính Mỹ, Ngân hàng Thế giới, Tỷ giá, Vàng LBMA & Bloomberg/FT/IMF.' },
-    { id: 'local_region', icon: '📍', title: '4. Khu vực & Quốc gia của bạn', minutes: 3, color: '#10b981', desc: 'Chỉ số World Bank (GDP, Thất nghiệp) & cổng báo chí chính thống + cơ quan Nhà nước theo vị trí.' },
+    { id: 'local_region', icon: '📍', title: '4. Khu vực & Quốc gia của bạn (Chuyên sâu 13p)', minutes: 13, color: '#10b981', desc: '+10 phút tăng thêm riêng cho Trụ cột 4 (13p/30p): Quy hoạch & Hạ tầng địa phương, Việc làm/FDI, Giá cả Sinh hoạt, Thời tiết & AQI theo vị trí GPS, World Bank GDP/CPI & Báo chí chính thống sở tại.' },
     { id: 'health_science', icon: '🩺', title: '5. Sức khỏe & Y học Thực chứng', minutes: 2, color: '#ef4444', desc: 'Công trình y khoa mới nhất từ Viện Y tế Quốc gia Hoa Kỳ (PubMed/NIH), WHO & Bộ Y tế.' },
     { id: 'law_society', icon: '⚖️', title: '6. Pháp luật, Chính sách & Xã hội', minutes: 2, color: '#06b6d4', desc: 'Chính sách công, luật mới, khí hậu (UNFCCC) & pháp lý từ Cổng Pháp luật, Reuters Legal, UNESCO.' },
     { id: 'mind_skills', icon: '🧠', title: '7. Tâm lý, Quản trị & Tư duy Sâu', minutes: 2, color: '#a855f7', desc: 'Khung ra quyết định thực chứng từ Harvard Business Review (HBR), MIT Sloan & Hiệp hội Tâm lý Mỹ (APA).' },
@@ -137,7 +141,7 @@
   ]);
 
   const FOCUS_MODES = Object.freeze([
-    { id: 'balanced_20m', label: '🧠 Toàn diện 8 Trụ cột (Chỉ báo chính thống & cơ quan chính thức)', desc: 'Tổng hợp cân bằng 8 mảng từ Reuters, AP, BBC, VnExpress, WHO, IMF, PubMed, Nature.' },
+    { id: 'balanced_30m', label: '🧠 Toàn diện 30 Phút · 8 Trụ cột (Tăng 10p riêng Trụ cột 4 Khu vực)', desc: 'Tổng hợp cân bằng 8 mảng trong 30 phút — dành trọn 13 phút chuyên sâu cho Khu vực & Quốc gia của bạn (Reuters, AP, BBC, VnExpress, Tuổi Trẻ, World Bank, Open-Meteo, PubMed).' },
     { id: 'tech_ai', label: '🚀 Trọng tâm Công nghệ, AI & Khoa học (MIT / Nature / Reuters)', desc: 'Đào sâu đột phá AI, bán dẫn, khoa học ứng dụng & tác động nghề nghiệp.' },
     { id: 'geo_econ', label: '🌍 Trọng tâm Địa chính trị, Kinh tế & Pháp lý (FT / Bloomberg / IMF)', desc: 'Giải mã chuỗi nhân quả giữa chính sách, thương mại, lãi suất & túi tiền.' },
     { id: 'health_mind', label: '🩺 Trọng tâm Y học, Sức khỏe & Quản trị Tư duy (NIH / WHO / HBR)', desc: 'Cập nhật nghiên cứu y khoa bình duyệt, sức khỏe bền vững & tư duy ra quyết định.' },
@@ -711,13 +715,26 @@
       report('🔬 Đã quét Công bố Khoa học & AI Chính thức (Crossref DOI)', `${categoriesData.tech_science.length} mục`);
     })();
 
-    // 5) ĐỌC TRỰC TIẾP BÀI BÁO THẬT HÔM NAY TỪ BÁO CHÍ CHÍNH THỐNG (BBC World/Tech/Business + VnExpress/Tuổi Trẻ + WHO + NASA + HBR qua RSS/Read Mode!)
+    // 5) ĐỌC TRỰC TIẾP BÀI BÁO THẬT HÔM NAY TỪ BÁO CHÍ CHÍNH THỐNG & MỞ RỘNG TRỤ CỘT 4 KHU VỰC (13 PHÚT / 30 PHÚT)
     const pLivePress = (async () => {
       const feedJobs = [
         { cat: 'world_geo', name: 'BBC News World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml', preferJina: false, max: 4 },
         { cat: 'tech_science', name: 'BBC Technology', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml', preferJina: false, max: 3 },
         { cat: 'economy_markets', name: 'BBC Business', url: 'https://feeds.bbci.co.uk/news/business/rss.xml', preferJina: false, max: 3 },
-        { cat: 'local_region', name: profile.code === 'VN' ? 'VnExpress Thời sự' : 'AP News', url: profile.code === 'VN' ? 'https://vnexpress.net/rss/tin-moi-nhat.rss' : 'https://apnews.com/world-news', preferJina: profile.code !== 'VN', max: 4 },
+        { cat: 'local_region', name: profile.code === 'VN' ? 'VnExpress Thời sự' : 'AP News', url: profile.code === 'VN' ? 'https://vnexpress.net/rss/tin-moi-nhat.rss' : 'https://apnews.com/world-news', preferJina: profile.code !== 'VN', max: 6 },
+        ...(profile.code === 'VN'
+          ? [
+              { cat: 'local_region', name: 'VnExpress Kinh doanh', url: 'https://vnexpress.net/rss/kinh-doanh.rss', preferJina: false, max: 5 },
+              { cat: 'local_region', name: 'Tuổi Trẻ Online', url: 'https://tuoitre.vn/rss/tin-moi-nhat.rss', preferJina: false, max: 5 },
+              { cat: 'local_region', name: 'Thanh Niên Thời sự', url: 'https://thanhnien.vn/rss/thoi-su.rss', preferJina: false, max: 4 },
+            ]
+          : (profile.rssFeeds || []).slice(0, 2).map((rf) => ({
+              cat: 'local_region',
+              name: rf.name,
+              url: rf.url,
+              preferJina: false,
+              max: 4,
+            }))),
         { cat: 'law_society', name: profile.code === 'VN' ? 'VnExpress Pháp luật' : 'UN News', url: profile.code === 'VN' ? 'https://vnexpress.net/phap-luat' : 'https://news.un.org/en/', preferJina: true, max: 3 },
         { cat: 'health_science', name: profile.code === 'VN' ? 'VnExpress Sức khỏe' : 'WHO News', url: profile.code === 'VN' ? 'https://vnexpress.net/suc-khoe' : 'https://www.who.int/news', preferJina: true, max: 3 },
         { cat: 'mind_skills', name: 'Harvard Business Review', url: 'https://hbr.org/the-latest', preferJina: true, max: 3 },
@@ -725,6 +742,12 @@
       ];
 
       let liveArticlesCount = 0;
+      const locTokens = String(loc.fullAddress || loc.cityLabel || profile.defaultCity || '')
+        .toLowerCase()
+        .split(/[,/\-]+/)
+        .map((x) => x.trim())
+        .filter((x) => x.length >= 3);
+
       await Promise.allSettled(
         feedJobs.map(async (job) => {
           const articles = await fetchLiveOfficialPress(job.url, job.name, {
@@ -734,13 +757,18 @@
           });
           for (const art of articles) {
             liveArticlesCount += 1;
-            categoriesData[job.cat].unshift(await makeProvenanceItem({
+            const hay = `${art.title || ''} ${art.summary || ''}`.toLowerCase();
+            const isLocalHit = job.cat === 'local_region' && locTokens.some((tok) => hay.includes(tok));
+            const enriched = await makeProvenanceItem({
               id: `live-press-${job.cat}-${liveArticlesCount}`,
               category: job.cat,
               ...art,
               isLiveArticle: true,
-              readMinutes: 2,
-            }));
+              localPriority: isLocalHit ? 1 : 0,
+              readMinutes: job.cat === 'local_region' ? 3 : 2,
+            });
+            if (isLocalHit) categoriesData[job.cat].unshift(enriched);
+            else categoriesData[job.cat].push(enriched);
             if (art.imageUrl && visualGallery.length < 8) {
               visualGallery.push({
                 title: art.title.slice(0, 75),
@@ -753,12 +781,105 @@
           }
         })
       );
-      report('📰 Đã trích xuất bài báo thật hôm nay (Báo chính thống & Read Mode)', `${liveArticlesCount} bài báo sống`);
+      if (categoriesData.local_region.length > 1) {
+        categoriesData.local_region.sort((a, b) => (b.localPriority || 0) - (a.localPriority || 0));
+      }
+      report(`📰 Đã trích xuất bài báo thật & tin khu vực Trụ cột 4 (${loc.cityLabel || profile.name})`, `${liveArticlesCount} bài báo sống`);
     })();
 
-    // 6) Bổ sung Cổng tra cứu chính chủ ở cuối mỗi trụ cột (chỉ làm phụ lục nếu trụ cột nào ít bài)
+    // 5b) DỮ LIỆU KHÍ HẬU & KHÔNG KHÍ THỜI GIAN THỰC CHO TRỤ CỘT 4 (Open-Meteo Official API — 0% Wikipedia/Blog)
+    const pLocalTelemetry = (async () => {
+      const lat = Number(loc.lat) || (profile.code === 'VN' ? 21.0285 : 37.7749);
+      const lon = Number(loc.lon) || (profile.code === 'VN' ? 105.8542 : -122.4194);
+      try {
+        const [wx, aq] = await Promise.allSettled([
+          fetchJsonSafe(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation&timezone=auto`, signal, 4500),
+          fetchJsonSafe(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10`, signal, 4500),
+        ]);
+        const curW = wx.status === 'fulfilled' ? wx.value?.current : null;
+        const curAq = aq.status === 'fulfilled' ? aq.value?.current : null;
+        if (curW || curAq) {
+          const tempStr = curW?.temperature_2m !== undefined ? `${curW.temperature_2m}°C` : 'N/A';
+          const humStr = curW?.relative_humidity_2m !== undefined ? `${curW.relative_humidity_2m}%` : 'N/A';
+          const windStr = curW?.wind_speed_10m !== undefined ? `${curW.wind_speed_10m} km/h` : 'N/A';
+          const aqiVal = curAq?.us_aqi !== undefined ? curAq.us_aqi : 'N/A';
+          const pm25Val = curAq?.pm2_5 !== undefined ? curAq.pm2_5 : 'N/A';
+          liveMetrics.localWeatherDesc = `${tempStr} · Ẩm ${humStr} · Gió ${windStr}`;
+          liveMetrics.localAqi = aqiVal;
+          categoriesData.local_region.unshift(await makeProvenanceItem({
+            id: 'loc-openmeteo-wx-aqi',
+            category: 'local_region',
+            title: `🌤️ Thời tiết & Chất lượng Không khí (${loc.cityLabel || profile.name}): ${tempStr} · AQI ${aqiVal} · PM2.5 ${pm25Val}`,
+            summary: `Độ ẩm ${humStr}, gió ${windStr}. Dữ liệu quan trắc khí tượng & môi trường trực tiếp tại tọa độ (${lat.toFixed(2)}, ${lon.toFixed(2)}) phục vụ Trụ cột 4 Khu vực hôm nay.`,
+            source: 'Open-Meteo Official Weather & Copernicus AQI',
+            url: 'https://open-meteo.com/',
+            imageUrl: '',
+            publishedAt: new Date().toISOString(),
+            isLiveArticle: true,
+            localPriority: 2,
+            readMinutes: 2,
+          }));
+        }
+      } catch (_eWx) {}
+    })();
+
+    // 6) Bổ sung Cổng tra cứu chính chủ + Bộ checklist 8 mảng chuyên sâu Trụ cột 4 (13 phút đọc sâu!)
     const pChecklist = (async () => {
-      for (const lnk of (profile.newsLinks || []).slice(0, 4)) {
+      const areaTitle = loc.fullAddress || loc.cityLabel || profile.name;
+      const searchEnc = encodeURIComponent(loc.cityLabel || loc.countryName || profile.name);
+      const deepLocalBriefs = [
+        {
+          id: 'loc-deep-infra',
+          title: `🏗️ Quy hoạch Đô thị, Hạ tầng & Dự án Trọng điểm tại ${areaTitle}`,
+          summary: `Theo dõi tiến độ cầu đường, metro, khu đô thị và giải ngân đầu tư công tác động trực tiếp đến hạ tầng & giá trị khu vực ${areaTitle}.`,
+          source: profile.code === 'VN' ? 'Báo Điện tử Chính phủ — Hạ tầng' : `${profile.name} Official Infrastructure`,
+          url: profile.code === 'VN' ? `https://baochinhphu.vn/tim-kiem.htm?keywords=${searchEnc}` : (profile.newsLinks?.[0]?.url || 'https://data.worldbank.org/'),
+        },
+        {
+          id: 'loc-deep-jobs',
+          title: `💼 Thị trường Việc làm, FDI, KCN & Thu nhập Khu vực (${areaTitle})`,
+          summary: `Tổng hợp làn sóng dịch chuyển vốn FDI, nhu cầu tuyển dụng kỹ thuật/dịch vụ, khu công nghiệp và cơ hội kinh doanh tại ${areaTitle}.`,
+          source: profile.code === 'VN' ? 'VnExpress Kinh doanh & Việc làm' : 'World Bank Labor & Economy',
+          url: profile.code === 'VN' ? 'https://vnexpress.net/kinh-doanh' : `https://data.worldbank.org/country/${profile.wbIso2}`,
+        },
+        {
+          id: 'loc-deep-cost',
+          title: `🛒 Chi phí Sinh hoạt, Giá Xăng dầu, Điện/Nước & Tiêu dùng Sở tại`,
+          summary: `Cập nhật rổ giá hàng hóa thiết yếu, giá điện, lương thực & mặt bằng chi tiêu hộ gia đình tại ${profile.name} (${areaTitle}).`,
+          source: profile.code === 'VN' ? 'Tổng cục Thống kê Việt Nam (GSO)' : 'IMF & World Bank CPI Monitor',
+          url: profile.code === 'VN' ? 'https://www.gso.gov.vn/' : `https://data.worldbank.org/country/${profile.wbIso2}`,
+        },
+        {
+          id: 'loc-deep-re',
+          title: `🏘️ Chính sách Đất đai, Thuế, Lãi suất & Thị trường Nhà ở Khu vực`,
+          summary: `Rà soát bảng giá đất địa phương, lãi suất cho vay mua nhà tại ngân hàng thương mại & quy định pháp lý sở hữu tại ${areaTitle}.`,
+          source: profile.code === 'VN' ? 'Ngân hàng Nhà nước & Thư Viện Pháp Luật' : 'IMF Housing & Monetary Portal',
+          url: profile.code === 'VN' ? 'https://www.sbv.gov.vn/' : 'https://www.imf.org/en/Data',
+        },
+        {
+          id: 'loc-deep-health-edu',
+          title: `🏥 Y tế Tuyến Địa phương, Giáo dục & Dịch vụ Công Trực tuyến`,
+          summary: `Khuyến cáo dịch bệnh theo mùa, tuyển sinh giáo dục & thủ tục hành chính công, thuế điện tử đang áp dụng tại ${areaTitle}.`,
+          source: profile.code === 'VN' ? 'Bộ Y tế (Sức Khỏe & Đời Sống) & Chính phủ' : 'WHO Regional Health Bulletins',
+          url: profile.code === 'VN' ? 'https://suckhoedoisong.vn/' : 'https://www.who.int/news',
+        },
+      ];
+      for (const dl of deepLocalBriefs) {
+        categoriesData.local_region.push(await makeProvenanceItem({
+          id: dl.id,
+          category: 'local_region',
+          title: dl.title,
+          summary: dl.summary,
+          source: dl.source,
+          url: dl.url,
+          imageUrl: '',
+          publishedAt: new Date().toISOString(),
+          isPortalLink: true,
+          localPriority: 1,
+          readMinutes: 2,
+        }));
+      }
+      for (const lnk of (profile.newsLinks || []).slice(0, 6)) {
         categoriesData.local_region.push(await makeProvenanceItem({
           id: `loc-press-${categoriesData.local_region.length}`,
           category: 'local_region',
@@ -789,10 +910,13 @@
           }));
         }
       }
+      if (categoriesData.local_region.length > 1) {
+        categoriesData.local_region.sort((a, b) => (b.localPriority || 0) - (a.localPriority || 0));
+      }
       report('✅ Hoàn tất 8 Trụ cột Tri thức Chính thống (0 Wiki / 0 Blog)', '100% báo chính thống');
     })();
 
-    await Promise.allSettled([pEcon, pWb, pPubMed, pCrossref, pLivePress, pChecklist]);
+    await Promise.allSettled([pEcon, pWb, pPubMed, pCrossref, pLivePress, pLocalTelemetry, pChecklist]);
 
     const totalItems = Object.values(categoriesData).reduce((sum, arr) => sum + arr.length, 0);
     return {
@@ -808,13 +932,14 @@
     };
   }
 
-  function buildGeminiWisdomPrompt(scanResult, { focusMode = 'balanced_20m', customTopic = '' } = {}) {
-    const modeObj = FOCUS_MODES.find((m) => m.id === focusMode) || FOCUS_MODES[0];
+  function buildGeminiWisdomPrompt(scanResult, { focusMode = 'balanced_30m', customTopic = '' } = {}) {
+    const normalizedMode = focusMode === 'balanced_20m' ? 'balanced_30m' : focusMode;
+    const modeObj = FOCUS_MODES.find((m) => m.id === normalizedMode) || FOCUS_MODES[0];
     const locStr = `${scanResult.location?.fullAddress || scanResult.profile?.name || 'Việt Nam'} (${scanResult.profile?.flag || '🌍'} ${scanResult.profile?.code || 'VN'})`;
     const m = scanResult.liveMetrics || {};
 
     const lines = [];
-    lines.push('Bạn là Tổng Biên Tập & Chuyên gia Phân tích Tri thức cho chuyên mục "🧠 20 PHÚT THÔNG THÁI MỖI NGÀY" (8 Trụ cột Tri thức Người Trưởng Thành).');
+    lines.push('Bạn là Tổng Biên Tập & Chuyên gia Phân tích Tri thức cho chuyên mục "🧠 30 PHÚT THÔNG THÁI MỖI NGÀY" (8 Trụ cột Tri thức Người Trưởng Thành — riêng Trụ cột 4 Khu vực & Quốc gia được cấp 13 phút chuyên sâu = 3p gốc + 10p tăng thêm!).');
     lines.push(`NGÀY HÔM NAY: ${scanResult.dateLabel}`);
     lines.push(`Vị trí người đọc: ${locStr}`);
     lines.push(`Chế độ trọng tâm: ${modeObj.label}`);
@@ -824,37 +949,39 @@
     lines.push('');
     lines.push('⚠️ QUY TẮC CỐT LÕI (BẮT BUỘC — VI PHẠM SẼ BỊ TỪ CHỐI):');
     lines.push('1. TUYỆT ĐỐI CẤM VIẾT CHUNG CHUNG kiểu "được cập nhật tại Reuters/VnExpress/WHO..." hay "hãy xem nguồn này nguồn kia"! MỌI TRỤ CỘT TỪ 1 ĐẾN 8 ĐỀU PHẢI NÊU SỰ KIỆN CỤ THỂ, CON SỐ THẬT, CHÍNH SÁCH/CÔNG TRÌNH THẬT ĐANG DIỄN RA HÔM NAY!');
-    lines.push('2. CHỈ trích dẫn BÁO CHÍ CHÍNH THỐNG HẠNG 1 & CƠ QUAN CHÍNH THỨC (Reuters, AP, BBC, FT, Bloomberg, VnExpress, Tuổi Trẻ, Báo Chính Phủ, WHO, IMF, World Bank, NIH/PubMed, Nature, Science, NASA, HBR). TUYỆT ĐỐI CẤM Wikipedia, blog cá nhân hay mạng xã hội!');
-    lines.push(`3. HÃY DÙNG CÔNG CỤ TÌM KIẾM WEB TRỰC TIẾP CỦA BẠN (Google Search) để bổ sung tin nóng MỚI NHẤT trong 24–72 giờ tính tới hôm nay (${scanResult.dateLabel}) cho bất kỳ trụ cột nào trong 8 mục cần thêm tin cụ thể tại ${locStr}.`);
+    lines.push('2. CHỈ trích dẫn BÁO CHÍ CHÍNH THỐNG HẠNG 1 & CƠ QUAN CHÍNH THỨC (Reuters, AP, BBC, FT, Bloomberg, VnExpress, Tuổi Trẻ, Thanh Niên, Báo Chính Phủ, Tổng cục Thống kê, Open-Meteo, WHO, IMF, World Bank, NIH/PubMed, Nature, Science, NASA, HBR). TUYỆT ĐỐI CẤM Wikipedia, blog cá nhân hay mạng xã hội!');
+    lines.push(`3. HÃY DÙNG CÔNG CỤ TÌM KIẾM WEB TRỰC TIẾP CỦA BẠN (Google Search) để đào sâu đặc biệt cho TRỤ CỘT 4 (13 PHÚT RIÊNG BIỆT) về tin nóng 24–72 giờ tại ${locStr} (kinh tế địa phương, quy hoạch/hạ tầng, việc làm, giá cả sinh hoạt, dịch vụ công, thời tiết/AQI), cùng với 7 trụ cột còn lại tính tới (${scanResult.dateLabel}).`);
     lines.push('');
     lines.push('=== BÀI BÁO THẬT & SỐ LIỆU CHÍNH THỨC ĐÃ TRÍCH XUẤT HÔM NAY (8 TRỤ CỘT) ===');
     lines.push(
-      `• Số liệu sống: USD/${m.localCurrency || 'VND'}=${m.usdToLocal || 'N/A'} | Vàng LBMA=${m.goldUsdOz ? '$' + m.goldUsdOz.toFixed(0) + '/oz' : 'N/A'} | BTC=${m.btcUsd ? '$' + m.btcUsd.toFixed(0) : 'N/A'} | Nợ công Mỹ (U.S. Treasury)=${m.usDebtTrillion ? '$' + m.usDebtTrillion + 'T' : 'N/A'} | GDP (World Bank)=${m.countryGdpPct ?? 'N/A'}% | CPI=${m.countryCpiPct ?? 'N/A'}%`
+      `• Số liệu sống: USD/${m.localCurrency || 'VND'}=${m.usdToLocal || 'N/A'} | Vàng LBMA=${m.goldUsdOz ? '$' + m.goldUsdOz.toFixed(0) + '/oz' : 'N/A'} | BTC=${m.btcUsd ? '$' + m.btcUsd.toFixed(0) : 'N/A'} | Nợ công Mỹ (U.S. Treasury)=${m.usDebtTrillion ? '$' + m.usDebtTrillion + 'T' : 'N/A'} | GDP (World Bank)=${m.countryGdpPct ?? 'N/A'}% | CPI=${m.countryCpiPct ?? 'N/A'}% | Thời tiết/AQI sở tại=${m.localWeatherDesc || 'N/A'} (AQI ${m.localAqi ?? 'N/A'})`
     );
 
     for (const cat of CATEGORIES) {
       const allCat = scanResult.categoriesData?.[cat.id] || [];
-      // Ưu tiên đưa bài báo thật & số liệu sống lên trước (chỉ đưa cổng tra cứu nếu không có bài sống)
+      // Ưu tiên đưa bài báo thật & số liệu sống lên trước (riêng Trụ cột 4 đưa tới 9 mục chuyên sâu 13p!)
       const concrete = allCat.filter((x) => !x.isPortalLink);
       const chosen = concrete.length ? concrete : allCat;
-      lines.push(`\n[${cat.title}] (${chosen.length} tin/số liệu cụ thể):`);
-      chosen.slice(0, 4).forEach((it, idx) => {
+      const limit = cat.id === 'local_region' ? 9 : 4;
+      lines.push(`\n[${cat.title} — ${cat.minutes}p/30p] (${chosen.length} tin/số liệu cụ thể):`);
+      chosen.slice(0, limit).forEach((it, idx) => {
         lines.push(`  ${idx + 1}. ${it.title} — ${String(it.summary || '').slice(0, 170)} (Nguồn: ${it.source} | ${it.url})`);
       });
     }
 
     lines.push('');
-    lines.push('=== PHẦN 1 — BẢN TIN 20 PHÚT CHÍNH THỐNG, DỄ HIỂU BẰNG TIẾNG VIỆT ===');
+    lines.push('=== PHẦN 1 — BẢN TIN 30 PHÚT CHÍNH THỐNG, DỄ HIỂU BẰNG TIẾNG VIỆT (13 PHÚT RIÊNG TRỤ CỘT 4) ===');
     lines.push('1. "3 Sự Kiện Quan Trọng Nhất Hôm Nay" (đọc trong 60 giây — ghi rõ tên tờ báo/cơ quan chính thống).');
-    lines.push('2. Tổng hợp tin mới nhất hôm nay đủ 8 Trụ cột (Thế giới, Công nghệ/AI, Kinh tế, Khu vực của tôi, Y học/Sức khỏe, Pháp luật/Chính sách, Tâm lý/Quản trị, Khoa học/Văn hóa) — mỗi ý đều nêu rõ nguồn chính thống.');
-    lines.push('3. Rút ra 3 "Mô hình Tư duy / Hành động Thực tế" áp dụng ngay hôm nay.');
+    lines.push(`2. Tổng hợp tin mới nhất đủ 8 Trụ cột — ĐẶC BIỆT: Trụ cột "4. Khu vực & Quốc gia [${locStr}]" được TĂNG THÊM 10 PHÚT (tổng 13 phút/30 phút) nên PHẢI viết chuyên sâu gấp 3–4 lần các trụ cột khác: thời sự địa phương, quy hoạch/hạ tầng, cơ hội việc làm & kinh tế vùng, chi phí sinh hoạt, dịch vụ công & khuyến nghị thời tiết/AQI hôm nay.`);
+    lines.push('3. Rút ra 3 "Mô hình Tư duy / Hành động Thực tế" áp dụng ngay hôm nay tại khu vực của bạn.');
     lines.push('');
     lines.push('=== PHẦN 2 — KHỐI JSON ĐỒNG BỘ BIỂU ĐỒ & SƠ ĐỒ (BẮT BUỘC ĐỦ 8 SỰ KIỆN CHO CẢ 8 TRỤ CỘT) ===');
-    lines.push('Cuối câu trả lời, xuất ĐÚNG 1 khối ```json theo chuẩn WISDOM_20MIN_SYNC_V1 (BẮT BUỘC có đủ 6–8 mục trong `impact_scores` VÀ đủ 6–8 chuỗi trong `causal_mindmap.chains` tương ứng với các sự kiện lớn của 8 Trụ cột, KHÔNG rút gọn còn 3 mục!):');
+    lines.push('Cuối câu trả lời, xuất ĐÚNG 1 khối ```json theo chuẩn WISDOM_30MIN_SYNC_V1 (BẮT BUỘC có đủ 6–8 mục trong `impact_scores` VÀ đủ 6–8 chuỗi trong `causal_mindmap.chains` tương ứng với các sự kiện lớn của 8 Trụ cột, KHÔNG rút gọn còn 3 mục!):');
     lines.push('```json');
     lines.push(JSON.stringify({
-      schema: 'WISDOM_20MIN_SYNC_V1',
+      schema: 'WISDOM_30MIN_SYNC_V1',
       headline: 'Tiêu đề toàn cảnh hôm nay từ báo chí chính thống (<= 90 ký tự)',
+      reading_plan_30m: CATEGORIES.map((c) => ({ label: c.title.replace(/^\d+\.\s*/, ''), minutes: c.minutes, color: c.color })),
       reading_plan_20m: CATEGORIES.map((c) => ({ label: c.title.replace(/^\d+\.\s*/, ''), minutes: c.minutes, color: c.color })),
       impact_scores: [
         { topic: 'Sự kiện 1 (Thế giới & Địa chính trị)', score: 92, category: 'Thế giới', note: 'Nguồn: BBC/AP' },
@@ -909,7 +1036,7 @@
       const candidate = jsonBlocks[i][1].trim();
       try {
         const parsed = JSON.parse(candidate);
-        if (parsed && (parsed.schema === 'WISDOM_20MIN_SYNC_V1' || parsed.reading_plan_20m || parsed.causal_mindmap || parsed.impact_scores)) {
+        if (parsed && (parsed.schema === 'WISDOM_30MIN_SYNC_V1' || parsed.schema === 'WISDOM_20MIN_SYNC_V1' || parsed.reading_plan_30m || parsed.reading_plan_20m || parsed.causal_mindmap || parsed.impact_scores)) {
           syncData = parsed;
           markdownBody = text.replace(jsonBlocks[i][0], '').trim();
           break;
@@ -998,13 +1125,14 @@
     }
 
     return {
-      schema: 'WISDOM_20MIN_SYNC_V1',
+      schema: 'WISDOM_30MIN_SYNC_V1',
       isFallbackFromRaw: true,
       headline: `Checklist 8 Trụ cột Chính thống — ${scanResult?.dateLabel || ''}`,
+      reading_plan_30m: readingPlan,
       reading_plan_20m: readingPlan,
       impact_scores: impacts,
       causal_mindmap: {
-        center: `20 Phút Thông Thái (${scanResult?.profile?.flag || '🌍'})`,
+        center: `30 Phút Thông Thái (${scanResult?.profile?.flag || '🌍'})`,
         chains,
       },
       timeline,

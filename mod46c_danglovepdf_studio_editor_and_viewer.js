@@ -1045,7 +1045,7 @@
     try {
       const pdfjsLib = await ensurePdfJs();
       const bytes = new Uint8Array(await resItem.blob.arrayBuffer());
-      pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
+      pdfDoc = await pdfjsLib.getDocument({ data: bytes, disableCreateObjectURL: true }).promise;
 
       prevBtn?.addEventListener('click', () => goToPage(currentPage - (layoutMode === 'spread' ? 2 : 1), { smooth: true }));
       nextBtn?.addEventListener('click', () => goToPage(currentPage + (layoutMode === 'spread' ? 2 : 1), { smooth: true }));
@@ -1300,7 +1300,7 @@
       `;
 
       const pdfjsLib = await ensurePdfJs();
-      this.pdfDoc = await pdfjsLib.getDocument({ data: fileRec.bytes.slice() }).promise;
+      this.pdfDoc = await pdfjsLib.getDocument({ data: fileRec.bytes.slice(), disableCreateObjectURL: true }).promise;
       this.totalPages = this.pdfDoc.numPages;
 
       const stage = container.querySelector('#mod46-ed-stage');

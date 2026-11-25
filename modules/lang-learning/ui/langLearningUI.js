@@ -83,9 +83,18 @@
       globalScope.localStorage?.setItem(LL.STORAGE_KEYS.DECKS, jsonDecks);
     } catch (_eQuota) {
       try {
-        // Nếu bộ thẻ quá lớn vượt ngưỡng 5MB localStorage, giữ nguyên trên RAM và chỉ lưu tóm tắt đầu tiên để không văng lỗi
-        const compact = state.decks.slice(0, 3).map((d) => ({ ...d, cards: (d.cards || []).slice(0, 300) }));
-        globalScope.localStorage?.setItem(LL.STORAGE_KEYS.DECKS, JSON.stringify(compact));
+        // Nếu bộ thẻ lớn vượt 5MB localStorage, lưu công thức tái tạo FULL theo ID từ vựng (0 mất thẻ nào khi mở lại!)
+        const recipes = state.decks.slice(0, 6).map((d) => ({
+          id: d.id,
+          title: d.title,
+          targetLang: d.targetLang,
+          defaultMode: d.defaultMode,
+          createdLabel: d.createdLabel,
+          sourceMode: d.sourceMode || ((d.cards?.length || 0) >= state.vocabList.length ? 'all' : 'custom'),
+          vocabIds: (d.cards || []).map((c) => c.vocabId).filter(Boolean),
+          cards: (d.cards?.length || 0) <= 250 ? d.cards : undefined,
+        }));
+        globalScope.localStorage?.setItem(LL.STORAGE_KEYS.DECKS, JSON.stringify(recipes));
       } catch (_e2) {}
     }
   }
@@ -109,11 +118,24 @@
       state.step = 'setup';
     }
     state.starredIds = new Set(LL.loadJson(LL.STORAGE_KEYS.STARS, []));
-    state.decks = LL.loadJson(LL.STORAGE_KEYS.DECKS, []);
+    const rawDecks = LL.loadJson(LL.STORAGE_KEYS.DECKS, []);
     state.masteryMap = LL.loadJson(LL.STORAGE_KEYS.MASTERY, {});
     state.vocabList = LL.buildWebsiteVocabDatabase();
     // Mặc định chọn TẤT CẢ từ vựng trong bảng để xuất PDF hoặc tạo Flashcard
     state.selectedIds = new Set(state.vocabList.map((v) => v.id));
+    state.decks = Array.isArray(rawDecks)
+      ? rawDecks.map((d) => {
+          if (Array.isArray(d?.cards) && d.cards.length) return d;
+          const tgt = d?.targetLang || state.targetLangs[0] || 'en';
+          const modeId = d?.defaultMode || 'meaning';
+          if (Array.isArray(d?.vocabIds) && d.vocabIds.length) {
+            const wantSet = new Set(d.vocabIds);
+            const matchedPool = state.vocabList.filter((v) => wantSet.has(v.id));
+            return { ...d, cards: buildDeckCardsFromPool(matchedPool, tgt, modeId) };
+          }
+          return { ...d, cards: buildDeckCards({ sourceMode: d?.sourceMode || 'all', targetLang: tgt, modeId }) };
+        })
+      : [];
   }
 
   function getLangMeta(code) {
@@ -130,11 +152,39 @@
     });
   }
 
-  function buildDeckCards({ sourceMode, targetLang, modeId }) {
+  function resolvePoolForSourceMode(sourceMode) {
+    let pool = state.vocabList;
+    if (sourceMode === 'selected') {
+      pool = state.vocabList.filter((v) => state.selectedIds.has(v.id));
+    } else if (sourceMode === 'starred') {
+      pool = state.vocabList.filter((v) => state.starredIds.has(v.id));
+    }
+    return pool.length ? pool : state.vocabList;
+  }
+
+  function makeVocabCard(v, targetLang, nativeMeta, targetMeta) {
+    const targetWord = v[targetLang] || v.en;
+    const nativeWord = v[state.nativeLang] || v.vi;
+    const phon = LL.getPhonetic(targetLang, targetWord);
+    return {
+      id: `${v.id}_${targetLang}`,
+      vocabId: v.id,
+      targetLang,
+      bcp47: targetMeta.bcp47,
+      speakText: targetWord,
+      frontLabel: `${targetMeta.flag} ${targetMeta.name} (${v.topic})`,
+      front: targetWord,
+      frontSub: phon,
+      backLabel: `${nativeMeta.flag} ${nativeMeta.name}`,
+      back: nativeWord,
+      backSub: phon ? `Phiên âm: ${phon}` : '',
+    };
+  }
+
+  function buildDeckCardsFromPool(pool, targetLang, modeId) {
     const nativeMeta = getLangMeta(state.nativeLang);
     const targetMeta = getLangMeta(targetLang);
-
-    if (modeId === 'grammar' || sourceMode === 'grammar') {
+    if (modeId === 'grammar') {
       return LL.GRAMMAR_MATRIX.map((g) => ({
         id: `${g.id}_${targetLang}`,
         frontLabel: `📐 NGỮ PHÁP (${targetMeta.flag} ${targetMeta.name})`,
@@ -149,34 +199,34 @@
         vocabId: g.id,
       }));
     }
+    return (pool || state.vocabList).map((v) => makeVocabCard(v, targetLang, nativeMeta, targetMeta));
+  }
 
-    let pool = state.vocabList;
-    if (sourceMode === 'selected') {
-      pool = state.vocabList.filter((v) => state.selectedIds.has(v.id));
-    } else if (sourceMode === 'starred') {
-      pool = state.vocabList.filter((v) => state.starredIds.has(v.id));
+  function buildDeckCards({ sourceMode, targetLang, modeId }) {
+    if (modeId === 'grammar' || sourceMode === 'grammar') {
+      return buildDeckCardsFromPool([], targetLang, 'grammar');
     }
-    if (!pool.length) pool = state.vocabList;
+    return buildDeckCardsFromPool(resolvePoolForSourceMode(sourceMode), targetLang, modeId);
+  }
 
-    // Xuất FULL 100% toàn bộ từ trong pool (kể cả trọn vẹn 3529+ từ — tuyệt đối không cắt 120 từ!)
-    return pool.map((v) => {
-      const targetWord = v[targetLang] || v.en;
-      const nativeWord = v[state.nativeLang] || v.vi;
-      const phon = LL.getPhonetic(targetLang, targetWord);
-      return {
-        id: `${v.id}_${targetLang}`,
-        vocabId: v.id,
-        targetLang,
-        bcp47: targetMeta.bcp47,
-        speakText: targetWord,
-        frontLabel: `${targetMeta.flag} ${targetMeta.name} (${v.topic})`,
-        front: targetWord,
-        frontSub: phon,
-        backLabel: `${nativeMeta.flag} ${nativeMeta.name}`,
-        back: nativeWord,
-        backSub: phon ? `Phiên âm: ${phon}` : '',
-      };
-    });
+  async function buildDeckCardsAsync({ sourceMode, targetLang, modeId, onProgress } = {}) {
+    if (modeId === 'grammar' || sourceMode === 'grammar') {
+      return buildDeckCardsFromPool([], targetLang, 'grammar');
+    }
+    const nativeMeta = getLangMeta(state.nativeLang);
+    const targetMeta = getLangMeta(targetLang);
+    const pool = resolvePoolForSourceMode(sourceMode);
+    const cards = new Array(pool.length);
+    const CHUNK = 160;
+    for (let i = 0; i < pool.length; i += CHUNK) {
+      const end = Math.min(pool.length, i + CHUNK);
+      for (let j = i; j < end; j++) {
+        cards[j] = makeVocabCard(pool[j], targetLang, nativeMeta, targetMeta);
+      }
+      if (typeof onProgress === 'function') onProgress(end, pool.length);
+      if (end < pool.length) await new Promise((r) => setTimeout(r, 0));
+    }
+    return cards;
   }
 
   // ==========================================================================
@@ -268,8 +318,8 @@
 
         <!-- Bộ lọc, Tìm kiếm & Quản lý Chọn Xuất / Sao yêu thích -->
         <div class="ll51-card flex flex-wrap items-center justify-between gap-2.5">
-          <div class="flex flex-wrap items-center gap-2 flex-1 min-w-[240px]">
-            <input type="text" id="ll51-search" class="ll51-input flex-1 min-w-[180px]" placeholder="🔍 Tìm từ vựng bằng bất kỳ ngôn ngữ nào..." value="${esc(state.searchQuery)}" />
+          <div class="flex flex-wrap items-center gap-2 flex-1 min-w-0 w-full md:w-auto md:min-w-[240px]">
+            <input type="text" id="ll51-search" class="ll51-input flex-1 min-w-0 w-full sm:w-auto sm:min-w-[180px]" placeholder="🔍 Tìm từ vựng bằng bất kỳ ngôn ngữ nào..." value="${esc(state.searchQuery)}" />
             <select id="ll51-topic-sel" class="ll51-select">
               ${topics.map((t) => `<option value="${esc(t)}" ${t === state.topicFilter ? 'selected' : ''}>${t === 'all' ? '📂 Tất cả chủ đề' : esc(t)}</option>`).join('')}
             </select>
@@ -523,6 +573,9 @@
                   </div>
                   <div class="flex flex-wrap gap-1.5">
                     <button type="button" data-ll51-open-deck="${d.id}" class="ll51-btn ll51-btn-primary text-xs py-1 flex-1">▶️ Học ngay</button>
+                    ${(d.cards?.length || 0) <= 300 && state.vocabList.length > 500 && (d.defaultMode || 'meaning') !== 'grammar'
+                      ? `<button type="button" data-ll51-upgrade-deck="${d.id}" class="ll51-btn ll51-btn-amber text-xs py-1">♻️ Nâng cấp FULL ${state.vocabList.length}</button>`
+                      : ''}
                     <button type="button" data-ll51-del-deck="${d.id}" class="ll51-btn text-xs py-1 border-rose-500/50 text-rose-300">🗑️</button>
                   </div>
                 </div>
@@ -567,7 +620,11 @@
           <select id="ll51-export-deck-sel" class="ll51-select w-full">
             <option value="__all_vocab__" ${useAllVocabDefault ? 'selected' : ''}>🌍 QUÉT FULL TOÀN BỘ TỪ VỰNG WEB (${state.vocabList.length} từ — ${esc(primaryMeta.name)})</option>
             <option value="__quick_selected__" ${useQuickSelectedDefault ? 'selected' : ''}>⚡ Xuất toàn bộ từ đang tích chọn (${state.selectedIds.size}/${state.vocabList.length} từ — ${esc(primaryMeta.name)})</option>
-            ${state.decks.map((d) => `<option value="${d.id}" ${useActiveDeckByDefault && activeDeck?.id === d.id ? 'selected' : ''}>🃏 ${esc(d.title)} (${d.cards?.length || 0} thẻ)</option>`).join('')}
+            ${state.decks.map((d) => {
+              const cnt = d.cards?.length || 0;
+              const isLegacyShort = cnt > 0 && cnt <= 300 && state.vocabList.length > 500 && (d.defaultMode || 'meaning') !== 'grammar';
+              return `<option value="${d.id}" ${useActiveDeckByDefault && activeDeck?.id === d.id ? 'selected' : ''}>🃏 ${esc(d.title)} (${cnt} thẻ${isLegacyShort ? ' · Bản cũ rút gọn' : ''})</option>`;
+            }).join('')}
           </select>
           <div class="space-y-2 pt-1">
             <button type="button" id="ll51-exp-fc-pdf" class="ll51-btn ll51-btn-primary w-full py-2.5">🖨️ Tải .PDF Thẻ Flashcard In Cắt 2 Mặt (A4 khớp gương)</button>
@@ -577,6 +634,29 @@
         </div>
       </div>
     `;
+  }
+
+  async function resolveDeckForExportAsync(onProgress) {
+    const selVal = state.modalEl?.querySelector('#ll51-export-deck-sel')?.value || '__all_vocab__';
+    const tgt = state.targetLangs[0] || 'en';
+    if (selVal === '__all_vocab__') {
+      return {
+        title: `Flashcard Full ${state.vocabList.length} Từ (${getLangMeta(tgt).name})`,
+        cards: await buildDeckCardsAsync({ sourceMode: 'all', targetLang: tgt, modeId: 'meaning', onProgress }),
+      };
+    }
+    if (selVal === '__quick_selected__') {
+      return {
+        title: `Flashcard (${state.selectedIds.size} từ · ${getLangMeta(tgt).name})`,
+        cards: await buildDeckCardsAsync({ sourceMode: 'selected', targetLang: tgt, modeId: 'meaning', onProgress }),
+      };
+    }
+    const found = state.decks.find((d) => d.id === selVal);
+    if (found) return found;
+    return {
+      title: `Flashcard Full ${state.vocabList.length} Từ (${getLangMeta(tgt).name})`,
+      cards: await buildDeckCardsAsync({ sourceMode: 'all', targetLang: tgt, modeId: 'meaning', onProgress }),
+    };
   }
 
   function resolveDeckForExport() {
@@ -755,31 +835,78 @@
       toast('✅ Đã tải xuống Sổ tay PDF Từ vựng & Ngữ pháp!', 'success', 3200);
     });
 
-    // Tab 3 Flashcard creation & player
-    root.querySelector('#ll51-btn-create-deck')?.addEventListener('click', () => {
+    // Tab 3 Flashcard creation & player (Sinh bất đồng bộ theo mẫu — 0 đơ màn hình)
+    root.querySelector('#ll51-btn-create-deck')?.addEventListener('click', async (ev) => {
+      const btn = ev.currentTarget;
+      const oldTxt = btn.textContent;
+      btn.disabled = true;
       const titleInp = root.querySelector('#ll51-new-deck-title')?.value?.trim();
       const sourceMode = root.querySelector('#ll51-new-deck-source')?.value || 'selected';
       const targetLang = root.querySelector('#ll51-new-deck-lang')?.value || state.targetLangs[0] || 'en';
       const modeId = root.querySelector('#ll51-new-deck-mode')?.value || 'meaning';
-      const cards = buildDeckCards({ sourceMode, targetLang, modeId });
-      const deck = {
-        id: `deck_${Date.now()}`,
-        title: titleInp || `Flashcard ${getLangMeta(targetLang).name} (${cards.length} thẻ)`,
-        targetLang,
-        defaultMode: modeId,
-        createdLabel: new Date().toLocaleDateString('vi-VN'),
-        cards,
-      };
-      state.decks.unshift(deck);
-      state.activeDeckId = deck.id;
-      state.studyMode = modeId;
-      state.cardIdx = 0;
-      state.cardFlipped = false;
-      state.quizPicked = '';
-      state.typingFeedback = '';
-      persistState();
-      toast(`✅ Đã tạo và lưu nội bộ "${deck.title}"!`, 'success', 3000);
-      render();
+      try {
+        await LL.ensurePinyinPro?.();
+        const cards = await buildDeckCardsAsync({
+          sourceMode,
+          targetLang,
+          modeId,
+          onProgress: (done, tot) => { btn.textContent = `⏳ Đang sinh từ mẫu... ${done}/${tot} thẻ`; },
+        });
+        const deck = {
+          id: `deck_${Date.now()}`,
+          title: titleInp || `Flashcard ${getLangMeta(targetLang).name} (${cards.length} thẻ)`,
+          targetLang,
+          defaultMode: modeId,
+          sourceMode,
+          createdLabel: new Date().toLocaleDateString('vi-VN'),
+          cards,
+        };
+        state.decks.unshift(deck);
+        state.activeDeckId = deck.id;
+        state.studyMode = modeId;
+        state.cardIdx = 0;
+        state.cardFlipped = false;
+        state.quizPicked = '';
+        state.typingFeedback = '';
+        persistState();
+        toast(`✅ Đã tạo và lưu nội bộ "${deck.title}" (${cards.length} thẻ)!`, 'success', 3200);
+        render();
+      } finally {
+        btn.disabled = false;
+        btn.textContent = oldTxt;
+      }
+    });
+
+    root.querySelectorAll('[data-ll51-upgrade-deck]').forEach((b) => {
+      b.addEventListener('click', async () => {
+        const id = b.getAttribute('data-ll51-upgrade-deck');
+        const deck = state.decks.find((d) => d.id === id);
+        if (!deck) return;
+        const oldTxt = b.textContent;
+        b.disabled = true;
+        try {
+          await LL.ensurePinyinPro?.();
+          const tgt = deck.targetLang || state.targetLangs[0] || 'en';
+          const modeId = deck.defaultMode || 'meaning';
+          const cards = await buildDeckCardsAsync({
+            sourceMode: 'all',
+            targetLang: tgt,
+            modeId,
+            onProgress: (done, tot) => { b.textContent = `⏳ ${done}/${tot}`; },
+          });
+          deck.cards = cards;
+          deck.sourceMode = 'all';
+          deck.title = deck.title.replace(/\(\d+\s*thẻ\)/i, `(${cards.length} thẻ)`);
+          state.activeDeckId = deck.id;
+          state.cardIdx = 0;
+          persistState();
+          toast(`✅ Đã nâng cấp bộ thẻ lên FULL ${cards.length} thẻ!`, 'success', 3200);
+          render();
+        } finally {
+          b.disabled = false;
+          b.textContent = oldTxt;
+        }
+      });
     });
 
     root.querySelectorAll('[data-ll51-open-deck]').forEach((b) => {
@@ -919,10 +1046,12 @@
       const btn = ev.currentTarget;
       const oldTxt = btn.textContent;
       btn.disabled = true;
-      await LL.ensurePinyinPro?.();
-      const deck = resolveDeckForExport();
-      toast(`⏳ Đang dựng PDF Flashcard FULL ${deck.cards.length} thẻ in cắt 2 mặt A4...`, 'info', 2800);
       try {
+        await LL.ensurePinyinPro?.();
+        const deck = await resolveDeckForExportAsync((done, tot) => {
+          btn.textContent = `⏳ Đang sinh từ mẫu... ${done}/${tot} thẻ`;
+        });
+        toast(`⏳ Đang dựng PDF Flashcard FULL ${deck.cards.length} thẻ in cắt 2 mặt A4...`, 'info', 2800);
         const r = await LL.exportFlashcardsPdf(deck, {
           onProgress: (done, tot) => {
             btn.textContent = `⏳ Đang dựng PDF Flashcard... ${done}/${tot} thẻ`;
@@ -934,17 +1063,37 @@
         btn.textContent = oldTxt;
       }
     });
-    root.querySelector('#ll51-exp-fc-tsv')?.addEventListener('click', async () => {
-      await LL.ensurePinyinPro?.();
-      const deck = resolveDeckForExport();
-      const r = LL.exportFlashcardsTsv(deck);
-      toast(`✅ Đã tải FULL ${r.count} thẻ chuẩn Anki / Quizlet (.TSV)!`, 'success', 3400);
+    root.querySelector('#ll51-exp-fc-tsv')?.addEventListener('click', async (ev) => {
+      const btn = ev.currentTarget;
+      const oldTxt = btn.textContent;
+      btn.disabled = true;
+      try {
+        await LL.ensurePinyinPro?.();
+        const deck = await resolveDeckForExportAsync((done, tot) => {
+          btn.textContent = `⏳ Đang sinh .TSV... ${done}/${tot} thẻ`;
+        });
+        const r = LL.exportFlashcardsTsv(deck);
+        toast(`✅ Đã tải FULL ${r.count} thẻ chuẩn Anki / Quizlet (.TSV)!`, 'success', 3400);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = oldTxt;
+      }
     });
-    root.querySelector('#ll51-exp-fc-html')?.addEventListener('click', async () => {
-      await LL.ensurePinyinPro?.();
-      const deck = resolveDeckForExport();
-      const r = LL.exportFlashcardsInteractiveHtml(deck);
-      toast(`✅ Đã tải FULL Bộ Flashcard Tương Tác Offline (.HTML · ${r.count} thẻ)!`, 'success', 3600);
+    root.querySelector('#ll51-exp-fc-html')?.addEventListener('click', async (ev) => {
+      const btn = ev.currentTarget;
+      const oldTxt = btn.textContent;
+      btn.disabled = true;
+      try {
+        await LL.ensurePinyinPro?.();
+        const deck = await resolveDeckForExportAsync((done, tot) => {
+          btn.textContent = `⏳ Đang sinh .HTML... ${done}/${tot} thẻ`;
+        });
+        const r = LL.exportFlashcardsInteractiveHtml(deck);
+        toast(`✅ Đã tải FULL Bộ Flashcard Tương Tác Offline (.HTML · ${r.count} thẻ)!`, 'success', 3600);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = oldTxt;
+      }
     });
   }
 

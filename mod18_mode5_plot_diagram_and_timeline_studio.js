@@ -458,26 +458,30 @@
         })
         .join('');
 
+      const tr18Main = (s) => {
+        const i18n = window.NoirStudio?.i18n;
+        return i18n?.translateText ? i18n.translateText(String(s || '')) : String(s || '');
+      };
       const nodesSvg = positioned
         .map((n, i) => {
           const isChar = n.group === 'CHARACTER';
           const isClue = n.group === 'CLUE';
           const strokeColor = isChar ? '#f59e0b' : isClue ? '#818cf8' : '#10b981';
           const fillBg = isChar ? '#271a05' : isClue ? '#17153b' : '#052e22';
-          const badge = isChar ? '👤 NHÂN VẬT' : isClue ? '🔫 PHỤC BÚT' : `⏳ MỐC #${i + 1}`;
-          const timeText = n.time ? ` (${n.time})` : '';
+          const badge = tr18Main(isChar ? '👤 NHÂN VẬT' : isClue ? '🔫 PHỤC BÚT' : `⏳ MỐC #${i + 1}`);
+          const timeText = n.time ? ` (${tr18Main(n.time)})` : '';
           const chapMatch = `${n.label || ''} ${n.detail || ''}`.match(/Chương\s*(\d+)/i);
           const chapAttr = chapMatch ? ` data-mode5-jump-chapter="${chapMatch[1]}"` : '';
           return `
             <g transform="translate(${n.x - 130}, ${n.y - 40})" class="cursor-pointer"${chapAttr}>
               <rect width="260" height="80" rx="14" fill="${fillBg}" stroke="${strokeColor}" stroke-width="2" filter="url(#dropGlow)" />
-              <text x="14" y="22" fill="${strokeColor}" font-size="10" font-family="JetBrains Mono, monospace" font-weight="700">${this.esc(
+              <text data-i18n-ignore="true" x="14" y="22" fill="${strokeColor}" font-size="10" font-family="JetBrains Mono, monospace" font-weight="700">${this.esc(
                 trimWordSafe(badge + timeText, 34)
               )}</text>
-              <text x="14" y="44" fill="#f4f4f5" font-size="11.5" font-family="Inter, sans-serif" font-weight="700">${this.esc(
+              <text data-i18n-ignore="true" x="14" y="44" fill="#f4f4f5" font-size="11.5" font-family="Inter, sans-serif" font-weight="700">${this.esc(
                 trimWordSafe(n.label || '', 32)
               )}</text>
-              <text x="14" y="64" fill="#a1a1aa" font-size="10" font-family="Inter, sans-serif">${this.esc(
+              <text data-i18n-ignore="true" x="14" y="64" fill="#a1a1aa" font-size="10" font-family="Inter, sans-serif">${this.esc(
                 trimWordSafe(n.detail || n.label || '', 40)
               )}</text>
             </g>
@@ -548,13 +552,13 @@
             <g transform="translate(${n.x - 145}, ${n.y - 42})">
               <rect width="290" height="84" rx="14" fill="${bg}" stroke="${stroke}" stroke-width="2.2" filter="url(#dropGlow)" />
               <circle cx="268" cy="20" r="8" fill="${stroke}" opacity="0.85" />
-              <text x="16" y="24" fill="${stroke}" font-size="10" font-family="JetBrains Mono, monospace" font-weight="800">${this.esc(
+              <text data-i18n-ignore="true" x="16" y="24" fill="${stroke}" font-size="10" font-family="JetBrains Mono, monospace" font-weight="800">${this.esc(
                 tag + timeBadge
               )}</text>
-              <text x="16" y="46" fill="#f8fafc" font-size="12.5" font-family="Inter, sans-serif" font-weight="800">${this.esc(
+              <text data-i18n-ignore="true" x="16" y="46" fill="#f8fafc" font-size="12.5" font-family="Inter, sans-serif" font-weight="800">${this.esc(
                 String(n.label || '').slice(0, 34)
               )}</text>
-              <text x="16" y="66" fill="#cbd5e1" font-size="10.5" font-family="Inter, sans-serif">${this.esc(
+              <text data-i18n-ignore="true" x="16" y="66" fill="#cbd5e1" font-size="10.5" font-family="Inter, sans-serif">${this.esc(
                 String(n.detail || '').slice(0, 42)
               )}</text>
             </g>
@@ -663,10 +667,10 @@
               <text x="14" y="21" fill="${stroke}" font-size="9.5" font-family="JetBrains Mono, monospace" font-weight="800">${this.esc(
                 roleBadge
               )}</text>
-              <text x="14" y="42" fill="#fafafa" font-size="12" font-family="Inter, sans-serif" font-weight="800">${this.esc(
+              <text data-i18n-ignore="true" x="14" y="42" fill="#fafafa" font-size="12" font-family="Inter, sans-serif" font-weight="800">${this.esc(
                 String(n.label || '').slice(0, 26)
               )}</text>
-              <text x="14" y="59" fill="#d4d4d8" font-size="10" font-family="Inter, sans-serif">${this.esc(
+              <text data-i18n-ignore="true" x="14" y="59" fill="#d4d4d8" font-size="10" font-family="Inter, sans-serif">${this.esc(
                 String(n.detail || n.time || '').slice(0, 32)
               )}</text>
             </g>
@@ -721,13 +725,13 @@
             <g transform="translate(${x}, ${y})">
               <rect width="428" height="136" rx="14" fill="#121217" stroke="${stroke}" stroke-width="2" filter="url(#dropGlow)" />
               <rect width="428" height="32" rx="14" fill="${headerBg}" />
-              <text x="16" y="21" fill="${stroke}" font-size="10.5" font-family="JetBrains Mono, monospace" font-weight="800">${this.esc(
+              <text data-i18n-ignore="true" x="16" y="21" fill="${stroke}" font-size="10.5" font-family="JetBrains Mono, monospace" font-weight="800">${this.esc(
                 panelTag
               )}</text>
-              <text x="16" y="60" fill="#ffffff" font-size="13.5" font-family="Inter, sans-serif" font-weight="800">${this.esc(
+              <text data-i18n-ignore="true" x="16" y="60" fill="#ffffff" font-size="13.5" font-family="Inter, sans-serif" font-weight="800">${this.esc(
                 String(n.label || '').slice(0, 44)
               )}</text>
-              <text x="16" y="84" fill="#d4d4d8" font-size="11" font-family="Inter, sans-serif">${this.esc(
+              <text data-i18n-ignore="true" x="16" y="84" fill="#d4d4d8" font-size="11" font-family="Inter, sans-serif">${this.esc(
                 panelDetail.slice(0, 56)
               )}</text>
               <rect x="16" y="102" width="396" height="18" rx="6" fill="#18181b" stroke="#27272a" />
@@ -1089,7 +1093,7 @@
           links.push({
             source: nodes[0].id,
             target: clid,
-            label: 'Liên kết bí mật'
+            label: window.NoirStudio?.i18n?.translateText ? window.NoirStudio.i18n.translateText('Liên kết bí mật') : 'Liên kết bí mật'
           });
         }
       });
@@ -1110,14 +1114,14 @@
           links.push({
             source: `chap_node_${idx - 1}`,
             target: nid,
-            label: 'Tiếp nối'
+            label: window.NoirStudio?.i18n?.translateText ? window.NoirStudio.i18n.translateText('Tiếp nối') : 'Tiếp nối'
           });
         }
         if (characters[idx]) {
           links.push({
             source: `char_node_${idx}`,
             target: nid,
-            label: 'Tuyến nhân vật'
+            label: window.NoirStudio?.i18n?.translateText ? window.NoirStudio.i18n.translateText('Tuyến nhân vật') : 'Tuyến nhân vật'
           });
         } else if (characters[0] && idx === 0) {
           links.push({
@@ -1491,6 +1495,10 @@
       const domUrl = URL.createObjectURL(svgBlob);
       const img = new Image();
 
+      img.onerror = () => {
+        try { URL.revokeObjectURL(domUrl); } catch (_) {}
+        this.exportDiagramAsSvgFile();
+      };
       img.onload = () => {
         try {
           const scale = 2; // Độ nét gấp đôi (Retina 2x)
