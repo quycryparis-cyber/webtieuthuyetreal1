@@ -1762,6 +1762,8 @@
     const p = loadInvReaderPrefs();
     const sz = INV_SIZES[p.size]?.px || 17.5;
     const ff = INV_FONTS[p.font]?.css || INV_FONTS.sans.css;
+    host.setAttribute('data-reader-size', p.size);
+    host.setAttribute('data-reader-font', p.font);
     host.style.fontSize = `${sz}px`;
     host.style.fontFamily = ff;
     host.querySelectorAll('.inv-exec-paper').forEach((paper) => {

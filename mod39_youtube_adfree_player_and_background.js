@@ -344,6 +344,116 @@
     return { kind: 'INVALID', seconds: null };
   }
 
+  /**
+   * Bộ trợ giúp nhập thời gian Mốc A / Mốc B dạng 00:00 (hoặc 00:00:00 cho video >= 1 giờ):
+   * Gõ đủ 2 chữ số tự nhảy sang 2 chữ số tiếp theo qua dấu ":" (y hệt khung chính Tab 5 — dùng chung cho cả Desktop & Mobile Mini-Player!).
+   */
+  function attachAutoAdvanceMiniAbClock(inputEl, { getDurationSec, onCommit }) {
+    if (!inputEl) return;
+    const getTpl = () => ((Number(getDurationSec?.()) || 0) >= 3600 ? '00:00:00' : '00:00');
+    const getSlots = (tpl) => (tpl.length === 8 ? [0, 1, 3, 4, 6, 7] : [0, 1, 3, 4]);
+    const formatSecToTpl = (sec, tpl) => {
+      const n = Math.max(0, Math.floor(Number(sec) || 0));
+      const h = Math.floor(n / 3600);
+      const m = Math.floor((n % 3600) / 60);
+      const s = n % 60;
+      const p2 = (v) => String(v).padStart(2, '0');
+      return tpl.length === 8 ? `${p2(h)}:${p2(m)}:${p2(s)}` : `${p2(Math.floor(n / 60))}:${p2(s)}`;
+    };
+    const normalizeVal = (raw, tpl) => {
+      const s = String(raw || '').trim();
+      if (tpl.length === 8 && /^\d{2}:\d{2}:\d{2}$/.test(s)) return s;
+      if (tpl.length === 5 && /^\d{2}:\d{2}$/.test(s)) return s;
+      const parsed = parseAbTimeInput(s);
+      if (parsed.kind === 'VALID') return formatSecToTpl(parsed.seconds, tpl);
+      return tpl;
+    };
+    const setCaret = (pos) => {
+      const apply = () => { try { inputEl.setSelectionRange(pos, pos); } catch (_e) {} };
+      apply();
+      setTimeout(apply, 0);
+    };
+    const applyDigits = (digitStr) => {
+      const digits = String(digitStr || '').replace(/\D+/g, '');
+      if (!digits) return false;
+      const tpl = getTpl();
+      const slots = getSlots(tpl);
+      let masked = normalizeVal(inputEl.value, tpl);
+      let rawPos = typeof inputEl.selectionStart === 'number' ? inputEl.selectionStart : 0;
+      const selEnd = typeof inputEl.selectionEnd === 'number' ? inputEl.selectionEnd : rawPos;
+      if (selEnd > rawPos && rawPos === 0 && selEnd >= tpl.length - 1) rawPos = 0;
+      for (let i = 0; i < digits.length; i++) {
+        let slotIdx = slots.findIndex((s) => s >= rawPos);
+        if (slotIdx === -1) slotIdx = slots.length - 1;
+        const charPos = slots[slotIdx];
+        const arr = masked.split('');
+        arr[charPos] = digits[i];
+        masked = arr.join('');
+        // Nhảy tự động sang ô tiếp theo (nếu vừa nhập xong chữ số thứ 2 của HH hoặc MM sẽ tự nhảy qua dấu ":")
+        rawPos = slotIdx < slots.length - 1 ? slots[slotIdx + 1] : tpl.length;
+      }
+      inputEl.value = masked;
+      setCaret(rawPos);
+      return true;
+    };
+
+    inputEl.addEventListener('focus', () => {
+      const tpl = getTpl();
+      if (!String(inputEl.value || '').trim()) {
+        inputEl.value = tpl;
+        setTimeout(() => { try { inputEl.setSelectionRange(0, 2); } catch (_e) {} }, 0);
+      }
+    });
+    inputEl.addEventListener('click', () => {
+      const val = String(inputEl.value || '');
+      if (!/^\d{2}:\d{2}(:\d{2})?$/.test(val)) return;
+      const pos = typeof inputEl.selectionStart === 'number' ? inputEl.selectionStart : 0;
+      const segStart = pos >= 6 ? 6 : pos >= 3 ? 3 : 0;
+      try { inputEl.setSelectionRange(segStart, segStart + 2); } catch (_e) {}
+    });
+    inputEl.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.keyCode === 13) {
+        ev.preventDefault();
+        if (typeof onCommit === 'function') onCommit();
+        inputEl.blur();
+        return;
+      }
+      if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+      if (/^[0-9]$/.test(ev.key)) {
+        ev.preventDefault();
+        applyDigits(ev.key);
+        return;
+      }
+      if (ev.key === 'Backspace') {
+        const cur = String(inputEl.value || '');
+        if (/^\d{2}:\d{2}(:\d{2})?$/.test(cur)) {
+          ev.preventDefault();
+          const slots = getSlots(getTpl());
+          const rawPos = typeof inputEl.selectionStart === 'number' ? inputEl.selectionStart : cur.length;
+          let prevIdx = -1;
+          for (let i = slots.length - 1; i >= 0; i--) {
+            if (slots[i] < rawPos) { prevIdx = i; break; }
+          }
+          if (prevIdx === -1) prevIdx = 0;
+          const charPos = slots[prevIdx];
+          const arr = cur.split('');
+          arr[charPos] = '0';
+          inputEl.value = arr.join('');
+          setCaret(charPos);
+        }
+      }
+    });
+    inputEl.addEventListener('beforeinput', (ev) => {
+      if (ev.inputType === 'insertText' && typeof ev.data === 'string' && /^[0-9]+$/.test(ev.data)) {
+        ev.preventDefault();
+        applyDigits(ev.data);
+      }
+    });
+    inputEl.addEventListener('blur', () => {
+      if (typeof onCommit === 'function') onCommit(true);
+    });
+  }
+
   // ==========================================================================
   // 2. BỘ PHÂN TÍCH & CHUẨN HÓA ĐƯỜNG DẪN YOUTUBE THÔNG MINH
   // ==========================================================================
@@ -3332,30 +3442,43 @@
 
       const box = document.createElement('div');
       box.id = 'mod39-mobile-floating-mini';
-      box.style.cssText = 'position:fixed;right:10px;bottom:76px;z-index:2147483560;width:min(330px,calc(100vw - 20px));border-radius:16px;overflow:hidden;border:2px solid #38bdf8;background:#09090b;color:#f4f4f5;box-shadow:0 18px 48px rgba(0,0,0,0.75);font-family:system-ui,-apple-system,sans-serif;';
+      box.style.cssText = 'position:fixed;right:10px;bottom:76px;z-index:2147483560;width:min(342px,calc(100vw - 20px));border-radius:16px;overflow:hidden;border:2px solid #38bdf8;background:#09090b;color:#f4f4f5;box-shadow:0 18px 48px rgba(0,0,0,0.78);font-family:system-ui,-apple-system,sans-serif;';
       box.innerHTML = `
-        <div id="mod39-mmini-header" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 10px;background:#18181b;border-bottom:1px solid #27272a;cursor:grab;touch-action:none;">
-          <span style="font-size:11px;font-weight:900;color:#6ee7b7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🎬 Video Mini &amp; Phát nền</span>
-          <div style="display:flex;gap:5px;">
-            <button type="button" id="btn-mmini-goto-tab5" style="padding:3px 7px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#e4e4e7;font-size:10.5px;font-weight:800;cursor:pointer;">↗️ Tab 5</button>
+        <div id="mod39-mmini-header" style="display:flex;align-items:center;justify-content:space-between;gap:4px;padding:6px 8px;background:#18181b;border-bottom:1px solid #27272a;cursor:grab;touch-action:none;">
+          <span style="font-size:11px;font-weight:900;color:#6ee7b7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🎬 Video Mini</span>
+          <div style="display:flex;gap:4px;align-items:center;shrink:0;">
+            <button type="button" id="btn-mmini-os-pip" title="Bật cửa sổ nổi hệ thống để thoát ra màn hình chính vẫn xem được" style="padding:3px 7px;border-radius:8px;border:1px solid #38bdf8;background:linear-gradient(135deg,#0284c7,#0d9488);color:#fff;font-size:10px;font-weight:900;cursor:pointer;">📱 Nổi ngoài App</button>
+            <button type="button" id="btn-mmini-goto-tab5" style="padding:3px 6px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#e4e4e7;font-size:10px;font-weight:800;cursor:pointer;">↗️ Tab 5</button>
             <button type="button" id="btn-mmini-close" style="padding:3px 8px;border-radius:8px;border:0;background:#e11d48;color:#fff;font-size:11px;font-weight:900;cursor:pointer;">✕</button>
           </div>
         </div>
         <div id="mod39-mmini-video-slot" style="width:100%;aspect-ratio:16/9;background:#000;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;"></div>
         <div style="padding:8px 10px;background:#111115;border-top:1px solid #27272a;display:flex;flex-direction:column;gap:6px;">
           <div style="display:flex;align-items:center;gap:6px;">
-            <span id="mmini-cur" style="font-family:monospace;font-size:10px;color:#a1a1aa;min-width:34px;">00:00</span>
-            <input id="mmini-seek" type="range" min="0" max="100" value="0" step="1" style="flex:1;accent-color:#10b981;height:4px;" />
-            <span id="mmini-dur" style="font-family:monospace;font-size:10px;color:#a1a1aa;min-width:34px;text-align:right;">00:00</span>
+            <span id="mmini-cur" style="font-family:monospace;font-size:10.5px;color:#a1a1aa;min-width:36px;">00:00</span>
+            <input id="mmini-seek" type="range" min="0" max="100" value="0" step="1" style="flex:1;accent-color:#10b981;height:5px;cursor:pointer;" />
+            <span id="mmini-dur" style="font-family:monospace;font-size:10.5px;color:#a1a1aa;min-width:36px;text-align:right;">00:00</span>
           </div>
           <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px;">
             <button type="button" id="btn-mmini-rew10" style="padding:5px 8px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#fff;font-size:11px;font-weight:800;cursor:pointer;">⏪ -10s</button>
-            <button type="button" id="btn-mmini-play" style="padding:5px 11px;border-radius:8px;border:0;background:#e11d48;color:#fff;font-size:11px;font-weight:900;cursor:pointer;">⏯️ Dừng/Phát</button>
+            <button type="button" id="btn-mmini-play" style="padding:5px 11px;border-radius:8px;border:0;background:#e11d48;color:#fff;font-size:11px;font-weight:900;cursor:pointer;">⏯️ Phát/Dừng</button>
             <button type="button" id="btn-mmini-fwd10" style="padding:5px 8px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#fff;font-size:11px;font-weight:800;cursor:pointer;">+10s ⏩</button>
-            <button type="button" id="btn-mmini-loop" style="padding:5px 8px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#e4e4e7;font-size:11px;font-weight:800;cursor:pointer;">🔁 Lặp</button>
-            <button type="button" id="btn-mmini-ab-a" style="padding:5px 7px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#fde047;font-size:11px;font-weight:800;cursor:pointer;">🅰️ A</button>
-            <button type="button" id="btn-mmini-ab-b" style="padding:5px 7px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#38bdf8;font-size:11px;font-weight:800;cursor:pointer;">🅱️ B</button>
-            <button type="button" id="btn-mmini-ab-clr" style="padding:5px 7px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#f87171;font-size:11px;font-weight:800;cursor:pointer;" title="Tắt Lặp A-B">✕AB</button>
+            <button type="button" id="btn-mmini-loop" style="padding:5px 7px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#e4e4e7;font-size:11px;font-weight:800;cursor:pointer;">🔁 Lặp</button>
+            <button type="button" id="btn-mmini-ab-toggle" style="padding:5px 7px;border-radius:8px;border:1px solid #f59e0b;background:#27272a;color:#fde047;font-size:10.5px;font-weight:900;cursor:pointer;">A–B ▾</button>
+          </div>
+          <div id="mmini-ab-row" style="display:none;flex-direction:column;gap:5px;padding-top:6px;border-top:1px dashed #27272a;">
+            <div style="display:flex;align-items:center;gap:4px;">
+              <span style="font-size:10px;font-weight:900;color:#fde047;">🅰️</span>
+              <input id="inp-mmini-ab-a" type="text" inputmode="numeric" placeholder="00:00" autocomplete="off" style="flex:1;min-width:0;padding:4px 6px;border-radius:7px;border:1px solid #facc15;background:#18181b;color:#fef08a;font-family:monospace;font-size:12px;font-weight:900;text-align:center;" />
+              <button type="button" id="btn-mmini-ab-a" title="Lấy giây hiện tại làm Mốc A" style="padding:4px 6px;border-radius:7px;border:1px solid #facc15;background:#27272a;color:#fde047;font-size:10px;font-weight:900;cursor:pointer;">📍A</button>
+              <span style="font-size:10px;font-weight:900;color:#38bdf8;">🅱️</span>
+              <input id="inp-mmini-ab-b" type="text" inputmode="numeric" placeholder="00:00" autocomplete="off" style="flex:1;min-width:0;padding:4px 6px;border-radius:7px;border:1px solid #38bdf8;background:#18181b;color:#bae6fd;font-family:monospace;font-size:12px;font-weight:900;text-align:center;" />
+              <button type="button" id="btn-mmini-ab-b" title="Lấy giây hiện tại làm Mốc B" style="padding:4px 6px;border-radius:7px;border:1px solid #38bdf8;background:#27272a;color:#38bdf8;font-size:10px;font-weight:900;cursor:pointer;">📍B</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;">
+              <button type="button" id="btn-mmini-ab-apply" style="flex:1;padding:5px 8px;border-radius:8px;border:0;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;font-size:10.5px;font-weight:900;cursor:pointer;">✅ Áp dụng &amp; Bật Lặp A–B</button>
+              <button type="button" id="btn-mmini-ab-clr" style="padding:5px 9px;border-radius:8px;border:1px solid #f87171;background:#3f1d24;color:#fecaca;font-size:10.5px;font-weight:900;cursor:pointer;" title="Tắt Lặp A-B">✕ Tắt</button>
+            </div>
           </div>
         </div>
       `;
@@ -3367,6 +3490,10 @@
         vidEl.style.width = '100%';
         vidEl.style.height = '100%';
         vidEl.style.objectFit = 'contain';
+        vidEl.playsInline = true;
+        vidEl.setAttribute('playsinline', '');
+        vidEl.setAttribute('webkit-playsinline', '');
+        vidEl.disablePictureInPicture = false;
         slot.appendChild(vidEl);
       } else if (slot) {
         const thumb = ctrl?.activeVideo?.thumbnailUrl || '';
@@ -3398,46 +3525,203 @@
       const curEl = box.querySelector('#mmini-cur');
       const durEl = box.querySelector('#mmini-dur');
       const seekEl = box.querySelector('#mmini-seek');
+      const playBtn = box.querySelector('#btn-mmini-play');
       const loopBtn = box.querySelector('#btn-mmini-loop');
+      const abToggleBtn = box.querySelector('#btn-mmini-ab-toggle');
+      const abRow = box.querySelector('#mmini-ab-row');
+      const abABtn = box.querySelector('#btn-mmini-ab-a');
+      const abBBtn = box.querySelector('#btn-mmini-ab-b');
+      const abAInp = box.querySelector('#inp-mmini-ab-a');
+      const abBInp = box.querySelector('#inp-mmini-ab-b');
+      const abApplyBtn = box.querySelector('#btn-mmini-ab-apply');
 
+      const getActiveMedia = () => document.getElementById('core-media-player') || vidEl;
+      const getCurSec = () => {
+        const m = getActiveMedia();
+        if (m && Number.isFinite(m.currentTime) && (m.readyState >= 1 || m.currentTime > 0)) return m.currentTime;
+        return Number(ctrl?.bridge?.getCurrentPlaybackSnapshot?.()?.currentTime) || 0;
+      };
+      const getDurSec = () => {
+        const m = getActiveMedia();
+        if (m && Number.isFinite(m.duration) && m.duration > 0) return m.duration;
+        return Number(ctrl?.bridge?.getCurrentPlaybackSnapshot?.()?.duration) || 0;
+      };
+
+      let isScrubbing = false;
       const syncMiniControls = () => {
         if (!box.isConnected) return;
-        const snap = ctrl?.bridge?.getCurrentPlaybackSnapshot?.() || {};
-        const t = Number(snap.currentTime) || 0;
-        const d = Number(snap.duration) || 0;
+        const m = getActiveMedia();
+        const t = getCurSec();
+        const d = getDurSec();
         if (curEl) curEl.textContent = fmt(t);
         if (durEl) durEl.textContent = fmt(d);
-        if (seekEl && document.activeElement !== seekEl && d > 0) {
+        if (seekEl && !isScrubbing && d > 0) {
           seekEl.max = String(Math.floor(d));
           seekEl.value = String(Math.floor(t));
+        }
+        if (playBtn) {
+          const paused = m ? m.paused : (ctrl?.bridge?.getCurrentPlaybackSnapshot?.()?.state !== 1);
+          playBtn.textContent = paused ? '▶️ Phát tiếp' : '⏸️ Tạm dừng';
+          playBtn.style.background = paused ? '#059669' : '#e11d48';
         }
         if (loopBtn) {
           const on = Boolean(ctrl?.prefs?.repeatMode);
           loopBtn.style.background = on ? '#059669' : '#27272a';
+          loopBtn.style.borderColor = on ? '#34d399' : '#3f3f46';
+        }
+        const ab = ctrl?.abLoop;
+        const fmtForDur = (sec) => {
+          const n = Math.max(0, Math.floor(Number(sec) || 0));
+          const p2 = (v) => String(v).padStart(2, '0');
+          return d >= 3600 ? `${p2(Math.floor(n / 3600))}:${p2(Math.floor((n % 3600) / 60))}:${p2(n % 60)}` : `${p2(Math.floor(n / 60))}:${p2(n % 60)}`;
+        };
+        if (abAInp && document.activeElement !== abAInp) {
+          abAInp.value = typeof ab?.startSec === 'number' ? fmtForDur(ab.startSec) : '';
+          abAInp.placeholder = d >= 3600 ? '00:00:00' : '00:00';
+        }
+        if (abBInp && document.activeElement !== abBInp) {
+          abBInp.value = typeof ab?.endSec === 'number' ? fmtForDur(ab.endSec) : '';
+          abBInp.placeholder = d >= 3600 ? '00:00:00' : '00:00';
+        }
+        if (abApplyBtn) {
+          abApplyBtn.textContent = ab?.enabled ? '🔁 Đang Lặp A–B (Cập nhật)' : '✅ Áp dụng & Bật Lặp A–B';
         }
       };
       syncMiniControls();
-      this._mminiSyncTimer = setInterval(syncMiniControls, 450);
+      this._mminiSyncTimer = setInterval(syncMiniControls, 400);
 
-      seekEl?.addEventListener('input', () => ctrl?.seekTo?.(Number(seekEl.value) || 0));
-      box.querySelector('#btn-mmini-rew10')?.addEventListener('click', () => ctrl?.seekBy?.(-10));
-      box.querySelector('#btn-mmini-fwd10')?.addEventListener('click', () => ctrl?.seekBy?.(10));
-      box.querySelector('#btn-mmini-play')?.addEventListener('click', () => ctrl?.togglePlayPause?.());
-      box.querySelector('#btn-mmini-loop')?.addEventListener('click', () => { ctrl?.toggleRepeatMode?.(); syncMiniControls(); });
-      box.querySelector('#btn-mmini-ab-a')?.addEventListener('click', () => {
-        const t = Number(ctrl?.bridge?.getCurrentPlaybackSnapshot?.()?.currentTime) || 0;
-        ctrl?.setAbPointA?.(t);
-        NS.utils?.showToast?.(`🅰️ Đã đặt điểm A = ${fmt(t)}`, 'info', 2000);
+      // Gọi ĐÚNG hàm điều khiển thật của playerCtrl + đồng bộ trực tiếp thẻ <video> (0% liệt nút!)
+      seekEl?.addEventListener('pointerdown', () => { isScrubbing = true; });
+      seekEl?.addEventListener('pointerup', () => { isScrubbing = false; });
+      seekEl?.addEventListener('input', () => {
+        const target = Math.max(0, Number(seekEl.value) || 0);
+        if (curEl) curEl.textContent = fmt(target);
+        if (typeof ctrl?.seekToSeconds === 'function') ctrl.seekToSeconds(target, true);
+        else {
+          const m = getActiveMedia();
+          if (m) m.currentTime = target;
+        }
       });
-      box.querySelector('#btn-mmini-ab-b')?.addEventListener('click', () => {
-        const t = Number(ctrl?.bridge?.getCurrentPlaybackSnapshot?.()?.currentTime) || 0;
-        ctrl?.setAbPointB?.(t);
-        NS.utils?.showToast?.(`🅱️ Đã đặt điểm B = ${fmt(t)} (Bật lặp A–B)`, 'success', 2200);
+      seekEl?.addEventListener('change', () => { isScrubbing = false; });
+
+      box.querySelector('#btn-mmini-rew10')?.addEventListener('click', () => {
+        if (typeof ctrl?.seekRelative === 'function') ctrl.seekRelative(-10);
+        else {
+          const m = getActiveMedia();
+          if (m) m.currentTime = Math.max(0, (m.currentTime || 0) - 10);
+        }
+        syncMiniControls();
+      });
+      box.querySelector('#btn-mmini-fwd10')?.addEventListener('click', () => {
+        if (typeof ctrl?.seekRelative === 'function') ctrl.seekRelative(10);
+        else {
+          const m = getActiveMedia();
+          if (m) m.currentTime = Math.min(getDurSec() || 99999, (m.currentTime || 0) + 10);
+        }
+        syncMiniControls();
+      });
+      box.querySelector('#btn-mmini-play')?.addEventListener('click', () => {
+        if (typeof ctrl?.togglePlayPause === 'function') {
+          ctrl.togglePlayPause();
+        } else {
+          const m = getActiveMedia();
+          if (m) { if (m.paused) m.play?.().catch(() => {}); else m.pause?.(); }
+        }
+        setTimeout(syncMiniControls, 120);
+      });
+      box.querySelector('#btn-mmini-loop')?.addEventListener('click', () => {
+        if (typeof ctrl?.toggleRepeat === 'function') ctrl.toggleRepeat();
+        syncMiniControls();
+      });
+
+      // Thu gọn / Mở rộng hàng Lặp A–B ngay trên trình phát mini!
+      let abExpanded = Boolean(ctrl?.abLoop?.enabled || typeof ctrl?.abLoop?.startSec === 'number');
+      const syncAbRow = () => {
+        if (abRow) abRow.style.display = abExpanded ? 'flex' : 'none';
+        if (abToggleBtn) abToggleBtn.textContent = abExpanded ? 'A–B ▴' : 'A–B ▾';
+      };
+      syncAbRow();
+      abToggleBtn?.addEventListener('click', () => {
+        abExpanded = !abExpanded;
+        syncAbRow();
+      });
+
+      const commitMobileAbInputs = (silent = false) => {
+        const pA = parseAbTimeInput(abAInp?.value || '');
+        const pB = parseAbTimeInput(abBInp?.value || '');
+        if (pA.kind === 'EMPTY' && pB.kind === 'EMPTY') return;
+        const aSec = pA.kind === 'VALID' ? pA.seconds : (typeof ctrl?.abLoop?.startSec === 'number' ? ctrl.abLoop.startSec : null);
+        const bSec = pB.kind === 'VALID' ? pB.seconds : (typeof ctrl?.abLoop?.endSec === 'number' ? ctrl.abLoop.endSec : null);
+        if (aSec === null || bSec === null) {
+          if (!silent) NS.utils?.showToast?.('💡 Hãy nhập đủ cả Mốc A và Mốc B (vd: 00:30 và 01:15).', 'info', 2600);
+          return;
+        }
+        if (bSec <= aSec) {
+          if (!silent) NS.utils?.showToast?.('⚠️ Mốc B phải lớn hơn Mốc A!', 'warning', 2400);
+          return;
+        }
+        if (typeof ctrl?.setAbLoopBounds === 'function') {
+          ctrl.setAbLoopBounds(aSec, bSec, true, { confirmField: 'BOTH' });
+          ctrl.seekToSeconds?.(aSec, true);
+          if (!silent) NS.utils?.showToast?.(`🔁 Đã bật lặp A–B: ${fmt(aSec)} ➔ ${fmt(bSec)}`, 'success', 2400);
+        }
+        syncMiniControls();
+      };
+      attachAutoAdvanceMiniAbClock(abAInp, { getDurationSec: getDurSec, onCommit: (s) => commitMobileAbInputs(Boolean(s)) });
+      attachAutoAdvanceMiniAbClock(abBInp, { getDurationSec: getDurSec, onCommit: (s) => commitMobileAbInputs(Boolean(s)) });
+      abApplyBtn?.addEventListener('click', () => commitMobileAbInputs(false));
+
+      abABtn?.addEventListener('click', () => {
+        if (typeof ctrl?.markPointAFromCurrent === 'function') ctrl.markPointAFromCurrent();
+        syncMiniControls();
+      });
+      abBBtn?.addEventListener('click', () => {
+        if (typeof ctrl?.markPointBFromCurrent === 'function') ctrl.markPointBFromCurrent();
+        syncMiniControls();
       });
       box.querySelector('#btn-mmini-ab-clr')?.addEventListener('click', () => {
-        ctrl?.clearAbLoop?.();
+        if (typeof ctrl?.clearAbLoop === 'function') ctrl.clearAbLoop();
+        if (abAInp) abAInp.value = '';
+        if (abBInp) abBInp.value = '';
         NS.utils?.showToast?.('⏹️ Đã tắt vòng lặp A–B', 'info', 1800);
+        syncMiniControls();
       });
+
+      // NÚT BẬT CỬA SỔ NỔI HỆ THỐNG (OS Picture-in-Picture) ĐỂ THOÁT RA MÀN HÌNH CHÍNH / APP KHÁC VẪN HIỆN VIDEO!
+      box.querySelector('#btn-mmini-os-pip')?.addEventListener('click', async () => {
+        const m = getActiveMedia();
+        if (!m) {
+          NS.utils?.showToast?.('⚠️ Hãy chờ luồng video nền tải xong hình ảnh rồi bấm lại "Nổi ngoài App"!', 'warning', 3200);
+          return;
+        }
+        try {
+          if (m.paused) await m.play().catch(() => {});
+          if (document.pictureInPictureElement === m) {
+            await document.exitPictureInPicture();
+          } else if (typeof m.requestPictureInPicture === 'function') {
+            await m.requestPictureInPicture();
+            NS.utils?.showToast?.('✅ Đã bật Cửa sổ nổi Hệ thống (OS PiP)! Bạn có thể thoát ra màn hình chính hoặc mở app khác mà video vẫn nổi!', 'success', 4200);
+          } else if (typeof m.webkitSetPresentationMode === 'function') {
+            m.webkitSetPresentationMode('picture-in-picture');
+            NS.utils?.showToast?.('✅ Đã bật Cửa sổ nổi iOS PiP! Thoát ra màn hình chính video vẫn chạy nổi!', 'success', 4200);
+          } else {
+            NS.utils?.showToast?.('💡 Trình duyệt này không hỗ trợ OS PiP trực tiếp — hãy mở bằng Chrome/Safari hoặc dùng chế độ phát nền Audio!', 'info', 4000);
+          }
+          // Đăng ký MediaSession để màn hình khóa & cửa sổ PiP điều khiển được đầy đủ
+          if ('mediaSession' in navigator) {
+            try {
+              navigator.mediaSession.setActionHandler('play', () => ctrl?.togglePlayPause?.());
+              navigator.mediaSession.setActionHandler('pause', () => ctrl?.togglePlayPause?.());
+              navigator.mediaSession.setActionHandler('seekbackward', () => ctrl?.seekRelative?.(-10));
+              navigator.mediaSession.setActionHandler('seekforward', () => ctrl?.seekRelative?.(10));
+              navigator.mediaSession.setActionHandler('seekto', (d) => { if (d?.seekTime != null) ctrl?.seekToSeconds?.(d.seekTime, true); });
+            } catch (_eMs) {}
+          }
+        } catch (err) {
+          NS.utils?.showToast?.('⚠️ Không bật được OS PiP lúc này: ' + (err?.message || 'Hãy chạm phát video trước rồi bấm lại.'), 'warning', 3600);
+        }
+      });
+
       box.querySelector('#btn-mmini-goto-tab5')?.addEventListener('click', () => {
         NS.navigator?.navigateToScreen?.('SCREEN_5_AMBIENCE');
       });
@@ -5717,11 +6001,18 @@
               <option value="2">2x</option>
             </select>
             <button id="${prefix}-loop-btn" type="button" style="background:#27272a;color:#e4e4e7;border:1px solid #3f3f46;border-radius:6px;padding:2px 7px;font-size:10.5px;font-weight:700;cursor:pointer;">🔁 ${trPip('Lặp')}</button>
-            <button id="${prefix}-ab-a-btn" type="button" style="background:#27272a;color:#e4e4e7;border:1px solid #3f3f46;border-radius:6px;padding:2px 6px;font-size:10.5px;font-weight:700;cursor:pointer;">🅰️ A</button>
-            <button id="${prefix}-ab-b-btn" type="button" style="background:#27272a;color:#e4e4e7;border:1px solid #3f3f46;border-radius:6px;padding:2px 6px;font-size:10.5px;font-weight:700;cursor:pointer;">🅱️ B</button>
             <button id="${prefix}-ab-toggle-btn" type="button" style="background:#27272a;color:#e4e4e7;border:1px solid #3f3f46;border-radius:6px;padding:2px 7px;font-size:10.5px;font-weight:700;cursor:pointer;">🔁 A–B</button>
             <button id="${prefix}-ab-clear-btn" type="button" title="${trPip('Xóa mốc A–B')}" style="background:#27272a;color:#fda4af;border:1px solid #3f3f46;border-radius:6px;padding:2px 6px;font-size:10.5px;font-weight:700;cursor:pointer;">✕ A–B</button>
             <span id="${prefix}-ab-badge" style="font-size:10px;color:#34d399;font-weight:700;margin-left:auto;"></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;margin-top:5px;padding-top:5px;border-top:1px dashed #27272a;">
+            <span style="font-size:10px;font-weight:900;color:#fde047;">🅰️</span>
+            <input id="${prefix}-ab-a-inp" type="text" inputmode="numeric" placeholder="00:00" autocomplete="off" title="Nhập Mốc A (gõ 2 chữ số tự nhảy sang 2 chữ số tiếp theo)" style="width:64px;padding:2px 5px;border-radius:6px;border:1px solid #facc15;background:#18181b;color:#fef08a;font-family:monospace;font-size:11px;font-weight:900;text-align:center;" />
+            <button id="${prefix}-ab-a-btn" type="button" title="Lấy giây hiện tại làm Mốc A" style="background:#27272a;color:#fde047;border:1px solid #facc15;border-radius:6px;padding:2px 5px;font-size:10px;font-weight:800;cursor:pointer;">📍A</button>
+            <span style="font-size:10px;font-weight:900;color:#38bdf8;">🅱️</span>
+            <input id="${prefix}-ab-b-inp" type="text" inputmode="numeric" placeholder="00:00" autocomplete="off" title="Nhập Mốc B (gõ 2 chữ số tự nhảy sang 2 chữ số tiếp theo)" style="width:64px;padding:2px 5px;border-radius:6px;border:1px solid #38bdf8;background:#18181b;color:#bae6fd;font-family:monospace;font-size:11px;font-weight:900;text-align:center;" />
+            <button id="${prefix}-ab-b-btn" type="button" title="Lấy giây hiện tại làm Mốc B" style="background:#27272a;color:#38bdf8;border:1px solid #38bdf8;border-radius:6px;padding:2px 5px;font-size:10px;font-weight:800;cursor:pointer;">📍B</button>
+            <button id="${prefix}-ab-apply-btn" type="button" style="background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:0;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:900;cursor:pointer;margin-left:auto;">✅ Áp dụng</button>
           </div>
         </div>
       `;
@@ -5734,6 +6025,9 @@
         const loopBtn = scopeRoot.querySelector(`#${prefix}-loop-btn`);
         const abABtn = scopeRoot.querySelector(`#${prefix}-ab-a-btn`);
         const abBBtn = scopeRoot.querySelector(`#${prefix}-ab-b-btn`);
+        const abAInp = scopeRoot.querySelector(`#${prefix}-ab-a-inp`);
+        const abBInp = scopeRoot.querySelector(`#${prefix}-ab-b-inp`);
+        const abApplyBtn = scopeRoot.querySelector(`#${prefix}-ab-apply-btn`);
         const abToggleBtn = scopeRoot.querySelector(`#${prefix}-ab-toggle-btn`);
         const abClearBtn = scopeRoot.querySelector(`#${prefix}-ab-clear-btn`);
 
@@ -5766,6 +6060,29 @@
           this.playerCtrl?.toggleRepeat?.();
           this.syncFloatingControlsUi();
         });
+        const commitDesktopAbInputs = (silent = false) => {
+          const pA = parseAbTimeInput(abAInp?.value || '');
+          const pB = parseAbTimeInput(abBInp?.value || '');
+          if (pA.kind === 'EMPTY' && pB.kind === 'EMPTY') return;
+          const aSec = pA.kind === 'VALID' ? pA.seconds : (typeof this.playerCtrl?.abLoop?.startSec === 'number' ? this.playerCtrl.abLoop.startSec : null);
+          const bSec = pB.kind === 'VALID' ? pB.seconds : (typeof this.playerCtrl?.abLoop?.endSec === 'number' ? this.playerCtrl.abLoop.endSec : null);
+          if (aSec === null || bSec === null) {
+            if (!silent) safeNotify('💡 Hãy nhập đủ cả Mốc A và Mốc B (vd: 00:30 và 01:15).', 'info', 2600);
+            return;
+          }
+          if (bSec <= aSec) {
+            if (!silent) safeNotify('⚠️ Mốc B phải lớn hơn Mốc A!', 'warning', 2400);
+            return;
+          }
+          this.playerCtrl?.setAbLoopBounds?.(aSec, bSec, true, { confirmField: 'BOTH' });
+          this.playerCtrl?.seekToSeconds?.(aSec, true);
+          this.syncFloatingControlsUi();
+        };
+        const getDesktopDur = () => Number(this.playerCtrl?.bridge?.getCurrentPlaybackSnapshot?.()?.duration || this.playerCtrl?.getKnownDurationSeconds?.() || 0);
+        attachAutoAdvanceMiniAbClock(abAInp, { getDurationSec: getDesktopDur, onCommit: (s) => commitDesktopAbInputs(Boolean(s)) });
+        attachAutoAdvanceMiniAbClock(abBInp, { getDurationSec: getDesktopDur, onCommit: (s) => commitDesktopAbInputs(Boolean(s)) });
+        abApplyBtn?.addEventListener('click', () => commitDesktopAbInputs(false));
+
         abABtn?.addEventListener('click', () => {
           this.playerCtrl?.markPointAFromCurrent?.();
           this.syncFloatingControlsUi();
@@ -5780,6 +6097,8 @@
         });
         abClearBtn?.addEventListener('click', () => {
           this.playerCtrl?.clearAbLoop?.();
+          if (abAInp) abAInp.value = '';
+          if (abBInp) abBInp.value = '';
           this.syncFloatingControlsUi();
         });
       };
@@ -5825,6 +6144,22 @@
               typeof ab.startSec === 'number' || typeof ab.endSec === 'number'
                 ? `${ab.enabled ? '🔁 ' : ''}${aTxt} ➔ ${bTxt}`
                 : '';
+          }
+          const fmtForDur = (sec) => {
+            const n = Math.max(0, Math.floor(Number(sec) || 0));
+            const p2 = (v) => String(v).padStart(2, '0');
+            return dur >= 3600 ? `${p2(Math.floor(n / 3600))}:${p2(Math.floor((n % 3600) / 60))}:${p2(n % 60)}` : `${p2(Math.floor(n / 60))}:${p2(n % 60)}`;
+          };
+          const ownerDoc = scopeRoot.ownerDocument || scopeRoot;
+          const abAInpEl = scopeRoot.querySelector(`#${prefix}-ab-a-inp`);
+          const abBInpEl = scopeRoot.querySelector(`#${prefix}-ab-b-inp`);
+          if (abAInpEl && ownerDoc.activeElement !== abAInpEl) {
+            abAInpEl.value = typeof ab.startSec === 'number' ? fmtForDur(ab.startSec) : '';
+            abAInpEl.placeholder = dur >= 3600 ? '00:00:00' : '00:00';
+          }
+          if (abBInpEl && ownerDoc.activeElement !== abBInpEl) {
+            abBInpEl.value = typeof ab.endSec === 'number' ? fmtForDur(ab.endSec) : '';
+            abBInpEl.placeholder = dur >= 3600 ? '00:00:00' : '00:00';
           }
         };
 
@@ -5928,7 +6263,7 @@
             try {
               const curW = Math.max(460, pipWin.outerWidth || 480);
               const curH = pipWin.outerHeight || 340;
-              pipWin.resizeTo(curW, isOpen ? Math.max(curH, 396) : Math.max(300, curH - 64));
+              pipWin.resizeTo(curW, isOpen ? Math.max(curH, 434) : Math.max(300, curH - 96));
             } catch (_eSz) {}
           });
           setTimeout(() => this.syncFloatingControlsUi(), 120);

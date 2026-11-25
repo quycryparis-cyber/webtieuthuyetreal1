@@ -311,7 +311,7 @@
           </label>
           <div class="grid grid-cols-5 gap-1.5">
             ${REPORT_THEMES_10.map((th, i) => `
-              <div title="${th.name}" class="rounded-lg p-1.5 border border-zinc-700/80 text-center text-[10px] font-black text-white" style="background:linear-gradient(135deg,${th.primary},${th.secondary});border-bottom:3px solid ${th.accent};">#${i + 1}</div>
+              <button type="button" data-pro-theme10-chip="${th.id}" title="${th.name}" class="rounded-lg p-1.5 border border-zinc-700/80 hover:border-amber-300 text-center text-[10px] font-black text-white cursor-pointer transition" style="background:linear-gradient(135deg,${th.primary},${th.secondary});border-bottom:3px solid ${th.accent};">#${i + 1}</button>
             `).join('')}
           </div>
           <label class="block space-y-1"><span class="font-bold">📤 Định dạng tệp đầu ra:</span>
@@ -820,8 +820,31 @@ Chương 3: Tổng kết | 12</textarea>
         classic: '"Palatino Linotype", Georgia, serif',
       };
       const ff = fontMap[pro.theme10Font] || fontMap.sans;
-      const docTitle = baseName(f.name).replace(/[_-]+/g, ' ');
-      prog(15, `Đang đọc cấu trúc tài liệu (${ext.toUpperCase()})...`);
+      const safeBase = String(typeof baseName === 'string' && baseName ? baseName : f.name || 'BaoCao').replace(/\.[^.]+$/, '');
+      const docTitle = safeBase.replace(/[_-]+/g, ' ');
+      prog(15, `Đang phân tích cấu trúc ngữ nghĩa tài liệu (${ext.toUpperCase()})...`);
+
+      // Bộ phân loại ngữ nghĩa sâu: Heading (H1/H2), Subheading (H3), Callout/KPI, Bullet, Table, Paragraph
+      const classifyLine = (txt) => {
+        const s = String(txt || '').replace(/\*\*/g, '').replace(/\*/g, '').trim();
+        if (!s) return null;
+        if (/^(CHƯƠNG|PHẦN|MỤC|BÁO CÁO|TỔNG QUAN|[IVXLCDM]+\.\s|\d+\.\s+[A-ZÀ-Ỹ])/i.test(s) && s.length < 110) {
+          return { type: 'heading', text: s };
+        }
+        if (/^(\d+\.\d+\.?\s|[a-z]\)\s)/i.test(s) && s.length < 110) {
+          return { type: 'subheading', text: s };
+        }
+        if (/^(>|💡|⚠️|📌|LƯU Ý|KẾT LUẬN|NHẬN ĐỊNH|TÓM TẮT|KEY TAKEAWAY|SUMMARY)/i.test(s)) {
+          return { type: 'callout', text: s.replace(/^>\s*/, '') };
+        }
+        if (/^([-•*▪◦+])\s+/.test(s)) {
+          return { type: 'bullet', text: s.replace(/^([-•*▪◦+])\s+/, '') };
+        }
+        if (s.length < 72 && s === s.toUpperCase() && /[A-ZÀ-Ỹ]{3,}/.test(s)) {
+          return { type: 'heading', text: s };
+        }
+        return { type: 'paragraph', text: s };
+      };
 
       // Bước 1: Trích xuất cấu trúc thống nhất: [{ type: 'heading'|'paragraph'|'table', text?, rows? }]
       const blocks = [];
@@ -840,8 +863,14 @@ Chương 3: Tổng kết | 12</textarea>
                 const txt = Array.from(child.getElementsByTagName('w:t')).map((t) => t.textContent || '').join('').trim();
                 if (!txt) continue;
                 const pStyle = child.getElementsByTagName('w:pStyle')[0]?.getAttribute('w:val') || '';
-                const isH = /heading|title|subtitle/i.test(pStyle) || (txt.length < 90 && /^([IVX0-9]+[.)]|CHƯƠNG|PHẦN|MỤC)/i.test(txt));
-                blocks.push({ type: isH ? 'heading' : 'paragraph', text: txt });
+                const isH = /heading\s*1|title/i.test(pStyle);
+                const isSub = /heading\s*[2-6]|subtitle/i.test(pStyle);
+                if (isH) blocks.push({ type: 'heading', text: txt });
+                else if (isSub) blocks.push({ type: 'subheading', text: txt });
+                else {
+                  const cls = classifyLine(txt);
+                  if (cls) blocks.push(cls);
+                }
               } else if (ln === 'tbl' || ln === 'w:tbl') {
                 const rows = Array.from(child.getElementsByTagName('w:tr')).map((tr) =>
                   Array.from(tr.getElementsByTagName('w:tc')).map((tc) =>
@@ -884,8 +913,8 @@ Chương 3: Tổng kết | 12</textarea>
           for (const yk of sortedY) {
             const lineTxt = lineMap.get(yk).sort((a, b) => a.x - b.x).map((o) => o.s).join(' ').trim();
             if (!lineTxt) continue;
-            const isH = lineTxt.length < 88 && (/^([IVX0-9]+[.)]|CHƯƠNG|PHẦN|BÁO CÁO)/i.test(lineTxt) || lineTxt === lineTxt.toUpperCase());
-            blocks.push({ type: isH ? 'heading' : 'paragraph', text: lineTxt });
+            const cls = classifyLine(lineTxt);
+            if (cls) blocks.push(cls);
           }
         }
       } else {
@@ -930,7 +959,7 @@ Chương 3: Tổng kết | 12</textarea>
         XLSX.utils.book_append_sheet(wb, wsMain, 'Tong_Quan_Bao_Cao');
         const arrBuf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
         outputs.push({
-          name: `${baseName(f.name)}_${theme.id}.xlsx`,
+          name: `${safeBase}_${theme.id}.xlsx`,
           blob: new Blob([arrBuf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
         });
         return outputs;
@@ -967,7 +996,7 @@ Chương 3: Tổng kết | 12</textarea>
         zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
         zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${bodyXml.join('')}</w:body></w:document>`);
         const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-        outputs.push({ name: `${baseName(f.name)}_${theme.id}.docx`, blob });
+        outputs.push({ name: `${safeBase}_${theme.id}.docx`, blob });
         return outputs;
       }
 
@@ -1080,6 +1109,37 @@ Chương 3: Tổng kết | 12</textarea>
             y += rh;
           }
           y += 14;
+        } else if (b.type === 'subheading') {
+          ensureSp(46);
+          y += 6;
+          curP.c.fillStyle = theme.accent;
+          curP.c.fillRect(72, y + 3, 6, 26);
+          curP.c.fillStyle = theme.primary;
+          curP.c.font = `800 21px ${ff}`;
+          curP.c.fillText(b.text.slice(0, 88), 90, y + 4);
+          y += 38;
+        } else if (b.type === 'callout') {
+          curP.c.font = `600 19px ${ff}`;
+          const cLines = wrapCv(curP.c, b.text, maxW - 44);
+          const ch = cLines.length * 28 + 24;
+          ensureSp(ch + 10);
+          curP.c.fillStyle = theme.zebra;
+          curP.c.fillRect(72, y, maxW, ch);
+          curP.c.fillStyle = theme.accent;
+          curP.c.fillRect(72, y, 8, ch);
+          curP.c.fillStyle = theme.text;
+          cLines.forEach((ln, li) => curP.c.fillText(ln, 96, y + 12 + li * 28));
+          y += ch + 10;
+        } else if (b.type === 'bullet') {
+          curP.c.font = `500 19.5px ${ff}`;
+          const bLines = wrapCv(curP.c, `• ${b.text}`, maxW - 24);
+          for (const ln of bLines) {
+            ensureSp(30);
+            curP.c.fillStyle = theme.text;
+            curP.c.fillText(ln, 88, y);
+            y += 28;
+          }
+          y += 4;
         } else {
           curP.c.font = `500 20px ${ff}`;
           const lines = wrapCv(curP.c, b.text, maxW);
@@ -1105,7 +1165,7 @@ Chương 3: Tổng kết | 12</textarea>
       }
       const pdfBytes = await outPdf.save();
       outputs.push({
-        name: `${baseName(f.name)}_${theme.id}.pdf`,
+        name: `${safeBase}_${theme.id}.pdf`,
         blob: new Blob([pdfBytes], { type: 'application/pdf' }),
       });
       return outputs;
@@ -2420,6 +2480,7 @@ ${visualOverlayHtml ? `<h2>2. Chồng lớp hình ảnh soi từng pixel (Visual
 
   NS.dangLovePdfPro = Object.freeze({
     PRO_TOOL_GROUPS,
+    REPORT_THEMES_10,
     PAPER_SIZES,
     buildProOptionsHtml,
     readProOptions,

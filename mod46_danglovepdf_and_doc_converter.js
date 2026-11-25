@@ -637,7 +637,7 @@
         modal = document.createElement('div');
         modal.id = 'modal-mod46-danglovepdf-studio';
         modal.className = 'fixed inset-0 z-[2147483590] bg-zinc-950/90 backdrop-blur-lg flex items-center justify-center p-1.5 sm:p-4 overflow-hidden text-zinc-100';
-        modal.style.cssText = 'position:fixed;inset:0;width:100vw;height:100dvh;display:flex;align-items:center;justify-content:center;';
+        modal.style.cssText = 'position:fixed;inset:0;width:100vw;height:100dvh;align-items:center;justify-content:center;';
         modal.setAttribute('role', 'dialog');
         modal.setAttribute('aria-modal', 'true');
         modal.innerHTML = `
@@ -670,6 +670,7 @@
         const forceCloseStudio = () => {
           this.cancelled = true;
           modal.classList.add('hidden');
+          modal.style.display = 'none';
           try { this.resetWorkspaceState(); } catch (_eReset) {}
         };
         modal.addEventListener('click', (ev) => {
@@ -699,12 +700,13 @@
           }
         });
         document.addEventListener('keydown', (ev) => {
-          if (ev.key === 'Escape' && !modal.classList.contains('hidden')) {
+          if (ev.key === 'Escape' && !modal.classList.contains('hidden') && modal.style.display !== 'none') {
             forceCloseStudio();
           }
         });
       }
       modal.classList.remove('hidden');
+      modal.style.display = 'flex';
 
       if (initialToolId) {
         const found = getActiveAllTools().find((t) => t.id === initialToolId);
@@ -1098,6 +1100,7 @@
               </div>
 
               <div id="mod46-preview-area">${this.buildPreviewAreaHtml()}</div>
+              <div id="mod46-fullpages-preview-host" class="hidden pt-2 border-t border-zinc-800 space-y-2"></div>
             </div>
 
             <!-- CỘT PHẢI (30% -> 4/12): TÙY CHỌN & NÚT THỰC HIỆN -->
@@ -2147,6 +2150,143 @@
       body.querySelector('#btn-mod46-run-primary')?.addEventListener('click', () => {
         this.executeActiveTool();
       });
+
+      // Tự động dựng trình XEM TRƯỚC CUỘN DỌC TỪNG TRANG sắc nét cho MỌI công cụ xử lý PDF + Preview sống 10 Theme!
+      const fullHost = body.querySelector('#mod46-fullpages-preview-host');
+      const firstPdf = this.files.find((f) => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
+      if (fullHost && firstPdf && !['annotate_edit', 'pdf_viewer_pro', 'organize'].includes(this.activeTool?.id)) {
+        fullHost.classList.remove('hidden');
+        fullHost.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="text-xs font-black text-sky-300">📖 Xem trước toàn bộ từng trang trong file (Cuộn dọc sắc nét)</div>
+            <div class="flex items-center gap-1.5 text-[11px]">
+              <span class="text-zinc-400">Nhảy tới trang:</span>
+              <input id="mod46-jump-pg-inp" type="number" min="1" value="1" class="w-14 px-1.5 py-0.5 rounded-lg bg-zinc-950 border border-zinc-700 text-center font-bold text-zinc-100" />
+              <span id="mod46-jump-pg-total" class="text-zinc-400 font-bold">/ ?</span>
+            </div>
+          </div>
+          <div id="mod46-scroll-pages-box" class="max-h-[54vh] overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-950/90 p-3 space-y-3">
+            <div class="text-center text-xs text-zinc-400 py-4">⏳ Đang tải toàn bộ các trang PDF để bạn cuộn xem trực tiếp...</div>
+          </div>
+        `;
+        (async () => {
+          try {
+            const pdfjsLib = await ensurePdfJs();
+            const pdfDoc = await pdfjsLib.getDocument({ data: firstPdf.bytes.slice(0) }).promise;
+            const totalP = pdfDoc.numPages;
+            const totEl = fullHost.querySelector('#mod46-jump-pg-total');
+            const jmpInp = fullHost.querySelector('#mod46-jump-pg-inp');
+            const box = fullHost.querySelector('#mod46-scroll-pages-box');
+            if (!box || !box.isConnected) return;
+            if (totEl) totEl.textContent = `/ ${totalP}`;
+            if (jmpInp) jmpInp.max = String(totalP);
+            box.innerHTML = '';
+            const placeholders = [];
+            for (let p = 1; p <= totalP; p++) {
+              const card = document.createElement('div');
+              card.className = 'rounded-xl border border-zinc-800 bg-zinc-900/70 p-2 space-y-1.5';
+              card.dataset.mod46PreviewPage = String(p);
+              card.innerHTML = `
+                <div class="flex items-center justify-between text-[11px] font-bold text-zinc-300 px-1">
+                  <span>Trang ${p} / ${totalP}</span>
+                  <span class="text-zinc-500">HiDPI Preview</span>
+                </div>
+                <div class="flex justify-center bg-zinc-950 rounded-lg overflow-hidden min-h-[160px] items-center">
+                  <canvas class="max-w-full h-auto block"></canvas>
+                </div>
+              `;
+              box.appendChild(card);
+              placeholders.push(card);
+            }
+            const renderedSet = new Set();
+            const renderPageCard = async (card) => {
+              const pNum = Number(card.dataset.mod46PreviewPage);
+              if (!pNum || renderedSet.has(pNum)) return;
+              renderedSet.add(pNum);
+              try {
+                const page = await pdfDoc.getPage(pNum);
+                const baseVp = page.getViewport({ scale: 1 });
+                const targetW = Math.min(760, Math.max(320, (box.clientWidth || 560) - 36));
+                const dpr = Math.min(2, window.devicePixelRatio || 1.5);
+                const vp = page.getViewport({ scale: (targetW / baseVp.width) * dpr });
+                const cv = card.querySelector('canvas');
+                if (!cv) return;
+                cv.width = Math.round(vp.width);
+                cv.height = Math.round(vp.height);
+                cv.style.width = `${Math.round(vp.width / dpr)}px`;
+                cv.style.height = 'auto';
+                await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+              } catch (_ePg) {}
+            };
+            if ('IntersectionObserver' in window) {
+              const io = new IntersectionObserver(
+                (entries) => {
+                  entries.forEach((en) => {
+                    if (en.isIntersecting) {
+                      renderPageCard(en.target);
+                      io.unobserve(en.target);
+                    }
+                  });
+                },
+                { root: box, rootMargin: '240px 0px' }
+              );
+              placeholders.forEach((c) => io.observe(c));
+            } else {
+              for (const c of placeholders.slice(0, 12)) await renderPageCard(c);
+            }
+            jmpInp?.addEventListener('change', () => {
+              const idx = Math.max(1, Math.min(totalP, Number(jmpInp.value) || 1)) - 1;
+              const targetCard = placeholders[idx];
+              if (targetCard) {
+                targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                renderPageCard(targetCard);
+              }
+            });
+          } catch (_ePv) {
+            if (fullHost) fullHost.classList.add('hidden');
+          }
+        })();
+      }
+
+      // Gắn sự kiện click trực tiếp cho 10 ô chọn màu Theme & Live Preview cho công cụ beautify_10_themes
+      if (this.activeTool?.id === 'beautify_10_themes') {
+        const selEl = body.querySelector('#opt-pro-theme10-id');
+        const themes = NS.dangLovePdfPro?.REPORT_THEMES_10 || [];
+        const renderLiveThemeSample = () => {
+          const th = themes.find((t) => t.id === selEl?.value) || themes[0];
+          if (!th || !fullHost) return;
+          fullHost.classList.remove('hidden');
+          const fname = escHtml(this.files[0]?.name || 'Bao_Cao_Cua_Ban');
+          fullHost.innerHTML = `
+            <div class="text-xs font-black text-amber-300">🎨 Xem trước trực tiếp bố cục Theme đã chọn (${escHtml(th.name)}):</div>
+            <div class="rounded-xl overflow-hidden border border-zinc-700 shadow-lg" style="background:${th.bg};color:${th.text};">
+              <div style="background:linear-gradient(135deg,${th.primary},${th.secondary});border-left:8px solid ${th.accent};padding:14px 18px;color:#fff;">
+                <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;color:${th.accent};">BÁO CÁO KHOA HỌC &amp; TÀI CHÍNH · ĐĂNGLOVEPDF</div>
+                <div style="font-size:15px;font-weight:900;margin-top:3px;">${fname}</div>
+              </div>
+              <div style="padding:12px 16px;font-size:12px;line-height:1.55;">
+                <div style="background:${th.primary};border-left:5px solid ${th.accent};color:#fff;padding:6px 10px;border-radius:5px;font-weight:800;margin-bottom:8px;">1. TIÊU ĐỀ PHẦN CHÍNH (TỰ NHẬN DIỆN TỪ TỆP GỐC)</div>
+                <div style="background:${th.zebra};border-left:4px solid ${th.accent};padding:7px 10px;border-radius:5px;margin-bottom:8px;">💡 Khung nổi bật số liệu / Nhận định trọng tâm tự động phân tách mảng màu.</div>
+                <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                  <thead><tr style="background:${th.primary};color:#fff;"><th style="padding:5px 8px;text-align:left;">Chỉ tiêu</th><th style="padding:5px 8px;text-align:left;">Dữ liệu nhận diện</th></tr></thead>
+                  <tbody>
+                    <tr style="background:${th.zebra};"><td style="padding:5px 8px;">Bảng số liệu &amp; Đề mục</td><td style="padding:5px 8px;">Tự kẻ sọc ngựa vằn &amp; đồng bộ font</td></tr>
+                    <tr style="background:${th.bg};"><td style="padding:5px 8px;">Đoạn văn &amp; Gạch đầu dòng</td><td style="padding:5px 8px;">Tự giãn dòng &amp; căn lề chuẩn in ấn A4</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        };
+        body.querySelectorAll('[data-pro-theme10-chip]').forEach((chip) => {
+          chip.addEventListener('click', () => {
+            if (selEl) selEl.value = chip.getAttribute('data-pro-theme10-chip') || 'navy_teal';
+            renderLiveThemeSample();
+          });
+        });
+        selEl?.addEventListener('change', renderLiveThemeSample);
+        renderLiveThemeSample();
+      }
     }
 
     // ------------------------------------------------------------------------

@@ -430,6 +430,42 @@
 
 .exec-bullet-list li {
   margin-bottom: 6px;
-  color: #1e293b;
+  color: inherit;
+}
+
+/* ============================================================================
+ * 🔤 REAL TYPOGRAPHY SCALER — 4 MỨC CỠ CHỮ THỰC SỰ ĐỔI NGAY (OVERRIDE TAILWIND)
+ * ============================================================================ */
+[data-reader-size="md"] { --w20-sm: 12.5px; --w20-base: 14.5px; --w20-lg: 16.5px; --w20-xl: 19px; }
+[data-reader-size="lg"] { --w20-sm: 14.5px; --w20-base: 17px;   --w20-lg: 19.5px; --w20-xl: 22px; }
+[data-reader-size="xl"] { --w20-sm: 17px;   --w20-base: 20px;   --w20-lg: 22.5px; --w20-xl: 25px; }
+[data-reader-size="xxl"]{ --w20-sm: 19.5px; --w20-base: 23px;   --w20-lg: 26px;   --w20-xl: 29px; }
+
+[data-reader-size] .wis20-root,
+[data-reader-size] .wis20-root p,
+[data-reader-size] .wis20-root li,
+[data-reader-size] .wis20-root td,
+[data-reader-size] .wis20-root th,
+[data-reader-size] .exec-report-paper,
+[data-reader-size] .exec-report-paper p,
+[data-reader-size] .exec-report-paper li,
+[data-reader-size] .exec-callout {
+  font-size: var(--w20-base) !important;
+  line-height: 1.65 !important;
+}
+[data-reader-size] .wis20-root .text-xs,
+[data-reader-size] .wis20-root [class*="text-[11"] {
+  font-size: var(--w20-sm) !important;
+  line-height: 1.55 !important;
+}
+[data-reader-size] .wis20-root .text-sm,
+[data-reader-size] .wis20-root .text-base,
+[data-reader-size] .wis20-root h4,
+[data-reader-size] .exec-subhead {
+  font-size: var(--w20-lg) !important;
+}
+[data-reader-size] .wis20-root h3,
+[data-reader-size] .exec-sec-banner {
+  font-size: var(--w20-xl) !important;
 }
 

@@ -934,6 +934,8 @@
     const p = loadReaderPrefs();
     const sz = READER_SIZES[p.size]?.px || 17.5;
     const ff = READER_FONTS[p.font]?.css || READER_FONTS.sans.css;
+    host.setAttribute('data-reader-size', p.size);
+    host.setAttribute('data-reader-font', p.font);
     host.style.fontSize = `${sz}px`;
     host.style.fontFamily = ff;
     host.querySelectorAll('.exec-report-paper').forEach((paper) => {

@@ -966,7 +966,11 @@ ${checklistLines}`;
       const liveHeadlinesText = mergedHeadlines.length
         ? mergedHeadlines
             .map((h) => `- [${h.date || asOfDate}] ${h.title}${h.snippet ? ` — "${h.snippet.slice(0, 160)}"` : ''} (Nguồn: ${h.source} | Link gốc: ${h.url})`)
-            .join('\n')
+            .join('\n') +
+          '\n\n[YÊU CẦU BẮT BUỘC VỀ PHÂN TÍCH TIN TỨC & TRÌNH BÀY]:\n' +
+          '1. BẮT BUỘC phân tích trực tiếp TỪNG tin nóng mới nhất ở trên: sự kiện đó tác động cụ thể thế nào đến Vàng, Chứng khoán, Nhà đất và Tiền mặt (cơ chế truyền dẫn -> mức độ tác động -> hành động phòng thủ/cơ hội).\n' +
+          '2. Kết hợp trọn vẹn Khung phân tích 7 chương + Toàn bộ số liệu API sống ở trên + Nguồn thông tin thô để lập báo cáo chuyên sâu có Bảng Markdown rõ ràng.\n' +
+          '3. Cuối bài BẮT BUỘC xuất đủ khối JSON INVEST_INTEL_SYNC_V2 để Web đồng bộ vẽ trọn bộ 6 biểu đồ & xuất PDF đầy đủ biểu đồ!'
         : '- [CHƯA CÓ DỮ LIỆU TIN TỨC TRONG PHIÊN] — Yêu cầu chỉ rõ các tin tức cần người dùng tự kiểm tra thêm.';
       const globalSnap = formatLayerSnapshot(report?.items, 'global_macro');
       const vnSnap = formatLayerSnapshot(report?.items, 'vn_macro');

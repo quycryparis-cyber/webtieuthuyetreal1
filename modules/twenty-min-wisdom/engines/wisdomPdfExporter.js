@@ -680,26 +680,104 @@
     return pages;
   }
 
-  async function exportWisdomReportPdf(scanResult, geminiParsed) {
-    if (!scanResult) throw new Error('Chưa có dữ liệu 20 phút thông thái để xuất PDF.');
-    const PDFLib = await ensurePdfLib();
-    const syncData = geminiParsed?.syncData || W20.buildDefaultChartDataFromRaw(scanResult);
-    const now = new Date();
-    const todayFullStr = now.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
-    const fileDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  /**
+   * Trang bổ sung Phần 2 (nếu có >3 chuỗi nhân quả / >4 sự kiện tác động / >3 mốc thời gian) để KHÔNG BAO GIỜ BỎ SÓT 1 SỰ KIỆN NÀO!
+   */
+  function drawPart2ContinuationPage(syncData, todayFullStr) {
+    const chains = Array.isArray(syncData?.causal_mindmap?.chains) ? syncData.causal_mindmap.chains : [];
+    const impacts = Array.isArray(syncData?.impact_scores) ? syncData.impact_scores : [];
+    const timeline = Array.isArray(syncData?.timeline) ? syncData.timeline : [];
+    const extraChains = chains.slice(3, 8);
+    const extraImpacts = impacts.slice(4, 8);
+    const extraTimeline = timeline.slice(3, 8);
+    if (!extraChains.length && !extraImpacts.length && !extraTimeline.length) return null;
 
-    const coverCanvas = drawCoverPage(scanResult, syncData, todayFullStr);
-    const chartCanvas = drawChartsDashboardPage(syncData, todayFullStr);
-    const contentCanvases = drawContentPages(scanResult, geminiParsed);
+    const { canvas, ctx } = createA4Canvas();
+    const W = canvas.width;
+    ctx.fillStyle = '#0f2942';
+    ctx.fillRect(0, 0, W, 96);
+    ctx.fillStyle = '#14b8a6';
+    ctx.fillRect(0, 92, W, 4);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 28px "Segoe UI", Arial, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('PHẦN 2 (TIẾP) — ĐẦY ĐỦ 8 SỰ KIỆN TÁC ĐỘNG, NHÂN QUẢ & DÒNG THỜI GIAN', 72, 48);
+    ctx.textBaseline = 'top';
 
-    const allCanvases = [coverCanvas, chartCanvas, ...contentCanvases];
-    const totalPages = allCanvases.length;
-
-    // Vẽ số trang chân trang từ trang 2 trở đi
-    for (let i = 1; i < totalPages; i++) {
-      drawPageFooter(allCanvases[i].getContext('2d'), i + 1, totalPages, todayFullStr);
+    let y = 126;
+    if (extraImpacts.length) {
+      ctx.fillStyle = '#0f2942';
+      ctx.font = '900 23px "Segoe UI", Arial, sans-serif';
+      ctx.fillText('📊 Các Sự Kiện Tác Động Tiếp Theo (Thang 0–100)', 72, y);
+      y += 40;
+      const barCols = ['#10b981', '#ec4899', '#14b8a6', '#f97316'];
+      extraImpacts.forEach((it, i) => {
+        const sc = Math.max(10, Math.min(100, Number(it.score) || 70));
+        const col = barCols[i % barCols.length];
+        ctx.fillStyle = '#0f172a';
+        ctx.font = '800 18px "Segoe UI", Arial, sans-serif';
+        ctx.fillText(String(it.topic || '').replace(/\*/g, '').slice(0, 74), 72, y);
+        ctx.fillStyle = col;
+        ctx.font = '900 18px "Segoe UI", Arial, sans-serif';
+        ctx.fillText(`${sc}/100`, 1090, y);
+        drawRoundedRect(ctx, 72, y + 26, 995, 16, 8);
+        ctx.fillStyle = '#e2e8f0'; ctx.fill();
+        drawRoundedRect(ctx, 72, y + 26, Math.round((sc / 100) * 995), 16, 8);
+        ctx.fillStyle = col; ctx.fill();
+        y += 58;
+      });
+      y += 14;
     }
 
+    if (extraChains.length) {
+      ctx.fillStyle = '#0f2942';
+      ctx.font = '900 23px "Segoe UI", Arial, sans-serif';
+      ctx.fillText(`🕸️ Sơ Đồ Nhân Quả Đầy Đủ (Chuỗi #4 – #${3 + extraChains.length})`, 72, y);
+      y += 40;
+      const colW = 342;
+      const colX = [72, 449, 826];
+      const strokes = ['#0ea5e9', '#8b5cf6', '#10b981'];
+      const fills = ['#f0f9ff', '#f5f3ff', '#ecfdf5'];
+      extraChains.forEach((ch) => {
+        if (y > 1440) return;
+        const vals = [ch.cause, ch.mechanism, ch.effect];
+        vals.forEach((txt, ci) => {
+          drawRoundedRect(ctx, colX[ci], y, colW, 134, 14);
+          ctx.fillStyle = fills[ci]; ctx.fill();
+          ctx.strokeStyle = strokes[ci]; ctx.lineWidth = 2; ctx.stroke();
+          ctx.fillStyle = '#0f172a';
+          ctx.font = '700 17.5px "Segoe UI", Arial, sans-serif';
+          wrapCanvasText(ctx, String(txt || '—').replace(/\*/g, ''), colW - 26).slice(0, 4).forEach((ln, li) => {
+            ctx.fillText(ln, colX[ci] + 13, y + 14 + li * 25);
+          });
+        });
+        y += 150;
+      });
+    }
+
+    if (extraTimeline.length && y < 1560) {
+      y += 10;
+      ctx.fillStyle = '#5b21b6';
+      ctx.font = '900 22px "Segoe UI", Arial, sans-serif';
+      ctx.fillText('🗓️ Mốc Thời Gian Đáng Chú Ý Tiếp Theo', 72, y);
+      y += 36;
+      extraTimeline.forEach((t) => {
+        if (y > 1630) return;
+        ctx.fillStyle = '#059669';
+        ctx.font = '800 17px "Segoe UI", Arial, sans-serif';
+        ctx.fillText(`• [${String(t.time || 'Sắp tới')}]`, 72, y);
+        ctx.fillStyle = '#1e293b';
+        ctx.font = '600 17px "Segoe UI", Arial, sans-serif';
+        const lns = wrapCanvasText(ctx, String(t.event || '').replace(/\*/g, ''), 920).slice(0, 2);
+        lns.forEach((ln, li) => ctx.fillText(ln, 210, y + li * 22));
+        y += Math.max(28, lns.length * 22 + 8);
+      });
+    }
+    return canvas;
+  }
+
+  async function saveWisdomCanvasesToPdf(allCanvases, fileDate) {
+    const PDFLib = await ensurePdfLib();
     const pdfDoc = await PDFLib.PDFDocument.create();
     pdfDoc.setTitle(`20 Phút Thông Thái Mỗi Ngày - ${fileDate}`);
     pdfDoc.setAuthor('Sổ Tay Tiểu Thuyết Của Bi - NoirStudio');
@@ -709,8 +787,6 @@
       const jpgImg = await pdfDoc.embedJpg(jpgBytes);
       const pg = pdfDoc.addPage([595.28, 841.89]); // Chuẩn A4 (pt)
       pg.drawImage(jpgImg, { x: 0, y: 0, width: 595.28, height: 841.89 });
-      c.width = 0;
-      c.height = 0;
     }
 
     const pdfBytes = await pdfDoc.save();
@@ -723,7 +799,82 @@
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
-    return { ok: true, pages: totalPages, size: pdfBytes.byteLength };
+    return { ok: true, pages: allCanvases.length, size: pdfBytes.byteLength };
+  }
+
+  async function exportWisdomReportPdf(scanResult, geminiParsed, readerOpts = {}) {
+    if (!scanResult) throw new Error('Chưa có dữ liệu 20 phút thông thái để xuất PDF.');
+    const syncData = geminiParsed?.syncData || W20.buildDefaultChartDataFromRaw(scanResult);
+    const now = new Date();
+    const todayFullStr = now.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+    const fileDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const coverCanvas = drawCoverPage(scanResult, syncData, todayFullStr);
+    const chartCanvas = drawChartsDashboardPage(syncData, todayFullStr);
+    const extraPart2 = drawPart2ContinuationPage(syncData, todayFullStr);
+    const contentCanvases = drawContentPages(scanResult, geminiParsed);
+
+    const allCanvases = [coverCanvas, chartCanvas, ...(extraPart2 ? [extraPart2] : []), ...contentCanvases];
+    const totalPages = allCanvases.length;
+
+    for (let i = 1; i < totalPages; i++) {
+      drawPageFooter(allCanvases[i].getContext('2d'), i + 1, totalPages, todayFullStr);
+    }
+
+    // Mở CỬA SỔ XEM TRƯỚC CUỘN DỌC TỪNG TRANG A4 trước khi tải file!
+    if (typeof document !== 'undefined' && !readerOpts.skipPreview) {
+      document.getElementById('w20-pdf-live-preview-modal')?.remove();
+      const modal = document.createElement('div');
+      modal.id = 'w20-pdf-live-preview-modal';
+      modal.className = 'fixed inset-0 z-[2147483645] bg-black/90 backdrop-blur-md flex flex-col text-zinc-100';
+      modal.innerHTML = `
+        <div class="px-4 py-3 bg-[#0f2942] border-b border-teal-500/50 flex flex-wrap items-center justify-between gap-2 shrink-0">
+          <div>
+            <div class="text-sm sm:text-base font-black text-white">👁️ Xem Trước Báo Cáo PDF 20 Phút Thông Thái (${totalPages} trang)</div>
+            <div class="text-xs text-teal-200">Đã bao gồm trọn bộ Trang Bìa, Phần 2 (Biểu đồ, Sơ đồ nhân quả đầy đủ, Dòng thời gian) &amp; 8 Trụ cột</div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" id="w20-pv-download" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs sm:text-sm font-black shadow-lg cursor-pointer">⬇️ Tải File PDF Ngay</button>
+            <button type="button" id="w20-pv-close" class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
+          </div>
+        </div>
+        <div id="w20-pv-pages-scroll" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 flex flex-col items-center bg-zinc-950/95"></div>
+      `;
+      document.body.appendChild(modal);
+      const box = modal.querySelector('#w20-pv-pages-scroll');
+      allCanvases.forEach((cv, idx) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'w-full max-w-[820px] space-y-1.5';
+        const lbl = document.createElement('div');
+        lbl.className = 'text-xs font-extrabold text-teal-300 text-center';
+        lbl.textContent = `— Trang ${idx + 1} / ${totalPages} —`;
+        cv.style.width = '100%';
+        cv.style.height = 'auto';
+        cv.style.borderRadius = '10px';
+        cv.style.boxShadow = '0 14px 40px rgba(0,0,0,0.65)';
+        wrap.appendChild(lbl);
+        wrap.appendChild(cv);
+        box.appendChild(wrap);
+      });
+      modal.querySelector('#w20-pv-close')?.addEventListener('click', () => modal.remove());
+      modal.querySelector('#w20-pv-download')?.addEventListener('click', async (ev) => {
+        const btn = ev.currentTarget;
+        btn.disabled = true;
+        btn.textContent = '⏳ Đang lưu file PDF...';
+        try {
+          await saveWisdomCanvasesToPdf(allCanvases, fileDate);
+          globalScope.NoirStudio?.utils?.showToast?.(`✅ Đã tải Báo cáo PDF (${totalPages} trang) thành công!`, 'success', 4000);
+          modal.remove();
+        } catch (err) {
+          globalScope.NoirStudio?.utils?.showToast?.('⚠️ ' + (err?.message || err), 'error', 4000);
+          btn.disabled = false;
+          btn.textContent = '⬇️ Tải File PDF Ngay';
+        }
+      });
+      return { ok: true, pages: totalPages, previewOpened: true };
+    }
+
+    return saveWisdomCanvasesToPdf(allCanvases, fileDate);
   }
 
   W20.exportWisdomReportPdf = exportWisdomReportPdf;

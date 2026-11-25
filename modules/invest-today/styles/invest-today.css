@@ -418,3 +418,37 @@
 .inv-exec-list li {
   margin-bottom: 4px;
 }
+
+/* ============================================================================
+ * 🔤 REAL TYPOGRAPHY SCALER — 4 MỨC CỠ CHỮ THỰC SỰ ĐỔI NGAY (OVERRIDE TAILWIND)
+ * ============================================================================ */
+[data-reader-size="md"] { --r-sm: 12.5px; --r-base: 14.5px; --r-lg: 16.5px; --r-xl: 19px; }
+[data-reader-size="lg"] { --r-sm: 14.5px; --r-base: 17px;   --r-lg: 19.5px; --r-xl: 22px; }
+[data-reader-size="xl"] { --r-sm: 17px;   --r-base: 20px;   --r-lg: 22.5px; --r-xl: 25px; }
+[data-reader-size="xxl"]{ --r-sm: 19.5px; --r-base: 23px;   --r-lg: 26px;   --r-xl: 29px; }
+
+[data-reader-size] .inv-root,
+[data-reader-size] .inv-root p,
+[data-reader-size] .inv-root li,
+[data-reader-size] .inv-root td,
+[data-reader-size] .inv-root th,
+[data-reader-size] .inv-exec-paper,
+[data-reader-size] .inv-exec-paper p,
+[data-reader-size] .inv-exec-paper li {
+  font-size: var(--r-base) !important;
+  line-height: 1.65 !important;
+}
+[data-reader-size] .inv-root .text-xs,
+[data-reader-size] .inv-root [class*="text-[11"] {
+  font-size: var(--r-sm) !important;
+  line-height: 1.55 !important;
+}
+[data-reader-size] .inv-root .text-sm,
+[data-reader-size] .inv-root .text-base,
+[data-reader-size] .inv-root h4 {
+  font-size: var(--r-lg) !important;
+}
+[data-reader-size] .inv-root h3,
+[data-reader-size] .inv-exec-banner {
+  font-size: var(--r-xl) !important;
+}

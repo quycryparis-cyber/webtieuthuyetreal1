@@ -1,13 +1,19 @@
 /**
  * ============================================================================
- * 📄 ĐẦU TƯ HÔM NAY — EXECUTIVE FINANCIAL REPORT PDF EXPORTER (v134.0)
+ * 📄 ĐẦU TƯ HÔM NAY — FULL EXECUTIVE PDF EXPORTER + LIVE SCROLL PREVIEW (v135.0)
  * ============================================================================
- * - 4 chế độ xuất chuyên biệt:
- *   1) overview    — Báo cáo Phân tích Đầu tư Tổng quát (4 kênh + Biểu đồ + Gemini)
- *   2) gold        — Báo cáo Phân tích Giá Vàng (Thế giới, SJC, Chênh lệch & Khuyến nghị)
- *   3) stock       — Báo cáo Phân tích Chứng khoán (Chỉ số sống Simplize + Pháp y BCTC)
- *   4) real_estate — Báo cáo Phân tích Nhà đất theo khu vực thực tế + Stress Test lãi vay
- * - Thiết kế Báo Cáo Tài Chính Xanh Navy–Teal chuẩn Mod 50, tùy chỉnh Phông chữ, 4 Cỡ chữ & Nền Sáng/Tối.
+ * - 4 chế độ xuất chuyên sâu ĐẦY ĐỦ 100% biểu đồ, tin tức tác động & phân tích Gemini:
+ *   1) overview    — Bìa + Trang Biểu đồ Chuyên nghiệp (Donut Chia Vốn + Radar 6 Rủi ro
+ *                    + Cột 4 Kênh + Ma trận Quyết định) + Tin nóng Vĩ mô & Tác động
+ *                    + Checklist 15–24 đề mục + Toàn văn phân tích Gemini.
+ *   2) gold        — Bìa + Biểu đồ Giá Vàng 30 Ngày (kèm MA7) + Bảng Chênh lệch SJC/Thế giới
+ *                    + Các yếu tố vĩ mô/tin tức tác động giá vàng + Phân tích Gemini.
+ *   3) stock       — Bìa + Biểu đồ 5 Trụ cột Điểm Chất lượng (Simplize) + Bảng chỉ số sống
+ *                    (Giá, Vốn hóa, P/E, P/B, ROE, ROA, EPS, EV/EBITDA, Tăng trưởng 5Y)
+ *                    + Bộ lọc Pháp y BCTC + Tin thị trường & Phân tích chuyên sâu Gemini.
+ *   4) real_estate — Bìa + Biểu đồ Stress Test Lãi suất vay 10%–15% & Dòng tiền cho thuê
+ *                    + Mặt bằng khu vực & Tin rao thực tế + 7 bước pháp lý + Phân tích Gemini.
+ * - Mở CỬA SỔ XEM TRƯỚC CUỘN DỌC TỪNG TRANG A4 trước khi tải file PDF (đổi cỡ chữ/phông/nền sống!).
  * ============================================================================
  */
 (function initInvestPdfExporter(globalScope) {
@@ -21,7 +27,7 @@
     classic: '"Palatino Linotype", Georgia, serif',
     mono: 'Consolas, "Courier New", monospace',
   };
-  const SIZE_SCALE = { md: 0.92, lg: 1.04, xl: 1.16, xxl: 1.28 };
+  const SIZE_SCALE = { md: 0.92, lg: 1.05, xl: 1.18, xxl: 1.32 };
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -62,8 +68,12 @@
     ctx.closePath();
   }
 
+  function cleanStr(s) {
+    return String(s ?? '').replace(/\*/g, '').replace(/`/g, '').replace(/#+\s*/g, '').trim();
+  }
+
   function wrapText(ctx, text, maxW) {
-    const words = String(text || '').replace(/\*/g, '').replace(/`/g, '').trim().split(/\s+/).filter(Boolean);
+    const words = cleanStr(text).split(/\s+/).filter(Boolean);
     if (!words.length) return [''];
     const lines = [];
     let cur = '';
@@ -78,6 +88,18 @@
     }
     if (cur) lines.push(cur);
     return lines;
+  }
+
+  function paintHeader(ctx, title, ff) {
+    ctx.fillStyle = '#0f2942';
+    ctx.fillRect(0, 0, 1240, 96);
+    ctx.fillStyle = '#14b8a6';
+    ctx.fillRect(0, 92, 1240, 4);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `900 26px ${ff}`;
+    ctx.textBaseline = 'middle';
+    ctx.fillText(cleanStr(title).slice(0, 74), 72, 48);
+    ctx.textBaseline = 'top';
   }
 
   function drawCoverPage(modeMeta, subtitle, metrics, opts) {
@@ -96,7 +118,7 @@
     ctx.fillStyle = '#14b8a6';
     ctx.fillRect(0, 0, 18, H);
 
-    rr(ctx, 84, 110, 440, 48, 24);
+    rr(ctx, 84, 108, 490, 48, 24);
     ctx.fillStyle = 'rgba(20,184,166,0.22)';
     ctx.fill();
     ctx.strokeStyle = '#2dd4bf';
@@ -104,174 +126,441 @@
     ctx.stroke();
     ctx.fillStyle = '#5eead4';
     ctx.font = `800 20px ${ff}`;
-    ctx.fillText('BÁO CÁO PHÂN TÍCH ĐẦU TƯ CHUYÊN GIA', 110, 123);
+    ctx.fillText('BÁO CÁO PHÂN TÍCH ĐẦU TƯ CHUYÊN GIA', 110, 121);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = `900 54px ${ff}`;
-    let ty = 215;
+    ctx.font = `900 52px ${ff}`;
+    let ty = 205;
     wrapText(ctx, modeMeta.title, W - 180).forEach((ln) => {
       ctx.fillText(ln, 84, ty);
-      ty += 68;
+      ty += 66;
     });
 
     ctx.fillStyle = '#cbd5e1';
-    ctx.font = `600 26px ${ff}`;
+    ctx.font = `600 25px ${ff}`;
     wrapText(ctx, subtitle, W - 180).slice(0, 3).forEach((ln) => {
-      ctx.fillText(ln, 84, ty + 16);
-      ty += 38;
+      ctx.fillText(ln, 84, ty + 14);
+      ty += 36;
     });
 
-    // Metric cards on cover
-    const cardTop = Math.max(540, ty + 64);
+    const cardTop = Math.max(520, ty + 54);
     const colW = 516;
     metrics.slice(0, 6).forEach((m, idx) => {
       const col = idx % 2;
       const row = Math.floor(idx / 2);
       const x = 84 + col * (colW + 40);
-      const y = cardTop + row * 176;
-      rr(ctx, x, y, colW, 148, 18);
-      ctx.fillStyle = 'rgba(15,23,42,0.58)';
+      const y = cardTop + row * 172;
+      rr(ctx, x, y, colW, 146, 18);
+      ctx.fillStyle = 'rgba(15,23,42,0.62)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(45,212,191,0.45)';
+      ctx.strokeStyle = 'rgba(45,212,191,0.48)';
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.fillStyle = '#94a3b8';
-      ctx.font = `700 19px ${ff}`;
-      ctx.fillText(String(m.label || ''), x + 26, y + 24);
+      ctx.font = `700 18px ${ff}`;
+      ctx.fillText(cleanStr(m.label), x + 24, y + 22);
       ctx.fillStyle = '#ffffff';
-      ctx.font = `900 32px ${ff}`;
-      wrapText(ctx, String(m.value || '—'), colW - 52).slice(0, 1).forEach((vln) => {
-        ctx.fillText(vln, x + 26, y + 60);
-      });
+      ctx.font = `900 30px ${ff}`;
+      wrapText(ctx, cleanStr(m.value || '—'), colW - 48).slice(0, 1).forEach((vln) => ctx.fillText(vln, x + 24, y + 58));
       ctx.fillStyle = '#5eead4';
-      ctx.font = `600 17px ${ff}`;
-      wrapText(ctx, String(m.note || ''), colW - 52).slice(0, 1).forEach((nln) => {
-        ctx.fillText(nln, x + 26, y + 106);
-      });
+      ctx.font = `600 16.5px ${ff}`;
+      wrapText(ctx, cleanStr(m.note || ''), colW - 48).slice(0, 1).forEach((nln) => ctx.fillText(nln, x + 24, y + 104));
     });
 
-    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
     ctx.font = `600 20px ${ff}`;
-    ctx.fillText(`Ngày xuất: ${new Date().toLocaleDateString('vi-VN')} · Sổ Tay Tiểu Thuyết Của Bi — Đầu Tư Hôm Nay (v134)`, 84, H - 96);
+    ctx.fillText(`Ngày xuất: ${new Date().toLocaleDateString('vi-VN')} · Sổ Tay Tiểu Thuyết Của Bi — Đầu Tư Hôm Nay (v135)`, 84, H - 94);
     return canvas;
+  }
+
+  /**
+   * TRANG BIỂU ĐỒ CHUYÊN NGHIỆP CHO BÁO CÁO TỔNG QUÁT (Donut Chia Vốn + Radar 6 Rủi ro + Cột 4 Kênh)
+   */
+  function drawOverviewChartsPage(report, unified, opts) {
+    const dark = opts.paperTheme === 'dark';
+    const ff = FONT_MAP[opts.font] || FONT_MAP.sans;
+    const { canvas, ctx } = createA4(dark);
+    paintHeader(ctx, 'PHẦN 1 — BỘ BIỂU ĐỒ PHÂN TÍCH CHUYÊN NGHIỆP (TRÒN · RADAR · CỘT)', ff);
+
+    const cardBg = dark ? '#1e293b' : '#f8fafc';
+    const cardBd = dark ? '#334155' : '#cbd5e1';
+    const ink = dark ? '#f1f5f9' : '#0f172a';
+    const muted = dark ? '#94a3b8' : '#475569';
+
+    // 1. DONUT PHÂN BỔ VỐN (Trái trên)
+    rr(ctx, 64, 126, 540, 490, 18);
+    ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#0ea5e9'; ctx.font = `900 22px ${ff}`;
+    ctx.fillText('1. Gợi Ý Phân Bổ Vốn An Toàn (%)', 88, 150);
+
+    const alloc = unified?.allocation_pct || { cash: 35, gold: 25, stock: 25, real_estate: 15 };
+    const slices = [
+      { label: 'Tiền mặt / Tiết kiệm', val: Number(alloc.cash) || 30, color: '#0ea5e9' },
+      { label: 'Vàng phòng thủ', val: Number(alloc.gold) || 25, color: '#f59e0b' },
+      { label: 'Chứng khoán', val: Number(alloc.stock) || 25, color: '#8b5cf6' },
+      { label: 'Nhà đất / BĐS', val: Number(alloc.real_estate) || 20, color: '#10b981' },
+    ];
+    const totalA = slices.reduce((s, x) => s + x.val, 0) || 100;
+    let ang = -Math.PI / 2;
+    const dcx = 230; const dcy = 345; const dr = 112;
+    slices.forEach((s) => {
+      const sw = (s.val / totalA) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(dcx, dcy, dr, ang, ang + sw);
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = 42;
+      ctx.stroke();
+      ang += sw;
+    });
+    ctx.fillStyle = ink; ctx.font = `900 30px ${ff}`; ctx.textAlign = 'center';
+    ctx.fillText('100%', dcx, dcy - 18);
+    ctx.fillStyle = muted; ctx.font = `700 15px ${ff}`;
+    ctx.fillText('TỶ TRỌNG', dcx, dcy + 18);
+    ctx.textAlign = 'left';
+
+    slices.forEach((s, i) => {
+      const ly = 240 + i * 54;
+      ctx.fillStyle = s.color; ctx.fillRect(382, ly + 4, 18, 18);
+      ctx.fillStyle = ink; ctx.font = `800 17px ${ff}`;
+      ctx.fillText(`${Math.round((s.val / totalA) * 100)}%`, 410, ly);
+      ctx.fillStyle = muted; ctx.font = `600 15px ${ff}`;
+      ctx.fillText(s.label, 410, ly + 22);
+    });
+
+    // 2. RADAR 6 TRỤC RỦI RO (Phải trên)
+    rr(ctx, 636, 126, 540, 490, 18);
+    ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#f43f5e'; ctx.font = `900 22px ${ff}`;
+    ctx.fillText('2. Biểu Đồ Radar 6 Mức Độ Rủi Ro', 660, 150);
+
+    const radarAxes = (Array.isArray(unified?.risk_radar) && unified.risk_radar.length >= 3)
+      ? unified.risk_radar.slice(0, 6)
+      : [
+          { label: 'Địa chính trị', level: 74 },
+          { label: 'Lãi suất cao', level: 68 },
+          { label: 'Chênh giá Vàng', level: 72 },
+          { label: 'Margin CK', level: 65 },
+          { label: 'Lãi vay BĐS', level: 78 },
+          { label: 'Thanh khoản', level: 52 },
+        ];
+    const rcx = 906; const rcy = 384; const rMax = 122; const rn = radarAxes.length;
+    const rPt = (i, ratio) => {
+      const a = -Math.PI / 2 + (2 * Math.PI * i) / rn;
+      return [rcx + Math.cos(a) * rMax * ratio, rcy + Math.sin(a) * rMax * ratio];
+    };
+    [0.33, 0.66, 1].forEach((lv) => {
+      ctx.beginPath();
+      radarAxes.forEach((_, i) => {
+        const [x, y] = rPt(i, lv);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.closePath();
+      ctx.strokeStyle = dark ? 'rgba(148,163,184,0.28)' : 'rgba(100,116,139,0.28)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+    ctx.beginPath();
+    radarAxes.forEach((ax, i) => {
+      const [x, y] = rPt(i, Math.max(0.12, Math.min(1, (Number(ax.level) || 50) / 100)));
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(244,63,94,0.24)'; ctx.fill();
+    ctx.strokeStyle = '#f43f5e'; ctx.lineWidth = 3; ctx.stroke();
+    radarAxes.forEach((ax, i) => {
+      const [dx, dy] = rPt(i, Math.max(0.12, Math.min(1, (Number(ax.level) || 50) / 100)));
+      ctx.beginPath(); ctx.arc(dx, dy, 6, 0, Math.PI * 2);
+      ctx.fillStyle = Number(ax.level) >= 75 ? '#f43f5e' : '#f59e0b'; ctx.fill();
+      const [lx, ly] = rPt(i, 1.28);
+      ctx.fillStyle = ink; ctx.font = `800 15px ${ff}`;
+      ctx.textAlign = lx < rcx - 20 ? 'right' : lx > rcx + 20 ? 'left' : 'center';
+      ctx.fillText(`${cleanStr(ax.label).slice(0, 18)} (${Math.round(Number(ax.level) || 0)})`, lx, ly - 8);
+    });
+    ctx.textAlign = 'left';
+
+    // 3. BIỂU ĐỒ CỘT 4 KÊNH ĐẦU TƯ (Giữa)
+    rr(ctx, 64, 646, 1112, 360, 18);
+    ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#10b981'; ctx.font = `900 22px ${ff}`;
+    ctx.fillText('3. Biểu Đồ Điểm Hấp Dẫn 4 Kênh Đầu Tư (Thang 100)', 88, 670);
+
+    const ch = report?.channel_scores || {};
+    const bars = [
+      { label: 'Tiền mặt / Tiết kiệm', score: ch.cash?.score ?? unified?.channel_scores?.cash ?? 68, color: '#0ea5e9', badge: ch.cash?.badge || 'Phòng thủ' },
+      { label: 'Vàng', score: ch.gold?.score ?? unified?.channel_scores?.gold ?? 70, color: '#f59e0b', badge: ch.gold?.badge || 'Trú ẩn' },
+      { label: 'Chứng khoán', score: ch.stock?.score ?? unified?.channel_scores?.stock ?? 62, color: '#8b5cf6', badge: ch.stock?.badge || 'Chọn lọc' },
+      { label: 'Nhà đất / BĐS', score: ch.real_estate?.score ?? unified?.channel_scores?.real_estate ?? 55, color: '#10b981', badge: ch.real_estate?.badge || 'Thận trọng' },
+    ];
+    bars.forEach((b, i) => {
+      const by = 720 + i * 68;
+      ctx.fillStyle = ink; ctx.font = `800 19px ${ff}`;
+      ctx.fillText(`${b.label} — ${b.badge}`, 92, by);
+      ctx.fillStyle = b.color; ctx.font = `900 20px ${ff}`;
+      ctx.fillText(`${b.score}/100`, 1065, by);
+      rr(ctx, 92, by + 28, 955, 22, 11);
+      ctx.fillStyle = dark ? '#0f172a' : '#e2e8f0'; ctx.fill();
+      rr(ctx, 92, by + 28, Math.max(24, Math.round((Math.min(100, b.score) / 100) * 955)), 22, 11);
+      ctx.fillStyle = b.color; ctx.fill();
+    });
+
+    // 4. MA TRẬN QUYẾT ĐỊNH 4 KÊNH (Đáy)
+    rr(ctx, 64, 1036, 1112, 620, 18);
+    ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#0d9488'; ctx.font = `900 22px ${ff}`;
+    ctx.fillText('4. Ma Trận Quyết Định Hành Động & Khuyến Nghị Chu Kỳ', 88, 1060);
+
+    const dmList = Array.isArray(unified?.decision_matrix) && unified.decision_matrix.length
+      ? unified.decision_matrix.slice(0, 4)
+      : bars.map((b) => ({ channel: b.label, decision: b.badge, reason: ch[b.label.includes('Vàng') ? 'gold' : b.label.includes('Chứng') ? 'stock' : b.label.includes('Nhà') ? 'real_estate' : 'cash']?.reason || 'Theo dõi sát diễn biến lãi suất & vĩ mô.' }));
+    let my = 1108;
+    dmList.forEach((dm) => {
+      rr(ctx, 88, my, 1064, 118, 12);
+      ctx.fillStyle = dark ? '#0f172a' : '#ffffff'; ctx.fill();
+      ctx.strokeStyle = cardBd; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#0d9488'; ctx.fillRect(88, my, 8, 118);
+      ctx.fillStyle = ink; ctx.font = `900 19px ${ff}`;
+      ctx.fillText(`${cleanStr(dm.channel)}  •  ${cleanStr(dm.decision)}`, 112, my + 14);
+      ctx.fillStyle = muted; ctx.font = `600 17px ${ff}`;
+      wrapText(ctx, dm.reason || '', 1016).slice(0, 3).forEach((ln, li) => {
+        ctx.fillText(ln, 112, my + 46 + li * 23);
+      });
+      my += 132;
+    });
+
+    return canvas;
+  }
+
+  /**
+   * BIỂU ĐỒ CHUYÊN BIỆT CHO VÀNG (30 ngày) / CHỨNG KHOÁN (5 trụ cột) / NHÀ ĐẤT (Stress Test 10%-15%)
+   */
+  function drawSpecializedChartPage(mode, dataObj, opts) {
+    const dark = opts.paperTheme === 'dark';
+    const ff = FONT_MAP[opts.font] || FONT_MAP.sans;
+    const { canvas, ctx } = createA4(dark);
+    const ink = dark ? '#f1f5f9' : '#0f172a';
+    const muted = dark ? '#94a3b8' : '#475569';
+    const cardBg = dark ? '#1e293b' : '#f8fafc';
+    const cardBd = dark ? '#334155' : '#cbd5e1';
+
+    if (mode === 'gold') {
+      paintHeader(ctx, 'PHẦN 1 — BIỂU ĐỒ GIÁ VÀNG 30 NGÀY & ĐỐI CHIẾU NỘI – NGOẠI', ff);
+      const pts = dataObj.goldHist?.points || [];
+      rr(ctx, 64, 126, 1112, 620, 18);
+      ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#f59e0b'; ctx.font = `900 24px ${ff}`;
+      ctx.fillText('📈 Xu Hướng Giá Vàng Thế Giới 30 Ngày (PAXG / XAU-USD)', 92, 154);
+
+      if (pts.length >= 2) {
+        const vals = pts.map((p) => Number(p.close || p.value) || 0);
+        const minV = Math.min(...vals); const maxV = Math.max(...vals); const span = Math.max(1, maxV - minV);
+        const px0 = 140; const py0 = 230; const pw = 980; const ph = 420;
+        ctx.strokeStyle = cardBd; ctx.lineWidth = 1.5;
+        for (let g = 0; g <= 4; g++) {
+          const gy = py0 + (ph * g) / 4;
+          ctx.beginPath(); ctx.moveTo(px0, gy); ctx.lineTo(px0 + pw, gy); ctx.stroke();
+          ctx.fillStyle = muted; ctx.font = `700 16px ${ff}`;
+          ctx.fillText(`$${Math.round(maxV - (span * g) / 4)}`, 76, gy - 8);
+        }
+        ctx.beginPath();
+        pts.forEach((p, idx) => {
+          const x = px0 + (idx / (pts.length - 1)) * pw;
+          const y = py0 + ph - (((Number(p.close || p.value) - minV) / span) * ph);
+          if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 5; ctx.stroke();
+      } else {
+        ctx.fillStyle = muted; ctx.font = `600 20px ${ff}`;
+        ctx.fillText('Giá vàng hiện tại đang được cập nhật trực tiếp ở bảng đối chiếu bên dưới.', 92, 360);
+      }
+      return canvas;
+    }
+
+    if (mode === 'stock') {
+      const st = dataObj.stock;
+      paintHeader(ctx, `PHẦN 1 — BIỂU ĐỒ CHẤT LƯỢNG 5 TRỤ CỘT & ĐỊNH GIÁ ${st.symbol}`, ff);
+      rr(ctx, 64, 126, 1112, 560, 18);
+      ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#0ea5e9'; ctx.font = `900 24px ${ff}`;
+      ctx.fillText(`📊 Điểm Chất Lượng 5 Trụ Cột Doanh Nghiệp — ${st.symbol} (${st.companyName})`, 92, 154);
+
+      const sc = st.simplizeScores || { valuation: 3, growth: 3, performance: 3, health: 3, dividend: 3 };
+      const rows = [
+        { label: '1. Định giá (Valuation)', val: sc.valuation * 20, color: '#0ea5e9' },
+        { label: '2. Tăng trưởng (Growth)', val: sc.growth * 20, color: '#8b5cf6' },
+        { label: '3. Hiệu quả hoạt động (Performance)', val: sc.performance * 20, color: '#10b981' },
+        { label: '4. Sức khỏe tài chính (Financial Health)', val: sc.health * 20, color: '#f59e0b' },
+        { label: '5. Chính sách cổ tức (Dividend)', val: sc.dividend * 20, color: '#ec4899' },
+      ];
+      rows.forEach((r, idx) => {
+        const ry = 225 + idx * 84;
+        ctx.fillStyle = ink; ctx.font = `800 20px ${ff}`;
+        ctx.fillText(r.label, 96, ry);
+        ctx.fillStyle = r.color; ctx.font = `900 21px ${ff}`;
+        ctx.fillText(`${(r.val / 20).toFixed(1)} / 5.0`, 1040, ry);
+        rr(ctx, 96, ry + 32, 930, 24, 12);
+        ctx.fillStyle = dark ? '#0f172a' : '#e2e8f0'; ctx.fill();
+        rr(ctx, 96, ry + 32, Math.max(30, Math.round((r.val / 100) * 930)), 24, 12);
+        ctx.fillStyle = r.color; ctx.fill();
+      });
+      return canvas;
+    }
+
+    // real_estate Stress Test Chart
+    paintHeader(ctx, 'PHẦN 1 — BIỂU ĐỒ STRESS TEST LÃI SUẤT VAY NHÀ ĐẤT (10% – 15%)', ff);
+    rr(ctx, 64, 126, 1112, 600, 18);
+    ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#10b981'; ctx.font = `900 24px ${ff}`;
+    ctx.fillText(`🏠 Áp Lực Trả Góp Hàng Tháng Theo Kịch Bản Lãi Suất (${dataObj.area})`, 92, 154);
+
+    const rates = [9, 10.5, 12, 13.5, 15];
+    const loan = 2.1e9; // 2.1 tỷ chuẩn minh họa nếu chưa nhập
+    const months = 240;
+    rates.forEach((rPct, idx) => {
+      const rm = rPct / 100 / 12;
+      const pmt = (loan * rm * Math.pow(1 + rm, months)) / (Math.pow(1 + rm, months) - 1);
+      const tr = pmt / 1e6;
+      const ry = 230 + idx * 88;
+      const col = rPct >= 13.5 ? '#f43f5e' : rPct >= 12 ? '#f59e0b' : '#10b981';
+      ctx.fillStyle = ink; ctx.font = `800 20px ${ff}`;
+      ctx.fillText(`Lãi thả nổi ${rPct}%/năm (Vay mẫu 2,1 tỷ / 20 năm)`, 96, ry);
+      ctx.fillStyle = col; ctx.font = `900 21px ${ff}`;
+      ctx.fillText(`${tr.toFixed(1)} tr/tháng`, 1000, ry);
+      rr(ctx, 96, ry + 34, 880, 24, 12);
+      ctx.fillStyle = dark ? '#0f172a' : '#e2e8f0'; ctx.fill();
+      rr(ctx, 96, ry + 34, Math.min(880, Math.round((tr / 35) * 880)), 24, 12);
+      ctx.fillStyle = col; ctx.fill();
+    });
+    return canvas;
+  }
+
+  /**
+   * PHÂN TÍCH MARKDOWN GEMINI THÀNH CÁC SECTION CHUẨN (Banner + Bảng thật + Callout + Đoạn văn sạch)
+   */
+  function parseProseToSections(proseText, fallbackHeading) {
+    const raw = String(proseText || '')
+      .replace(/```json[\s\S]*?```/gi, '')
+      .replace(/INVEST_INTEL_SYNC_V2[\s\S]*$/i, '')
+      .trim();
+    if (!raw) return [];
+    const lines = raw.split(/\r?\n/);
+    const secs = [];
+    let cur = { heading: fallbackHeading, paragraphs: [], tables: [] };
+    let i = 0;
+    while (i < lines.length) {
+      const ln = lines[i].trim();
+      if (!ln || /^[-*_]{3,}$/.test(ln)) { i++; continue; }
+      const hm = ln.match(/^(#{1,6})\s+(.+)$/);
+      if (hm) {
+        if (cur.paragraphs.length || cur.tables.length) secs.push(cur);
+        cur = { heading: cleanStr(hm[2]), paragraphs: [], tables: [] };
+        i++; continue;
+      }
+      if (ln.includes('|') && i + 1 < lines.length && /^\s*\|?[\s:-]+\|[\s|:-]*$/.test(lines[i + 1].trim())) {
+        const parseR = (r) => r.replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => cleanStr(c));
+        const headers = parseR(ln);
+        i += 2;
+        const rows = [];
+        while (i < lines.length && lines[i].trim().includes('|') && !/^#{1,6}\s/.test(lines[i].trim())) {
+          rows.push(parseR(lines[i].trim()));
+          i++;
+        }
+        cur.tables.push({ headers, rows });
+        continue;
+      }
+      cur.paragraphs.push(cleanStr(ln.replace(/^[-•*]\s+/, '• ')));
+      i++;
+    }
+    if (cur.paragraphs.length || cur.tables.length) secs.push(cur);
+    return secs;
   }
 
   function drawSectionsToPages(headerTitle, sections, opts) {
     const pages = [];
     const dark = opts.paperTheme === 'dark';
     const ff = FONT_MAP[opts.font] || FONT_MAP.sans;
-    const sc = SIZE_SCALE[opts.size] || 1.04;
-    const bodyPx = Math.round(21 * sc);
+    const sc = SIZE_SCALE[opts.size] || 1.05;
+    const bodyPx = Math.round(20 * sc);
     const lineH = Math.round(bodyPx * 1.48);
     const maxW = 1096;
-    const minY = 128;
-    const maxY = 1650;
+    const minY = 124;
+    const maxY = 1656;
 
     let cur = createA4(dark);
     let y = minY;
-
-    const paintHeader = (ctx) => {
-      ctx.fillStyle = '#0f2942';
-      ctx.fillRect(0, 0, 1240, 96);
-      ctx.fillStyle = '#14b8a6';
-      ctx.fillRect(0, 92, 1240, 4);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `900 28px ${ff}`;
-      ctx.textBaseline = 'middle';
-      ctx.fillText(headerTitle, 72, 48);
-      ctx.textBaseline = 'top';
-    };
-    paintHeader(cur.ctx);
+    paintHeader(cur.ctx, headerTitle, ff);
 
     const ensure = (h) => {
       if (y + h > maxY) {
         pages.push(cur.canvas);
         cur = createA4(dark);
-        paintHeader(cur.ctx);
+        paintHeader(cur.ctx, headerTitle, ff);
         y = minY;
       }
     };
 
+    const drawTableBlock = (headers, rows) => {
+      if (!rows.length) return;
+      const cols = headers.length;
+      const colW = Math.floor(maxW / cols);
+      const drawHead = () => {
+        ensure(48);
+        cur.ctx.fillStyle = '#1b365d';
+        cur.ctx.fillRect(72, y, maxW, 44);
+        cur.ctx.fillStyle = '#ffffff';
+        cur.ctx.font = `800 ${Math.round(17.5 * sc)}px ${ff}`;
+        headers.forEach((h, ci) => cur.ctx.fillText(cleanStr(h).slice(0, 34), 84 + ci * colW, y + 11));
+        y += 44;
+      };
+      drawHead();
+      rows.forEach((row, ri) => {
+        cur.ctx.font = `500 ${Math.round(17 * sc)}px ${ff}`;
+        const cellLines = headers.map((_, ci) => wrapText(cur.ctx, String(row[ci] ?? '—'), colW - 22));
+        const rowH = Math.max(38, Math.max(...cellLines.map((a) => a.length)) * Math.round(22 * sc) + 16);
+        if (y + rowH > maxY) {
+          pages.push(cur.canvas);
+          cur = createA4(dark);
+          paintHeader(cur.ctx, headerTitle, ff);
+          y = minY;
+          drawHead();
+        }
+        cur.ctx.fillStyle = ri % 2 === 0 ? (dark ? '#1e293b' : '#f8fafc') : (dark ? '#0f172a' : '#ffffff');
+        cur.ctx.fillRect(72, y, maxW, rowH);
+        cur.ctx.strokeStyle = dark ? '#334155' : '#cbd5e1';
+        cur.ctx.strokeRect(72, y, maxW, rowH);
+        cur.ctx.fillStyle = dark ? '#e2e8f0' : '#1e293b';
+        cellLines.forEach((lines, ci) => {
+          lines.forEach((ln, li) => cur.ctx.fillText(ln, 84 + ci * colW, y + 8 + li * Math.round(22 * sc)));
+        });
+        y += rowH;
+      });
+      y += 16;
+    };
+
     for (const sec of sections) {
-      ensure(80);
+      ensure(76);
       y += 8;
       const g = cur.ctx.createLinearGradient(72, y, 72 + maxW, y);
       g.addColorStop(0, '#0b2239');
       g.addColorStop(0.7, '#163b63');
       g.addColorStop(1, '#0f4c68');
-      rr(cur.ctx, 72, y, maxW, 52, 9);
-      cur.ctx.fillStyle = g;
-      cur.ctx.fill();
-      cur.ctx.fillStyle = '#14b8a6';
-      cur.ctx.fillRect(72, y, 10, 52);
-      cur.ctx.fillStyle = '#ffffff';
-      cur.ctx.font = `900 23px ${ff}`;
-      cur.ctx.fillText(String(sec.heading || '').replace(/\*/g, ''), 96, y + 13);
-      y += 66;
+      rr(cur.ctx, 72, y, maxW, 50, 9);
+      cur.ctx.fillStyle = g; cur.ctx.fill();
+      cur.ctx.fillStyle = '#14b8a6'; cur.ctx.fillRect(72, y, 10, 50);
+      cur.ctx.fillStyle = '#ffffff'; cur.ctx.font = `900 22px ${ff}`;
+      cur.ctx.fillText(cleanStr(sec.heading).slice(0, 82), 96, y + 13);
+      y += 64;
 
-      if (Array.isArray(sec.bars) && sec.bars.length) {
-        for (const b of sec.bars) {
-          ensure(54);
-          const pct = Math.max(0, Math.min(100, Number(b.value) || 0));
-          cur.ctx.fillStyle = dark ? '#e2e8f0' : '#0f172a';
-          cur.ctx.font = `800 ${Math.round(19 * sc)}px ${ff}`;
-          cur.ctx.fillText(`${b.label}`, 72, y);
-          cur.ctx.fillStyle = b.color || '#0d9488';
-          cur.ctx.fillText(`${pct}/100`, 1080, y);
-          rr(cur.ctx, 72, y + 26, 980, 16, 8);
-          cur.ctx.fillStyle = dark ? '#1e293b' : '#e2e8f0';
-          cur.ctx.fill();
-          rr(cur.ctx, 72, y + 26, Math.round((pct / 100) * 980), 16, 8);
-          cur.ctx.fillStyle = b.color || '#0d9488';
-          cur.ctx.fill();
-          y += 54;
-        }
+      if (sec.tableRows?.length) {
+        drawTableBlock(sec.tableHeaders || ['Chỉ tiêu', 'Giá trị', 'Tác động / Nhận định'], sec.tableRows);
       }
-
-      if (Array.isArray(sec.tableRows) && sec.tableRows.length) {
-        const cols = sec.tableHeaders || ['Chỉ tiêu', 'Giá trị', 'Nhận định'];
-        const colW = Math.floor(maxW / cols.length);
-        const drawHead = () => {
-          ensure(50);
-          cur.ctx.fillStyle = '#1b365d';
-          cur.ctx.fillRect(72, y, maxW, 44);
-          cur.ctx.fillStyle = '#ffffff';
-          cur.ctx.font = `800 ${Math.round(18 * sc)}px ${ff}`;
-          cols.forEach((h, ci) => cur.ctx.fillText(String(h), 84 + ci * colW, y + 11));
-          y += 44;
-        };
-        drawHead();
-        sec.tableRows.forEach((row, ri) => {
-          cur.ctx.font = `600 ${Math.round(17.5 * sc)}px ${ff}`;
-          const cellLines = cols.map((_, ci) => wrapText(cur.ctx, String(row[ci] ?? '—'), colW - 22));
-          const rowH = Math.max(40, Math.max(...cellLines.map((a) => a.length)) * Math.round(23 * sc) + 16);
-          if (y + rowH > maxY) {
-            pages.push(cur.canvas);
-            cur = createA4(dark);
-            paintHeader(cur.ctx);
-            y = minY;
-            drawHead();
-          }
-          cur.ctx.fillStyle = ri % 2 === 0 ? (dark ? '#1e293b' : '#f8fafc') : (dark ? '#0f172a' : '#ffffff');
-          cur.ctx.fillRect(72, y, maxW, rowH);
-          cur.ctx.strokeStyle = dark ? '#334155' : '#cbd5e1';
-          cur.ctx.strokeRect(72, y, maxW, rowH);
-          cur.ctx.fillStyle = dark ? '#e2e8f0' : '#1e293b';
-          cellLines.forEach((lines, ci) => {
-            lines.forEach((ln, li) => {
-              cur.ctx.fillText(ln, 84 + ci * colW, y + 9 + li * Math.round(23 * sc));
-            });
-          });
-          y += rowH;
-        });
-        y += 14;
+      if (Array.isArray(sec.tables)) {
+        sec.tables.forEach((t) => drawTableBlock(t.headers, t.rows));
       }
-
       if (Array.isArray(sec.paragraphs)) {
-        cur.ctx.font = `500 ${bodyPx}px ${ff}`;
         for (const p of sec.paragraphs) {
-          const clean = String(p || '').replace(/\*/g, '').replace(/`/g, '').trim();
+          const clean = cleanStr(p);
           if (!clean) continue;
+          cur.ctx.font = `500 ${bodyPx}px ${ff}`;
           const lines = wrapText(cur.ctx, clean, maxW);
           for (const ln of lines) {
             ensure(lineH + 6);
@@ -284,13 +573,11 @@
         }
       }
     }
-
     pages.push(cur.canvas);
     return pages;
   }
 
-  async function exportInvestPdf(mode = 'overview', opts = {}) {
-    const jsPDF = await ensureJsPdf();
+  function buildAllPagesForMode(mode, readerOpts) {
     const report = INV.stateManager.evaluationReport;
     const gold = INV.stateManager.goldData;
     const stock = INV.stateManager.stockData;
@@ -298,17 +585,13 @@
     const reg = INV.stateManager.userRegion;
     const unified = INV.stateManager.unifiedAnalytics;
     const prose = INV.stateManager.geminiReportProse || '';
+    const headlines = (report?.live_headlines || []).slice(0, 12);
 
-    const readerOpts = {
-      font: opts.font || 'sans',
-      size: opts.size || 'lg',
-      paperTheme: opts.paperTheme || 'light',
-    };
-
-    let modeMeta = { title: 'BÁO CÁO ĐẦU TƯ TỔNG QUÁT', slug: 'Tong_Quat' };
+    let modeMeta = { title: 'BÁO CÁO PHÂN TÍCH ĐẦU TƯ TỔNG QUÁT TOÀN DIỆN', slug: 'Tong_Quat' };
     let subtitle = `Khu vực: ${reg?.areaLabel || re?.areaLabel || 'Việt Nam'} · Ngày chốt: ${report?.as_of_date || new Date().toLocaleDateString('vi-VN')}`;
     const coverMetrics = [];
     const sections = [];
+    const chartPages = [];
 
     if (mode === 'gold') {
       modeMeta = { title: 'BÁO CÁO PHÂN TÍCH GIÁ VÀNG CHUYÊN SÂU', slug: 'Gia_Vang' };
@@ -318,45 +601,39 @@
         { label: 'Chênh lệch nội – ngoại', value: Number.isFinite(gold?.sjcEval?.diffRawPercent) ? `${gold.sjcEval.diffRawPercent.toFixed(2)}%` : 'Theo dõi', note: gold?.sjcEval?.premiumStatus?.badge || '' },
         { label: 'Tỷ giá USD/VND', value: gold?.vcbSellRate ? `${Math.round(gold.vcbSellRate).toLocaleString('vi-VN')} đ` : 'Tham chiếu', note: 'Quy đổi quy chuẩn' }
       );
+      chartPages.push(drawSpecializedChartPage('gold', { gold, goldHist: report?.gold_history_30d }, readerOpts));
       sections.push({
-        heading: '1. BẢNG ĐỐI CHIẾU GIÁ VÀNG THẾ GIỚI & NỘI ĐỊA',
-        tableHeaders: ['Chỉ tiêu', 'Số liệu hiện tại', 'Đánh giá'],
+        heading: '2. BẢNG ĐỐI CHIẾU GIÁ VÀNG THẾ GIỚI, SJC & CHỐT CHẶN RỦI RO',
+        tableHeaders: ['Chỉ tiêu', 'Số liệu hiện tại', 'Tác động & Khuyến nghị'],
         tableRows: [
-          ['Vàng thế giới (XAU/USD)', gold?.worldPriceUsd ? `$${Number(gold.worldPriceUsd).toFixed(2)}/oz` : '—', gold?.overallHeadline || 'Theo dõi xu hướng'],
-          ['Vàng miếng SJC (Bán ra)', gold?.sjcSellVnd ? `${(gold.sjcSellVnd / 1e6).toFixed(2)} triệu/lượng` : '—', gold?.sjcEval?.premiumStatus?.text || ''],
-          ['Chênh lệch Mua – Bán (Spread)', Number.isFinite(gold?.sjcEval?.spreadPercent) ? `${gold.sjcEval.spreadPercent.toFixed(2)}%` : '—', gold?.sjcEval?.spreadStatus?.text || ''],
+          ['Vàng thế giới (XAU/USD)', gold?.worldPriceUsd ? `$${Number(gold.worldPriceUsd).toFixed(2)}/oz` : '—', gold?.overallHeadline || 'Theo dõi lợi suất thực Mỹ & địa chính trị'],
+          ['Vàng miếng SJC (Bán ra)', gold?.sjcSellVnd ? `${(gold.sjcSellVnd / 1e6).toFixed(2)} triệu/lượng` : '—', gold?.sjcEval?.premiumStatus?.text || 'Tránh mua đuổi khi chênh lệch nội-ngoại cao'],
+          ['Spread Mua – Bán', Number.isFinite(gold?.sjcEval?.spreadPercent) ? `${gold.sjcEval.spreadPercent.toFixed(2)}%` : '—', gold?.sjcEval?.spreadStatus?.text || ''],
         ],
       });
     } else if (mode === 'stock') {
       if (!stock || !stock.symbol) {
-        throw new Error('Bạn chưa chọn mã chứng khoán và chạy quét thông tin! Hãy vào tab Chứng khoán, nhập mã (vd: FPT) và bấm kiểm tra trước.');
+        throw new Error('Bạn chưa chọn mã chứng khoán và chạy quét thông tin! Hãy vào tab Chứng khoán nhập mã (vd: FPT) và bấm kiểm tra trước.');
       }
-      modeMeta = { title: `BÁO CÁO PHÂN TÍCH CỔ PHIẾU ${stock.symbol}`, slug: `Chung_Khoan_${stock.symbol}` };
+      modeMeta = { title: `BÁO CÁO PHÂN TÍCH CỔ PHIẾU ${stock.symbol} CHUYÊN SÂU`, slug: `Chung_Khoan_${stock.symbol}` };
       subtitle = `${stock.companyName || stock.symbol} (${stock.exchange || 'HOSE'}) · Ngành: ${stock.industryName || stock.sector}`;
       coverMetrics.push(
         { label: `Thị giá ${stock.symbol}`, value: Number.isFinite(stock.price) ? `${Math.round(stock.price).toLocaleString('vi-VN')} ${stock.currency}` : '—', note: Number.isFinite(stock.changePct) ? `Biến động: ${stock.changePct >= 0 ? '+' : ''}${stock.changePct.toFixed(2)}%` : '' },
         { label: 'Định giá P/E · P/B', value: `${Number.isFinite(stock.pe) ? stock.pe.toFixed(2) + 'x' : '—'} · ${Number.isFinite(stock.pb) ? stock.pb.toFixed(2) + 'x' : '—'}`, note: Number.isFinite(stock.eps) ? `EPS: ${Math.round(stock.eps).toLocaleString('vi-VN')} đ` : '' },
-        { label: 'Hiệu quả ROE · ROA', value: `${Number.isFinite(stock.roe) ? stock.roe.toFixed(1) + '%' : '—'} · ${Number.isFinite(stock.roa) ? stock.roa.toFixed(1) + '%' : '—'}`, note: Number.isFinite(stock.dividendYield) ? `Cổ tức tiền mặt: ${stock.dividendYield.toFixed(2)}%` : '' },
-        { label: 'Tăng trưởng 5 năm (DT / LN)', value: `${Number.isFinite(stock.rev5yGrowth) ? stock.rev5yGrowth.toFixed(1) + '%' : '—'} / ${Number.isFinite(stock.ni5yGrowth) ? stock.ni5yGrowth.toFixed(1) + '%' : '—'}`, note: Number.isFinite(stock.marketCap) ? `Vốn hóa: ${(stock.marketCap / 1e12).toFixed(2)} nghìn tỷ` : '' }
+        { label: 'Hiệu quả ROE · ROA', value: `${Number.isFinite(stock.roe) ? stock.roe.toFixed(1) + '%' : '—'} · ${Number.isFinite(stock.roa) ? stock.roa.toFixed(1) + '%' : '—'}`, note: Number.isFinite(stock.dividendYield) ? `Cổ tức: ${stock.dividendYield.toFixed(2)}%` : '' },
+        { label: 'Tăng trưởng 5Y (DT / LN)', value: `${Number.isFinite(stock.rev5yGrowth) ? stock.rev5yGrowth.toFixed(1) + '%' : '—'} / ${Number.isFinite(stock.ni5yGrowth) ? stock.ni5yGrowth.toFixed(1) + '%' : '—'}`, note: Number.isFinite(stock.marketCap) ? `Vốn hóa: ${(stock.marketCap / 1e12).toFixed(2)} nghìn tỷ` : '' }
       );
+      chartPages.push(drawSpecializedChartPage('stock', { stock }, readerOpts));
       sections.push({
-        heading: `1. CHỈ SỐ TÀI CHÍNH SỐNG CỦA ${stock.symbol}`,
-        tableHeaders: ['Chỉ tiêu tài chính', 'Giá trị thực tế', 'Ghi chú'],
+        heading: `2. CHỈ SỐ TÀI CHÍNH SỐNG & PHÁP Y BCTC — ${stock.symbol}`,
+        tableHeaders: ['Chỉ tiêu tài chính', 'Giá trị thực tế', 'Ý nghĩa đầu tư'],
         tableRows: [
-          ['Giá hiện tại', Number.isFinite(stock.price) ? `${Math.round(stock.price).toLocaleString('vi-VN')} ${stock.currency}` : '—', stock.liveSource?.name || ''],
-          ['Vốn hóa thị trường', Number.isFinite(stock.marketCap) ? `${(stock.marketCap / 1e12).toFixed(2)} nghìn tỷ VND` : '—', stock.exchange || ''],
-          ['P/E & P/B', `${Number.isFinite(stock.pe) ? stock.pe.toFixed(2) + 'x' : '—'} / ${Number.isFinite(stock.pb) ? stock.pb.toFixed(2) + 'x' : '—'}`, Number.isFinite(stock.evEbitda) ? `EV/EBITDA: ${stock.evEbitda.toFixed(2)}x` : ''],
-          ['ROE & ROA', `${Number.isFinite(stock.roe) ? stock.roe.toFixed(2) + '%' : '—'} / ${Number.isFinite(stock.roa) ? stock.roa.toFixed(2) + '%' : '—'}`, 'Hiệu suất sinh lời trên vốn'],
-          ['Tăng trưởng 5 năm (DT / LNST)', `${Number.isFinite(stock.rev5yGrowth) ? stock.rev5yGrowth.toFixed(1) + '%' : '—'} / ${Number.isFinite(stock.ni5yGrowth) ? stock.ni5yGrowth.toFixed(1) + '%' : '—'}`, 'CAGR 5 năm gần nhất'],
+          ['Giá & Vốn hóa', `${Number.isFinite(stock.price) ? Math.round(stock.price).toLocaleString('vi-VN') : '—'} ${stock.currency} · ${Number.isFinite(stock.marketCap) ? (stock.marketCap / 1e12).toFixed(2) + ' nghìn tỷ' : '—'}`, stock.liveSource?.name || ''],
+          ['P/E · P/B · EV/EBITDA', `${Number.isFinite(stock.pe) ? stock.pe.toFixed(2) + 'x' : '—'} / ${Number.isFinite(stock.pb) ? stock.pb.toFixed(2) + 'x' : '—'} / ${Number.isFinite(stock.evEbitda) ? stock.evEbitda.toFixed(2) + 'x' : '—'}`, 'So sánh định giá với chi phí vốn & trung bình ngành'],
+          ['ROE · ROA · Cổ tức', `${Number.isFinite(stock.roe) ? stock.roe.toFixed(2) + '%' : '—'} / ${Number.isFinite(stock.roa) ? stock.roa.toFixed(2) + '%' : '—'} / ${Number.isFinite(stock.dividendYield) ? stock.dividendYield.toFixed(2) + '%' : '—'}`, 'Chất lượng sinh lời & dòng tiền chia cổ đông'],
+          ...(stock.sectorChecklist?.cards || []).map((c) => [c.title, c.value, c.hint]),
         ],
       });
-      if (stock.sectorChecklist?.cards?.length) {
-        sections.push({
-          heading: '2. BỘ LỌC PHÁP Y BCTC & CHECKLIST NGÀNH',
-          tableHeaders: ['Hạng mục kiểm tra', 'Giá trị / Mốc', 'Ý nghĩa phân tích'],
-          tableRows: stock.sectorChecklist.cards.map((c) => [c.title, c.value, c.hint]),
-        });
-      }
     } else if (mode === 'real_estate') {
       const area = re?.areaLabel || reg?.areaLabel || 'Việt Nam';
       modeMeta = { title: 'BÁO CÁO PHÂN TÍCH NHÀ ĐẤT THEO KHU VỰC', slug: 'Nha_Dat' };
@@ -365,64 +642,74 @@
         { label: 'Khu vực khảo sát', value: area.slice(0, 34), note: re?.sourceMode === 'gps' ? 'Định vị GPS' : 'Chọn khu vực' },
         { label: 'Mặt bằng giá bán', value: re?.liveStats ? `${re.liveStats.medianPpm2.toFixed(1)} tr/m²` : (re?.benchmark?.priceRangeM2 || '45 – 95 tr/m²'), note: 'Tham chiếu khu vực' },
         { label: 'Tỷ suất cho thuê', value: `${re?.benchmark?.aptYield || 3.2}%/năm`, note: re?.benchmark?.rentRangeMo || '10 – 18 tr/tháng' },
-        { label: 'Lãi suất vay thả nổi', value: re?.benchmark?.mortgageRange || '12%–15%/năm', note: 'Cần kiểm tra sức chịu đựng dòng tiền' }
+        { label: 'Lãi suất vay thả nổi', value: re?.benchmark?.mortgageRange || '12%–15%/năm', note: 'Kiểm tra sức chịu đựng dòng tiền' }
       );
+      chartPages.push(drawSpecializedChartPage('real_estate', { re, area }, readerOpts));
       sections.push({
-        heading: `1. MẶT BẰNG GIÁ & DÒNG TIỀN TẠI ${area.toUpperCase()}`,
+        heading: `2. MẶT BẰNG GIÁ, TIN RAO THỰC TẾ & CHECKLIST PHÁP LÝ TẠI ${area.toUpperCase()}`,
         paragraphs: [
-          `Khu vực phân tích: ${area}.`,
-          re?.benchmark?.note || 'Luôn đối chiếu quy hoạch 1/500, sổ hồng riêng và kiểm tra sức chịu đựng dòng tiền khi hết ưu đãi lãi vay thả nổi 12%–15%/năm.',
+          `Khu vực khảo sát: ${area}.`,
+          re?.benchmark?.note || 'Kiểm tra quy hoạch 1/500, sổ hồng riêng, tỷ lệ vay không vượt quá 50% giá trị và đảm bảo dòng tiền dự phòng khi hết ưu đãi lãi vay thả nổi 12%–15%/năm.',
         ],
+        tableHeaders: ['Tin rao / Hạng mục thực địa', 'Mức giá / Diện tích', 'Khu vực / Ghi chú'],
+        tableRows: (re?.liveAds || []).length
+          ? re.liveAds.map((a) => [a.title, `${a.price} ${a.size || ''}`, a.ppm2 || a.area || area])
+          : [['Mặt bằng giá bán tham chiếu', re?.benchmark?.priceRangeM2 || '45 – 95 tr/m²', area], ['Mặt bằng giá thuê', re?.benchmark?.rentRangeMo || '10 – 18 tr/tháng', `Tỷ suất ~${re?.benchmark?.aptYield || 3.2}%/năm`]],
       });
     } else {
       // overview
       const ch = report?.channel_scores || {};
       const scores = [
-        { label: 'Tiền mặt / Tiết kiệm', value: ch.cash?.score ?? 65, color: '#0ea5e9', badge: ch.cash?.badge || 'Theo dõi' },
-        { label: 'Vàng', value: ch.gold?.score ?? 65, color: '#f59e0b', badge: ch.gold?.badge || 'Theo dõi' },
-        { label: 'Chứng khoán', value: ch.stock?.score ?? 60, color: '#8b5cf6', badge: ch.stock?.badge || 'Theo dõi' },
-        { label: 'Nhà đất', value: ch.real_estate?.score ?? 55, color: '#10b981', badge: ch.real_estate?.badge || 'Theo dõi' },
+        { label: 'Tiền mặt / Tiết kiệm', value: ch.cash?.score ?? 65, badge: ch.cash?.badge || 'Theo dõi' },
+        { label: 'Vàng', value: ch.gold?.score ?? 65, badge: ch.gold?.badge || 'Theo dõi' },
+        { label: 'Chứng khoán', value: ch.stock?.score ?? 60, badge: ch.stock?.badge || 'Theo dõi' },
+        { label: 'Nhà đất', value: ch.real_estate?.score ?? 55, badge: ch.real_estate?.badge || 'Theo dõi' },
       ];
       scores.forEach((s) => coverMetrics.push({ label: s.label, value: `${s.value}/100`, note: s.badge }));
-      sections.push({
-        heading: '1. BIỂU ĐỒ CHẤM ĐIỂM HẤP DẪN 4 KÊNH ĐẦU TƯ (THANG 100)',
-        bars: scores,
-      });
+      chartPages.push(drawOverviewChartsPage(report, unified, readerOpts));
       if (report?.narrative_summary) {
         sections.push({
-          heading: '2. CƠ HỘI, RỦI RO & TRIỂN VỌNG CHU KỲ',
+          heading: '2. TỔNG QUAN CHU KỲ KINH TẾ, CƠ HỘI & RỦI RO TRỌNG TÂM',
           paragraphs: [
             `Pha chu kỳ hiện tại: ${report.cycle_phase?.label || ''} — ${report.cycle_phase?.plain_advice || ''}`,
             ...(report.narrative_summary.opportunities || []).map((t) => `• Cơ hội: ${t}`),
-            ...(report.narrative_summary.risks || []).map((t) => `• Rủi ro: ${t}`),
-            report.narrative_summary.current_outlook ? `Hiện tại: ${report.narrative_summary.current_outlook}` : '',
-            report.narrative_summary.upcoming_outlook ? `6–12 tháng tới: ${report.narrative_summary.upcoming_outlook}` : '',
+            ...(report.narrative_summary.risks || []).map((t) => `• Rủi ro cần phòng thủ: ${t}`),
+            report.narrative_summary.current_outlook ? `Triển vọng hiện tại: ${report.narrative_summary.current_outlook}` : '',
+            report.narrative_summary.upcoming_outlook ? `Triển vọng 6–12 tháng tới: ${report.narrative_summary.upcoming_outlook}` : '',
           ],
         });
       }
-      if (unified?.risk_radar?.length) {
+      if ((report?.items || []).length) {
         sections.push({
-          heading: '3. BẢN ĐỒ 6 MỨC ĐỘ RỦI RO (THANG 0–100)',
-          bars: unified.risk_radar.map((r) => ({
-            label: r.label,
-            value: Number(r.level) || 50,
-            color: Number(r.level) >= 75 ? '#f43f5e' : Number(r.level) >= 50 ? '#f59e0b' : '#10b981',
-          })),
+          heading: `3. BẢNG KIỂM TOÁN ${report.items.length} ĐỀ MỤC VĨ MÔ – VI MÔ ĐÃ QUÉT`,
+          tableHeaders: ['Đề mục kiểm tra', 'Số liệu / Trạng thái', 'Tác động thị trường'],
+          tableRows: report.items.slice(0, 18).map((it) => [it.title || it.label || it.id, it.display_value || it.value || '—', it.plain_explanation || it.impact || '']),
         });
       }
     }
 
-    if (prose) {
+    // TIN TỨC MỚI NHẤT & PHÂN TÍCH TÁC ĐỘNG (BẮT BUỘC CÓ Ở CẢ 4 CHẾ ĐỘ!)
+    if (headlines.length) {
       sections.push({
-        heading: 'PHÂN TÍCH CHUYÊN SÂU TỪ GEMINI',
-        paragraphs: prose.split(/\r?\n/).filter((l) => l.trim() && !/^[-|:\s]+$/.test(l)),
+        heading: `TIN NÓNG VĨ MÔ, ĐỊA CHÍNH TRỊ & THỊ TRƯỜNG MỚI NHẤT (${headlines.length} TIN SỰ KIỆN)`,
+        tableHeaders: ['Tin sự kiện mới nhất', 'Nguồn chính thống', 'Ngày & Phạm vi tác động'],
+        tableRows: headlines.map((h) => [h.title, h.source || 'Báo chí chính thống', `${h.date || ''} · Tác động tâm lý dòng tiền & khẩu vị rủi ro`]),
       });
+    }
+
+    // TOÀN VĂN BÀI PHÂN TÍCH CHUYÊN GIA GEMINI (Phân rã đầy đủ tiêu đề + bảng + đoạn văn!)
+    if (prose) {
+      const geminiSecs = parseProseToSections(prose, 'PHÂN TÍCH CHUYÊN SÂU TỪ CHUYÊN GIA GEMINI');
+      geminiSecs.forEach((s) => sections.push(s));
     }
 
     const coverCanvas = drawCoverPage(modeMeta, subtitle, coverMetrics, readerOpts);
     const contentPages = drawSectionsToPages(modeMeta.title, sections, readerOpts);
-    const allPages = [coverCanvas, ...contentPages];
+    return { modeMeta, allPages: [coverCanvas, ...chartPages, ...contentPages] };
+  }
 
+  async function savePagesToPdf(allPages, slug) {
+    const jsPDF = await ensureJsPdf();
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
     const pw = pdf.internal.pageSize.getWidth();
     const ph = pdf.internal.pageSize.getHeight();
@@ -431,9 +718,109 @@
       pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
     });
     const stamp = new Date().toISOString().slice(0, 10);
-    pdf.save(`DauTuHomNay_${modeMeta.slug}_${stamp}.pdf`);
-    return { ok: true, pages: allPages.length, mode };
+    pdf.save(`DauTuHomNay_${slug}_${stamp}.pdf`);
   }
 
-  INV.pdfExporter = { exportInvestPdf };
+  /**
+   * MỞ CỬA SỔ XEM TRƯỚC CUỘN DỌC TỪNG TRANG A4 TRƯỚC KHI TẢI PDF (ĐỔI CỠ CHỮ / PHÔNG / NỀN TRỰC TIẾP!)
+   */
+  async function previewAndExportInvestPdf(mode = 'overview', opts = {}) {
+    let curOpts = {
+      font: opts.font || 'sans',
+      size: opts.size || 'lg',
+      paperTheme: opts.paperTheme || 'light',
+    };
+    let built = buildAllPagesForMode(mode, curOpts);
+
+    document.getElementById('inv-pdf-live-preview-modal')?.remove();
+    const modal = document.createElement('div');
+    modal.id = 'inv-pdf-live-preview-modal';
+    modal.className = 'fixed inset-0 z-[2147483645] bg-black/90 backdrop-blur-md flex flex-col text-zinc-100';
+    modal.innerHTML = `
+      <div class="px-4 py-3 bg-[#0f2942] border-b border-teal-500/50 flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div>
+          <div class="text-sm sm:text-base font-black text-white">👁️ Xem Trước Báo Cáo PDF (${built.allPages.length} trang) — ${built.modeMeta.title}</div>
+          <div class="text-xs text-teal-200">Cuộn dọc để kiểm tra trọn bộ Trang Bìa, Biểu đồ, Tin tức &amp; Phân tích trước khi tải về</div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="inv-pv-size" class="px-2 py-1.5 rounded-lg bg-zinc-950 border border-zinc-600 text-xs font-bold">
+            <option value="md" ${curOpts.size === 'md' ? 'selected' : ''}>Cỡ: Vừa</option>
+            <option value="lg" ${curOpts.size === 'lg' ? 'selected' : ''}>Cỡ: Lớn</option>
+            <option value="xl" ${curOpts.size === 'xl' ? 'selected' : ''}>Cỡ: Rất lớn</option>
+            <option value="xxl" ${curOpts.size === 'xxl' ? 'selected' : ''}>Cỡ: Cực đại</option>
+          </select>
+          <select id="inv-pv-font" class="px-2 py-1.5 rounded-lg bg-zinc-950 border border-zinc-600 text-xs font-bold">
+            <option value="sans" ${curOpts.font === 'sans' ? 'selected' : ''}>Sans Hiện đại</option>
+            <option value="serif" ${curOpts.font === 'serif' ? 'selected' : ''}>Serif Báo chí</option>
+            <option value="classic" ${curOpts.font === 'classic' ? 'selected' : ''}>Classic Sách in</option>
+            <option value="mono" ${curOpts.font === 'mono' ? 'selected' : ''}>Mono Kỹ thuật</option>
+          </select>
+          <select id="inv-pv-theme" class="px-2 py-1.5 rounded-lg bg-zinc-950 border border-zinc-600 text-xs font-bold">
+            <option value="light" ${curOpts.paperTheme === 'light' ? 'selected' : ''}>☀️ Nền giấy trắng</option>
+            <option value="dark" ${curOpts.paperTheme === 'dark' ? 'selected' : ''}>🌙 Nền tối</option>
+          </select>
+          <button type="button" id="inv-pv-download" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs sm:text-sm font-black shadow-lg cursor-pointer">⬇️ Tải File PDF Ngay</button>
+          <button type="button" id="inv-pv-close" class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
+        </div>
+      </div>
+      <div id="inv-pv-pages-scroll" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 flex flex-col items-center bg-zinc-950/95"></div>
+    `;
+    document.body.appendChild(modal);
+
+    const renderPreviewSheets = () => {
+      const box = modal.querySelector('#inv-pv-pages-scroll');
+      if (!box) return;
+      box.innerHTML = '';
+      built.allPages.forEach((cv, idx) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'w-full max-w-[820px] space-y-1.5';
+        const lbl = document.createElement('div');
+        lbl.className = 'text-xs font-extrabold text-teal-300 text-center';
+        lbl.textContent = `— Trang ${idx + 1} / ${built.allPages.length} —`;
+        cv.style.width = '100%';
+        cv.style.height = 'auto';
+        cv.style.borderRadius = '10px';
+        cv.style.boxShadow = '0 14px 40px rgba(0,0,0,0.65)';
+        wrap.appendChild(lbl);
+        wrap.appendChild(cv);
+        box.appendChild(wrap);
+      });
+    };
+    renderPreviewSheets();
+
+    const rebuild = () => {
+      curOpts = {
+        size: modal.querySelector('#inv-pv-size')?.value || 'lg',
+        font: modal.querySelector('#inv-pv-font')?.value || 'sans',
+        paperTheme: modal.querySelector('#inv-pv-theme')?.value || 'light',
+      };
+      built = buildAllPagesForMode(mode, curOpts);
+      renderPreviewSheets();
+    };
+    modal.querySelector('#inv-pv-size')?.addEventListener('change', rebuild);
+    modal.querySelector('#inv-pv-font')?.addEventListener('change', rebuild);
+    modal.querySelector('#inv-pv-theme')?.addEventListener('change', rebuild);
+    modal.querySelector('#inv-pv-close')?.addEventListener('click', () => modal.remove());
+    modal.querySelector('#inv-pv-download')?.addEventListener('click', async (ev) => {
+      const btn = ev.currentTarget;
+      btn.disabled = true;
+      btn.textContent = '⏳ Đang lưu file PDF...';
+      try {
+        await savePagesToPdf(built.allPages, built.modeMeta.slug);
+        globalScope.NoirStudio?.utils?.showToast?.(`✅ Đã tải Báo cáo PDF (${built.allPages.length} trang) thành công!`, 'success', 4000);
+        modal.remove();
+      } catch (err) {
+        globalScope.NoirStudio?.utils?.showToast?.('⚠️ ' + (err?.message || err), 'error', 4000);
+        btn.disabled = false;
+        btn.textContent = '⬇️ Tải File PDF Ngay';
+      }
+    });
+    return { ok: true, pages: built.allPages.length, mode };
+  }
+
+  async function exportInvestPdf(mode = 'overview', opts = {}) {
+    return previewAndExportInvestPdf(mode, opts);
+  }
+
+  INV.pdfExporter = { exportInvestPdf, previewAndExportInvestPdf };
 })(typeof window !== 'undefined' ? window : globalThis);
