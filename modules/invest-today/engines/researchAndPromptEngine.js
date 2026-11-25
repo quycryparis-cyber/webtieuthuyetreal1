@@ -177,7 +177,9 @@ ${checklistLines}`;
       wbFdiRes,
       wbUsCpiRes,
       btcRes,
-      wikiEnRes,
+      bbcWorldRss,
+      bbcBizRss,
+      vneBizRss,
       hnWarRes,
       hnLeaderRes,
       hnTradeRes,
@@ -192,7 +194,9 @@ ${checklistLines}`;
       INV.networkAdapter.fetchJson(`https://api.worldbank.org/v2/country/${encodeURIComponent(iso2)}/indicator/BX.KLT.DINV.WD.GD.ZS?format=json&mrv=3`, { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://api.worldbank.org/v2/country/US/indicator/FP.CPI.TOTL.ZG?format=json&mrv=3', { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT', { signal, timeoutMs: 7000, preferDirect: true }),
-      INV.networkAdapter.fetchJson(`https://en.wikipedia.org/api/rest_v1/feed/featured/${y}/${m}/${day}`, { signal, timeoutMs: 7500, preferDirect: true }),
+      INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://feeds.bbci.co.uk/news/world/rss.xml'), { signal, timeoutMs: 7500, preferDirect: true }),
+      INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://feeds.bbci.co.uk/news/business/rss.xml'), { signal, timeoutMs: 7500, preferDirect: true }),
+      INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://vnexpress.net/rss/kinh-doanh.rss'), { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://hn.algolia.com/api/v1/search_by_date?query=Ukraine&tags=story&restrictSearchableAttributes=title&typoTolerance=false&numericFilters=points>5&hitsPerPage=4', { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://hn.algolia.com/api/v1/search_by_date?query=Trump&tags=story&restrictSearchableAttributes=title&typoTolerance=false&numericFilters=points>5&hitsPerPage=4', { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://hn.algolia.com/api/v1/search_by_date?query=tariff&tags=story&restrictSearchableAttributes=title&typoTolerance=false&numericFilters=points>5&hitsPerPage=4', { signal, timeoutMs: 7500, preferDirect: true }),
@@ -312,29 +316,34 @@ ${checklistLines}`;
       });
     };
 
-    pushHn(hnWarRes, bundle.geoHeadlines, 'Tin Xung đột & Địa chính trị (Live)', 10, /ukraine|russia|war|iran|israel|gaza|nato|military|conflict|drone|strike/i);
-    pushHn(hnLeaderRes, bundle.geoHeadlines, 'Tin Lãnh đạo & Chính sách Mỹ (Live)', 10, /trump|president|white house|biden|xi|putin|congress|policy/i);
-    pushHn(hnTradeRes, bundle.geoHeadlines, 'Tin Thuế quan & Thương mại (Live)', 10, /tariff|trade|treaty|sanction|china|eu|export|economy|opec/i);
-
-    if (wikiEnRes.status === 'fulfilled') {
-      const list = Array.isArray(wikiEnRes.value?.data?.news) ? wikiEnRes.value.data.news : [];
-      list.slice(0, 4).forEach((item) => {
-        const text = stripTags(item.story);
-        const link = item.links?.[0]?.content_urls?.desktop?.page || 'https://en.wikipedia.org/wiki/Portal:Current_events';
-        if (text) {
-          addUnique(bundle.geoHeadlines, {
-            title: text,
-            source: 'Wikipedia Current Events (EN · Live)',
+    // 7) Live Mainstream Press (BBC World, BBC Business, VnExpress Kinh doanh — v133, 0% Wikipedia)
+    const pushRss2Json = (res, targetArr, sourceLabel, maxLen) => {
+      if (res.status !== 'fulfilled') return;
+      const items = Array.isArray(res.value?.data?.items) ? res.value.data.items : [];
+      items.slice(0, 5).forEach((it) => {
+        const title = stripTags(it.title || '');
+        const link = String(it.link || it.guid || '').trim();
+        if (title && /^https?:\/\//i.test(link)) {
+          addUnique(targetArr, {
+            title,
+            source: sourceLabel,
             url: link,
-            date: `${y}-${m}-${day}`,
-          }, 12);
+            date: String(it.pubDate || '').slice(0, 10) || `${y}-${m}-${day}`,
+          }, maxLen);
         }
       });
-    }
+    };
+    pushRss2Json(bbcWorldRss, bundle.geoHeadlines, 'BBC World News (Chính thống · Live)', 12);
+    pushRss2Json(bbcBizRss, bundle.corpHeadlines, 'BBC Business (Chính thống · Live)', 10);
+    pushRss2Json(vneBizRss, bundle.corpHeadlines, 'VnExpress Kinh doanh (Chính thống · Live)', 10);
+
+    pushHn(hnWarRes, bundle.geoHeadlines, 'Tin Xung đột & Địa chính trị (Live)', 12, /ukraine|russia|war|iran|israel|gaza|nato|military|conflict|drone|strike/i);
+    pushHn(hnLeaderRes, bundle.geoHeadlines, 'Tin Lãnh đạo & Chính sách Mỹ (Live)', 12, /trump|president|white house|biden|xi|putin|congress|policy/i);
+    pushHn(hnTradeRes, bundle.geoHeadlines, 'Tin Thuế quan & Thương mại (Live)', 12, /tariff|trade|treaty|sanction|china|eu|export|economy|opec/i);
 
     // 8) Live Mega-Corporations, AI, Fed, Inflation & Macro News (HN Algolia CORS=*)
-    pushHn(hnMacroCorpRes, bundle.corpHeadlines, 'Tin Lạm phát, Fed & Kinh tế (Live)', 8, /inflation|fed|rate|recession|economy|bank|price|gdp|cpi|oil|gold/i);
-    pushHn(hnLeaderRes, bundle.corpHeadlines, 'Tin Tập đoàn & Chính sách (Live)', 8, /nvidia|apple|microsoft|google|openai|anthropic|trump|ceo|ipo|chip|ai/i);
+    pushHn(hnMacroCorpRes, bundle.corpHeadlines, 'Tin Lạm phát, Fed & Kinh tế (Live)', 12, /inflation|fed|rate|recession|economy|bank|price|gdp|cpi|oil|gold/i);
+    pushHn(hnLeaderRes, bundle.corpHeadlines, 'Tin Tập đoàn & Chính sách (Live)', 12, /nvidia|apple|microsoft|google|openai|anthropic|trump|ceo|ipo|chip|ai/i);
 
     return bundle;
   }

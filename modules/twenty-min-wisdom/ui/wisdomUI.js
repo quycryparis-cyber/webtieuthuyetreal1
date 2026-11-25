@@ -85,17 +85,101 @@
     return `${mm}:${ss}`;
   }
 
+  function formatInlineMd(str) {
+    return esc(str)
+      .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#0f2942;font-weight:800;">$1</strong>')
+      .replace(/`([^`]+)`/g, '<code style="padding:1px 6px;border-radius:5px;background:#e2e8f0;color:#0f2942;font-size:12px;">$1</code>');
+  }
+
+  /**
+   * Trình kết xuất Báo Cáo Tài Chính / Tạp Chí Chuyên Nghiệp (Chuẩn Word / PDF):
+   * - Xử lý sạch 100% tiêu đề #..###### thành dải màu xanh navy-teal (0 còn dấu ####!).
+   * - Phân tích chuẩn bảng Markdown `| col | col |` thành bảng HTML có nền tiêu đề xanh đậm + kẻ sọc.
+   * - Không bao giờ để sót dòng `---` hay `PHẦN 2 — KHỐI JSON` thừa!
+   */
   function renderSimpleMarkdown(md) {
-    const safe = esc(md || '');
-    return safe
-      .replace(/^###\s+(.+)$/gm, '<h4 class="text-sm font-black text-emerald-700 dark:text-emerald-300 mt-3 mb-1">$1</h4>')
-      .replace(/^##\s+(.+)$/gm, '<h3 class="text-base font-black text-sky-700 dark:text-sky-300 mt-4 mb-1.5">$1</h3>')
-      .replace(/^#\s+(.+)$/gm, '<h2 class="text-base font-black mt-4 mb-1.5">$1</h2>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-[11px]">$1</code>')
-      .replace(/^\s*[-*•]\s+(.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
-      .replace(/\n{2,}/g, '<br/><br/>')
-      .replace(/\n/g, '<br/>');
+    const lines = String(md || '').split(/\r?\n/);
+    const htmlParts = [];
+    let i = 0;
+
+    while (i < lines.length) {
+      const raw = lines[i];
+      const trimmed = raw.trim();
+
+      if (!trimmed || /^---+$/.test(trimmed) || /^===+$/.test(trimmed)) {
+        i++;
+        continue;
+      }
+
+      // 1. Bảng Markdown chuẩn `| a | b |`
+      if (trimmed.startsWith('|') && trimmed.endsWith('|') && i + 1 < lines.length && /^\|\s*[-:]+/.test(lines[i + 1].trim())) {
+        const parseRow = (ln) => ln.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+        const headers = parseRow(trimmed);
+        i += 2; // bỏ qua dòng header & dòng |---|---|
+        const bodyRows = [];
+        while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
+          bodyRows.push(parseRow(lines[i]));
+          i++;
+        }
+        htmlParts.push(`
+          <div class="exec-table-wrap">
+            <table class="exec-table">
+              <thead><tr>${headers.map((h) => `<th>${formatInlineMd(h)}</th>`).join('')}</tr></thead>
+              <tbody>
+                ${bodyRows.map((row) => `<tr>${row.map((cell) => `<td>${formatInlineMd(cell)}</td>`).join('')}</tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        `);
+        continue;
+      }
+
+      // 2. Tiêu đề các cấp (# đến ######)
+      const hMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+      if (hMatch) {
+        const lvl = hMatch[1].length;
+        const title = hMatch[2].replace(/\*\*/g, '').trim();
+        if (lvl <= 2) {
+          htmlParts.push(`<div class="exec-sec-banner">${esc(title)}</div>`);
+        } else {
+          htmlParts.push(`<div class="exec-subhead">${esc(title)}</div>`);
+        }
+        i++;
+        continue;
+      }
+
+      // 3. Callout / Trích dẫn `>`
+      if (trimmed.startsWith('>')) {
+        const quoteLines = [];
+        while (i < lines.length && lines[i].trim().startsWith('>')) {
+          quoteLines.push(lines[i].trim().replace(/^>\s?/, ''));
+          i++;
+        }
+        htmlParts.push(`<div class="exec-callout">${quoteLines.map(formatInlineMd).join('<br/>')}</div>`);
+        continue;
+      }
+
+      // 4. Danh sách gạch đầu dòng (`-`, `*`, `•`)
+      if (/^[-*•]\s+/.test(trimmed)) {
+        const items = [];
+        while (i < lines.length && /^[-*•]\s+/.test(lines[i].trim())) {
+          items.push(lines[i].trim().replace(/^[-*•]\s+/, ''));
+          i++;
+        }
+        htmlParts.push(`<ul class="exec-bullet-list">${items.map((it) => `<li>${formatInlineMd(it)}</li>`).join('')}</ul>`);
+        continue;
+      }
+
+      // 5. Đoạn văn bản thường (nếu là tiêu đề đánh số kiểu `1. Thế giới...` in đậm)
+      if (/^\d+\.\s+/.test(trimmed) && trimmed.length < 95) {
+        htmlParts.push(`<div class="exec-subhead">${formatInlineMd(trimmed)}</div>`);
+      } else {
+        htmlParts.push(`<p style="margin:6px 0 10px;color:#1e293b;">${formatInlineMd(trimmed)}</p>`);
+      }
+      i++;
+    }
+
+    return htmlParts.join('\n');
   }
 
   function getCountryOptionsHtml(selectedCode) {
@@ -616,8 +700,22 @@
           </div>
         ` : ''}
 
-        <div class="wis20-card wis20-md-body text-xs sm:text-[13px] leading-relaxed">
+        <!-- BÁO CÁO CHÍNH THEO GIAO DIỆN TÀI CHÍNH / PDF-WORD CHUYÊN NGHIỆP -->
+        <div class="exec-report-paper">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding-bottom:12px;margin-bottom:14px;border-bottom:2px solid #0f2942;">
+            <div>
+              <div style="font-size:11px;font-weight:900;letter-spacing:0.06em;color:#0d9488;text-transform:uppercase;">BÁO CÁO TRI THỨC CHÍNH THỐNG · 20 PHÚT THÔNG THÁI MỖI NGÀY</div>
+              <div style="font-size:18px;font-weight:900;color:#0f2942;margin-top:2px;">${esc(sync.headline || `Bản tin 8 Trụ cột — ${state.scanResult?.dateLabel || ''}`)}</div>
+            </div>
+            <span style="padding:4px 10px;border-radius:999px;background:#0f2942;color:#ffffff;font-size:11px;font-weight:800;">📅 ${esc(state.scanResult?.dateLabel || '')}</span>
+          </div>
           ${renderSimpleMarkdown(state.geminiParsed.markdownBody)}
+        </div>
+
+        <!-- PHẦN 2: SƠ ĐỒ & BIỂU ĐỒ BẢN TIN 20 PHÚT (HIỂN THỊ TRỰC TIẾP NGAY TRONG BÁO CÁO!) -->
+        <div class="wis20-card space-y-3">
+          <div class="exec-sec-banner" style="margin-top:0;">PHẦN 2 — SƠ ĐỒ, BIỂU ĐỒ &amp; HÌNH ẢNH BẢN TIN 20 PHÚT</div>
+          ${W20.charts.renderAllChartsHtml(sync, state.scanResult)}
         </div>
 
         <div class="flex flex-wrap justify-end gap-2">

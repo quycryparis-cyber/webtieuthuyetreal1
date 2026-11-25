@@ -96,6 +96,21 @@
     '画像':'gazō','文書':'bunsho','印刷':'insatsu','結合':'ketsugō','分割':'bunkatsu','圧縮':'asshuku','署名':'shomei',
     '変換':'henkan','表示':'hyōji','非表示':'hihyōji','拡大':'kakudai','縮小':'shukushō','回転':'kaiten','完了':'kanryō',
     '成功':'seikō','失敗':'shippai','警告':'keikoku','注意':'chūi','詳細':'shōsai','概要':'gaiyō','比較':'hikaku',
+    '地政学':'chiseigaku','戦争':'sensō','指導者':'shidōsha','協定':'kyōtei','大企業':'daikigyō','参考':'sankō',
+    '販売':'hanbai','区間':'kukan','賃貸':'chintai','利回り':'rimawari','住宅':'jūtaku','金利':'kinri','水準':'suijun',
+    '周辺':'shūhen','最新':'saishin','物件':'bukken','時差':'jisa','アラーム':'arāmu','機能':'kinō','画面':'gamen',
+    '全体':'zentai','部分':'bubun','追加':'tsuika','更新':'kōshin','復元':'fukugen','保護':'hogo','暗号化':'angōka',
+    '解除':'kaijo','検証':'kenshō','診断':'shindan','報告':'hōkoku','記録':'kiroku','履歴':'rireki','統計':'tōkei',
+    '速度':'sokudo','容量':'yōryō','端末':'tanmatsu','通信':'tsūshin','接続':'setsuzoku','切断':'setsudan','待機':'taiki',
+    '有効':'yūkō','無効':'mukō','標準':'hyōjun','高度':'kōdo','軽量':'keiryō','高速':'kōsoku','安全':'anzen',
+    '無料':'muryō','有料':'yūryō','公式':'kōshiki','個人':'kojin','共有':'kyōyū','翻訳':'honyaku','発音':'hatsuon',
+    '意味':'imi','例文':'reibun','問題':'mondai','解答':'kaitō','正解':'seikai','不正解':'fuseikai','進捗':'shinchoku',
+    '星':'hoshi','お気に入り':'okiniiri','すべて':'subete','検索':'kensaku','並べ替え':'narabekae','絞り込み':'shiborikomi',
+    '金':'kin','株':'kabu','不動産':'fudōsan','経済':'keizai','金融':'kinyū','医療':'iryō','健康':'kenkō','法律':'hōritsu',
+    '社会':'shakai','心理':'shinri','文化':'bunka','歴史':'rekishi','科学':'kagaku','技術':'gijutsu','世界':'sekai',
+    '人':'hito','日':'hi','月':'tsuki','年':'toshi','本':'hon','書':'sho','読':'yomi','見':'mi','聞':'kiki','話':'hanashi',
+    '新':'shin','古':'furu','大':'dai','小':'shō','高':'taka','低':'hiku','上':'ue','下':'shita','前':'mae','後':'ato',
+    '中':'naka','外':'soto','内':'uchi','全':'zen','多':'ōi','少':'sukunai','良':'yoi','悪':'warui','強':'tsuyoi','弱':'yowai',
   };
 
   function romanizeJapanese(str) {
@@ -152,10 +167,38 @@
     '部':'bù','页':'yè','頁':'yè','面':'miàn','简':'jiǎn','簡':'jiǎn','体':'tǐ','體':'tǐ','繁':'fán',
   };
 
+  let pinyinProPromise = null;
+  async function ensurePinyinPro() {
+    if (globalScope.pinyinPro?.pinyin) return globalScope.pinyinPro;
+    if (pinyinProPromise) return pinyinProPromise;
+    pinyinProPromise = new Promise((resolve) => {
+      if (typeof document === 'undefined') return resolve(null);
+      const existing = document.querySelector('script[data-mod51-pinyin="1"]');
+      if (existing && globalScope.pinyinPro?.pinyin) return resolve(globalScope.pinyinPro);
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/dist/index.js';
+      s.async = true;
+      s.dataset.mod51Pinyin = '1';
+      s.onload = () => resolve(globalScope.pinyinPro || null);
+      s.onerror = () => resolve(null);
+      document.head.appendChild(s);
+    });
+    return pinyinProPromise;
+  }
+
   function romanizeChinese(str) {
+    const raw = String(str || '').trim();
+    if (!raw) return '';
+    // Ưu tiên 100% pinyin-pro (đầy đủ 20.900+ Hán tự Giản thể & Phồn thể có thanh điệu chuẩn!)
+    if (globalScope.pinyinPro && typeof globalScope.pinyinPro.pinyin === 'function') {
+      try {
+        const res = globalScope.pinyinPro.pinyin(raw, { toneType: 'symbol', nonZh: 'consecutive' });
+        if (res && String(res).trim()) return String(res).replace(/\s+/g, ' ').trim();
+      } catch (_ePp) {}
+    }
     let out = [];
     let buf = '';
-    for (const ch of String(str || '')) {
+    for (const ch of raw) {
       if (ZH_PINYIN_MAP[ch]) {
         if (buf) { out.push(buf); buf = ''; }
         out.push(ZH_PINYIN_MAP[ch]);
@@ -434,7 +477,8 @@
     return lines.length ? lines : [''];
   }
 
-  async function exportVocabAndGrammarPdf({ vocabItems, visibleLangs, nativeLang, includeGrammar = true }) {
+  async function exportVocabAndGrammarPdf({ vocabItems, visibleLangs, nativeLang, includeGrammar = true, onProgress = null }) {
+    await ensurePinyinPro();
     const PDFLib = await ensurePdfLib();
     const langs = visibleLangs.slice(0, 6);
     const pdfDoc = await PDFLib.PDFDocument.create();
@@ -444,75 +488,89 @@
     c.height = 1754;
     const ctx = c.getContext('2d');
     const fontCjk = '"Segoe UI", "Microsoft YaHei", "Malgun Gothic", "Yu Gothic", Arial, sans-serif';
+    let pageCounter = 0;
 
     const flushPage = async () => {
-      const dataUrl = c.toDataURL('image/jpeg', 0.90);
+      pageCounter += 1;
+      const dataUrl = c.toDataURL('image/jpeg', 0.86);
       const bin = atob(dataUrl.split(',')[1]);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       const jpg = await pdfDoc.embedJpg(bytes);
       const pg = pdfDoc.addPage([595.28, 841.89]);
       pg.drawImage(jpg, { x: 0, y: 0, width: 595.28, height: 841.89 });
+      if (pageCounter % 6 === 0) {
+        await new Promise((r) => setTimeout(r, 0));
+      }
     };
 
     const startNewPage = (subtitle) => {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, c.width, c.height);
-      ctx.fillStyle = '#0f172a';
+      ctx.fillStyle = '#0f2942';
       ctx.fillRect(0, 0, c.width, 108);
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = '#14b8a6';
+      ctx.fillRect(0, 0, 14, 108);
+      ctx.fillStyle = '#ffffff';
       ctx.font = `900 30px ${fontCjk}`;
       ctx.textBaseline = 'top';
-      ctx.fillText(`SỔ TAY TỪ VỰNG & NGỮ PHÁP ĐA NGÔN NGỮ (${langs.map((l) => l.toUpperCase()).join(' · ')})`, 56, 22);
+      ctx.fillText(`SỔ TAY TỪ VỰNG & NGỮ PHÁP ĐA NGÔN NGỮ (${langs.map((l) => l.toUpperCase()).join(' · ')})`, 46, 22);
       ctx.fillStyle = '#cbd5e1';
       ctx.font = `600 19px ${fontCjk}`;
-      ctx.fillText(`${subtitle}  ·  Ngày xuất: ${todayStr}  ·  Sổ Tay Tiểu Thuyết Của Bi`, 56, 66);
+      ctx.fillText(`${subtitle}  ·  Ngày xuất: ${todayStr}  ·  Trang ${pageCounter + 1}`, 46, 66);
       return 132;
     };
 
-    let y = startNewPage(`Bảng từ vựng đã chọn (${vocabItems.length} mục) kèm phiên âm`);
+    let y = startNewPage(`Bảng từ vựng ĐẦY ĐỦ đã chọn (${vocabItems.length} mục) kèm phiên âm`);
     const colW = Math.floor((1240 - 112) / langs.length);
 
     const drawTableHeader = () => {
-      ctx.fillStyle = '#e0f2fe';
-      ctx.fillRect(56, y, 1240 - 112, 42);
-      ctx.fillStyle = '#0369a1';
+      ctx.fillStyle = '#162d4c';
+      ctx.fillRect(56, y, 1240 - 112, 44);
+      ctx.fillStyle = '#ffffff';
       ctx.font = `900 20px ${fontCjk}`;
       langs.forEach((code, idx) => {
         const meta = LANGUAGES.find((l) => l.code === code) || { name: code };
-        ctx.fillText(meta.name + (code === nativeLang ? ' ★' : ''), 66 + idx * colW, y + 10);
+        ctx.fillText(meta.name + (code === nativeLang ? ' ★' : ''), 66 + idx * colW, y + 11);
       });
       y += 46;
     };
 
     drawTableHeader();
-    for (const item of vocabItems.slice(0, 260)) {
+    // XUẤT FULL 100% TOÀN BỘ TỪ VỰNG ĐÃ CHỌN (KHÔNG CẮT GIỚI HẠN 260 TỪ!)
+    for (let idxItem = 0; idxItem < vocabItems.length; idxItem++) {
+      const item = vocabItems[idxItem];
+      if (onProgress && (idxItem % 40 === 0 || idxItem === vocabItems.length - 1)) {
+        onProgress(idxItem + 1, vocabItems.length);
+      }
       const cellLines = langs.map((code) => {
-        ctx.font = `700 18px ${fontCjk}`;
+        ctx.font = `700 17px ${fontCjk}`;
         const t = wrapCtx(ctx, item[code] || '—', colW - 18).slice(0, 2);
         const ph = getPhonetic(code, item[code]);
-        ctx.font = `500 14px ${fontCjk}`;
+        ctx.font = `500 13.5px ${fontCjk}`;
         const p = ph && code !== nativeLang ? wrapCtx(ctx, ph, colW - 18).slice(0, 2) : [];
         return { t, p };
       });
-      const maxH = Math.max(...cellLines.map((cl) => cl.t.length * 24 + cl.p.length * 19)) + 16;
-      if (y + maxH > 1680) {
+      const maxH = Math.max(...cellLines.map((cl) => cl.t.length * 22 + cl.p.length * 18)) + 14;
+      if (y + maxH > 1690) {
         await flushPage();
-        y = startNewPage(`Bảng từ vựng (tiếp theo)`);
+        y = startNewPage(`Bảng từ vựng (${idxItem + 1}/${vocabItems.length} từ)`);
         drawTableHeader();
       }
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth = 1.2;
+      ctx.fillStyle = idxItem % 2 === 1 ? '#f8fafc' : '#ffffff';
+      ctx.fillRect(56, y, 1240 - 112, maxH);
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
       ctx.strokeRect(56, y, 1240 - 112, maxH);
       cellLines.forEach((cl, idx) => {
         const cx = 66 + idx * colW;
-        let cy = y + 8;
+        let cy = y + 7;
         ctx.fillStyle = '#0f172a';
-        ctx.font = `700 18px ${fontCjk}`;
-        cl.t.forEach((ln) => { ctx.fillText(ln, cx, cy); cy += 24; });
-        ctx.fillStyle = '#64748b';
-        ctx.font = `500 14px ${fontCjk}`;
-        cl.p.forEach((ln) => { ctx.fillText(ln, cx, cy); cy += 19; });
+        ctx.font = `700 17px ${fontCjk}`;
+        cl.t.forEach((ln) => { ctx.fillText(ln, cx, cy); cy += 22; });
+        ctx.fillStyle = '#475569';
+        ctx.font = `500 13.5px ${fontCjk}`;
+        cl.p.forEach((ln) => { ctx.fillText(ln, cx, cy); cy += 18; });
       });
       y += maxH;
     }
@@ -684,6 +742,7 @@ render();</script></body></html>`;
   LL.LANGUAGES = LANGUAGES;
   LL.GRAMMAR_MATRIX = GRAMMAR_MATRIX;
   LL.STORAGE_KEYS = STORAGE_KEYS;
+  LL.ensurePinyinPro = ensurePinyinPro;
   LL.getPhonetic = getPhonetic;
   LL.speakText = speakText;
   LL.buildWebsiteVocabDatabase = buildWebsiteVocabDatabase;

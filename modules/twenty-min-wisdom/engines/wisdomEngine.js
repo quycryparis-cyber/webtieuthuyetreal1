@@ -316,8 +316,103 @@
   }
 
   /**
-   * Parse RSS XML trực tiếp (khi chạy bản Electron Desktop có cầu IPC fetch không bị CORS!)
+   * Trích xuất bài báo thật từ Jina Read Mode (r.jina.ai) — 200 OK · CORS=* cho mọi trang báo chính thống!
    */
+  function parseJinaReadModeArticles(mdText, sourceName, maxItems = 4) {
+    const out = [];
+    const seen = new Set();
+    // Khớp các link Markdown chuẩn [Tiêu đề bài báo](https://...) dài >= 24 ký tự
+    const matches = [...String(mdText || '').matchAll(/\[([^\]\n]{24,180})\]\((https?:\/\/[^\s)]+)\)/g)];
+    for (const m of matches) {
+      if (out.length >= maxItems) break;
+      const title = stripHtml(m[1]).replace(/\s+/g, ' ').trim();
+      const url = m[2].trim();
+      if (!title || !url || seen.has(url)) continue;
+      if (/privacy|cookie|subscribe|sign.?in|login|terms|contact|about|facebook|twitter|youtube|instagram|javascript:/i.test(title + ' ' + url)) continue;
+      if (!isFreshNewsItem({ title, maxDays: 30 })) continue;
+      seen.add(url);
+      out.push({
+        title: title.slice(0, 190),
+        summary: `Bài viết chính thống trích trực tiếp qua chế độ Read Mode từ ${sourceName} hôm nay.`,
+        url,
+        imageUrl: '',
+        publishedAt: new Date().toISOString(),
+        source: `${sourceName} (Read Mode Live)`,
+      });
+    }
+    return out;
+  }
+
+  /**
+   * Bộ lấy tin Báo chí Chính thống 3 tầng (Electron Direct RSS -> rss2json CORS -> Jina Read Mode CORS)
+   */
+  async function fetchLiveOfficialPress(feedUrl, sourceName, { maxItems = 4, signal, preferJina = false } = {}) {
+    // Tầng 1: Electron Desktop (đọc thẳng RSS XML gốc 0 giới hạn)
+    if (globalScope.NoirDesktopLocalEngine?.fetchUrl) {
+      try {
+        const res = await globalScope.NoirDesktopLocalEngine.fetchUrl(feedUrl);
+        if (res?.ok && res.text) {
+          const items = parseOfficialRssXml(res.text, sourceName, maxItems);
+          if (items.length) return items;
+        }
+      } catch (_eEl) {}
+    }
+
+    // Tầng 2: rss2json (200 OK · CORS phản chiếu origin — trả đủ tiêu đề, tóm tắt, ảnh báo gốc & ngày đăng!)
+    if (!preferJina) {
+      try {
+        const j = await fetchJsonSafe(
+          `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`,
+          signal,
+          8500
+        );
+        if (j?.status === 'ok' && Array.isArray(j.items) && j.items.length) {
+          const out = [];
+          for (const it of j.items) {
+            if (out.length >= maxItems) break;
+            const title = stripHtml(it.title);
+            const summary = stripHtml(it.description || it.content || '').slice(0, 260);
+            const url = it.link || it.guid || '';
+            const img = it.thumbnail || it.enclosure?.link || '';
+            if (!title || !url || !isFreshNewsItem({ title, summary, publishedAt: it.pubDate, maxDays: 14 })) continue;
+            out.push({
+              title: title.slice(0, 200),
+              summary: summary || `Bản tin chính thống mới nhất từ ${sourceName}.`,
+              url,
+              imageUrl: /^https?:\/\//i.test(img) ? img : '',
+              publishedAt: it.pubDate || new Date().toISOString(),
+              source: `${sourceName} (Live)`,
+            });
+          }
+          if (out.length) return out;
+        }
+      } catch (_eR2j) {}
+    }
+
+    // Tầng 3: Jina Read Mode (`https://r.jina.ai/...` — 200 OK · CORS=* đọc sạch nội dung bài báo!)
+    try {
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), 9500);
+      const onAb = () => ctrl.abort();
+      if (signal) signal.addEventListener('abort', onAb, { once: true });
+      try {
+        const resp = await fetch(`https://r.jina.ai/${feedUrl}`, { signal: ctrl.signal });
+        if (resp.ok) {
+          const txt = await resp.text();
+          // Nếu r.jina.ai trả về nội dung RSS hoặc trang báo -> trích xuất bài báo thật
+          const fromXml = parseOfficialRssXml(txt, sourceName, maxItems);
+          if (fromXml.length) return fromXml;
+          const fromMd = parseJinaReadModeArticles(txt, sourceName, maxItems);
+          if (fromMd.length) return fromMd;
+        }
+      } finally {
+        clearTimeout(tmr);
+        if (signal) signal.removeEventListener('abort', onAb);
+      }
+    } catch (_eJina) {}
+
+    return [];
+  }
   function parseOfficialRssXml(xmlText, sourceName, maxItems = 4) {
     const out = [];
     const items = [...String(xmlText || '').matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)];
@@ -616,75 +711,88 @@
       report('🔬 Đã quét Công bố Khoa học & AI Chính thức (Crossref DOI)', `${categoriesData.tech_science.length} mục`);
     })();
 
-    // 5) Nếu đang chạy bản Electron Desktop -> đọc thẳng RSS XML từ Báo Chính Thống (VnExpress, Tuổi Trẻ, BBC World)!
-    const pElectronRss = (async () => {
-      if (!globalScope.NoirDesktopLocalEngine?.fetchUrl) {
-        report('📰 Chuẩn hóa Checklist Báo chí Chính thống Quốc tế & Khu vực', profile.name);
-        return;
-      }
-      const rssTargets = [
-        { name: 'BBC World News', url: 'https://feeds.bbci.co.uk/news/world/rss.xml', cat: 'world_geo' },
-        ...(profile.rssFeeds || []),
+    // 5) ĐỌC TRỰC TIẾP BÀI BÁO THẬT HÔM NAY TỪ BÁO CHÍ CHÍNH THỐNG (BBC World/Tech/Business + VnExpress/Tuổi Trẻ + WHO + NASA + HBR qua RSS/Read Mode!)
+    const pLivePress = (async () => {
+      const feedJobs = [
+        { cat: 'world_geo', name: 'BBC News World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml', preferJina: false, max: 4 },
+        { cat: 'tech_science', name: 'BBC Technology', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml', preferJina: false, max: 3 },
+        { cat: 'economy_markets', name: 'BBC Business', url: 'https://feeds.bbci.co.uk/news/business/rss.xml', preferJina: false, max: 3 },
+        { cat: 'local_region', name: profile.code === 'VN' ? 'VnExpress Thời sự' : 'AP News', url: profile.code === 'VN' ? 'https://vnexpress.net/rss/tin-moi-nhat.rss' : 'https://apnews.com/world-news', preferJina: profile.code !== 'VN', max: 4 },
+        { cat: 'law_society', name: profile.code === 'VN' ? 'VnExpress Pháp luật' : 'UN News', url: profile.code === 'VN' ? 'https://vnexpress.net/phap-luat' : 'https://news.un.org/en/', preferJina: true, max: 3 },
+        { cat: 'health_science', name: profile.code === 'VN' ? 'VnExpress Sức khỏe' : 'WHO News', url: profile.code === 'VN' ? 'https://vnexpress.net/suc-khoe' : 'https://www.who.int/news', preferJina: true, max: 3 },
+        { cat: 'mind_skills', name: 'Harvard Business Review', url: 'https://hbr.org/the-latest', preferJina: true, max: 3 },
+        { cat: 'deep_knowledge', name: 'NASA Official News', url: 'https://www.nasa.gov/news/all-news/', preferJina: true, max: 3 },
       ];
-      let added = 0;
-      for (const feed of rssTargets.slice(0, 4)) {
-        try {
-          const res = await globalScope.NoirDesktopLocalEngine.fetchUrl(feed.url);
-          if (res?.ok && res.text) {
-            const parsed = parseOfficialRssXml(res.text, feed.name, 3);
-            for (const it of parsed) {
-              categoriesData[feed.cat].push(await makeProvenanceItem({
-                id: `rss-${feed.cat}-${added++}`,
-                category: feed.cat,
-                ...it,
-                readMinutes: 2,
-              }));
-              if (it.imageUrl) {
-                visualGallery.push({ title: it.title.slice(0, 75), caption: it.summary.slice(0, 130), imageUrl: it.imageUrl, url: it.url, tag: `📰 ${feed.name}` });
-              }
+
+      let liveArticlesCount = 0;
+      await Promise.allSettled(
+        feedJobs.map(async (job) => {
+          const articles = await fetchLiveOfficialPress(job.url, job.name, {
+            maxItems: job.max,
+            signal,
+            preferJina: job.preferJina,
+          });
+          for (const art of articles) {
+            liveArticlesCount += 1;
+            categoriesData[job.cat].unshift(await makeProvenanceItem({
+              id: `live-press-${job.cat}-${liveArticlesCount}`,
+              category: job.cat,
+              ...art,
+              isLiveArticle: true,
+              readMinutes: 2,
+            }));
+            if (art.imageUrl && visualGallery.length < 8) {
+              visualGallery.push({
+                title: art.title.slice(0, 75),
+                caption: art.summary.slice(0, 130),
+                imageUrl: art.imageUrl,
+                url: art.url,
+                tag: `📰 ${job.name}`,
+              });
             }
           }
-        } catch (_eRss) {}
-      }
-      report('📰 Đã đọc thẳng RSS Báo chí Chính thống (Electron)', `${added} bài báo`);
+        })
+      );
+      report('📰 Đã trích xuất bài báo thật hôm nay (Báo chính thống & Read Mode)', `${liveArticlesCount} bài báo sống`);
     })();
 
-    // 6) Nạp Checklist Báo chí Chính thống Hạng 1 & Cổng Cơ quan Nhà nước theo đúng Quốc gia (100% link chính chủ, 0 Wikipedia/Blog/MXH!)
+    // 6) Bổ sung Cổng tra cứu chính chủ ở cuối mỗi trụ cột (chỉ làm phụ lục nếu trụ cột nào ít bài)
     const pChecklist = (async () => {
-      // Khu vực & Quốc gia của người dùng
-      for (const lnk of (profile.newsLinks || [])) {
+      for (const lnk of (profile.newsLinks || []).slice(0, 4)) {
         categoriesData.local_region.push(await makeProvenanceItem({
           id: `loc-press-${categoriesData.local_region.length}`,
           category: 'local_region',
-          title: `📰 ${lnk.label}`,
-          summary: `Cổng thông tin ${lnk.tier} chính thức dành cho khu vực ${loc.fullAddress || profile.name} — bấm mở đọc tin mới nhất hôm nay.`,
+          title: `🔗 Cổng chính thức: ${lnk.label}`,
+          summary: `Cổng thông tin ${lnk.tier} chính thức khu vực ${loc.fullAddress || profile.name}.`,
           source: `${lnk.tier} · ${profile.name}`,
           url: lnk.url,
           imageUrl: '',
           publishedAt: new Date().toISOString(),
-          readMinutes: 2,
+          isPortalLink: true,
+          readMinutes: 1,
         }));
       }
-      // 7 trụ cột báo chí & học viện chính thống toàn cầu
       for (const [catId, list] of Object.entries(OFFICIAL_PRESS_CHECKLIST)) {
-        for (const item of list) {
+        // Chỉ thêm tối đa 2 cổng chính chủ làm tham chiếu bổ sung nếu chưa đủ bài sống
+        for (const item of list.slice(0, 2)) {
           categoriesData[catId].push(await makeProvenanceItem({
             id: `chk-${catId}-${categoriesData[catId].length}`,
             category: catId,
-            title: item.title,
+            title: `🔗 ${item.title}`,
             summary: item.summary,
             source: item.source,
             url: item.url,
             imageUrl: '',
             publishedAt: new Date().toISOString(),
-            readMinutes: item.readMinutes || 2,
+            isPortalLink: true,
+            readMinutes: item.readMinutes || 1,
           }));
         }
       }
-      report('✅ Hoàn tất Checklist 8 Trụ cột Báo chí Chính thống (0 Wiki / 0 Blog)', '100% nguồn uy tín');
+      report('✅ Hoàn tất 8 Trụ cột Tri thức Chính thống (0 Wiki / 0 Blog)', '100% báo chính thống');
     })();
 
-    await Promise.allSettled([pEcon, pWb, pPubMed, pCrossref, pElectronRss, pChecklist]);
+    await Promise.allSettled([pEcon, pWb, pPubMed, pCrossref, pLivePress, pChecklist]);
 
     const totalItems = Object.values(categoriesData).reduce((sum, arr) => sum + arr.length, 0);
     return {
@@ -714,21 +822,24 @@
       lines.push(`Chủ đề người đọc muốn ưu tiên đào sâu hôm nay: "${String(customTopic).trim()}"`);
     }
     lines.push('');
-    lines.push('⚠️ QUY TẮC NGUỒN TIN & THỜI SỰ BẮT BUỘC (0% TIN CŨ · 0% NGUỒN RÁC):');
-    lines.push('1. CHỈ ĐƯỢC PHÉP tra cứu và trích dẫn từ BÁO CHÍ CHÍNH THỐNG HẠNG 1 & CƠ QUAN CHÍNH THỨC: Reuters, AP News, BBC, Financial Times, Bloomberg, The Economist, Nature, Science, MIT Tech Review, Harvard Business Review, WHO, IMF, World Bank, NIH/PubMed, NASA, Báo Điện tử Chính phủ, VnExpress, Tuổi Trẻ, Thanh Niên, Ngân hàng Trung ương.');
-    lines.push('2. TUYỆT ĐỐI CẤM dùng Wikipedia, blog cá nhân, diễn đàn (Reddit/Hacker News/Quora) hay mạng xã hội làm nguồn tin chính!');
-    lines.push(`3. CHỈ tổng hợp sự kiện MỚI NHẤT trong 24–72 giờ tính tới hôm nay (${scanResult.dateLabel}), TUYỆT ĐỐI KHÔNG nhắc lại sự kiện cũ 2020–2024.`);
+    lines.push('⚠️ QUY TẮC CỐT LÕI (BẮT BUỘC — VI PHẠM SẼ BỊ TỪ CHỐI):');
+    lines.push('1. TUYỆT ĐỐI CẤM VIẾT CHUNG CHUNG kiểu "được cập nhật tại Reuters/VnExpress/WHO..." hay "hãy xem nguồn này nguồn kia"! MỌI TRỤ CỘT TỪ 1 ĐẾN 8 ĐỀU PHẢI NÊU SỰ KIỆN CỤ THỂ, CON SỐ THẬT, CHÍNH SÁCH/CÔNG TRÌNH THẬT ĐANG DIỄN RA HÔM NAY!');
+    lines.push('2. CHỈ trích dẫn BÁO CHÍ CHÍNH THỐNG HẠNG 1 & CƠ QUAN CHÍNH THỨC (Reuters, AP, BBC, FT, Bloomberg, VnExpress, Tuổi Trẻ, Báo Chính Phủ, WHO, IMF, World Bank, NIH/PubMed, Nature, Science, NASA, HBR). TUYỆT ĐỐI CẤM Wikipedia, blog cá nhân hay mạng xã hội!');
+    lines.push(`3. HÃY DÙNG CÔNG CỤ TÌM KIẾM WEB TRỰC TIẾP CỦA BẠN (Google Search) để bổ sung tin nóng MỚI NHẤT trong 24–72 giờ tính tới hôm nay (${scanResult.dateLabel}) cho bất kỳ trụ cột nào trong 8 mục cần thêm tin cụ thể tại ${locStr}.`);
     lines.push('');
-    lines.push('=== SỐ LIỆU CHÍNH THỨC & CHECKLIST 8 TRỤ CỘT ĐÃ CHUẨN BỊ HÔM NAY ===');
+    lines.push('=== BÀI BÁO THẬT & SỐ LIỆU CHÍNH THỨC ĐÃ TRÍCH XUẤT HÔM NAY (8 TRỤ CỘT) ===');
     lines.push(
       `• Số liệu sống: USD/${m.localCurrency || 'VND'}=${m.usdToLocal || 'N/A'} | Vàng LBMA=${m.goldUsdOz ? '$' + m.goldUsdOz.toFixed(0) + '/oz' : 'N/A'} | BTC=${m.btcUsd ? '$' + m.btcUsd.toFixed(0) : 'N/A'} | Nợ công Mỹ (U.S. Treasury)=${m.usDebtTrillion ? '$' + m.usDebtTrillion + 'T' : 'N/A'} | GDP (World Bank)=${m.countryGdpPct ?? 'N/A'}% | CPI=${m.countryCpiPct ?? 'N/A'}%`
     );
 
     for (const cat of CATEGORIES) {
-      const items = scanResult.categoriesData?.[cat.id] || [];
-      lines.push(`\n[${cat.title}] (${items.length} đầu mục nguồn uy tín):`);
-      items.slice(0, 4).forEach((it, idx) => {
-        lines.push(`  ${idx + 1}. ${it.title} — ${String(it.summary || '').slice(0, 140)} (Nguồn: ${it.source} | ${it.url})`);
+      const allCat = scanResult.categoriesData?.[cat.id] || [];
+      // Ưu tiên đưa bài báo thật & số liệu sống lên trước (chỉ đưa cổng tra cứu nếu không có bài sống)
+      const concrete = allCat.filter((x) => !x.isPortalLink);
+      const chosen = concrete.length ? concrete : allCat;
+      lines.push(`\n[${cat.title}] (${chosen.length} tin/số liệu cụ thể):`);
+      chosen.slice(0, 4).forEach((it, idx) => {
+        lines.push(`  ${idx + 1}. ${it.title} — ${String(it.summary || '').slice(0, 170)} (Nguồn: ${it.source} | ${it.url})`);
       });
     }
 
@@ -810,6 +921,12 @@
         }
       }
     }
+
+    // Dọn sạch tiêu đề thừa "PHẦN 2 — KHỐI JSON ĐỒNG BỘ..." hoặc gạch ngang "---" cuối văn bản!
+    markdownBody = markdownBody
+      .replace(/(?:^|\n)\s*(?:#{1,6}\s*|===+\s*|\*\*)?\s*PHẦN\s*2\s*[—–\-:]\s*(?:KHỐI\s*JSON|JSON|ĐỒNG BỘ BIỂU ĐỒ)[^\n]*$/gim, '')
+      .replace(/(?:^|\n)\s*---+\s*$/g, '')
+      .trim();
 
     return {
       parsedAt: new Date().toISOString(),

@@ -1202,6 +1202,85 @@
   // --------------------------------------------------------------------------
   // TAB 5: BIỂU ĐỒ PHÂN TÍCH CHUYÊN NGHIỆP (NGÔN NGỮ BÌNH DÂN DỄ HIỂU)
   // --------------------------------------------------------------------------
+  function renderExecutiveMarkdown(mdText) {
+    const esc = INV.utils.escapeHtml;
+    const raw = String(mdText || '')
+      .replace(/```json[\s\S]*?```/gi, '')
+      .replace(/INVEST_INTEL_SYNC_V2[\s\S]*$/i, '')
+      .replace(/^#{1,6}\s*(PHẦN\s*2|KHỐI\s*JSON)[^\n]*$/gim, '')
+      .trim();
+    if (!raw) return '';
+    const formatInline = (s) =>
+      esc(s)
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+        .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-[11.5px]">$1</code>')
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-teal-700 dark:text-teal-400 underline font-semibold">$1 ↗</a>');
+
+    const lines = raw.split(/\r?\n/);
+    const out = [];
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i].trim();
+      if (!line || /^[-*_]{3,}$/.test(line)) {
+        i += 1;
+        continue;
+      }
+      // Markdown table detection
+      if (line.includes('|') && i + 1 < lines.length && /^\s*\|?[\s:-]+\|[\s|:-]*$/.test(lines[i + 1].trim())) {
+        const parseRow = (r) => r.replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+        const headers = parseRow(line);
+        i += 2;
+        const rows = [];
+        while (i < lines.length && lines[i].trim().includes('|') && !/^#{1,6}\s/.test(lines[i].trim())) {
+          rows.push(parseRow(lines[i].trim()));
+          i += 1;
+        }
+        out.push(
+          `<div class="inv-exec-table-wrap"><table class="inv-exec-table"><thead><tr>${headers
+            .map((h) => `<th>${formatInline(h)}</th>`)
+            .join('')}</tr></thead><tbody>${rows
+            .map((r) => `<tr>${headers.map((_, ci) => `<td>${formatInline(r[ci] || '')}</td>`).join('')}</tr>`)
+            .join('')}</tbody></table></div>`
+        );
+        continue;
+      }
+      const hMatch = line.match(/^(#{1,6})\s+(.+)$/);
+      if (hMatch) {
+        const lvl = hMatch[1].length;
+        const title = hMatch[2].replace(/\*\*/g, '').trim();
+        if (lvl <= 2) {
+          out.push(`<div class="inv-exec-banner">${formatInline(title)}</div>`);
+        } else {
+          out.push(`<h4 class="inv-exec-subhead">${formatInline(title)}</h4>`);
+        }
+        i += 1;
+        continue;
+      }
+      if (/^>\s*/.test(line)) {
+        const qLines = [];
+        while (i < lines.length && /^>\s*/.test(lines[i].trim())) {
+          qLines.push(formatInline(lines[i].trim().replace(/^>\s*/, '')));
+          i += 1;
+        }
+        out.push(`<div class="inv-exec-callout">${qLines.join('<br/>')}</div>`);
+        continue;
+      }
+      if (/^[-•*+]\s+/.test(line) || /^\d+[.)]\s+/.test(line)) {
+        const items = [];
+        while (i < lines.length && (/^[-•*+]\s+/.test(lines[i].trim()) || /^\d+[.)]\s+/.test(lines[i].trim()))) {
+          items.push(formatInline(lines[i].trim().replace(/^([-•*+]|\d+[.)])\s+/, '')));
+          i += 1;
+        }
+        out.push(`<ul class="inv-exec-list">${items.map((it) => `<li>${it}</li>`).join('')}</ul>`);
+        continue;
+      }
+      out.push(`<p class="my-1.5">${formatInline(line)}</p>`);
+      i += 1;
+    }
+    return out.join('\n');
+  }
+
   function renderChartsTab() {
     const esc = INV.utils.escapeHtml;
     const report = INV.stateManager.evaluationReport;
@@ -1248,6 +1327,20 @@
             </div>
           </div>
         </div>
+
+        ${
+          INV.stateManager.geminiReportProse
+            ? `<div class="inv-exec-paper space-y-2">
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b-2 border-teal-600/50">
+                  <div>
+                    <div class="text-[11px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-400">📊 BÁO CÁO PHÂN TÍCH ĐẦU TƯ — ĐỊNH DẠNG CHUYÊN GIA</div>
+                    <div class="text-base font-black text-slate-900 dark:text-white">Tổng hợp chuyên sâu từ Gemini (${esc(unified?.as_of_date || report?.as_of_date || '')})</div>
+                  </div>
+                </div>
+                <div>${renderExecutiveMarkdown(INV.stateManager.geminiReportProse)}</div>
+              </div>`
+            : ''
+        }
 
         <!-- Toàn bộ 6 Biểu đồ Chuyên nghiệp -->
         ${
@@ -2375,6 +2468,10 @@
       }
       const synced = res.data;
       INV.stateManager.unifiedAnalytics = synced;
+      INV.stateManager.geminiReportProse = String(rawText || '')
+        .replace(/```json[\s\S]*?```/gi, '')
+        .replace(/INVEST_INTEL_SYNC_V2[\s\S]*$/i, '')
+        .trim();
       // Cập nhật đồng bộ các ô điểm số, nhận xét & pha chu kỳ ngay trên báo cáo Tổng quan!
       const prevRep = INV.stateManager.evaluationReport || { items: [], triggered_breakers: [], live_headlines: [], as_of_date: synced.as_of_date };
       const mkChannel = (key, name, fb) => {

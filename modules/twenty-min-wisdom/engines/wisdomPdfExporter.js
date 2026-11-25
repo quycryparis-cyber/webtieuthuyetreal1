@@ -483,30 +483,138 @@
       }
     };
 
-    // Phần A: Bản tin Gemini (nếu có)
+    // Phần A: Bản tin Gemini — VẼ THEO GIAO DIỆN BÁO CÁO TÀI CHÍNH CHUYÊN NGHIỆP (Banner xanh navy + Bảng thật có tiêu đề navy + 0 dấu #### hay | --- |!)
     if (geminiParsed?.markdownBody) {
-      const rawLines = String(geminiParsed.markdownBody)
-        .replace(/\*\*/g, '')
-        .replace(/`/g, '')
-        .split(/\r?\n/);
+      const rawLines = String(geminiParsed.markdownBody).split(/\r?\n/);
+      let li = 0;
 
-      for (const raw of rawLines) {
-        const trimmed = raw.trim();
-        if (!trimmed) { y += 14; continue; }
-        const isHead = /^#{1,3}\s+/.test(trimmed);
-        const clean = trimmed.replace(/^#{1,3}\s+/, '');
-        cur.ctx.font = isHead ? '900 26px "Segoe UI", Arial, sans-serif' : '500 21px "Segoe UI", Arial, sans-serif';
-        const wrapped = wrapCanvasText(cur.ctx, clean, maxW);
-        const lineH = isHead ? 36 : 31;
-        ensureSpace(wrapped.length * lineH + (isHead ? 18 : 8), 'BẢN TIN 20 PHÚT THÔNG THÁI (TIẾP THEO)');
-        if (isHead) y += 10;
-        cur.ctx.fillStyle = isHead ? '#0369a1' : '#1e293b';
-        cur.ctx.font = isHead ? '900 26px "Segoe UI", Arial, sans-serif' : '500 21px "Segoe UI", Arial, sans-serif';
+      while (li < rawLines.length) {
+        const trimmed = rawLines[li].trim();
+        if (!trimmed || /^---+$/.test(trimmed) || /^===+$/.test(trimmed)) {
+          li++;
+          continue;
+        }
+
+        // 1. Bảng Markdown chuẩn `| col | col |` -> Vẽ BẢNG TÀI CHÍNH THẬT trên PDF!
+        if (trimmed.startsWith('|') && trimmed.endsWith('|') && li + 1 < rawLines.length && /^\|\s*[-:]+/.test(rawLines[li + 1].trim())) {
+          const parseRow = (ln) => ln.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.replace(/\*\*/g, '').replace(/`/g, '').trim());
+          const headers = parseRow(trimmed);
+          li += 2;
+          const rows = [];
+          while (li < rawLines.length && rawLines[li].trim().startsWith('|') && rawLines[li].trim().endsWith('|')) {
+            rows.push(parseRow(rawLines[li]));
+            li++;
+          }
+          const colCount = Math.max(1, headers.length);
+          const colW = Math.floor(maxW / colCount);
+          const drawTableHead = () => {
+            cur.ctx.fillStyle = '#162d4c';
+            cur.ctx.fillRect(72, y, maxW, 44);
+            cur.ctx.fillStyle = '#14b8a6';
+            cur.ctx.fillRect(72, y + 41, maxW, 3);
+            cur.ctx.fillStyle = '#ffffff';
+            cur.ctx.font = '800 18px "Segoe UI", Arial, sans-serif';
+            headers.forEach((h, ci) => {
+              cur.ctx.fillText(h.slice(0, Math.max(12, Math.floor(colW / 11))), 84 + ci * colW, y + 12);
+            });
+            y += 46;
+          };
+
+          ensureSpace(100, 'BẢN TIN 20 PHÚT THÔNG THÁI (BẢNG TỔNG HỢP)');
+          drawTableHead();
+          rows.forEach((row, rIdx) => {
+            cur.ctx.font = '600 17px "Segoe UI", Arial, sans-serif';
+            const cellLines = Array.from({ length: colCount }, (_, ci) => wrapCanvasText(cur.ctx, row[ci] || '—', colW - 20).slice(0, 3));
+            const rowH = Math.max(36, Math.max(...cellLines.map((cl) => cl.length)) * 24 + 14);
+            if (y + rowH > maxY) {
+              pages.push(cur.canvas);
+              cur = createA4Canvas();
+              paintHeader(cur.ctx, 'BẢN TIN 20 PHÚT THÔNG THÁI (TIẾP THEO)');
+              y = minY;
+              drawTableHead();
+            }
+            cur.ctx.fillStyle = rIdx % 2 === 1 ? '#eff6ff' : '#ffffff';
+            cur.ctx.fillRect(72, y, maxW, rowH);
+            cur.ctx.strokeStyle = '#cbd5e1';
+            cur.ctx.lineWidth = 1;
+            cur.ctx.strokeRect(72, y, maxW, rowH);
+            cur.ctx.fillStyle = '#0f172a';
+            cur.ctx.font = '600 17px "Segoe UI", Arial, sans-serif';
+            cellLines.forEach((cl, ci) => {
+              cl.forEach((ln, k) => cur.ctx.fillText(ln, 84 + ci * colW, y + 9 + k * 24));
+            });
+            y += rowH;
+          });
+          y += 18;
+          continue;
+        }
+
+        // 2. Tiêu đề Markdown (# đến ######) -> Vẽ Banner Xanh Navy-Teal chuẩn Báo Cáo Tài Chính (0 còn dấu ####!)
+        const hMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+        if (hMatch) {
+          const lvl = hMatch[1].length;
+          const cleanTitle = hMatch[2].replace(/\*\*/g, '').replace(/`/g, '').trim();
+          if (lvl <= 2) {
+            ensureSpace(74, 'BẢN TIN 20 PHÚT THÔNG THÁI (TIẾP THEO)');
+            y += 8;
+            const g = cur.ctx.createLinearGradient(72, y, 72 + maxW, y);
+            g.addColorStop(0, '#0b2239');
+            g.addColorStop(0.65, '#163b63');
+            g.addColorStop(1, '#0f4c68');
+            drawRoundedRect(cur.ctx, 72, y, maxW, 54, 10);
+            cur.ctx.fillStyle = g;
+            cur.ctx.fill();
+            cur.ctx.fillStyle = '#14b8a6';
+            cur.ctx.fillRect(72, y, 10, 54);
+            cur.ctx.fillStyle = '#ffffff';
+            cur.ctx.font = '900 24px "Segoe UI", Arial, sans-serif';
+            cur.ctx.fillText(cleanTitle.slice(0, 82), 96, y + 14);
+            y += 68;
+          } else {
+            ensureSpace(50, 'BẢN TIN 20 PHÚT THÔNG THÁI (TIẾP THEO)');
+            y += 6;
+            cur.ctx.fillStyle = '#0d9488';
+            cur.ctx.fillRect(72, y + 2, 6, 30);
+            cur.ctx.fillStyle = '#0f2942';
+            cur.ctx.font = '900 23px "Segoe UI", Arial, sans-serif';
+            cur.ctx.fillText(cleanTitle.slice(0, 84), 90, y + 4);
+            y += 42;
+          }
+          li++;
+          continue;
+        }
+
+        // 3. Đoạn chữ thường / Gạch đầu dòng sạch sẽ (loại bỏ sạch dấu ** và *)
+        const isBullet = /^[-*•]\s+/.test(trimmed);
+        const clean = trimmed
+          .replace(/^[-*•]\s+/, '• ')
+          .replace(/\*\*/g, '')
+          .replace(/`/g, '');
+        const isSubNum = /^\d+\.\s+/.test(clean) && clean.length < 95;
+        if (isSubNum) {
+          ensureSpace(46, 'BẢN TIN 20 PHÚT THÔNG THÁI (TIẾP THEO)');
+          cur.ctx.fillStyle = '#0d9488';
+          cur.ctx.fillRect(72, y + 3, 6, 28);
+          cur.ctx.fillStyle = '#0f2942';
+          cur.ctx.font = '900 22px "Segoe UI", Arial, sans-serif';
+          cur.ctx.fillText(clean, 90, y + 4);
+          y += 40;
+          li++;
+          continue;
+        }
+
+        cur.ctx.font = '500 20px "Segoe UI", Arial, sans-serif';
+        const indentX = isBullet ? 90 : 72;
+        const wrapped = wrapCanvasText(cur.ctx, clean, maxW - (indentX - 72));
+        ensureSpace(wrapped.length * 30 + 10, 'BẢN TIN 20 PHÚT THÔNG THÁI (TIẾP THEO)');
+        cur.ctx.fillStyle = '#1e293b';
+        cur.ctx.font = '500 20px "Segoe UI", Arial, sans-serif';
         for (const ln of wrapped) {
-          cur.ctx.fillText(ln, 72, y);
-          y += lineH;
+          cur.ctx.fillText(ln, indentX, y);
+          y += 30;
         }
         y += 6;
+        li++;
       }
       y += 22;
     }

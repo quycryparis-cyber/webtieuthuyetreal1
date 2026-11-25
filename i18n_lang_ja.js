@@ -47,6 +47,10 @@
 };
 
   const exact = Object.freeze({
+    "📺 Xem video mini và phát nền: Tắt": "📺 ミニ動画・バックグラウンド再生：オフ",
+    "✅ Bấm vào đây để bật video mini, phát nền đã sẵn sàng": "✅ タップしてミニ動画を起動（バックグラウンド再生準備完了）",
+    "PHẦN 2 — SƠ ĐỒ, BIỂU ĐỒ & HÌNH ẢNH BẢN TIN 20 PHÚT": "第2部 — 20分ブリーフィングの図解・チャート・ビジュアル",
+    "📊 BÁO CÁO PHÂN TÍCH ĐẦU TƯ — ĐỊNH DẠNG CHUYÊN GIA": "📊 エグゼクティブ投資分析レポート",
     "🌐 Địa chính trị, Chiến tranh, Lãnh đạo, Hiệp định & Tập đoàn lớn": "🌐 地政学・戦争・指導者・貿易協定・巨大企業",
     "🌐 Tin nóng Địa chính trị, Lãnh đạo, Thuế quan & Tập đoàn lớn (Cập nhật trực tiếp)": "🌐 地政学・指導者・関税・巨大企業ライブ速報",
     "Mặt bằng giá bán tham chiếu": "参考売買価格帯",

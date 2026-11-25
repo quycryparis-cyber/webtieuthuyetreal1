@@ -47,6 +47,10 @@
 };
 
   const exact = Object.freeze({
+    "📺 Xem video mini và phát nền: Tắt": "📺 미니 비디오 및 백그라운드 재생: 끔",
+    "✅ Bấm vào đây để bật video mini, phát nền đã sẵn sàng": "✅ 여기를 눌러 미니 비디오 켜기 (백그라운드 재생 준비 완료)",
+    "PHẦN 2 — SƠ ĐỒ, BIỂU ĐỒ & HÌNH ẢNH BẢN TIN 20 PHÚT": "제2부 — 20분 브리핑 도표, 차트 및 시각화",
+    "📊 BÁO CÁO PHÂN TÍCH ĐẦU TƯ — ĐỊNH DẠNG CHUYÊN GIA": "📊 전문가용 투자 분석 리포트",
     "🌐 Địa chính trị, Chiến tranh, Lãnh đạo, Hiệp định & Tập đoàn lớn": "🌐 지정학, 전쟁, 지도자, 무역협정 및 대기업",
     "🌐 Tin nóng Địa chính trị, Lãnh đạo, Thuế quan & Tập đoàn lớn (Cập nhật trực tiếp)": "🌐 실시간 지정학·지도자·관세·대기업 속보",
     "Mặt bằng giá bán tham chiếu": "참고 매매 가격대",

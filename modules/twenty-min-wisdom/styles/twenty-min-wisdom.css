@@ -336,3 +336,100 @@
 .wis20-md-body li {
   margin-bottom: 5px;
 }
+
+/* ============================================================================
+ * EXECUTIVE FINANCIAL REPORT THEME (Chuẩn Báo Cáo Tài Chính — PDF/Word Paper)
+ * ============================================================================ */
+.exec-report-paper {
+  border-radius: 18px;
+  background: #ffffff;
+  color: #1e293b;
+  border: 1.5px solid #cbd5e1;
+  padding: 22px 24px;
+  box-shadow: 0 14px 36px -14px rgba(15, 23, 42, 0.28);
+  font-size: 14.5px;
+  line-height: 1.72;
+}
+
+.exec-sec-banner {
+  margin: 18px 0 12px;
+  padding: 12px 16px 12px 18px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0b2239, #163b63 62%, #0f4c68);
+  border-left: 6px solid #14b8a6;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 15.5px;
+  letter-spacing: 0.01em;
+  box-shadow: 0 6px 16px -8px rgba(11, 34, 57, 0.55);
+}
+
+.exec-subhead {
+  margin: 14px 0 8px;
+  padding: 4px 0 4px 12px;
+  border-left: 4px solid #0d9488;
+  color: #0f2942;
+  font-weight: 900;
+  font-size: 15px;
+}
+
+.exec-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin: 12px 0 16px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+}
+
+.exec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.exec-table thead th {
+  background: #162d4c;
+  color: #ffffff;
+  font-weight: 800;
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 2px solid #0d9488;
+}
+
+.exec-table tbody td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+.exec-table tbody tr:nth-child(even) td {
+  background: #f8fafc;
+}
+
+.exec-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.exec-callout {
+  margin: 12px 0;
+  padding: 12px 15px;
+  border-radius: 10px;
+  border-left: 5px solid #0d9488;
+  background: #f0fdfa;
+  color: #0f2942;
+  font-size: 13.5px;
+}
+
+.exec-bullet-list {
+  margin: 8px 0 12px;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.exec-bullet-list li {
+  margin-bottom: 6px;
+  color: #1e293b;
+}
+

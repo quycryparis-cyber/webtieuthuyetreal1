@@ -3278,6 +3278,7 @@
       if (typeof document === 'undefined') return;
       const bar = document.getElementById('mod39-auto-probe-disabled-bar');
       const toggleBtn = document.getElementById('btn-mod39-reenable-auto-probe');
+      const miniLaunchBtn = document.getElementById('btn-mod39-mobile-mini-launch');
       const statusTxt = document.getElementById('mod39-mobile-bg-mode-hint');
       if (!bar) return;
       if (isDesktopDirectYoutubeEnv()) {
@@ -3286,19 +3287,175 @@
       }
       bar.classList.remove('hidden');
       const isBgEnabled = !this._isAutoBgProbeDisabled();
+      const vidEl = document.getElementById('core-media-player');
+      const isStreamReady = Boolean(
+        isBgEnabled &&
+        ((NS.nativePlayer?.isActive?.() && vidEl && vidEl.readyState >= 2) ||
+          this.playerCtrl?.activeEngine === 'MOD21_AUDIO' ||
+          this._bgAudioTookOver)
+      );
       if (toggleBtn) {
         toggleBtn.textContent = isBgEnabled
           ? '✅ Đang bật: Luồng phát nền, video mini (Bấm để tắt)'
           : '🎧 Luồng phát nền, video mini';
-        toggleBtn.className = isBgEnabled
-          ? 'w-full sm:w-auto px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 border border-emerald-300/70 text-white font-black text-xs shadow-lg transition cursor-pointer'
-          : 'w-full sm:w-auto px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:brightness-110 border-2 border-amber-300/90 text-zinc-950 font-black text-xs shadow-lg transition cursor-pointer mod39-bg-toggle-blink';
+        toggleBtn.style.cssText = isBgEnabled
+          ? 'width:100%;padding:10px 14px;border-radius:12px;background:linear-gradient(135deg,#059669,#0d9488);color:#ffffff;border:2px solid #6ee7b7;font-weight:900;font-size:12.5px;box-shadow:0 0 14px rgba(16,185,129,0.5);cursor:pointer;'
+          : 'width:100%;padding:10px 14px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#f97316,#e11d48);color:#ffffff;border:2px solid #fde047;font-weight:900;font-size:12.5px;box-shadow:0 0 18px rgba(251,191,36,0.65);cursor:pointer;text-shadow:0 1px 2px rgba(0,0,0,0.45);';
+      }
+      if (miniLaunchBtn) {
+        miniLaunchBtn.disabled = !isStreamReady;
+        miniLaunchBtn.textContent = isStreamReady
+          ? '✅ Bấm vào đây để bật video mini, phát nền đã sẵn sàng'
+          : '📺 Xem video mini và phát nền: Tắt';
+        miniLaunchBtn.style.cssText = isStreamReady
+          ? 'width:100%;padding:10px 14px;border-radius:12px;background:linear-gradient(135deg,#0284c7,#10b981);color:#ffffff;border:2px solid #6ee7b7;font-weight:900;font-size:12.5px;box-shadow:0 0 18px rgba(14,165,233,0.6);cursor:pointer;'
+          : 'width:100%;padding:9px 14px;border-radius:12px;background:rgba(39,39,42,0.92);color:#a1a1aa;border:1px solid rgba(113,113,122,0.5);font-weight:800;font-size:12px;cursor:not-allowed;';
       }
       if (statusTxt) {
-        statusTxt.innerHTML = isBgEnabled
-          ? '🔄 <strong>Chế độ dò luồng nền đang BẬT</strong> — YouTube No-Cookie vẫn phát bình thường, khi luồng nền (Hình + Tiếng) sẵn sàng 100% mới tự thay thế.'
-          : '📺 Đang xem <strong>YouTube No-Cookie</strong> mặc định (không bị gián đoạn) — Bấm nút sáng bên cạnh nếu muốn bật phát nền &amp; video mini.';
+        statusTxt.innerHTML = isStreamReady
+          ? '🎉 Luồng phát nền (Hình + Tiếng) đã sẵn sàng 100%! Bấm nút xanh phía trên để mở khung video mini có đủ Tua, Dừng, Lặp A–B.'
+          : isBgEnabled
+            ? '🔄 Đang dò ngầm luồng phát nền — YouTube No-Cookie vẫn phát xuyên suốt không bị gián đoạn.'
+            : '📺 Đang xem <strong>YouTube No-Cookie</strong> mặc định — Bấm nút sáng trên nếu muốn bật luồng phát nền &amp; video mini.';
       }
+    }
+
+    openMobileFloatingMiniPlayer() {
+      if (typeof document === 'undefined') return false;
+      const ctrl = this.playerCtrl;
+      const vidEl = document.getElementById('core-media-player');
+      const existing = document.getElementById('mod39-mobile-floating-mini');
+      if (existing) {
+        this.closeMobileFloatingMiniPlayer();
+        return true;
+      }
+
+      const box = document.createElement('div');
+      box.id = 'mod39-mobile-floating-mini';
+      box.style.cssText = 'position:fixed;right:10px;bottom:76px;z-index:2147483560;width:min(330px,calc(100vw - 20px));border-radius:16px;overflow:hidden;border:2px solid #38bdf8;background:#09090b;color:#f4f4f5;box-shadow:0 18px 48px rgba(0,0,0,0.75);font-family:system-ui,-apple-system,sans-serif;';
+      box.innerHTML = `
+        <div id="mod39-mmini-header" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 10px;background:#18181b;border-bottom:1px solid #27272a;cursor:grab;touch-action:none;">
+          <span style="font-size:11px;font-weight:900;color:#6ee7b7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🎬 Video Mini &amp; Phát nền</span>
+          <div style="display:flex;gap:5px;">
+            <button type="button" id="btn-mmini-goto-tab5" style="padding:3px 7px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#e4e4e7;font-size:10.5px;font-weight:800;cursor:pointer;">↗️ Tab 5</button>
+            <button type="button" id="btn-mmini-close" style="padding:3px 8px;border-radius:8px;border:0;background:#e11d48;color:#fff;font-size:11px;font-weight:900;cursor:pointer;">✕</button>
+          </div>
+        </div>
+        <div id="mod39-mmini-video-slot" style="width:100%;aspect-ratio:16/9;background:#000;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;"></div>
+        <div style="padding:8px 10px;background:#111115;border-top:1px solid #27272a;display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span id="mmini-cur" style="font-family:monospace;font-size:10px;color:#a1a1aa;min-width:34px;">00:00</span>
+            <input id="mmini-seek" type="range" min="0" max="100" value="0" step="1" style="flex:1;accent-color:#10b981;height:4px;" />
+            <span id="mmini-dur" style="font-family:monospace;font-size:10px;color:#a1a1aa;min-width:34px;text-align:right;">00:00</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px;">
+            <button type="button" id="btn-mmini-rew10" style="padding:5px 8px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#fff;font-size:11px;font-weight:800;cursor:pointer;">⏪ -10s</button>
+            <button type="button" id="btn-mmini-play" style="padding:5px 11px;border-radius:8px;border:0;background:#e11d48;color:#fff;font-size:11px;font-weight:900;cursor:pointer;">⏯️ Dừng/Phát</button>
+            <button type="button" id="btn-mmini-fwd10" style="padding:5px 8px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#fff;font-size:11px;font-weight:800;cursor:pointer;">+10s ⏩</button>
+            <button type="button" id="btn-mmini-loop" style="padding:5px 8px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#e4e4e7;font-size:11px;font-weight:800;cursor:pointer;">🔁 Lặp</button>
+            <button type="button" id="btn-mmini-ab-a" style="padding:5px 7px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#fde047;font-size:11px;font-weight:800;cursor:pointer;">🅰️ A</button>
+            <button type="button" id="btn-mmini-ab-b" style="padding:5px 7px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#38bdf8;font-size:11px;font-weight:800;cursor:pointer;">🅱️ B</button>
+            <button type="button" id="btn-mmini-ab-clr" style="padding:5px 7px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#f87171;font-size:11px;font-weight:800;cursor:pointer;" title="Tắt Lặp A-B">✕AB</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(box);
+
+      const slot = box.querySelector('#mod39-mmini-video-slot');
+      if (vidEl && slot) {
+        this._mminiOrigParent = vidEl.parentElement;
+        vidEl.style.width = '100%';
+        vidEl.style.height = '100%';
+        vidEl.style.objectFit = 'contain';
+        slot.appendChild(vidEl);
+      } else if (slot) {
+        const thumb = ctrl?.activeVideo?.thumbnailUrl || '';
+        slot.innerHTML = `${thumb ? `<img src="${escapeHtml(thumb)}" style="width:100%;height:100%;object-fit:cover;opacity:0.65;" />` : ''}<div style="position:absolute;font-size:12px;font-weight:900;color:#6ee7b7;background:rgba(0,0,0,0.65);padding:4px 10px;border-radius:999px;">🎧 Đang phát Audio nền</div>`;
+      }
+
+      // Kéo thả khung mini mượt mà bằng cảm ứng trên Mobile
+      const hdr = box.querySelector('#mod39-mmini-header');
+      let drag = null;
+      hdr?.addEventListener('pointerdown', (ev) => {
+        if (ev.target?.closest?.('button')) return;
+        const r = box.getBoundingClientRect();
+        drag = { dx: ev.clientX - r.left, dy: ev.clientY - r.top };
+        hdr.setPointerCapture?.(ev.pointerId);
+      });
+      hdr?.addEventListener('pointermove', (ev) => {
+        if (!drag) return;
+        box.style.right = 'auto';
+        box.style.bottom = 'auto';
+        box.style.left = `${Math.max(4, Math.min(window.innerWidth - box.offsetWidth - 4, ev.clientX - drag.dx))}px`;
+        box.style.top = `${Math.max(4, Math.min(window.innerHeight - box.offsetHeight - 4, ev.clientY - drag.dy))}px`;
+      });
+      hdr?.addEventListener('pointerup', () => { drag = null; });
+
+      const fmt = (s) => {
+        const n = Math.max(0, Math.floor(Number(s) || 0));
+        return `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
+      };
+      const curEl = box.querySelector('#mmini-cur');
+      const durEl = box.querySelector('#mmini-dur');
+      const seekEl = box.querySelector('#mmini-seek');
+      const loopBtn = box.querySelector('#btn-mmini-loop');
+
+      const syncMiniControls = () => {
+        if (!box.isConnected) return;
+        const snap = ctrl?.bridge?.getCurrentPlaybackSnapshot?.() || {};
+        const t = Number(snap.currentTime) || 0;
+        const d = Number(snap.duration) || 0;
+        if (curEl) curEl.textContent = fmt(t);
+        if (durEl) durEl.textContent = fmt(d);
+        if (seekEl && document.activeElement !== seekEl && d > 0) {
+          seekEl.max = String(Math.floor(d));
+          seekEl.value = String(Math.floor(t));
+        }
+        if (loopBtn) {
+          const on = Boolean(ctrl?.prefs?.repeatMode);
+          loopBtn.style.background = on ? '#059669' : '#27272a';
+        }
+      };
+      syncMiniControls();
+      this._mminiSyncTimer = setInterval(syncMiniControls, 450);
+
+      seekEl?.addEventListener('input', () => ctrl?.seekTo?.(Number(seekEl.value) || 0));
+      box.querySelector('#btn-mmini-rew10')?.addEventListener('click', () => ctrl?.seekBy?.(-10));
+      box.querySelector('#btn-mmini-fwd10')?.addEventListener('click', () => ctrl?.seekBy?.(10));
+      box.querySelector('#btn-mmini-play')?.addEventListener('click', () => ctrl?.togglePlayPause?.());
+      box.querySelector('#btn-mmini-loop')?.addEventListener('click', () => { ctrl?.toggleRepeatMode?.(); syncMiniControls(); });
+      box.querySelector('#btn-mmini-ab-a')?.addEventListener('click', () => {
+        const t = Number(ctrl?.bridge?.getCurrentPlaybackSnapshot?.()?.currentTime) || 0;
+        ctrl?.setAbPointA?.(t);
+        NS.utils?.showToast?.(`🅰️ Đã đặt điểm A = ${fmt(t)}`, 'info', 2000);
+      });
+      box.querySelector('#btn-mmini-ab-b')?.addEventListener('click', () => {
+        const t = Number(ctrl?.bridge?.getCurrentPlaybackSnapshot?.()?.currentTime) || 0;
+        ctrl?.setAbPointB?.(t);
+        NS.utils?.showToast?.(`🅱️ Đã đặt điểm B = ${fmt(t)} (Bật lặp A–B)`, 'success', 2200);
+      });
+      box.querySelector('#btn-mmini-ab-clr')?.addEventListener('click', () => {
+        ctrl?.clearAbLoop?.();
+        NS.utils?.showToast?.('⏹️ Đã tắt vòng lặp A–B', 'info', 1800);
+      });
+      box.querySelector('#btn-mmini-goto-tab5')?.addEventListener('click', () => {
+        NS.navigator?.navigateToScreen?.('SCREEN_5_AMBIENCE');
+      });
+      box.querySelector('#btn-mmini-close')?.addEventListener('click', () => this.closeMobileFloatingMiniPlayer());
+      return true;
+    }
+
+    closeMobileFloatingMiniPlayer() {
+      if (this._mminiSyncTimer) {
+        clearInterval(this._mminiSyncTimer);
+        this._mminiSyncTimer = null;
+      }
+      const vidEl = document.getElementById('core-media-player');
+      const nativeHost = document.getElementById('mod39-native-video-host');
+      if (vidEl && nativeHost && vidEl.parentElement !== nativeHost) {
+        nativeHost.appendChild(vidEl);
+      }
+      document.getElementById('mod39-mobile-floating-mini')?.remove();
     }
 
     _bindWaitOverlayButtonsOnce() {
@@ -3354,6 +3511,16 @@
               NS.utils?.showToast?.('✅ Đã bật Luồng phát nền, video mini — sẽ dò ngầm khi bạn phát video.', 'success', 3000);
             }
           }
+        });
+      }
+      const miniLaunchBtn = document.getElementById('btn-mod39-mobile-mini-launch');
+      if (miniLaunchBtn && miniLaunchBtn.dataset.v133Bound !== '1') {
+        miniLaunchBtn.dataset.v133Bound = '1';
+        miniLaunchBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (miniLaunchBtn.disabled) return;
+          this.openMobileFloatingMiniPlayer();
         });
       }
       this._syncAutoProbeDisabledBar();
@@ -6191,24 +6358,19 @@
       );
       const shouldBlinkStatusAlert = Boolean(isReconnectingNow || isYoutubeIframeFallback);
       if (statusEl) {
-        const bgStatusMsg = isDesktopDirect
-          ? '🖥️ Chế độ Desktop (YouTube Trực Tiếp): Phát mượt trong nền qua youtube-nocookie, hỗ trợ Tua, Dừng, Lặp A–B, Tốc độ (0.25x–4x) & Cửa sổ nổi.'
-          : this.statusText && this.statusText.indexOf('🎬') === -1
-            ? this.statusText
-            : isYoutubeIframeFallback
-              ? '📺 Đang phát qua Luồng phát YouTube — Đã tự động ngắt MP3 cũ ở Tab 3 để chờ đồng bộ (Tự động chạy nền khi sang Luồng phát công cộng).'
-              : '🎧 Tự động chạy nền (Luồng phát công cộng): Hình chạy tại Tab 5, Âm thanh nối thẳng Tab 3 (MP3) & luôn đồng bộ thời gian.';
-        const renderedStatus = isReconnectingNow && this._bgReconnectState.attempts > 0
-          ? `${trBg(bgStatusMsg)} (#${this._bgReconnectState.attempts})`
-          : trBg(bgStatusMsg);
-        setTxtIf(statusEl, renderedStatus);
-        setClsIf(
-          statusEl,
-          shouldBlinkStatusAlert
-            ? 'px-2.5 py-1.5 rounded-xl border border-amber-400/75 bg-amber-500/15 text-[11px] font-bold text-amber-100 leading-snug break-words flex-1 min-w-[180px] mod39-status-alert-blink'
-            : 'px-2.5 py-1.5 rounded-xl border border-emerald-500/35 bg-emerald-500/10 text-[11px] text-emerald-200/95 leading-snug break-words flex-1 min-w-[180px]'
-        );
-        statusEl.classList.remove('hidden');
+        if (!isDesktopDirect) {
+          // Trên Mobile: xóa bỏ hoàn toàn khung "Tự động chạy nền..." gây rối giao diện!
+          statusEl.classList.add('hidden');
+        } else {
+          const bgStatusMsg =
+            '🖥️ Chế độ Desktop (YouTube Trực Tiếp): Phát mượt trong nền qua youtube-nocookie, hỗ trợ Tua, Dừng, Lặp A–B, Tốc độ (0.25x–4x) & Cửa sổ nổi.';
+          setTxtIf(statusEl, trBg(bgStatusMsg));
+          setClsIf(
+            statusEl,
+            'px-2.5 py-1.5 rounded-xl border border-emerald-500/35 bg-emerald-500/10 text-[11px] text-emerald-200/95 leading-snug break-words flex-1 min-w-[180px]'
+          );
+          statusEl.classList.remove('hidden');
+        }
       }
       if (modeBadge) {
         if (isDesktopDirect) {
@@ -6281,16 +6443,18 @@
         );
       }
       if (sysPipBtn) {
-        sysPipBtn.classList.toggle('hidden', !canShowFloatingBtn);
+        const showSysPip = Boolean(isDesktopDirect && canShowFloatingBtn);
+        sysPipBtn.classList.toggle('hidden', !showSysPip);
         sysPipBtn.textContent = trBg(
           isFloatingOpen ? '🖼️ Đang mở Cửa sổ nổi' : '🖼️ Cửa sổ nổi'
         );
-        sysPipBtn.className = canShowFloatingBtn
+        sysPipBtn.className = showSysPip
           ? isFloatingOpen
-            ? 'px-2.5 py-2 rounded-xl border border-emerald-400 bg-emerald-600/80 text-white text-xs font-extrabold transition shadow shrink-0 whitespace-nowrap inline-flex items-center justify-center'
-            : 'px-2.5 py-2 rounded-xl border border-violet-500/45 bg-violet-500/15 hover:bg-violet-500/25 text-violet-200 text-xs font-extrabold transition shrink-0 whitespace-nowrap inline-flex items-center justify-center'
+            ? 'hidden lg:inline-flex px-2.5 py-2 rounded-xl border border-emerald-400 bg-emerald-600/80 text-white text-xs font-extrabold transition shadow shrink-0 whitespace-nowrap items-center justify-center'
+            : 'hidden lg:inline-flex px-2.5 py-2 rounded-xl border border-violet-500/45 bg-violet-500/15 hover:bg-violet-500/25 text-violet-200 text-xs font-extrabold transition shrink-0 whitespace-nowrap items-center justify-center'
           : 'hidden';
       }
+      this._syncAutoProbeDisabledBar();
     }
   }
 
@@ -9675,11 +9839,6 @@
           <div id="mod39-active-player-grid" class="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start">
             <!-- CỘT TRÁI (7/12): KHUNG VIDEO 16:9 + TIMELINE + THANH ĐIỀU KHIỂN -->
             <div class="xl:col-span-7 space-y-3 min-w-0">
-              <!-- Thanh Hướng Dẫn & Nút Chuyển Chế Độ Ẩn Hình (Chỉ Audio Nền) / Bật Video Hình (Chỉ hiện trên Mobile) -->
-              <div id="mod39-bg-hint-ribbon" class="flex lg:hidden flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 px-3 py-2.5 rounded-xl bg-amber-950/35 border border-amber-500/40 shadow-sm min-w-0">
-                <p id="mod39-bg-hint-text" class="text-[11px] leading-relaxed text-amber-100/95 font-medium min-w-0 flex-1 break-words">Nếu bạn muốn nghe phát nền hãy bấm vào nút Ẩn hình (Chỉ Audio Nền), còn muốn xem lại video ở trên web thì bấm lại "Bật video hình" là được nhé =)), hack youtube lord</p>
-                <button type="button" id="btn-mod39-bg-mode-toggle" class="shrink-0 px-3 py-2 rounded-xl border border-amber-400/65 bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 text-xs font-extrabold transition flex lg:hidden items-center justify-center gap-1.5 shadow-sm mod39-bg-toggle-blink">🎧 Ẩn Hình (Chỉ Audio Nền)</button>
-              </div>
               <!-- Khung màn hình phát & nút thoát Pseudo-Fullscreen -->
               <div id="mod39-player-stage-wrapper" class="relative w-full aspect-video min-h-[225px] sm:min-h-0 rounded-2xl overflow-hidden bg-black border border-zinc-700 shadow-2xl">
                 <iframe
@@ -9798,17 +9957,23 @@
                 >✕ Thu Nhỏ Màn Hình</button>
               </div>
 
-              <!-- Nút nổi bật (mặc định TẮT trên Mobile) để bật "Luồng phát nền, video mini" — đặt GỌN DƯỚI KHUNG VIDEO, tuyệt đối không che video! -->
+              <!-- 2 Nút Sáng Rõ Nổi Bật (chỉ hiện trên Mobile) đặt GỌN DƯỚI KHUNG VIDEO -->
               <div
                 id="mod39-auto-probe-disabled-bar"
-                class="flex lg:hidden flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl bg-zinc-900/85 border border-amber-400/45 text-[11.5px] text-zinc-200 shadow"
+                class="flex lg:hidden flex-col gap-2 p-2.5 rounded-xl bg-zinc-900/90 border border-amber-400/55 text-[11.5px] text-zinc-200 shadow-lg"
               >
                 <button
                   type="button"
                   id="btn-mod39-reenable-auto-probe"
-                  class="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:brightness-110 border-2 border-amber-300/90 text-zinc-950 font-black text-xs shadow-lg transition cursor-pointer mod39-bg-toggle-blink"
+                  style="width:100%;padding:10px 14px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#f97316,#e11d48);color:#ffffff;border:2px solid #fde047;font-weight:900;font-size:12.5px;box-shadow:0 0 18px rgba(251,191,36,0.65);cursor:pointer;text-shadow:0 1px 2px rgba(0,0,0,0.45);"
                 >🎧 Luồng phát nền, video mini</button>
-                <span id="mod39-mobile-bg-mode-hint" class="text-[11px] text-zinc-300 leading-snug">📺 Đang xem <strong>YouTube No-Cookie</strong> mặc định (không bị gián đoạn) — Bấm nút sáng bên cạnh nếu muốn bật phát nền &amp; video mini.</span>
+                <button
+                  type="button"
+                  id="btn-mod39-mobile-mini-launch"
+                  disabled
+                  style="width:100%;padding:9px 14px;border-radius:12px;background:rgba(39,39,42,0.92);color:#a1a1aa;border:1px solid rgba(113,113,122,0.5);font-weight:800;font-size:12px;cursor:not-allowed;"
+                >📺 Xem video mini và phát nền: Tắt</button>
+                <span id="mod39-mobile-bg-mode-hint" class="text-[11px] text-zinc-300 leading-snug">📺 Đang xem <strong>YouTube No-Cookie</strong> mặc định — Bấm nút sáng trên nếu muốn bật luồng phát nền &amp; video mini.</span>
               </div>
               <div
                 id="mod39-probing-top-pill"

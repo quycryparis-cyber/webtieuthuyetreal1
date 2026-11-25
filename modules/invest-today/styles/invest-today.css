@@ -320,3 +320,101 @@
     font-size: 12px;
   }
 }
+
+/* ============================================================================
+ * 📊 EXECUTIVE FINANCIAL REPORT THEME (v133 — Navy-Teal Word/PDF Paper)
+ * ============================================================================ */
+.inv-exec-paper {
+  background: #ffffff;
+  color: #1e293b;
+  border-radius: 14px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+  padding: 20px 24px;
+  line-height: 1.65;
+  font-size: 13.5px;
+}
+.dark .inv-exec-paper {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-color: #334155;
+  box-shadow: 0 14px 36px rgba(2, 6, 23, 0.55);
+}
+.inv-exec-banner {
+  margin: 18px 0 10px;
+  padding: 9px 14px;
+  border-radius: 7px;
+  border-left: 5px solid #0d9488;
+  background: linear-gradient(90deg, #1b365d 0%, #244b7a 100%);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 13.5px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(27, 54, 93, 0.25);
+}
+.inv-exec-subhead {
+  margin: 14px 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1.5px solid rgba(13, 148, 136, 0.35);
+  color: #1b365d;
+  font-weight: 800;
+  font-size: 13px;
+}
+.dark .inv-exec-subhead {
+  color: #5eead4;
+}
+.inv-exec-table-wrap {
+  overflow-x: auto;
+  margin: 12px 0;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+}
+.dark .inv-exec-table-wrap {
+  border-color: #334155;
+}
+.inv-exec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.inv-exec-table thead th {
+  background: #1b365d;
+  color: #ffffff;
+  font-weight: 800;
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 2px solid #0d9488;
+}
+.inv-exec-table tbody td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+.dark .inv-exec-table tbody td {
+  border-bottom-color: #1e293b;
+}
+.inv-exec-table tbody tr:nth-child(even) {
+  background: #f1f5f9;
+}
+.dark .inv-exec-table tbody tr:nth-child(even) {
+  background: rgba(30, 41, 59, 0.65);
+}
+.inv-exec-callout {
+  margin: 10px 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border-left: 4px solid #0d9488;
+  background: rgba(13, 148, 136, 0.08);
+  font-size: 13px;
+}
+.dark .inv-exec-callout {
+  background: rgba(13, 148, 136, 0.16);
+}
+.inv-exec-list {
+  margin: 6px 0 10px 18px;
+  list-style: disc;
+}
+.inv-exec-list li {
+  margin-bottom: 4px;
+}

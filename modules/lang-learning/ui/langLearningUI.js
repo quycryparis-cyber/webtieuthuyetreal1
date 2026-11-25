@@ -266,7 +266,7 @@
             <button type="button" id="ll51-btn-filter-star" class="ll51-btn text-xs ${state.showOnlyStarred ? 'll51-btn-amber' : ''}">⭐ Chỉ hiện từ yêu thích (${state.starredIds.size})</button>
           </div>
           <div class="flex flex-wrap items-center gap-1.5">
-            <span class="text-xs font-black text-emerald-300 px-2">✅ Đã chọn: ${state.selectedIds.size}/${state.vocabList.length}</span>
+            <span id="ll51-selected-count-badge" class="text-xs font-black text-emerald-300 px-2">✅ Đã chọn: ${state.selectedIds.size}/${state.vocabList.length}</span>
             <button type="button" id="ll51-btn-sel-all" class="ll51-btn text-xs py-1.5">☑️ Chọn hết</button>
             <button type="button" id="ll51-btn-sel-none" class="ll51-btn text-xs py-1.5">⬜ Bỏ chọn</button>
             <button type="button" id="ll51-btn-sel-stars" class="ll51-btn text-xs py-1.5">⭐ Chọn theo Sao</button>
@@ -697,16 +697,25 @@
         const id = chk.getAttribute('data-ll51-sel-id');
         if (chk.checked) state.selectedIds.add(id);
         else state.selectedIds.delete(id);
-        render();
+        // Cập nhật đếm trực tiếp TẠI CHỖ (KHÔNG render lại toàn trang để giữ nguyên 100% vị trí cuộn!)
+        const badge = root.querySelector('#ll51-selected-count-badge');
+        if (badge) badge.textContent = `✅ Đã chọn: ${state.selectedIds.size}/${state.vocabList.length}`;
       });
     });
     root.querySelectorAll('[data-ll51-star-id]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-ll51-star-id');
-        if (state.starredIds.has(id)) state.starredIds.delete(id);
-        else state.starredIds.add(id);
+        const nowStar = !state.starredIds.has(id);
+        if (nowStar) state.starredIds.add(id);
+        else state.starredIds.delete(id);
         persistState();
-        render();
+        // Cập nhật dấu sao TẠI CHỖ (KHÔNG nhảy lên đầu trang!)
+        btn.textContent = nowStar ? '⭐' : '☆';
+        const fStarBtn = root.querySelector('#ll51-btn-filter-star');
+        if (fStarBtn) fStarBtn.textContent = `⭐ Chỉ hiện từ yêu thích (${state.starredIds.size})`;
+        if (state.showOnlyStarred && !nowStar) {
+          btn.closest('tr')?.remove();
+        }
       });
     });
 
@@ -847,13 +856,29 @@
       render();
     });
 
-    // Tab 4 Export buttons
-    root.querySelector('#ll51-exp-pdf-full')?.addEventListener('click', async () => {
+    // Tab 4 Export buttons (Xuất FULL toàn bộ từ đã chọn kèm tiến độ trực tiếp!)
+    root.querySelector('#ll51-exp-pdf-full')?.addEventListener('click', async (ev) => {
+      const btn = ev.currentTarget;
       const items = state.vocabList.filter((v) => state.selectedIds.has(v.id));
       if (!items.length) return toast('⚠️ Chưa có từ nào được tích chọn!', 'warning', 2500);
-      toast('⏳ Đang xuất Sổ tay PDF Từ vựng & Ngữ pháp...', 'info', 2500);
-      const r = await LL.exportVocabAndGrammarPdf({ vocabItems: items, visibleLangs: state.visibleLangs, nativeLang: state.nativeLang, includeGrammar: true });
-      toast(`✅ Đã tải PDF Sổ tay Ngoại ngữ (${r.pages} trang)!`, 'success', 3500);
+      const oldTxt = btn.textContent;
+      btn.disabled = true;
+      toast(`⏳ Đang xuất FULL ${items.length} từ vựng + Ngữ pháp ra PDF...`, 'info', 3000);
+      try {
+        const r = await LL.exportVocabAndGrammarPdf({
+          vocabItems: items,
+          visibleLangs: state.visibleLangs,
+          nativeLang: state.nativeLang,
+          includeGrammar: true,
+          onProgress: (done, tot) => {
+            btn.textContent = `⏳ Đang xuất PDF... ${done}/${tot} từ`;
+          },
+        });
+        toast(`✅ Đã tải PDF FULL ${items.length} từ vựng (${r.pages} trang)!`, 'success', 4000);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = oldTxt;
+      }
     });
     root.querySelector('#ll51-exp-pdf-star')?.addEventListener('click', async () => {
       const items = state.vocabList.filter((v) => state.starredIds.has(v.id));
@@ -882,6 +907,9 @@
 
   function render() {
     if (!state.modalEl) return;
+    // Giữ nguyên vị trí cuộn của modal & bảng khi re-render (không bao giờ giật lên đầu trang!)
+    const prevBodyScroll = state.modalEl.querySelector('.ll51-body')?.scrollTop || 0;
+    const prevTableScroll = state.modalEl.querySelector('.ll51-table-wrap')?.scrollTop || 0;
     const isStudio = state.step === 'studio';
     const bodyHtml = isStudio
       ? `
@@ -915,6 +943,10 @@
       </div>
     `;
     bindEvents();
+    const newBody = state.modalEl.querySelector('.ll51-body');
+    const newTable = state.modalEl.querySelector('.ll51-table-wrap');
+    if (newBody && prevBodyScroll > 0) newBody.scrollTop = prevBodyScroll;
+    if (newTable && prevTableScroll > 0) newTable.scrollTop = prevTableScroll;
   }
 
   LL.open = function open() {
@@ -930,6 +962,14 @@
     }
     state.modalEl = modal;
     render();
+    // Nạp nền thư viện pinyin-pro (20.900+ Hán tự Giản/Phồn) rồi tự làm mới phiên âm 100%!
+    if (typeof LL.ensurePinyinPro === 'function' && !globalScope.pinyinPro?.pinyin) {
+      LL.ensurePinyinPro().then((lib) => {
+        if (lib && state.modalEl && state.modalEl.isConnected && state.step === 'studio') {
+          render();
+        }
+      });
+    }
     return true;
   };
 
