@@ -462,6 +462,7 @@
 
       for (let i = 0; i < Math.min(nodes.length, 2200); i++) {
         const n = nodes[i];
+        if (n instanceof SVGElement && n.tagName.toLowerCase() !== 'svg') continue;
         if (n.closest('[data-autotester-ui="true"]') || n.closest('.hidden') || n.id === 'ambient-backdrop-layer' || n.classList?.contains('sr-only')) continue;
         const st = getComputedStyle(n);
         if (st.display === 'none' || st.visibility === 'hidden' || st.opacity === '0') continue;

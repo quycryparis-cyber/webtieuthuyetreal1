@@ -366,7 +366,15 @@
         state.redirectTimer = null;
         state.phase = 'dashboard';
         state.activeTab = 'briefing';
+        state.highlightExportPdfCta = true;
         render();
+        requestAnimationFrame(() => {
+          const pdfBtn = state.hostEl?.querySelector('#wis20-btn-export-pdf');
+          if (pdfBtn) {
+            try { pdfBtn.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_e) {}
+            try { pdfBtn.focus({ preventScroll: true }); } catch (_e2) {}
+          }
+        });
       }
     }, 1000);
   }
@@ -496,7 +504,7 @@
               <button type="button" id="wis20-btn-timer-reset" class="px-1 py-0.5 rounded-md border border-emerald-500/40 text-[10px] font-black cursor-pointer" title="Đặt lại 30:00">🔄</button>
             </span>
           ` : ''}
-          <button type="button" id="wis20-btn-export-pdf" class="wis20-btn wis20-btn-pdf text-xs py-1.5">📄 Xuất Báo Cáo PDF</button>
+          <button type="button" id="wis20-btn-export-pdf" class="wis20-btn wis20-btn-pdf text-xs py-1.5 ${state.highlightExportPdfCta ? 'animate-pulse ring-4 ring-amber-400/95 shadow-[0_0_26px_rgba(251,191,36,0.85)]' : ''}">📄 Xuất Báo Cáo PDF${state.highlightExportPdfCta ? ' 👇 Bấm ngay!' : ''}</button>
           <button type="button" id="wis20-btn-rescan" class="wis20-btn text-xs py-1.5">🔄 Quét lại tin mới</button>
           <button type="button" id="wis20-btn-change-loc" class="wis20-btn wis20-btn-change-loc text-xs py-1.5">📍 Đổi vị trí</button>
         </div>
@@ -762,6 +770,46 @@
           ${W20.charts.renderAllChartsHtml(sync, state.scanResult)}
         </div>
 
+        <!-- PHẦN 3: TOÀN BỘ 100% TRÍCH DẪN NGUỒN BÀI BÁO ĐÃ DÒ RA (KHÔNG SÓT BÀI NÀO) -->
+        ${(() => {
+          const allRefs = [];
+          const seenRef = new Set();
+          for (const cat of (W20.CATEGORIES || [])) {
+            const list = state.scanResult?.categoriesData?.[cat.id] || [];
+            for (const it of list) {
+              if (!it || !it.title) continue;
+              const k = String(it.url || it.title).trim().toLowerCase().slice(0, 90);
+              if (seenRef.has(k)) continue;
+              seenRef.add(k);
+              allRefs.push({ ...it, catTitle: cat.title, catIcon: cat.icon });
+            }
+          }
+          if (!allRefs.length) return '';
+          return `
+            <div class="wis20-card space-y-2.5">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h4 class="text-xs sm:text-sm font-black text-sky-700 dark:text-sky-300">📚 Toàn bộ Trích dẫn Nguồn Báo chí Chính thống đã dò ra (${allRefs.length} nguồn · Bấm mở trực tiếp)</h4>
+                <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">✅ Tự động xuất đủ 100% vào cuối PDF</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[380px] overflow-y-auto pr-1">
+                ${allRefs.map((ref, idx) => {
+                  const rawUrl = String(ref.url || ref.link || '').trim();
+                  const okUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : '';
+                  const tagOpen = okUrl ? `<a href="${esc(okUrl)}" target="_blank" rel="noopener noreferrer" class="block p-2 rounded-xl border border-zinc-200/80 dark:border-zinc-800 hover:border-sky-400 transition text-xs space-y-0.5">` : `<div class="p-2 rounded-xl border border-zinc-200/80 dark:border-zinc-800 text-xs space-y-0.5">`;
+                  const tagClose = okUrl ? '</a>' : '</div>';
+                  return `${tagOpen}
+                    <div class="font-bold line-clamp-2">${idx + 1}. ${esc(ref.title)}</div>
+                    <div class="text-[10.5px] opacity-75 flex justify-between gap-2">
+                      <span class="truncate">${ref.catIcon || '📰'} ${esc(ref.source || 'Báo chí chính thống')}</span>
+                      ${okUrl ? '<span class="text-sky-600 dark:text-sky-400 font-bold shrink-0">Mở nguồn ↗</span>' : ''}
+                    </div>
+                  ${tagClose}`;
+                }).join('')}
+              </div>
+            </div>
+          `;
+        })()}
+
         <div class="flex flex-wrap justify-end gap-2">
           <button type="button" id="wis20-btn-goto-gemini-hub" class="wis20-btn">🔄 Đổi góc nhìn / Dán lại bản Gemini khác</button>
         </div>
@@ -838,6 +886,8 @@
     // Shared header buttons
     const triggerExportPdf = async (btnEl) => {
       if (!state.scanResult || typeof W20.exportWisdomReportPdf !== 'function') return;
+      state.highlightExportPdfCta = false;
+      btnEl?.classList?.remove('animate-pulse', 'ring-4', 'ring-amber-400/95');
       const oldTxt = btnEl?.textContent || '';
       if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ Đang dựng PDF bìa & biểu đồ...'; }
       try {
@@ -896,7 +946,15 @@
       state.redirectCountdown = 0;
       state.phase = 'dashboard';
       state.activeTab = 'briefing';
+      state.highlightExportPdfCta = true;
       render();
+      requestAnimationFrame(() => {
+        const pdfBtn = state.hostEl?.querySelector('#wis20-btn-export-pdf');
+        if (pdfBtn) {
+          try { pdfBtn.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_e) {}
+          try { pdfBtn.focus({ preventScroll: true }); } catch (_e2) {}
+        }
+      });
     });
 
     // Phase 4 (Dashboard tabs & filters)

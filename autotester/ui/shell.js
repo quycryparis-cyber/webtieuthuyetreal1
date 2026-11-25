@@ -475,6 +475,47 @@ Chi tiết: ${escHtml(it.techDetail || '')}
       `;
     }
 
+    showRunConfirmModal(onConfirm) {
+      document.getElementById('modal-at-run-confirm')?.remove();
+      const modal = document.createElement('div');
+      modal.id = 'modal-at-run-confirm';
+      modal.setAttribute('data-autotester-ui', 'true');
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.setAttribute('aria-labelledby', 'at-run-confirm-title');
+      modal.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,0.78);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;';
+      modal.innerHTML = `
+        <div style="width:100%;max-width:440px;border-radius:22px;border:2px solid rgba(251,191,36,0.75);background:linear-gradient(180deg,#18181b,#09090b);color:#f4f4f5;box-shadow:0 24px 70px rgba(0,0,0,0.85);overflow:hidden;">
+          <div style="padding:14px 18px;border-bottom:1px solid #27272a;background:linear-gradient(90deg,rgba(245,158,11,0.18),rgba(16,185,129,0.14));font-weight:900;font-size:13px;color:#fcd34d;letter-spacing:0.03em;text-transform:uppercase;">
+            🩺 Xác nhận bắt đầu chẩn đoán
+          </div>
+          <div style="padding:22px 20px;text-align:center;">
+            <h3 id="at-run-confirm-title" style="margin:0 0 18px;font-size:15.5px;font-weight:800;line-height:1.5;color:#ffffff;">
+              Một khi bấm thì không thể thoát giữa chừng (Để đảm bảo cái autotester này chẩn đoán chính xác nhất), bạn chắc chắn chứ?
+            </h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <button type="button" id="btn-at-confirm-yes" style="padding:12px 16px;border-radius:14px;border:1.5px solid #34d399;background:#059669;color:#ffffff;font-weight:900;font-size:14px;cursor:pointer;">
+                Có
+              </button>
+              <button type="button" id="btn-at-confirm-no" style="padding:12px 16px;border-radius:14px;border:1.5px solid #52525b;background:#27272a;color:#e4e4e7;font-weight:900;font-size:14px;cursor:pointer;">
+                Không
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      try { globalScope.NoirStudio?.i18n?.translateElement?.(modal); } catch (_eTrAt) {}
+      const close = () => modal.remove();
+      modal.querySelector('#btn-at-confirm-no')?.addEventListener('click', close);
+      modal.addEventListener('click', (ev) => { if (ev.target === modal) close(); });
+      modal.querySelector('#btn-at-confirm-yes')?.addEventListener('click', () => {
+        close();
+        if (typeof onConfirm === 'function') onConfirm();
+      });
+      modal.querySelector('#btn-at-confirm-yes')?.focus?.();
+    }
+
     _bindEvents() {
       const r = this.rootEl;
       if (!r) return;
@@ -501,8 +542,12 @@ Chi tiết: ${escHtml(it.techDetail || '')}
         });
       });
 
-      r.querySelector('#at-btn-run-all')?.addEventListener('click', () => this.ctrl.runAllSelected());
-      r.querySelector('#at-btn-run-current')?.addEventListener('click', () => this.ctrl.runCurrentScreenOnly());
+      r.querySelector('#at-btn-run-all')?.addEventListener('click', () => {
+        this.showRunConfirmModal(() => this.ctrl.runAllSelected());
+      });
+      r.querySelector('#at-btn-run-current')?.addEventListener('click', () => {
+        this.showRunConfirmModal(() => this.ctrl.runCurrentScreenOnly());
+      });
       r.querySelector('#at-btn-stop')?.addEventListener('click', () => this.ctrl.abortRun());
 
       r.querySelectorAll('[data-at-sim-vp]').forEach((b) => {

@@ -973,8 +973,9 @@ ${checklistLines}`;
           '   - Phân tích trực tiếp TỪNG tin nóng mới nhất ở trên (ghi rõ tên nguồn & link gốc): sự kiện đó tác động cụ thể ra sao tới Vàng, Chứng khoán, Nhà đất và Tiền mặt (ngắn hạn 1–3 tháng và trung hạn 6–12 tháng).\n' +
           '   - So sánh định giá & luân chuyển dòng tiền giữa 4 kênh (Tiền mặt/Tiết kiệm vs Vàng vs Chứng khoán vs Nhà đất), nêu rõ kịch bản Cơ sở / Tích cực / Tiêu cực kèm ngưỡng kích hoạt hành động cụ thể.\n' +
           '   - Chiến lược phân bổ vốn, quản trị rủi ro đòn bẩy và danh sách chốt chặn kỷ luật (tuyệt đối KHÔNG viết qua loa vài gạch đầu dòng chung chung!).\n' +
-          '2. Kết hợp trọn vẹn Khung phân tích 7 chương + Toàn bộ số liệu API sống ở trên + Nguồn thông tin thô để lập báo cáo chuyên sâu có Bảng Markdown rõ ràng.\n' +
-          '3. Cuối bài BẮT BUỘC xuất đủ khối JSON INVEST_INTEL_SYNC_V2 để Web đồng bộ vẽ trọn bộ 6 biểu đồ & xuất PDF đầy đủ biểu đồ!'
+          '2. Kết hợp trọn vẹn Khung phân tích 7 chương + Toàn bộ số liệu API sống ở trên + Nguồn thông tin thô để lập báo cáo chuyên sâu có Bảng Markdown và tiêu đề rõ ràng (`PHẦN 1:`, `PHẦN 2:`, `I.`, `II.`, `1.`, `2.`).\n' +
+          '3. HÌNH ẢNH & TRÍCH DẪN TỰ ĐỘNG TRONG PDF (ÁP DỤNG MỌI CHẾ ĐỘ): Bạn KHÔNG cần tự chèn link ảnh Markdown hay cố chép tay hết toàn bộ danh sách URL ở cuối bài — hãy bố trí mạch phân tích rõ ràng, cô đọng theo từng đề mục lớn để hệ thống tự động ghép khu vực Hình ảnh / Thẻ xem trước bài báo và tự động đính kèm ĐẦY ĐỦ 100% trích dẫn nguồn bài báo mà code đã dò ra vào cuối file PDF!\n' +
+          '4. Cuối bài BẮT BUỘC xuất đủ khối JSON INVEST_INTEL_SYNC_V2 để Web đồng bộ vẽ trọn bộ 6 biểu đồ & xuất PDF đầy đủ biểu đồ!'
         : '- [CHƯA CÓ DỮ LIỆU TIN TỨC TRONG PHIÊN] — Yêu cầu chỉ rõ các tin tức cần người dùng tự kiểm tra thêm.';
       const globalSnap = formatLayerSnapshot(report?.items, 'global_macro');
       const vnSnap = formatLayerSnapshot(report?.items, 'vn_macro');

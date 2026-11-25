@@ -1449,6 +1449,9 @@
       } catch (e) {}
 
       window.addEventListener('popstate', () => {
+        if (window.__NOIR_EXIT_CONFIRMED__ || window.__NOIR_DISABLE_EXIT_SENTINEL__) return;
+        this.verifyNoUnexpectedEntryGateSlip();
+        if (NS.exitGuard?.isInstalled?.()) return;
         const entryGate = typeof document !== 'undefined' ? document.getElementById('app-entry-connection-gate') : null;
         const gateDismissed = Boolean(
           NS.state?.entryGateUnlocked || (entryGate && entryGate.classList.contains('hidden'))

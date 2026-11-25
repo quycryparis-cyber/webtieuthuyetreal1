@@ -951,6 +951,7 @@
     lines.push('1. TUYỆT ĐỐI CẤM VIẾT CHUNG CHUNG kiểu "được cập nhật tại Reuters/VnExpress/WHO..." hay "hãy xem nguồn này nguồn kia"! MỌI TRỤ CỘT TỪ 1 ĐẾN 8 ĐỀU PHẢI NÊU SỰ KIỆN CỤ THỂ, CON SỐ THẬT, CHÍNH SÁCH/CÔNG TRÌNH THẬT ĐANG DIỄN RA HÔM NAY!');
     lines.push('2. CHỈ trích dẫn BÁO CHÍ CHÍNH THỐNG HẠNG 1 & CƠ QUAN CHÍNH THỨC (Reuters, AP, BBC, FT, Bloomberg, VnExpress, Tuổi Trẻ, Thanh Niên, Báo Chính Phủ, Tổng cục Thống kê, Open-Meteo, WHO, IMF, World Bank, NIH/PubMed, Nature, Science, NASA, HBR). TUYỆT ĐỐI CẤM Wikipedia, blog cá nhân hay mạng xã hội!');
     lines.push(`3. HÃY DÙNG CÔNG CỤ TÌM KIẾM WEB TRỰC TIẾP CỦA BẠN (Google Search) để đào sâu đặc biệt cho TRỤ CỘT 4 (13 PHÚT RIÊNG BIỆT) về tin nóng 24–72 giờ tại ${locStr} (kinh tế địa phương, quy hoạch/hạ tầng, việc làm, giá cả sinh hoạt, dịch vụ công, thời tiết/AQI), cùng với 7 trụ cột còn lại tính tới (${scanResult.dateLabel}).`);
+    lines.push('4. HÌNH ẢNH & TRÍCH DẪN TỰ ĐỘNG TRONG PDF (ÁP DỤNG MỌI CHẾ ĐỘ): Bạn KHÔNG cần tự chèn link ảnh Markdown hay tự chép tay lại hết tất cả URL bài báo ở cuối câu trả lời — chỉ cần trình bày đề mục rõ ràng (`PHẦN 1:`, `PHẦN 2:`, `I.`, `II.`, `1.`, `2.`) để hệ thống tự động bố trí khu vực Hình ảnh / Thẻ xem trước bài báo và tự động đính kèm ĐẦY ĐỦ 100% trích dẫn bài báo mà code đã dò ra vào cuối file PDF!');
     lines.push('');
     lines.push('=== BÀI BÁO THẬT & SỐ LIỆU CHÍNH THỨC ĐÃ TRÍCH XUẤT HÔM NAY (8 TRỤ CỘT) ===');
     lines.push(

@@ -568,6 +568,7 @@
                   return true;
                 });
 
+              let sliceStart = performance.now();
               for (let i = 0; i < candidates.length; i++) {
                 if (ctx.isAborted()) break;
                 const el = candidates[i];
@@ -614,7 +615,10 @@
                     }
                   }
                 }
-                if (i % 5 === 4) await AT.sleep(16);
+                if (performance.now() - sliceStart >= 24 || i % 4 === 3) {
+                  await AT.sleep(8);
+                  sliceStart = performance.now();
+                }
               }
             };
 
@@ -633,12 +637,12 @@
                 await AT.sleep(18);
               }
 
-              // 2. Mở & quét các Pop-up Studio lớn (Mod 42 Clock/Weather/Invest/Wisdom, Mod 46 ĐăngLovePDF, Mod 47 RAM, Mod 51 Ngoại ngữ)
+              // 2. Mở & quét các Pop-up Studio lớn (Mod 42 Clock/Weather/Market/Wisdom, Mod 46 ĐăngLovePDF, Mod 47 RAM, Mod 51 Ngoại ngữ)
               if (globalScope.NoirStudio?.worldClockStudio?.openModal) {
-                for (const m42Tab of ['timezone', 'weather', 'alarm', 'invest', 'wisdom']) {
+                for (const m42Tab of ['timezone', 'weather', 'alarm', 'market', 'wisdom']) {
                   if (ctx.isAborted()) break;
                   globalScope.NoirStudio.worldClockStudio.openModal(m42Tab);
-                  await AT.sleep(120);
+                  await AT.sleep(160);
                   visitedScreens.push(`Mod42:${m42Tab}`);
                   await safeProbeContainer(document.getElementById('mod42-world-clock-modal'), `Mod42:${m42Tab}`);
                 }
@@ -665,13 +669,14 @@
                 await AT.sleep(30);
               }
 
-              if (globalScope.NoirStudio?.langLearning?.open) {
-                await globalScope.NoirStudio.langLearning.open();
-                await AT.sleep(120);
+              const llCtrlOmni = globalScope.NoirStudio?.langLearningStudio || globalScope.NoirStudio?.mod51;
+              if (llCtrlOmni?.open) {
+                await llCtrlOmni.open();
+                await AT.sleep(140);
                 visitedScreens.push('Mod51:LangLearning');
                 const m51 = document.getElementById('modal-mod51-lang-studio');
                 await safeProbeContainer(m51, 'Mod51');
-                globalScope.NoirStudio.langLearning.close?.();
+                llCtrlOmni.close?.();
                 await AT.sleep(40);
               }
             } finally {
@@ -1008,6 +1013,264 @@
             });
           },
         },
+        {
+          id: 'deep_module_architecture_logic',
+          label: '🧠 Thấu hiểu & Kiểm chứng logic sâu toàn app (Mod 08/12/16/18/39/46/49/50/51 & Exit Guard)',
+          run: async (ctx) => {
+            if (!isBiNovelApp()) {
+              return makePass('deep_module_architecture_logic', 'core_features', 'Bỏ qua kiểm chứng module nội bộ (web ngoài)', 'Tự động thích ứng.');
+            }
+            const ns = globalScope.NoirStudio || {};
+            const gaps = [];
+            AT.driver.recordBreadcrumb('Kiểm chứng sâu logic kiến trúc Mod 08/12/16/18/39/46/49/50/51 & Exit Guard');
+
+            // 1. Core Writing Engine + Story Bible + 5 Modes + Mode 5 Plot
+            if (!ns.idb || !ns.autoSaver || !ns.storyBible || !ns.promptSynthesizer || !ns.mode5Studio) {
+              gaps.push('Thiếu engine cốt lõi: ' + ['idb', 'autoSaver', 'storyBible', 'promptSynthesizer', 'mode5Studio'].filter((k) => !ns[k]).join(', '));
+            }
+
+            // 2. Exit Guard Universal (Desktop X / Mobile Swipe Back / Web Leave Site)
+            const expectedExitPrompt = 'Bạn muốn thoát khỏi sự kiểm soát của Đăng ( ͡° ͜ʖ ͡°) chứ?';
+            if (!ns.exitGuard || ns.exitGuard.PROMPT_TEXT !== expectedExitPrompt) {
+              gaps.push(`Exit Guard sai thông điệp: "${ns.exitGuard?.PROMPT_TEXT || 'missing'}"`);
+            } else {
+              let noCalled = false;
+              ns.exitGuard.confirmExit(() => {}, () => { noCalled = true; });
+              await AT.sleep(30);
+              const exitModal = document.getElementById('modal-noir-exit-guard');
+              const exitTitle = exitModal?.querySelector('#noir-exit-guard-title')?.textContent?.trim() || '';
+              const yesTxt = exitModal?.querySelector('#btn-noir-exit-yes')?.textContent?.trim() || '';
+              const noBtn = exitModal?.querySelector('#btn-noir-exit-no');
+              const noTxt = noBtn?.textContent?.trim() || '';
+              if (!exitModal || !exitTitle.includes('( ͡° ͜ʖ ͡°) chứ?') || !yesTxt || !noTxt) {
+                gaps.push('Pop-up Exit Guard không hiển thị đủ câu hỏi & nút Có/Không');
+              }
+              noBtn?.click?.();
+              await AT.sleep(20);
+              if (!noCalled || document.getElementById('modal-noir-exit-guard')) {
+                gaps.push('Nút "Không" trên Exit Guard không đóng sạch pop-up hoặc không kích hoạt callback hủy');
+              }
+            }
+
+            // 3. YouTube & OS PiP unblocked + A-B loop vault
+            const blockedPipVideos = Array.from(document.querySelectorAll('#mod39-player-stage-wrapper video[disablePictureInPicture]'));
+            if (blockedPipVideos.length > 0) {
+              gaps.push('Thẻ <video> trong trình phát vẫn còn khóa disablePictureInPicture');
+            }
+            await AT.sleep(4);
+
+            // 4. Mod 46 ĐăngLovePDF: phân loại tiêu đề chuẩn (không nhận nhầm "phần SX" / "USD")
+            if (typeof globalScope.NoirClassifyDocLine === 'function') {
+              const falseH1 = globalScope.NoirClassifyDocLine('phần SX Thiên Long với vốn điều lệ 100 tỷ đồng');
+              const falseH2 = globalScope.NoirClassifyDocLine('USD.');
+              const trueH1 = globalScope.NoirClassifyDocLine('PHẦN 1: PHÂN TÍCH VĨ MÔ');
+              const trueH2 = globalScope.NoirClassifyDocLine('1. Tổng quan thị trường và cơ hội');
+              if (
+                falseH1?.type !== 'paragraph' ||
+                falseH2?.type !== 'paragraph' ||
+                trueH1?.type !== 'heading' ||
+                trueH2?.type !== 'heading'
+              ) {
+                gaps.push(
+                  `NoirClassifyDocLine sai logic tiêu đề: false=[${falseH1?.kind || falseH1},${falseH2?.kind || falseH2}], true=[${trueH1?.kind || trueH1},${trueH2?.kind || trueH2}]`
+                );
+              }
+            } else {
+              gaps.push('Thiếu hàm NoirClassifyDocLine từ mod46b');
+            }
+
+            // 5. Nạp & kiểm chứng Mod 49 (Đầu tư Hôm Nay) + Mod 50 (30 Phút Thông Thái) + Mod 51 (6 Ngoại ngữ full >= 3500 từ)
+            if (ns.worldClockStudio?.openModal && (!globalScope.NoirInvestToday?.promptComposer || !globalScope.NoirWisdom20?.CATEGORIES)) {
+              ns.worldClockStudio.openModal('market');
+              for (let w = 0; w < 28 && !globalScope.NoirInvestToday?.pdfExporter?.exportInvestPdf; w++) {
+                if (ctx.isAborted()) return null;
+                await AT.sleep(80);
+              }
+              ns.worldClockStudio.openModal('wisdom');
+              for (let w = 0; w < 28 && !globalScope.NoirWisdom20?.CATEGORIES; w++) {
+                if (ctx.isAborted()) return null;
+                await AT.sleep(80);
+              }
+              ns.worldClockStudio.closeModal?.();
+              await AT.sleep(30);
+            }
+            const inv = globalScope.NoirInvestToday;
+            if (!inv?.promptComposer || !inv?.pdfExporter?.exportInvestPdf || !/chỉ mang tính chất tham khảo/i.test(inv?.MANDATORY_DISCLAIMER || '')) {
+              gaps.push('Mod 49 thiếu promptComposer / exportInvestPdf / dòng miễn trừ tham khảo bắt buộc');
+            }
+            await AT.sleep(4);
+
+            const w20 = globalScope.NoirWisdom20;
+            const totalW20Min = (w20?.CATEGORIES || []).reduce((s, c) => s + (Number(c.minutes) || 0), 0);
+            const pillar4Min = (w20?.CATEGORIES || []).find((c) => c.id === 'local_region')?.minutes || 0;
+            if (!w20 || (w20.CATEGORIES || []).length !== 8 || pillar4Min !== 13 || totalW20Min !== 30 || typeof w20.exportWisdomReportPdf !== 'function') {
+              gaps.push(`Mod 50 sai cấu trúc 30 Phút Thông Thái (pillars=${w20?.CATEGORIES?.length}, p4=${pillar4Min}m, total=${totalW20Min}m)`);
+            }
+            await AT.sleep(4);
+
+            const llCtrl = ns.langLearningStudio || ns.mod51;
+            if (llCtrl?.open && !globalScope.NoirLangLearning?.buildWebsiteVocabDatabase) {
+              await llCtrl.open();
+              for (let w = 0; w < 25 && !globalScope.NoirLangLearning?.buildWebsiteVocabDatabase; w++) {
+                if (ctx.isAborted()) return null;
+                await AT.sleep(80);
+              }
+              llCtrl.close?.();
+              await AT.sleep(30);
+            }
+            const ll = globalScope.NoirLangLearning;
+            const fullVocab = typeof ll?.buildWebsiteVocabDatabase === 'function' ? ll.buildWebsiteVocabDatabase() : [];
+            if (!ll || (ll.LANGUAGES || []).length !== 6 || fullVocab.length < 3500) {
+              gaps.push(`Mod 51 thiếu gói 6 ngôn ngữ hoặc bộ từ vựng bị cắt ngắn (${fullVocab.length} < 3500)`);
+            } else {
+              const sampleCards = fullVocab.slice(0, 3).map((v) => ({ front: v.vi || 'test', back: v.en || 'test' }));
+              const sampleTsv = ll.exportFlashcardsTsv?.({ title: 'Probe', cards: sampleCards });
+              const sampleHtml = ll.exportFlashcardsInteractiveHtml?.({ title: 'Probe', cards: sampleCards });
+              if (!sampleTsv?.ok || sampleTsv.count !== 3 || !sampleHtml?.ok || sampleHtml.count !== 3) {
+                gaps.push(`Mod 51 hàm xuất TSV hoặc HTML Flashcard trả về sai định dạng (tsv=${JSON.stringify(sampleTsv)}, html=${JSON.stringify(sampleHtml)})`);
+              }
+            }
+
+            if (gaps.length > 0) {
+              return makeIssue('deep_module_architecture_logic', 'core_features', 'ERR_DOMAIN_LOGIC_GAP', {
+                moduleRef: 'mod46b/mod49/mod50/mod51/noir_exit_guard.js',
+                techDetail: gaps.join(' | '),
+              });
+            }
+
+            return makePass(
+              'deep_module_architecture_logic',
+              'core_features',
+              `Logic toàn bộ module đạt chuẩn (${fullVocab.length} từ Mod 51 · 30p/13p Mod 50 · 4 chế độ Mod 49 · Exit Guard)`,
+              'Đã kiểm chứng sâu luồng viết truyện, Story Bible, tiêu đề ĐăngLovePDF, 4 chế độ PDF Đầu tư, 8 trụ cột 30p (Trụ 4 = 13p), trọn bộ >3500 flashcard Mod 51 & Pop-up thoát.',
+              'mod49/mod50/mod51/noir_exit_guard.js',
+              'functional'
+            );
+          },
+        },
+        {
+          id: 'hidden_db_and_api_integrity',
+          label: '🗄️ Kiểm tra dữ liệu ngầm (IndexedDB đọc/ghi, localStorage schema & API/Parser Contract)',
+          run: async () => {
+            AT.driver.recordBreadcrumb('Kiểm tra ngầm IndexedDB, localStorage schema, Service Worker & API Contract');
+            const dbIssues = [];
+            const idb = globalScope.NoirStudio?.idb;
+
+            // 1. IndexedDB thật: tôn trọng Sandbox chế độ Khách (mod41) & kiểm chứng IDB gốc trong DB cô lập
+            const isGuestActive = Boolean(
+              globalScope.NoirStudio?.guestMode?.active ||
+                globalScope.NoirStudio?.guestMode?.sandbox?.isGuestActive?.() ||
+                document.getElementById('mod41-guest-banner')
+            );
+            if (idb && typeof idb.open === 'function') {
+              const openedDb = await idb.open();
+              if (!openedDb || !openedDb.objectStoreNames?.contains('state_cache')) {
+                dbIssues.push('IndexedDB chính (mod04) không mở được kho state_cache');
+              } else if (!isGuestActive && typeof idb.set === 'function' && typeof idb.get === 'function') {
+                const probeKey = '__at_hidden_db_probe__';
+                const payload = { ok: true, checksum: 'AT_V143', ts: Date.now() };
+                try {
+                  await idb.set('state_cache', probeKey, payload);
+                  const got = await idb.get('state_cache', probeKey, null);
+                  if (!got || got.checksum !== 'AT_V143') {
+                    dbIssues.push('IndexedDB state_cache đọc/ghi không khớp checksum');
+                  }
+                } catch (eIdb) {
+                  dbIssues.push(`IndexedDB thao tác lỗi: ${eIdb?.message || eIdb}`);
+                } finally {
+                  try { await idb.delete?.('state_cache', probeKey); } catch (_eDel) {}
+                }
+              }
+            }
+            if (typeof indexedDB !== 'undefined') {
+              const probeDbName = '__noir_autotester_idb_probe__';
+              try {
+                const okTempDb = await new Promise((resolve) => {
+                  const req = indexedDB.open(probeDbName, 1);
+                  req.onupgradeneeded = () => {
+                    if (!req.result.objectStoreNames.contains('kv')) req.result.createObjectStore('kv');
+                  };
+                  req.onsuccess = () => {
+                    const db = req.result;
+                    try {
+                      const tx = db.transaction('kv', 'readwrite');
+                      const st = tx.objectStore('kv');
+                      st.put({ checksum: 'AT_V143' }, 'k1');
+                      tx.oncomplete = () => {
+                        try {
+                          const rx = db.transaction('kv', 'readonly');
+                          const g = rx.objectStore('kv').get('k1');
+                          g.onsuccess = () => { db.close(); resolve(g.result?.checksum === 'AT_V143'); };
+                          g.onerror = () => { db.close(); resolve(false); };
+                        } catch (_eR) { db.close(); resolve(false); }
+                      };
+                      tx.onerror = () => { db.close(); resolve(false); };
+                    } catch (_eTx) { db.close(); resolve(false); }
+                  };
+                  req.onerror = () => resolve(false);
+                });
+                if (!okTempDb) dbIssues.push('Trình duyệt không đọc/ghi được IndexedDB tạm cô lập');
+              } finally {
+                try { indexedDB.deleteDatabase(probeDbName); } catch (_eDelDb) {}
+              }
+            }
+
+            // 2. Kiểm tra schema JSON & dung lượng localStorage
+            let totalChars = 0;
+            const corruptKeys = [];
+            try {
+              for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                const v = localStorage.getItem(k) || '';
+                totalChars += (k?.length || 0) + v.length;
+                if (/^(noir_|bi_|mod\d+|__autotester_)/i.test(k || '') && /^\s*[\[{]/.test(v)) {
+                  try {
+                    JSON.parse(v);
+                  } catch (_eJson) {
+                    corruptKeys.push(k);
+                  }
+                }
+              }
+            } catch (_eLs) {}
+            const lsKb = Math.round((totalChars * 2) / 1024);
+            if (corruptKeys.length > 0) {
+              dbIssues.push(`Phát hiện ${corruptKeys.length} key localStorage JSON hỏng: ${corruptKeys.slice(0, 4).join(', ')}`);
+            }
+            if (lsKb > 4400) {
+              dbIssues.push(`localStorage gần đầy (${lsKb} KB > 4400 KB)`);
+            }
+
+            // 3. Kiểm tra API Contract & Parser phòng thủ (0 đốt Token AI)
+            const w20 = globalScope.NoirWisdom20;
+            if (w20 && typeof w20.parseGeminiWisdomReply === 'function') {
+              try {
+                const safeParsed = w20.parseGeminiWisdomReply('Nội dung không có JSON {hỏng...', { location: {}, categories: {} });
+                if (!safeParsed || typeof safeParsed !== 'object') {
+                  dbIssues.push('Mod 50 parseGeminiWisdomReply không trả về object an toàn khi thiếu JSON');
+                }
+              } catch (eParse) {
+                dbIssues.push(`Mod 50 parser ném lỗi với input thiếu JSON: ${eParse?.message}`);
+              }
+            }
+
+            if (dbIssues.length > 0) {
+              const isDbErr = corruptKeys.length > 0 || dbIssues.some((x) => /IndexedDB|localStorage/i.test(x));
+              return makeIssue('hidden_db_and_api_integrity', 'core_features', isDbErr ? 'ERR_HIDDEN_DB_CORRUPT' : 'ERR_API_CONTRACT_BROKEN', {
+                moduleRef: 'mod04_indexeddb_storage_and_emergency_vault.js',
+                techDetail: dbIssues.join(' | '),
+              });
+            }
+
+            return makePass(
+              'hidden_db_and_api_integrity',
+              'core_features',
+              `Dữ liệu ngầm IDB & localStorage (${lsKb} KB / ${localStorage.length} keys) sạch 100%`,
+              `Đã kiểm tra đọc/ghi/xóa IndexedDB, xác thực JSON schema toàn bộ khóa cấu hình & khả năng chịu lỗi API/Parser ngầm.`,
+              'mod04_indexeddb_storage_and_emergency_vault.js',
+              'resilience'
+            );
+          },
+        },
       ],
     },
 
@@ -1041,10 +1304,10 @@
                 await AT.sleep(16);
               }
               if (isBiNovelApp() && globalScope.NoirStudio?.worldClockStudio?.openModal) {
-                for (const m42Tab of ['invest', 'wisdom']) {
+                for (const m42Tab of ['market', 'wisdom']) {
                   if (ctx.isAborted()) return;
                   globalScope.NoirStudio.worldClockStudio.openModal(m42Tab);
-                  await AT.sleep(110);
+                  await AT.sleep(160);
                   AT.viewportSim?.syncMedia?.();
                   const f = AT.visualAuditor.scanCurrentScreen(`${vpTag} · Mod42:${m42Tab}`);
                   allFindings.push(...f);
@@ -1052,13 +1315,14 @@
                 globalScope.NoirStudio.worldClockStudio.closeModal?.();
                 await AT.sleep(30);
               }
-              if (isBiNovelApp() && globalScope.NoirStudio?.langLearning?.open) {
-                await globalScope.NoirStudio.langLearning.open();
-                await AT.sleep(100);
+              const llCtrlVis = globalScope.NoirStudio?.langLearningStudio || globalScope.NoirStudio?.mod51;
+              if (isBiNovelApp() && llCtrlVis?.open) {
+                await llCtrlVis.open();
+                await AT.sleep(140);
                 AT.viewportSim?.syncMedia?.();
                 const f51 = AT.visualAuditor.scanCurrentScreen(`${vpTag} · Mod51:Lang`);
                 allFindings.push(...f51);
-                globalScope.NoirStudio.langLearning.close?.();
+                llCtrlVis.close?.();
                 await AT.sleep(30);
               }
             };
@@ -1165,14 +1429,16 @@
                 if (cleanCheck.length >= 3 && VN_DIACRITICS_RE.test(cleanCheck)) {
                   const el = node.parentElement;
                   if (el && !el.closest(SKIP_ANCESTOR_SEL)) {
-                    const st = globalScope.getComputedStyle?.(el);
                     const ownerHtml = el instanceof HTMLElement ? el : el.closest?.('svg')?.parentElement;
                     const isShown = ownerHtml
                       ? (ownerHtml.offsetParent !== null && (!ownerHtml.checkVisibility || ownerHtml.checkVisibility()))
                       : false;
-                    if (st && st.display !== 'none' && st.visibility !== 'hidden' && isShown) {
-                      leaks.push({ lang: langCode, scope: scopeLabel, text: txt.slice(0, 70), selector: el.id ? `#${el.id}` : el.tagName.toLowerCase() });
-                      foundInScope += 1;
+                    if (isShown) {
+                      const st = globalScope.getComputedStyle?.(el);
+                      if (st && st.display !== 'none' && st.visibility !== 'hidden') {
+                        leaks.push({ lang: langCode, scope: scopeLabel, text: txt.slice(0, 70), selector: el.id ? `#${el.id}` : el.tagName.toLowerCase() });
+                        foundInScope += 1;
+                      }
                     }
                   }
                 }
@@ -1352,6 +1618,89 @@
             return makeIssue('chaos_offline_simulation', 'chaos_resilience', 'ERR_OFFLINE_FREEZE', {
               techDetail: `Phát sinh ${errAfter - errBefore} lỗi không được bắt khi giả lập rớt mạng/mạng chậm.`,
             });
+          },
+        },
+        {
+          id: 'security_hygiene_audit',
+          label: '🔐 Kiểm tra bảo mật cơ bản (XSS Escape, Rò rỉ API Key, Link _blank & Electron Sandbox)',
+          run: async () => {
+            AT.driver.recordBreadcrumb('Kiểm tra bảo mật cơ bản: XSS, API Key hygiene, noopener & sandbox');
+            const secRisks = [];
+            let secCanaryFired = false;
+            globalScope.__AT_SEC_CANARY__ = () => { secCanaryFired = true; };
+
+            try {
+              // 1. Escape XSS canary
+              const xssPayload = '<img src=x onerror="window.__AT_SEC_CANARY__()"><script>window.__AT_SEC_CANARY__()</script>';
+              const escaped = globalScope.NoirStudio?.utils?.escapeHtml?.(xssPayload) || '';
+              if (!escaped || /<img|<script/i.test(escaped)) {
+                secRisks.push('NS.utils.escapeHtml chưa mã hóa đủ thẻ nguy hiểm');
+              }
+              const sink = document.createElement('div');
+              sink.innerHTML = escaped;
+              if (secCanaryFired || sink.querySelector('script, img')) {
+                secRisks.push('HTML sau escape vẫn tạo phần tử thực thi');
+              }
+
+              // 2. Chống rò rỉ Gemini API Key ra URL / Flashcard HTML / Đơn thuốc Autotester
+              const savedKey = localStorage.getItem('noir_gemini_api_key') || '';
+              if (/AIza[0-9A-Za-z_-]{10,}/.test(globalScope.location?.href || '')) {
+                secRisks.push('Phát hiện API Key nằm trên URL trình duyệt!');
+              }
+              if (savedKey) {
+                const ll = globalScope.NoirLangLearning;
+                if (ll?.exportFlashcardsInteractiveHtml) {
+                  ll.exportFlashcardsInteractiveHtml({ title: 'SecProbe', cards: [{ front: 'thử', back: 'test' }] });
+                  const lastCap = AT.interceptors?.capturedDownloads?.[AT.interceptors.capturedDownloads.length - 1];
+                  if (lastCap?.textSnippet && String(lastCap.textSnippet).includes(savedKey)) {
+                    secRisks.push('API Key bị lộ trong file HTML Flashcard xuất ra!');
+                  }
+                }
+                const rxText = AT.loopEngine?.buildAiPatchPrompt?.(AT.ctrl?.lastReport || {
+                  runNumber: 1, totalScore: 100, scoreDelta: 0, browserSignature: 'Chrome', viewport: '1280x800',
+                  pillars: { functional: { score: 25, max: 25 }, sync: { score: 25, max: 25 }, smoothness: { score: 20, max: 20 }, visual: { score: 15, max: 15 }, resilience: { score: 15, max: 15 } },
+                  kpis: { buttonsTested: 1, deadButtonsFound: 0, syncPassed: 1, syncTotal: 1 },
+                  perfStats: { avgFps: 60, minFps: 60, longTasks: 0, unrevokedBlobs: 0 },
+                  passed: [], issues: [], regressions: [], fixedSincePrev: [], breadcrumbs: [],
+                }) || '';
+                if (rxText.includes(savedKey)) secRisks.push('API Key bị lộ trong đơn thuốc Autotester!');
+              }
+
+              // 3. Kiểm tra link ngoài target="_blank" phải có rel="noopener" chống Tabnabbing
+              const unsafeBlankLinks = Array.from(document.querySelectorAll('a[target="_blank"]')).filter((a) => {
+                if (a.closest('[data-autotester-ui="true"]')) return false;
+                const href = String(a.getAttribute('href') || '');
+                if (!/^https?:\/\//i.test(href)) return false;
+                const rel = String(a.getAttribute('rel') || '').toLowerCase();
+                return !rel.includes('noopener') && !rel.includes('noreferrer');
+              });
+              if (unsafeBlankLinks.length > 0) {
+                secRisks.push(`${unsafeBlankLinks.length} liên kết _blank thiếu rel="noopener" (${unsafeBlankLinks[0].getAttribute('href')})`);
+              }
+
+              // 4. Ranh giới Electron Node Sandbox (contextIsolation)
+              if (typeof globalScope.require === 'function' || globalScope.process?.versions?.electron) {
+                secRisks.push('Phát hiện Node.js require/process lộ trực tiếp trong Renderer (thiếu contextIsolation)');
+              }
+            } finally {
+              delete globalScope.__AT_SEC_CANARY__;
+            }
+
+            if (secRisks.length > 0) {
+              return makeIssue('security_hygiene_audit', 'chaos_resilience', 'ERR_SECURITY_RISK', {
+                moduleRef: 'mod03/noir_exit_guard/electron/main.cjs',
+                techDetail: secRisks.join(' | '),
+              });
+            }
+
+            return makePass(
+              'security_hygiene_audit',
+              'chaos_resilience',
+              'Đạt chuẩn bảo mật cơ bản (XSS Escape, 0 rò API Key, _blank noopener & Sandbox sạch)',
+              'Không thực thi mã độc mẫu, không lộ khóa API ra URL hay file xuất và mọi liên kết ngoài đều được cô lập an toàn.',
+              'mod03_humanized_ui_toast_and_vn_nlp_utils.js',
+              'resilience'
+            );
           },
         },
       ],

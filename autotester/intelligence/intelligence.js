@@ -343,6 +343,34 @@
       plainDesc: 'Nút vẫn chạy bình thường, chỉ cần cập nhật lại mã định danh để kiểm tra nhanh hơn.',
       fixAdvice: 'Cập nhật lại selector hoặc `data-testid` của nút đã thay đổi.',
     },
+    ERR_DOMAIN_LOGIC_GAP: {
+      severity: 'P1',
+      pillar: 'functional',
+      plainTitle: 'Logic nghiệp vụ cốt lõi của một module chưa khớp yêu cầu thiết kế',
+      plainDesc: 'Kiểm tra sâu nội bộ cho thấy công thức phân loại, bộ đếm phút, bộ từ vựng đầy đủ, liên kết báo chí hoặc hộp thoại thoát chưa khớp chuẩn.',
+      fixAdvice: 'Kiểm tra lại logic module tương ứng (`mod12`/`mod16`/`mod18`/`mod39`/`mod46`/`mod49`/`mod50`/`mod51` hoặc `noir_exit_guard.js`).',
+    },
+    ERR_HIDDEN_DB_CORRUPT: {
+      severity: 'P0',
+      pillar: 'resilience',
+      plainTitle: 'Dữ liệu lưu ngầm (IndexedDB / localStorage / Cache) bị hỏng hoặc nghẽn đọc ghi',
+      plainDesc: 'Khi thử đọc/ghi kiểm chứng bộ nhớ ngầm hoặc phân tích JSON cấu hình, phát hiện dữ liệu lỗi hoặc gần cạn dung lượng lưu trữ.',
+      fixAdvice: 'Kiểm tra `mod04_indexeddb_storage_and_emergency_vault.js`, bọc `JSON.parse` an toàn và dọn key tạm dư thừa.',
+    },
+    ERR_API_CONTRACT_BROKEN: {
+      severity: 'P1',
+      pillar: 'sync',
+      plainTitle: 'Bộ đọc dữ liệu API / RSS / lá chắn Gemini xử lý sai định dạng ngầm',
+      plainDesc: 'Khi nạp dữ liệu thiếu trường hoặc phản hồi bất thường từ API, bộ phân tích ngầm chưa trả về cấu trúc an toàn.',
+      fixAdvice: 'Kiểm tra schema parser tại `mod49` (`researchAndPromptEngine.js`), `mod50` (`wisdomEngine.js`) và `interceptors` của Autotester.',
+    },
+    ERR_SECURITY_RISK: {
+      severity: 'P0',
+      pillar: 'resilience',
+      plainTitle: 'Phát hiện rủi ro bảo mật cơ bản (XSS / Rò rỉ API Key / Link không an toàn)',
+      plainDesc: 'Kiểm tra an toàn dữ liệu cho thấy nguy cơ thực thi HTML chưa escape, rò khóa API ra bản xuất, hoặc liên kết thiếu `noopener`.',
+      fixAdvice: 'Dùng `NS.utils.escapeHtml()`, lọc URL chỉ cho phép `http(s):`, không chép khóa API vào file xuất và gắn `rel="noopener noreferrer"`.',
+    },
   });
 
   // 3. ĐỘNG CƠ CHẤM ĐIỂM 5 TRỤ CỘT + LỊCH SỬ 20 VÒNG + PHÁT HIỆN HỒI QUY + ĐƠN THUỐC AI

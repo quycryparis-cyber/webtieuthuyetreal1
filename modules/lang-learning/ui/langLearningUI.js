@@ -246,8 +246,8 @@
             ${LL.LANGUAGES.map((l) => {
               const active = l.code === state.nativeLang;
               return `
-                <button type="button" data-ll51-native="${l.code}" class="p-3 rounded-2xl border-2 text-left transition cursor-pointer flex items-center justify-between gap-2 ${active ? 'border-emerald-400 bg-emerald-500/20 text-white' : 'border-slate-700 bg-slate-900/80 text-slate-300 hover:border-sky-400/60'}">
-                  <span class="flex items-center gap-2 font-extrabold text-sm"><span>${l.flag}</span><span>${esc(l.name)}</span></span>
+                <button type="button" data-ll51-native="${l.code}" class="min-w-0 p-3 rounded-2xl border-2 text-left transition cursor-pointer flex items-center justify-between gap-2 ${active ? 'border-emerald-400 bg-emerald-500/20 text-white' : 'border-slate-700 bg-slate-900/80 text-slate-300 hover:border-sky-400/60'}">
+                  <span class="min-w-0 flex items-center gap-2 font-extrabold text-xs sm:text-sm"><span class="shrink-0">${l.flag}</span><span class="break-words">${esc(l.name)}</span></span>
                   <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-slate-800">${active ? '✓' : l.short}</span>
                 </button>
               `;
@@ -362,8 +362,8 @@
                       return `
                         <td>
                           <div class="flex items-start justify-between gap-1.5">
-                            <span class="font-bold text-slate-100">${esc(txt)}</span>
-                            <button type="button" data-ll51-speak-lang="${code}" data-ll51-speak-text="${esc(txt)}" class="shrink-0 text-xs px-1.5 py-0.5 rounded bg-slate-800 hover:bg-sky-600 text-sky-300 hover:text-white cursor-pointer border-0" title="Nghe phát âm bản xứ">🔊</button>
+                            <span lang="${esc(code)}" class="font-semibold text-slate-100 leading-relaxed">${esc(txt)}</span>
+                            <button type="button" data-ll51-speak-lang="${code}" data-ll51-speak-text="${esc(txt)}" class="shrink-0 text-xs px-1.5 py-0.5 rounded bg-slate-800 hover:bg-sky-600 text-sky-300 hover:text-white cursor-pointer border-0 inline-flex items-center justify-center" title="Nghe phát âm bản xứ" aria-label="Nghe phát âm"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>
                           </div>
                           ${phon ? `<span class="ll51-phonetic">${esc(phon)}</span>` : ''}
                         </td>
@@ -492,12 +492,15 @@
           frontMain = '🎧 Bấm nút 🔊 Nghe phát âm để đoán từ!';
           frontSub = `Gợi ý độ dài: ${String(card.front || '').length} ký tự`;
         }
+        const faceLang = showBack
+          ? (card.backLang || state.nativeLang || 'vi')
+          : (card.frontLang || card.targetLang || (String(card.bcp47 || '').split('-')[0] === 'zh' ? card.bcp47 : String(card.bcp47 || '').split('-')[0]) || 'en');
         cardBodyHtml = `
           <div id="ll51-card-flip-area" class="text-center space-y-3 cursor-pointer select-none py-4">
-            <div class="text-xs font-black uppercase ${showBack ? 'text-emerald-300' : 'text-sky-300'}">${esc(showBack ? card.backLabel : card.frontLabel)}</div>
-            <div class="text-2xl sm:text-3xl font-black text-white leading-snug">${esc(showBack ? card.back : frontMain)}</div>
+            <div class="text-xs font-semibold uppercase tracking-wide ${showBack ? 'text-emerald-300' : 'text-sky-300'}">${esc(showBack ? card.backLabel : card.frontLabel)}</div>
+            <div lang="${esc(faceLang)}" class="ll51-fc-main text-2xl sm:text-3xl font-bold text-white leading-snug">${esc(showBack ? card.back : frontMain)}</div>
             <div class="text-sm text-slate-300 font-mono">${esc(showBack ? (mode === 'listening' ? `${card.front} — ${card.frontSub}` : card.backSub) : frontSub)}</div>
-            <div class="text-xs text-slate-500 pt-2">👆 Bấm vào thẻ hoặc nút "Lật thẻ" để xem ${showBack ? 'Mặt trước' : 'Đáp án Mặt sau'}</div>
+            <div class="text-xs text-slate-400 pt-2">Bấm vào thẻ hoặc nút "Lật thẻ" để xem ${showBack ? 'Mặt trước' : 'Đáp án Mặt sau'}</div>
           </div>
         `;
       }
@@ -520,11 +523,11 @@
           <div class="ll51-flashcard-stage">
             ${cardBodyHtml}
             <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-700/80">
-              <div class="flex flex-wrap gap-1.5">
-                <button type="button" id="ll51-btn-prev-card" class="ll51-btn text-xs">◀ Thẻ trước</button>
-                <button type="button" id="ll51-btn-speak-card" class="ll51-btn ll51-btn-violet text-xs">🔊 Nghe phát âm</button>
-                <button type="button" id="ll51-btn-flip-card" class="ll51-btn ll51-btn-primary text-xs">🔄 Lật thẻ</button>
-                <button type="button" id="ll51-btn-next-card" class="ll51-btn text-xs">Thẻ sau ▶</button>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" id="ll51-btn-prev-card" class="ll51-btn text-xs"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg><span>Thẻ trước</span></button>
+                <button type="button" id="ll51-btn-speak-card" class="ll51-btn ll51-btn-violet text-xs"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg><span>Nghe phát âm</span></button>
+                <button type="button" id="ll51-btn-flip-card" class="ll51-btn ll51-btn-primary text-xs"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg><span>Lật thẻ</span></button>
+                <button type="button" id="ll51-btn-next-card" class="ll51-btn text-xs"><span>Thẻ sau</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg></button>
               </div>
               <div class="flex flex-wrap gap-1">
                 <button type="button" data-ll51-rate="hard" class="ll51-btn text-xs py-1 px-2.5 border-rose-500/60">🔴 Chưa thuộc</button>

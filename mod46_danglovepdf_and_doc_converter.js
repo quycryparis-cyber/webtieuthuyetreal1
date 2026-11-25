@@ -1087,6 +1087,15 @@
 
       const tool = this.activeTool;
 
+      const themeHeadingNoticeHtml =
+        (tool.id === 'beautify_10_themes' || tool.id === 'auto_toc' || tool.id === 'theme_report')
+          ? `<div id="mod46-theme-heading-notice" class="rounded-2xl border-2 border-amber-400/80 bg-gradient-to-r from-amber-950/75 via-rose-950/60 to-amber-950/75 px-4 py-3 text-left shadow-[0_0_24px_rgba(245,158,11,0.3)] animate-pulse">
+               <div class="text-xs sm:text-sm font-black text-amber-200 leading-relaxed">
+                 ✨ Lưu ý quan trọng để AI nhận diện &amp; lọc đề mục chuẩn 100%: Bạn phải có đề mục rõ ràng từ số La Mã như I. II. III. IV. tới 1. 1.1. 1.2. vân vân thì AI mới tạo đề mục, lọc đề mục chính xác; đề mục là Chương 1, Chương 2... hay Phần 1, Phần 2... thì cũng phải rõ ràng, cách dòng đầy đủ nha!
+               </div>
+             </div>`
+          : '';
+
       // MÀN HÌNH 2: CHƯA CÓ FILE -> KHUNG KÉO THẢ LỚN DỄ DÙNG (trừ công cụ Tạo mới không cần nạp file)
       if (!this.files.length && !tool.noFileRequired) {
         body.innerHTML = `
@@ -1096,6 +1105,8 @@
               <h3 class="text-lg sm:text-xl font-black text-zinc-100">${escHtml(tool.name)}</h3>
               <p class="text-xs sm:text-sm text-zinc-400">${escHtml(tool.desc)}</p>
             </div>
+
+            ${themeHeadingNoticeHtml}
 
             <div id="mod46-dropzone" class="rounded-3xl border-2 border-dashed border-rose-400/60 hover:border-rose-300 bg-zinc-900/70 p-8 sm:p-12 text-center space-y-4 transition cursor-pointer">
               <div class="text-5xl">📂</div>
@@ -1140,6 +1151,7 @@
 
       body.innerHTML = `
         <div class="max-w-6xl mx-auto space-y-3">
+          ${themeHeadingNoticeHtml}
           ${over300Mb ? `<div class="px-3.5 py-2 rounded-xl border border-amber-400/60 bg-amber-950/45 text-amber-200 text-xs font-bold">⚠️ Tổng dung lượng tệp (${formatBytes(totalBytes)}) vượt 300 MB — nên chia nhỏ để trình duyệt xử lý mượt nhất.</div>` : ''}
 
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">

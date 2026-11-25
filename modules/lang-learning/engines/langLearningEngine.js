@@ -844,21 +844,42 @@
     const safeJson = JSON.stringify(safeDeck).replace(/</g, '\\u003c');
     const html = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>${String(safeDeck.title).replace(/</g, '&lt;')}</title>
-<style>body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:#0f172a;color:#f8fafc;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}
-.tools{width:100%;max-width:620px;display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.tools input{flex:1;min-width:140px;padding:9px 12px;border-radius:10px;border:1px solid #475569;background:#1e293b;color:#f8fafc;font-size:13px}.tools input[type=number]{max-width:96px;flex:0 0 96px}
-.card{width:100%;max-width:620px;min-height:280px;border-radius:22px;border:2px solid #38bdf8;background:#1e293b;padding:28px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;box-shadow:0 20px 50px rgba(0,0,0,.5)}
-.tag{font-size:12px;font-weight:800;color:#7dd3fc;text-transform:uppercase}.main{font-size:30px;font-weight:900;margin:16px 0;line-height:1.3}.sub{font-size:15px;color:#94a3b8}
-.bar{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center}button{padding:10px 16px;border-radius:12px;border:1px solid #475569;background:#334155;color:#fff;font-weight:800;cursor:pointer}
-button.pri{background:linear-gradient(135deg,#059669,#0284c7);border-color:#34d399}</style></head><body>
-<h2 id="title" style="margin:0 0 10px;text-align:center"></h2>
-<div class="tools"><input id="q" type="search" placeholder="🔍 Tìm trong tất cả ${cards.length} từ..."/><input id="jmp" type="number" min="1" max="${Math.max(1, cards.length)}" placeholder="#Thẻ"/><button id="shuf">🔀 Trộn</button></div>
-<div class="card" id="card"><div class="tag" id="tag"></div><div class="main" id="main"></div><div class="sub" id="sub"></div><div style="font-size:12px;color:#64748b">Bấm vào thẻ để lật Mặt trước / Mặt sau</div></div>
-<div class="bar"><button id="prev">◀ Trước</button><button id="speak">🔊 Nghe phát âm</button><button class="pri" id="flip">🔄 Lật thẻ</button><button id="next">Sau ▶</button></div>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+JP:wght@500;700&family=Noto+Serif+SC:wght@500;700&family=Noto+Serif+TC:wght@500;700&display=swap"/>
+<style>
+body{margin:0;font-family:'Be Vietnam Pro','Noto Sans SC','Noto Sans TC','Noto Sans JP','Noto Sans KR',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;background:#0f172a;color:#f8fafc;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;box-sizing:border-box;line-height:1.6}
+:lang(zh-CN),:lang(zh-Hans){font-family:'Noto Sans SC','Be Vietnam Pro',sans-serif;line-height:1.75}
+:lang(zh-TW),:lang(zh-Hant){font-family:'Noto Sans TC','Be Vietnam Pro',sans-serif;line-height:1.75}
+:lang(ja){font-family:'Noto Sans JP','Be Vietnam Pro',sans-serif;line-height:1.75}
+:lang(ko){font-family:'Noto Sans KR','Be Vietnam Pro',sans-serif;line-height:1.7}
+.tools{width:100%;max-width:620px;display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.tools input{flex:1;min-width:140px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:#1e293b;color:#f8fafc;font-family:inherit;font-size:14px;outline:none}
+.tools input:focus{border-color:#38bdf8}
+.tools input[type=number]{max-width:96px;flex:0 0 96px}
+.card{width:100%;max-width:620px;min-height:280px;border-radius:18px;border:1.5px solid rgba(56,189,248,.45);background:#1e293b;padding:28px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.tag{font-size:12px;font-weight:600;letter-spacing:.04em;color:#7dd3fc;text-transform:uppercase}
+.main{font-size:30px;font-weight:700;margin:16px 0;line-height:1.38}
+.main:lang(zh-CN),.main:lang(zh-Hans){font-family:'Noto Serif SC','Noto Sans SC',serif}
+.main:lang(zh-TW),.main:lang(zh-Hant){font-family:'Noto Serif TC','Noto Sans TC',serif}
+.main:lang(ja){font-family:'Noto Serif JP','Noto Sans JP',serif}
+.sub{font-size:15px;color:#94a3b8;font-weight:500}
+.bar{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+button{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:11px;border:1px solid rgba(255,255,255,.14);background:#1e293b;color:#f8fafc;font-family:inherit;font-size:14px;font-weight:600;letter-spacing:.01em;cursor:pointer;transition:background-color .15s,border-color .15s}
+button:hover{background:#334155;border-color:rgba(125,211,252,.5)}
+button.pri{background:#0d9488;border-color:rgba(45,212,191,.75);color:#fff}
+button.pri:hover{background:#0f766e}
+</style></head><body>
+<h2 id="title" style="margin:0 0 12px;text-align:center;font-weight:700;font-size:20px"></h2>
+<div class="tools"><input id="q" type="search" placeholder="Tìm trong tất cả ${cards.length} từ..."/><input id="jmp" type="number" min="1" max="${Math.max(1, cards.length)}" placeholder="#Thẻ"/><button id="shuf"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg><span>Trộn</span></button></div>
+<div class="card" id="card"><div class="tag" id="tag"></div><div class="main" id="main"></div><div class="sub" id="sub"></div><div style="font-size:12.5px;color:#64748b">Bấm vào thẻ để lật Mặt trước / Mặt sau</div></div>
+<div class="bar"><button id="prev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span>Trước</span></button><button id="speak"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg><span>Nghe phát âm</span></button><button class="pri" id="flip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg><span>Lật thẻ</span></button><button id="next"><span>Sau</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button></div>
 <p id="stat" style="font-size:13px;color:#94a3b8;margin-top:12px"></p>
 <script>const DECK=${safeJson};let list=DECK.cards.slice(),idx=0,back=false;document.getElementById('title').textContent=DECK.title+' ('+DECK.cards.length+' thẻ)';
-function render(){if(!list.length){document.getElementById('tag').textContent='TRỐNG';document.getElementById('main').textContent='Không có thẻ khớp tìm kiếm';document.getElementById('sub').textContent='';document.getElementById('stat').textContent='0 / '+DECK.cards.length;return;}
+function render(){const mainEl=document.getElementById('main');if(!list.length){document.getElementById('tag').textContent='TRỐNG';mainEl.setAttribute('lang','vi');mainEl.textContent='Không có thẻ khớp tìm kiếm';document.getElementById('sub').textContent='';document.getElementById('stat').textContent='0 / '+DECK.cards.length;return;}
 const c=list[idx]||{};document.getElementById('tag').textContent=back?(c.backLabel||'ĐÁP ÁN'):(c.frontLabel||'CÂU HỎI');
-document.getElementById('main').textContent=back?(c.back||''):(c.front||'');document.getElementById('sub').textContent=back?(c.backSub||''):(c.frontSub||'');
+const bcp=String(c.bcp47||'');const faceLang=back?'vi':(/^zh/i.test(bcp)?bcp:(bcp.split('-')[0]||'en'));mainEl.setAttribute('lang',faceLang);
+mainEl.textContent=back?(c.back||''):(c.front||'');document.getElementById('sub').textContent=back?(c.backSub||''):(c.frontSub||'');
 document.getElementById('stat').textContent='Thẻ '+(idx+1)+' / '+list.length+' (Tổng gốc: '+DECK.cards.length+')';}
 document.getElementById('card').onclick=document.getElementById('flip').onclick=()=>{back=!back;render();};
 document.getElementById('prev').onclick=()=>{if(!list.length)return;idx=(idx-1+list.length)%list.length;back=false;render();};

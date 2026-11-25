@@ -356,12 +356,12 @@
       }
 
       const atNodes = Array.from(document.querySelectorAll('[data-autotester-ui="true"]'));
-      const savedVis = atNodes.map((n) => n.style.visibility);
-      const savedPtr = atNodes.map((n) => n.style.pointerEvents);
+      const savedStyleCss = atNodes.map((n) => n.style.cssText);
       try {
         atNodes.forEach((n) => {
-          n.style.visibility = 'hidden';
-          n.style.pointerEvents = 'none';
+          n.style.setProperty('display', 'none', 'important');
+          n.style.setProperty('visibility', 'hidden', 'important');
+          n.style.setProperty('pointer-events', 'none', 'important');
         });
         const topEl = document.elementFromPoint(cx, cy);
         if (!topEl) return { ok: true, topEl: null, blocker: '' };
@@ -374,8 +374,7 @@
         };
       } finally {
         atNodes.forEach((n, idx) => {
-          n.style.visibility = savedVis[idx];
-          n.style.pointerEvents = savedPtr[idx];
+          n.style.cssText = savedStyleCss[idx];
         });
       }
     }

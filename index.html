@@ -45,8 +45,8 @@
             studioLightText: '#1F1E1B'
           },
           fontFamily: {
-            serifNovel: ['Georgia', '"Times New Roman"', '"Songti SC"', '"SimSun"', '"PMingLiU"', '"Yu Mincho"', '"Batang"', 'serif'],
-            sansUI: ['system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', '"PingFang SC"', '"Microsoft YaHei"', '"PingFang TC"', '"Microsoft JhengHei"', '"Malgun Gothic"', '"Hiragino Sans"', '"Yu Gothic UI"', 'sans-serif'],
+            serifNovel: ['Georgia', '"Times New Roman"', '"Noto Serif SC"', '"Noto Serif TC"', '"Noto Serif JP"', 'serif'],
+            sansUI: ['"Be Vietnam Pro"', '"Noto Sans SC"', '"Noto Sans TC"', '"Noto Sans JP"', '"Noto Sans KR"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
             monoCode: ['ui-monospace', '"Cascadia Mono"', '"SFMono-Regular"', 'Consolas', '"Liberation Mono"', 'monospace']
           }
         }
@@ -54,7 +54,10 @@
     };
   </script>
 
-  <!-- System UI + CJK/VN Native Font Stack (Zero external Google Fonts network block/reflow lag) -->
+  <!-- Multilingual Typography Stack: Be Vietnam Pro (VN/EN) + Noto Sans/Serif CJK (SC/TC/JP/KR) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+JP:wght@500;700&family=Noto+Serif+SC:wght@500;700&family=Noto+Serif+TC:wght@500;700&display=swap" />
 
   <!-- Mammoth.js (.DOCX Parser) & PDF.js (.PDF Parser) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
@@ -105,8 +108,35 @@
       overflow: hidden;
       overflow: clip !important;
       overscroll-behavior: none;
-      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      font-family: 'Be Vietnam Pro', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    :lang(zh-CN), :lang(zh-Hans) {
+      font-family: 'Noto Sans SC', 'Be Vietnam Pro', sans-serif;
+      line-height: 1.72;
+    }
+    :lang(zh-TW), :lang(zh-Hant) {
+      font-family: 'Noto Sans TC', 'Be Vietnam Pro', sans-serif;
+      line-height: 1.72;
+    }
+    :lang(ja) {
+      font-family: 'Noto Sans JP', 'Be Vietnam Pro', sans-serif;
+      line-height: 1.72;
+    }
+    :lang(ko) {
+      font-family: 'Noto Sans KR', 'Be Vietnam Pro', sans-serif;
+      line-height: 1.68;
+    }
+    /* Chặn triệt để lỗi rơi dấu tiếng Việt về Times New Roman do weight 800/900 */
+    .font-extrabold, .font-black {
+      font-weight: 700 !important;
+    }
+    button, [role="button"] {
+      font-family: inherit;
+    }
+    button.font-extrabold, button.font-black, [role="button"].font-extrabold, [role="button"].font-black {
+      font-weight: 600 !important;
     }
     html[data-keyboard-open="true"] {
       height: 100% !important;
@@ -1188,7 +1218,7 @@
       <img src="assets/app-icon-192.png" alt="Logo Studio Tiểu Thuyết Của Bi" class="noir-splash-spin-icon" style="width:74px;height:74px;border-radius:20px;object-fit:cover;box-shadow:0 12px 32px rgba(16,185,129,0.45);border:2px solid rgba(52,211,153,0.75);animation-duration:2.4s;" />
     </div>
     <div style="text-align:center;max-width:340px;">
-      <div style="font-size:15px;font-weight:900;color:#ecfdf5;letter-spacing:0.02em;">Sổ Tay Tiểu Thuyết Của Bi</div>
+      <div style="font-size:15px;font-weight:700;color:#ecfdf5;letter-spacing:0.01em;">Sổ Tay Tiểu Thuyết Của Bi</div>
       <div id="app-boot-splash-status" style="margin-top:6px;font-size:12px;font-weight:600;color:#a7f3d0;">⏳ Đang tải toàn bộ tài nguyên &amp; 48 module Studio...</div>
     </div>
   </div>

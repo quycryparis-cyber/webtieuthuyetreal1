@@ -664,7 +664,135 @@
     return pages;
   }
 
-  function buildAllPagesForMode(mode, readerOpts) {
+  function loadCorsImageSafe(url, timeoutMs = 1100) {
+    return new Promise((resolve) => {
+      if (!url || !/^https?:\/\//i.test(String(url)) || typeof Image === 'undefined') return resolve(null);
+      let done = false;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      const finish = (val) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(val);
+      };
+      const timer = setTimeout(() => finish(null), timeoutMs);
+      img.onload = () => finish(img.naturalWidth > 20 && img.naturalHeight > 20 ? img : null);
+      img.onerror = () => finish(null);
+      img.src = String(url);
+    });
+  }
+
+  async function drawArticleVisualsPage(headlines, readerOpts) {
+    if (!headlines || !headlines.length) return null;
+    const featured = headlines.slice(0, 6);
+    const loadedImgs = await Promise.all(
+      featured.map((h) => loadCorsImageSafe(h.imageUrl || h.image || h.thumbnail || ''))
+    );
+
+    const { canvas, ctx } = createCanvas();
+    const dark = readerOpts?.paperTheme === 'dark';
+    const ff = resolveFontFamily(readerOpts?.font);
+    ctx.fillStyle = dark ? '#0b1220' : '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+    paintHeader(ctx, 'KHU VỰC HÌNH ẢNH & THẺ XEM TRƯỚC BÀI BÁO CHÍNH THỐNG', ff);
+
+    ctx.fillStyle = dark ? '#94a3b8' : '#475569';
+    ctx.font = `600 18px ${ff}`;
+    ctx.fillText(`Tổng hợp trực quan ${featured.length} điểm tin tiêu biểu (bấm trực tiếp vào từng thẻ để mở bài báo gốc · danh mục đủ ${headlines.length} nguồn ở cuối báo cáo)`, 72, 114);
+
+    canvas.__pdfLinks = canvas.__pdfLinks || [];
+    const cardW = 532;
+    const cardH = 468;
+    const gapX = 32;
+    const gapY = 26;
+    const startY = 152;
+    const accents = ['#0284c7', '#059669', '#d97706', '#7c3aed', '#e11d48', '#0d9488'];
+
+    featured.forEach((h, idx) => {
+      const col = idx % 2;
+      const row = Math.floor(idx / 2);
+      const x = 72 + col * (cardW + gapX);
+      const y = startY + row * (cardH + gapY);
+      const accent = accents[idx % accents.length];
+
+      rr(ctx, x, y, cardW, cardH, 16);
+      ctx.fillStyle = dark ? '#111827' : '#f8fafc';
+      ctx.fill();
+      ctx.strokeStyle = dark ? '#334155' : '#cbd5e1';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Khung ảnh bài báo (nếu tải được ảnh thật thì vẽ cover-fit, nếu không thì dựng Banner Preview Tiêu đề sắc nét)
+      const imgH = 216;
+      ctx.save();
+      rr(ctx, x + 2, y + 2, cardW - 4, imgH, 14);
+      ctx.clip();
+      const loaded = loadedImgs[idx];
+      if (loaded) {
+        try {
+          const scale = Math.max((cardW - 4) / loaded.naturalWidth, imgH / loaded.naturalHeight);
+          const dw = loaded.naturalWidth * scale;
+          const dh = loaded.naturalHeight * scale;
+          ctx.drawImage(loaded, x + 2 + (cardW - 4 - dw) / 2, y + 2 + (imgH - dh) / 2, dw, dh);
+        } catch (_eImg) {
+          ctx.fillStyle = accent;
+          ctx.fillRect(x + 2, y + 2, cardW - 4, imgH);
+        }
+      } else {
+        const g = ctx.createLinearGradient(x, y, x + cardW, y + imgH);
+        g.addColorStop(0, '#0f2942');
+        g.addColorStop(1, accent);
+        ctx.fillStyle = g;
+        ctx.fillRect(x + 2, y + 2, cardW - 4, imgH);
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.beginPath();
+        ctx.arc(x + cardW - 46, y + 48, 70, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fde68a';
+        ctx.font = `900 15px ${ff}`;
+        ctx.fillText(`📰 ${(h.source || 'BÁO CHÍ CHÍNH THỐNG').toUpperCase().slice(0, 32)}`, x + 22, y + 34);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `900 22px ${ff}`;
+        wrapText(ctx, cleanStr(h.title || ''), cardW - 48).slice(0, 4).forEach((ln, li) => {
+          ctx.fillText(ln, x + 22, y + 66 + li * 31);
+        });
+      }
+      ctx.restore();
+
+      // Nội dung tiêu đề & tóm tắt bên dưới
+      ctx.fillStyle = dark ? '#38bdf8' : '#0369a1';
+      ctx.font = `800 14.5px ${ff}`;
+      ctx.fillText(`${cleanStr(h.source || 'Nguồn chính thống').slice(0, 28)}  ·  ${cleanStr(h.date || '')}`, x + 18, y + imgH + 22);
+
+      ctx.fillStyle = dark ? '#f8fafc' : '#0f172a';
+      ctx.font = `900 19px ${ff}`;
+      const titleLines = wrapText(ctx, cleanStr(h.title || ''), cardW - 36).slice(0, 3);
+      titleLines.forEach((ln, li) => ctx.fillText(ln, x + 18, y + imgH + 50 + li * 26));
+
+      const snipY = y + imgH + 56 + titleLines.length * 26;
+      if (h.snippet) {
+        ctx.fillStyle = dark ? '#cbd5e1' : '#475569';
+        ctx.font = `500 15.5px ${ff}`;
+        wrapText(ctx, cleanStr(h.snippet), cardW - 36).slice(0, 3).forEach((ln, li) => {
+          ctx.fillText(ln, x + 18, snipY + li * 22);
+        });
+      }
+
+      const rawUrl = String(h.url || h.link || h.official_url || '').trim();
+      const normUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : (/^www\./i.test(rawUrl) ? `https://${rawUrl}` : '');
+      if (normUrl) {
+        ctx.fillStyle = dark ? '#34d399' : '#0d9488';
+        ctx.font = `800 14.5px ${ff}`;
+        ctx.fillText(`🔗 Bấm mở bài gốc: ${normUrl.slice(0, 44)}`, x + 18, y + cardH - 26);
+        canvas.__pdfLinks.push({ x, y, w: cardW, h: cardH, url: normUrl });
+      }
+    });
+
+    return canvas;
+  }
+
+  async function buildAllPagesForMode(mode, readerOpts) {
     const report = INV.stateManager.evaluationReport;
     const gold = INV.stateManager.goldData;
     const stock = INV.stateManager.stockData;
@@ -672,7 +800,33 @@
     const reg = INV.stateManager.userRegion;
     const unified = INV.stateManager.unifiedAnalytics;
     const prose = INV.stateManager.geminiReportProse || '';
-    const headlines = (report?.live_headlines || []).slice(0, 12);
+
+    // Hợp nhất 100% TẤT CẢ bài báo & trích dẫn mà code đã dò ra (KHÔNG cắt bớt!)
+    const allDiscoveredRaw = [
+      ...(report?.live_headlines || []),
+      ...(re?.rssNews || []),
+      ...(gold?.headlines || []),
+      ...(stock?.news || []),
+      ...(report?.items || [])
+        .filter((it) => /^https?:\/\//i.test(String(it?.url || it?.official_url || '').trim()))
+        .map((it) => ({
+          title: it.title || it.plain_label || it.label || it.id,
+          source: it.source || it.provider || 'Nguồn dữ liệu chính thống',
+          date: it.as_of_date || report?.as_of_date || '',
+          url: it.url || it.official_url,
+          snippet: it.plain_explanation || it.impact || '',
+        })),
+    ];
+    const seenHeadKeys = new Set();
+    const headlines = [];
+    for (const h of allDiscoveredRaw) {
+      if (!h || !h.title) continue;
+      const u = String(h.url || h.link || h.official_url || '').trim();
+      const k = u ? u.toLowerCase() : String(h.title).trim().toLowerCase().slice(0, 80);
+      if (seenHeadKeys.has(k)) continue;
+      seenHeadKeys.add(k);
+      headlines.push(h);
+    }
 
     let modeMeta = { title: 'BÁO CÁO PHÂN TÍCH ĐẦU TƯ TỔNG QUÁT TOÀN DIỆN', slug: 'Tong_Quat' };
     let subtitle = `Khu vực: ${reg?.areaLabel || re?.areaLabel || 'Việt Nam'} · Ngày chốt: ${report?.as_of_date || new Date().toLocaleDateString('vi-VN')}`;
@@ -772,12 +926,12 @@
         paragraphs: deepOverviewParagraphs,
       });
       if ((report?.items || []).length) {
-        const slicedItems = report.items.slice(0, 18);
+        const allAuditItems = report.items;
         sections.push({
-          heading: `3. BẢNG KIỂM TOÁN ${report.items.length} ĐỀ MỤC VĨ MÔ – VI MÔ ĐÃ QUÉT`,
+          heading: `3. BẢNG KIỂM TOÁN ĐẦY ĐỦ ${allAuditItems.length} ĐỀ MỤC VĨ MÔ – VI MÔ ĐÃ QUÉT`,
           tableHeaders: ['Đề mục kiểm tra', 'Số liệu / Trạng thái', 'Tác động thị trường'],
-          tableRows: slicedItems.map((it) => [it.title || it.label || it.id, it.display_value || it.value || '—', it.plain_explanation || it.impact || '']),
-          tableRowUrls: slicedItems.map((it) => /^https?:\/\//i.test(String(it.url || it.official_url || '').trim()) ? String(it.url || it.official_url).trim() : ''),
+          tableRows: allAuditItems.map((it) => [it.title || it.label || it.id, it.display_value || it.value || '—', it.plain_explanation || it.impact || '']),
+          tableRowUrls: allAuditItems.map((it) => /^https?:\/\//i.test(String(it.url || it.official_url || '').trim()) ? String(it.url || it.official_url).trim() : ''),
         });
       }
     }
@@ -813,8 +967,9 @@
     });
 
     const coverCanvas = drawCoverPage(modeMeta, subtitle, coverMetrics, readerOpts);
+    const visualsPage = await drawArticleVisualsPage(headlines, readerOpts);
     const contentPages = drawSectionsToPages(modeMeta.title, sections, readerOpts);
-    return { modeMeta, allPages: [coverCanvas, ...chartPages, ...contentPages] };
+    return { modeMeta, allPages: [coverCanvas, ...chartPages, ...(visualsPage ? [visualsPage] : []), ...contentPages] };
   }
 
   async function savePagesToPdf(allPages, slug) {
@@ -851,7 +1006,7 @@
       size: opts.size || 'lg',
       paperTheme: opts.paperTheme || 'light',
     };
-    let built = buildAllPagesForMode(mode, curOpts);
+    let built = await buildAllPagesForMode(mode, curOpts);
 
     document.getElementById('inv-pdf-live-preview-modal')?.remove();
     const modal = document.createElement('div');
@@ -932,13 +1087,13 @@
     };
     renderPreviewSheets();
 
-    const rebuild = () => {
+    const rebuild = async () => {
       curOpts = {
         size: modal.querySelector('#inv-pv-size')?.value || 'lg',
         font: modal.querySelector('#inv-pv-font')?.value || 'sans',
         paperTheme: modal.querySelector('#inv-pv-theme')?.value || 'light',
       };
-      built = buildAllPagesForMode(mode, curOpts);
+      built = await buildAllPagesForMode(mode, curOpts);
       renderPreviewSheets();
     };
     modal.querySelector('#inv-pv-size')?.addEventListener('change', rebuild);

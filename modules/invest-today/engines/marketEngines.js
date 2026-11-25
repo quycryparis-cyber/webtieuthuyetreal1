@@ -1136,6 +1136,11 @@
       const desc = getTag('description');
       const pubDate = getTag('pubDate');
       const sourceTag = getTag('source');
+      const imgMatch =
+        block.match(/<(?:media:content|media:thumbnail|enclosure)[^>]+url=["'](https?:\/\/[^"']+)["']/i) ||
+        block.match(/<img[^>]+src=["'](https?:\/\/[^"']+)["']/i) ||
+        block.match(/(?:url|src)=["'](https?:\/\/[^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)["']/i);
+      const imageUrl = imgMatch ? imgMatch[1] : '';
       if (title && link) {
         let isoDate = INV.utils.todayIso();
         try {
@@ -1151,6 +1156,7 @@
           snippet: desc.slice(0, 220),
           source: sourceTag || 'RSS Chính thống (Nguyên bản)',
           url: link,
+          imageUrl,
           date: isoDate,
           selected_for_prompt: true,
         });

@@ -277,9 +277,8 @@
                         : '<span class="text-[10.5px] text-zinc-500">Tick chọn bài báo muốn AI đọc kỹ</span>'
                     }
                   </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[420px] overflow-y-auto pr-1">
                     ${report.live_headlines
-                      .slice(0, 8)
                       .map(
                         (h, idx) => {
                           const topMatch = Array.isArray(h.matched_checklists) && h.matched_checklists[0];
@@ -1812,7 +1811,10 @@
       saveInvReaderPrefs(p);
       render();
     });
-    host.querySelector('#inv-btn-open-pdf-export-modal')?.addEventListener('click', () => openInvestPdfExportModal());
+    host.querySelector('#inv-btn-open-pdf-export-modal')?.addEventListener('click', () => {
+      uiState.highlightExportPdfCta = false;
+      openInvestPdfExportModal();
+    });
   }
 
   function openInvestPdfExportModal() {
@@ -1978,8 +1980,8 @@
             <p class="text-[11.5px] text-zinc-500 dark:text-zinc-400">Tra cứu nhanh khi cần — Không chạy ngầm tốn máy · Bám sát ${esc(reg.countryName)} (${esc(reg.centralBank)}, ${esc(reg.stockIndex)})</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <button type="button" id="inv-btn-open-pdf-export-modal" class="inv-gemini-copy-demo-btn px-4 py-2.5 rounded-xl font-black text-sm text-white cursor-pointer shadow-xl border-2 border-amber-300" style="background:linear-gradient(135deg,#059669 0%,#0d9488 50%,#0284c7 100%);">
-              📄 Xuất Báo Cáo PDF (4 Chế Độ)
+            <button type="button" id="inv-btn-open-pdf-export-modal" class="inv-gemini-copy-demo-btn px-4 py-2.5 rounded-xl font-black text-sm text-white cursor-pointer shadow-xl border-2 border-amber-300 ${uiState.highlightExportPdfCta ? 'animate-pulse ring-4 ring-amber-400/95 shadow-[0_0_28px_rgba(251,191,36,0.85)]' : ''}" style="background:linear-gradient(135deg,#059669 0%,#0d9488 50%,#0284c7 100%);">
+              📄 Xuất Báo Cáo PDF (4 Chế Độ)${uiState.highlightExportPdfCta ? ' 👇 Bấm ngay!' : ''}
             </button>
             <button type="button" id="inv-btn-back-to-2steps" class="inv-secondary-btn text-xs py-1.5 px-3">🔁 Màn hình 2 Bước</button>
             <button type="button" id="inv-btn-header-gemini" class="inv-gemini-btn text-xs py-2 px-3">
@@ -2188,7 +2190,18 @@
       });
     });
 
-    const enterDashboardNow = () => {
+    const focusExportPdfButtonNow = () => {
+      uiState.highlightExportPdfCta = true;
+      requestAnimationFrame(() => {
+        const pdfBtn = host.querySelector('#inv-btn-open-pdf-export-modal');
+        if (pdfBtn) {
+          try { pdfBtn.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_e) {}
+          try { pdfBtn.focus({ preventScroll: true }); } catch (_e2) {}
+        }
+      });
+    };
+
+    const enterDashboardNow = (highlightPdf = false) => {
       if (uiState.w2CountdownTimerId) {
         clearInterval(uiState.w2CountdownTimerId);
         uiState.w2CountdownTimerId = null;
@@ -2197,11 +2210,13 @@
       uiState.wizardStage = 'dashboard';
       INV.storageAdapter.setSession('wizard_stage', 'dashboard');
       INV.stateManager.activeTab = 'overview';
+      if (highlightPdf) uiState.highlightExportPdfCta = true;
       render();
+      if (highlightPdf) focusExportPdfButtonNow();
     };
 
-    host.querySelector('#inv-w2-btn-enter-now')?.addEventListener('click', enterDashboardNow);
-    host.querySelector('#inv-w2-btn-skip-to-dashboard')?.addEventListener('click', enterDashboardNow);
+    host.querySelector('#inv-w2-btn-enter-now')?.addEventListener('click', () => enterDashboardNow(true));
+    host.querySelector('#inv-w2-btn-skip-to-dashboard')?.addEventListener('click', () => enterDashboardNow(false));
 
     // Bước 2: Dán câu trả lời Gemini & Bấm Đồng bộ -> Thông báo xong + Đếm ngược 3 giây tự chuyển qua Phân tích & Báo chí!
     host.querySelector('#inv-w2-btn-sync')?.addEventListener('click', () => {
@@ -2268,7 +2283,7 @@
         }
         uiState.w2SyncCountdown.sec -= 1;
         if (uiState.w2SyncCountdown.sec <= 0) {
-          enterDashboardNow();
+          enterDashboardNow(true);
         } else {
           render();
         }
@@ -2743,8 +2758,16 @@
         },
       };
       if (jumpToCharts) INV.stateManager.activeTab = 'charts';
+      uiState.highlightExportPdfCta = true;
       NS.utils?.showToast?.('✅ Đã đồng bộ cấu trúc Gemini (INVEST_INTEL_SYNC_V2) vào toàn bộ bảng dữ liệu & 6 biểu đồ chuyên nghiệp!', 'success', 4200);
       render();
+      requestAnimationFrame(() => {
+        const pdfBtn = host.querySelector('#inv-btn-open-pdf-export-modal');
+        if (pdfBtn) {
+          try { pdfBtn.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_e) {}
+          try { pdfBtn.focus({ preventScroll: true }); } catch (_e2) {}
+        }
+      });
     };
 
     host.querySelector('#inv-btn-sync-gemini-ov')?.addEventListener('click', () => {

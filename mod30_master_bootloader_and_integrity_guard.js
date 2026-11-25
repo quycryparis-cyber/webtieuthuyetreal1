@@ -3965,9 +3965,9 @@
       return false;
     }
 
-    processTextNode(textNode) {
+    processTextNode(textNode, skipExcludeCheck = false) {
       if (!textNode || textNode.nodeType !== 3 || !this.origTextMap) return;
-      if (this.isExcludedTextNode(textNode)) return;
+      if (!skipExcludeCheck && this.isExcludedTextNode(textNode)) return;
 
       const currentVal = textNode.nodeValue;
       let entry = this.origTextMap.get(textNode);
@@ -4105,6 +4105,7 @@
       const FILTER_REJECT = typeof NodeFilter !== 'undefined' ? NodeFilter.FILTER_REJECT : 2;
       const FILTER_SKIP = typeof NodeFilter !== 'undefined' ? NodeFilter.FILTER_SKIP : 3;
 
+      const deferredHiddenRoots = this._collectDeferredHidden ? [] : null;
       const self = this;
       const walker = document.createTreeWalker(rootEl, SHOW_ELEMENT | SHOW_TEXT, {
         acceptNode(node) {
@@ -4128,12 +4129,14 @@
               return FILTER_REJECT;
             }
             if (
-              node.hasAttribute('placeholder') ||
-              node.hasAttribute('title') ||
-              node.hasAttribute('aria-label') ||
-              node.hasAttribute('data-noir-hover-title')
+              deferredHiddenRoots &&
+              node !== rootEl &&
+              node.classList &&
+              node.classList.contains('hidden') &&
+              (tag === 'SECTION' || node.getAttribute('role') === 'dialog' || node.id?.startsWith('modal-'))
             ) {
-              self.processElementAttributes(node);
+              deferredHiddenRoots.push(node);
+              return FILTER_REJECT;
             }
             if (
               tag === 'TEXTAREA' ||
@@ -4144,6 +4147,14 @@
               (node.matches && node.matches(self.excludedSelector))
             ) {
               return FILTER_REJECT;
+            }
+            if (
+              node.hasAttribute('placeholder') ||
+              node.hasAttribute('title') ||
+              node.hasAttribute('aria-label') ||
+              node.hasAttribute('data-noir-hover-title')
+            ) {
+              self.processElementAttributes(node);
             }
             return FILTER_SKIP;
           }
@@ -4159,9 +4170,35 @@
 
       let textNode = walker.nextNode();
       while (textNode) {
-        this.processTextNode(textNode);
+        this.processTextNode(textNode, true);
         textNode = walker.nextNode();
       }
+      if (deferredHiddenRoots && deferredHiddenRoots.length > 0) {
+        this._queueDeferredSubtrees(deferredHiddenRoots, this.currentLang);
+      }
+    }
+
+    _queueDeferredSubtrees(nodes, expectedLang) {
+      if (this._hiddenSweepTimer) {
+        clearTimeout(this._hiddenSweepTimer);
+        this._hiddenSweepTimer = null;
+      }
+      let idx = 0;
+      const runNextChunk = () => {
+        this._hiddenSweepTimer = null;
+        if (this.currentLang !== expectedLang || idx >= nodes.length) return;
+        const start = performance.now();
+        while (idx < nodes.length && performance.now() - start < 14) {
+          const el = nodes[idx++];
+          if (el && el.isConnected) {
+            try { this.translateSubtree(el); } catch (_e) {}
+          }
+        }
+        if (idx < nodes.length) {
+          this._hiddenSweepTimer = setTimeout(runNextChunk, 4);
+        }
+      };
+      this._hiddenSweepTimer = setTimeout(runNextChunk, 4);
     }
 
     translateElement(rootEl) {
@@ -4198,11 +4235,17 @@
       this.isApplying = true;
       try {
         const target = rootEl || document.body;
+        if (this._hiddenSweepTimer) {
+          clearTimeout(this._hiddenSweepTimer);
+          this._hiddenSweepTimer = null;
+        }
+        this._collectDeferredHidden = target === document.body;
         if (target) this.translateSubtree(target);
         this.syncDefaultInputValues();
         this.syncDocumentTitle();
         this.syncTriggerLabels();
       } finally {
+        this._collectDeferredHidden = false;
         this.isApplying = false;
       }
     }

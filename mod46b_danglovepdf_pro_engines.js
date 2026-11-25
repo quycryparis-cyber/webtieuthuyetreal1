@@ -48,14 +48,14 @@
       return { type: 'heading', kind: 'h1', text: s };
     }
 
-    // Tiêu đề Lớn Cấp 1: CHƯƠNG ..., PHẦN 1/I/A..., hoặc Cỡ chữ PDF lớn >= 1.26x thân bài
+    // Tiêu đề Lớn Cấp 1: CHƯƠNG 1/2..., PHẦN 1/2/I/II..., hoặc Cỡ chữ PDF lớn >= 1.22x thân bài chiếm 1 dòng
     if (
-      s.length <= 130 &&
+      s.length <= 140 &&
       (
         /^CHƯƠNG\s+([IVXLCDM]+|\d{1,2})\b/i.test(s) ||
-        /^(PHẦN|MỤC|PHỤ LỤC)\s+([IVXLCDM]+|\d{1,2}|[A-Z])\b/.test(s) ||
-        /^Phần\s+([IVXLCDM]+|\d{1,2})\b(?:\s*[:.\-–—]|\s|$)/.test(s) ||
-        (medSize > 0 && fSize >= medSize * 1.26 && s.length >= 4 && !/[,;]$/.test(s))
+        /^PHẦN\s+([IVXLCDM]+|\d{1,2})\b/i.test(s) ||
+        /^(MỤC|PHỤ LỤC)\s+([IVXLCDM]+|\d{1,2}|[A-Z])\b/i.test(s) ||
+        (medSize > 0 && fSize >= medSize * 1.22 && s.length >= 4 && !/[,;]$/.test(s))
       )
     ) {
       return { type: 'heading', kind: 'h1', text: s };
@@ -336,12 +336,34 @@
       const pageRowsList = [];
       const pageImagesMap = new Map();
 
+      const joinPdfItemsByGeometry = (items) => {
+        if (!items || !items.length) return '';
+        let out = items[0].s;
+        let prev = items[0];
+        for (let k = 1; k < items.length; k++) {
+          const cur = items[k];
+          const gap = cur.x - prev.endX;
+          const refSize = Math.min(prev.fSz, cur.fSz);
+          const spaceThresh = Math.max(1.2, refSize * 0.22);
+          const curStartsPunct = /^[.,;:!?)\]}»”’%]/.test(cur.s);
+          const prevEndsOpen = /[(\[{«“‘\/-]$/.test(out);
+          const needsSpace =
+            !curStartsPunct &&
+            !prevEndsOpen &&
+            (prev.hasTrailingSpace || cur.hasLeadingSpace || gap > spaceThresh);
+          out += (needsSpace ? ' ' : '') + cur.s;
+          prev = cur;
+        }
+        return out.replace(/\s+/g, ' ').trim();
+      };
+
       for (let pno = 1; pno <= maxP; pno++) {
         const page = await pdfDoc.getPage(pno);
         const tc = await page.getTextContent();
         const rawItems = [];
         for (const it of tc.items || []) {
-          const s = String(it.str || '').trim();
+          const rawStr = String(it.str || '');
+          const s = rawStr.trim();
           if (!s) continue;
           const x = Number(it.transform?.[4] || 0);
           const y = Number(it.transform?.[5] || 0);
@@ -349,7 +371,17 @@
           const w = Number(it.width || 0) || s.length * fSz * 0.48;
           const boldFlag = /bold|black|heavy|demi|semibold/i.test(String(it.fontName || '') + String(tc.styles?.[it.fontName]?.fontFamily || ''));
           allFontSizes.push(fSz);
-          rawItems.push({ x, y, w, s, fSz, boldFlag });
+          rawItems.push({
+            x,
+            y,
+            w,
+            endX: x + w,
+            s,
+            fSz,
+            boldFlag,
+            hasLeadingSpace: /^\s/.test(rawStr),
+            hasTrailingSpace: /\s$/.test(rawStr),
+          });
         }
 
         // Gom item theo từng dòng Y linh hoạt (tránh bug làm tròn chia ranh giới)
@@ -374,15 +406,18 @@
             const last = segs[segs.length - 1];
             const gap = last ? it.x - last.endX : 0;
             if (!last || gap >= gapThresh) {
-              segs.push({ x: it.x, endX: it.x + it.w, text: it.s, bold: it.boldFlag });
+              segs.push({ x: it.x, endX: it.endX, items: [it], text: it.s, bold: it.boldFlag });
             } else {
-              last.text = `${last.text} ${it.s}`.replace(/\s+/g, ' ').trim();
-              last.endX = Math.max(last.endX, it.x + it.w);
+              last.items.push(it);
+              last.endX = Math.max(last.endX, it.endX);
               last.bold = last.bold || it.boldFlag;
             }
           }
+          for (const sg of segs) {
+            sg.text = joinPdfItemsByGeometry(sg.items);
+          }
           r.segs = segs;
-          r.text = r.items.map((o) => o.s).join(' ').replace(/\s+/g, ' ').trim();
+          r.text = segs.map((sg) => sg.text).filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
           r.isBold = r.items.some((o) => o.boldFlag);
         }
         pageRowsList.push(rowsOnPage);
