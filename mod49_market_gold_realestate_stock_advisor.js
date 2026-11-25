@@ -24,6 +24,7 @@
     'modules/invest-today/engines/deterministicExtractor.js',
     'modules/invest-today/engines/marketEngines.js',
     'modules/invest-today/engines/researchAndPromptEngine.js',
+    'modules/invest-today/engines/investPdfExporter.js',
     'modules/invest-today/ui/investCharts.js',
     'modules/invest-today/ui/investUI.js',
   ];

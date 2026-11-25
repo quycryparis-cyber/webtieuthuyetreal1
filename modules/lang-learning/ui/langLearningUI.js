@@ -905,6 +905,164 @@
     });
   }
 
+  // Bản dịch giao diện nút bấm Mod 51 theo đúng Ngôn ngữ mẹ đẻ người dùng chọn (6 thứ tiếng)
+  const NATIVE_UI_CHROME = Object.freeze({
+    en: {
+      '🎓 Học Ngoại Ngữ Qua Trang Web · 6 Languages & Flashcards Studio': '🎓 Learn Languages From This Website · 6 Languages & Flashcards Studio',
+      'Từ vựng thật từ giao diện web · Phiên âm & Giọng đọc 6 thứ tiếng · Ngữ pháp đối chiếu · Xuất PDF & Flashcard': 'Real vocabulary from this web UI · 6-language phonetics & audio · Comparative grammar · PDF & Flashcard export',
+      '✕ Đóng': '✕ Close',
+      'Bảng Từ Vựng': 'Vocabulary Table',
+      'Bảng Ngữ Pháp (10 Cấu trúc)': 'Grammar Matrix (10 Structures)',
+      'Flashcard 6 Chế Độ': '6-Mode Flashcards',
+      'Xuất PDF & Tải Flashcard': 'Export PDF & Flashcards',
+      'Ẩn / Hiện cột ngôn ngữ (luôn giữ tối thiểu 2 ngôn ngữ để đối chiếu):': 'Show / Hide language columns (keep at least 2 languages):',
+      'Hiện phiên âm 6 ngôn ngữ': 'Show phonetics (6 languages)',
+      'Đổi ngôn ngữ mẹ đẻ / mục tiêu': 'Change Native / Target Languages',
+      'Tìm từ vựng bằng bất kỳ ngôn ngữ nào...': 'Search vocabulary in any language...',
+      'Tất cả chủ đề': 'All Topics',
+      'Chỉ hiện từ yêu thích': 'Starred Only',
+      'Đã chọn:': 'Selected:',
+      'Chọn hết': 'Select All',
+      'Bỏ chọn': 'Deselect All',
+      'Chọn theo Sao': 'Select Starred',
+      'Chọn': 'Select',
+      'Mẹ đẻ': 'Native',
+      'bộ': 'decks',
+      'Tạo Bộ Flashcard Mới': 'Create New Flashcard Deck',
+      'Xuất PDF Sổ Tay Từ Vựng & Ngữ Pháp': 'Export Vocab & Grammar PDF',
+      'Tải Bộ Flashcard Tương Tác Offline (.HTML)': 'Download Offline Interactive Flashcards (.HTML)',
+    },
+    ja: {
+      '🎓 Học Ngoại Ngữ Qua Trang Web · 6 Languages & Flashcards Studio': '🎓 ウェブサイトで語学学習 · 6言語＆単語帳スタジオ',
+      'Từ vựng thật từ giao diện web · Phiên âm & Giọng đọc 6 thứ tiếng · Ngữ pháp đối chiếu · Xuất PDF & Flashcard': '実サイトの語彙 · 6言語発音記号＆音声 · 対照文法 · PDF＆単語帳出力',
+      '✕ Đóng': '✕ 閉じる',
+      'Bảng Từ Vựng': '単語リスト',
+      'Bảng Ngữ Pháp (10 Cấu trúc)': '文法対照表 (10構造)',
+      'Flashcard 6 Chế Độ': '6モード単語帳',
+      'Xuất PDF & Tải Flashcard': 'PDF出力＆単語帳保存',
+      'Ẩn / Hiện cột ngôn ngữ (luôn giữ tối thiểu 2 ngôn ngữ để đối chiếu):': '言語列の表示 / 非表示（最低2言語を維持）：',
+      'Hiện phiên âm 6 ngôn ngữ': '6言語の発音表記を表示',
+      'Đổi ngôn ngữ mẹ đẻ / mục tiêu': '母語・学習言語を変更',
+      'Tìm từ vựng bằng bất kỳ ngôn ngữ nào...': 'どの言語でも単語を検索...',
+      'Tất cả chủ đề': 'すべてのトピック',
+      'Chỉ hiện từ yêu thích': 'お気に入りのみ',
+      'Đã chọn:': '選択中:',
+      'Chọn hết': 'すべて選択',
+      'Bỏ chọn': '選択解除',
+      'Chọn theo Sao': '星付きを選択',
+      'Chọn': '選択',
+      'Mẹ đẻ': '母語',
+      'bộ': 'セット',
+    },
+    ko: {
+      '🎓 Học Ngoại Ngữ Qua Trang Web · 6 Languages & Flashcards Studio': '🎓 웹사이트로 외국어 학습 · 6개 언어 & 플래시카드 스튜디오',
+      'Từ vựng thật từ giao diện web · Phiên âm & Giọng đọc 6 thứ tiếng · Ngữ pháp đối chiếu · Xuất PDF & Flashcard': '실제 웹 어휘 · 6개 언어 발음 & 음성 · 대조 문법 · PDF & 플래시카드 내보내기',
+      '✕ Đóng': '✕ 닫기',
+      'Bảng Từ Vựng': '어휘 표',
+      'Bảng Ngữ Pháp (10 Cấu trúc)': '문법 대조표 (10구조)',
+      'Flashcard 6 Chế Độ': '6모드 플래시카드',
+      'Xuất PDF & Tải Flashcard': 'PDF & 플래시카드 내보내기',
+      'Ẩn / Hiện cột ngôn ngữ (luôn giữ tối thiểu 2 ngôn ngữ để đối chiếu):': '언어 열 표시 / 숨기기 (최소 2개 언어 유지):',
+      'Hiện phiên âm 6 ngôn ngữ': '6개 언어 발음 표기 보기',
+      'Đổi ngôn ngữ mẹ đẻ / mục tiêu': '모국어 / 학습 언어 변경',
+      'Tìm từ vựng bằng bất kỳ ngôn ngữ nào...': '모든 언어로 어휘 검색...',
+      'Tất cả chủ đề': '모든 주제',
+      'Chỉ hiện từ yêu thích': '즐겨찾기만 보기',
+      'Đã chọn:': '선택됨:',
+      'Chọn hết': '모두 선택',
+      'Bỏ chọn': '선택 해제',
+      'Chọn theo Sao': '별표만 선택',
+      'Chọn': '선택',
+      'Mẹ đẻ': '모국어',
+      'bộ': '세트',
+    },
+    zh_cn: {
+      '🎓 Học Ngoại Ngữ Qua Trang Web · 6 Languages & Flashcards Studio': '🎓 通过网站学外语 · 6语言与闪卡工作室',
+      'Từ vựng thật từ giao diện web · Phiên âm & Giọng đọc 6 thứ tiếng · Ngữ pháp đối chiếu · Xuất PDF & Flashcard': '真实网页词汇 · 6语种音标与朗读 · 语法对照 · 导出PDF与闪卡',
+      '✕ Đóng': '✕ 关闭',
+      'Bảng Từ Vựng': '词汇表',
+      'Bảng Ngữ Pháp (10 Cấu trúc)': '语法对照表 (10项)',
+      'Flashcard 6 Chế Độ': '6模式闪卡',
+      'Xuất PDF & Tải Flashcard': '导出PDF与闪卡',
+      'Ẩn / Hiện cột ngôn ngữ (luôn giữ tối thiểu 2 ngôn ngữ để đối chiếu):': '显示/隐藏语言列（至少保留2种语言对照）：',
+      'Hiện phiên âm 6 ngôn ngữ': '显示6语种音标',
+      'Đổi ngôn ngữ mẹ đẻ / mục tiêu': '更改母语 / 目标语言',
+      'Tìm từ vựng bằng bất kỳ ngôn ngữ nào...': '输入任意语言搜索词汇...',
+      'Tất cả chủ đề': '全部主题',
+      'Chỉ hiện từ yêu thích': '仅看收藏',
+      'Đã chọn:': '已选:',
+      'Chọn hết': '全选',
+      'Bỏ chọn': '取消全选',
+      'Chọn theo Sao': '选择收藏项',
+      'Chọn': '选择',
+      'Mẹ đẻ': '母语',
+      'bộ': '套',
+    },
+    zh_tw: {
+      '🎓 Học Ngoại Ngữ Qua Trang Web · 6 Languages & Flashcards Studio': '🎓 透過網站學外語 · 6語言與閃卡工作室',
+      'Từ vựng thật từ giao diện web · Phiên âm & Giọng đọc 6 thứ tiếng · Ngữ pháp đối chiếu · Xuất PDF & Flashcard': '真實網頁詞彙 · 6語種音標與朗讀 · 文法對照 · 匯出PDF與閃卡',
+      '✕ Đóng': '✕ 關閉',
+      'Bảng Từ Vựng': '詞彙表',
+      'Bảng Ngữ Pháp (10 Cấu trúc)': '文法對照表 (10項)',
+      'Flashcard 6 Chế Độ': '6模式閃卡',
+      'Xuất PDF & Tải Flashcard': '匯出PDF與閃卡',
+      'Ẩn / Hiện cột ngôn ngữ (luôn giữ tối thiểu 2 ngôn ngữ để đối chiếu):': '顯示/隱藏語言欄（至少保留2種語言對照）：',
+      'Hiện phiên âm 6 ngôn ngữ': '顯示6語種音標',
+      'Đổi ngôn ngữ mẹ đẻ / mục tiêu': '變更母語 / 目標語言',
+      'Tìm từ vựng bằng bất kỳ ngôn ngữ nào...': '輸入任意語言搜尋詞彙...',
+      'Tất cả chủ đề': '全部主題',
+      'Chỉ hiện từ yêu thích': '僅看收藏',
+      'Đã chọn:': '已選:',
+      'Chọn hết': '全選',
+      'Bỏ chọn': '取消全選',
+      'Chọn theo Sao': '選擇收藏項',
+      'Chọn': '選擇',
+      'Mẹ đẻ': '母語',
+      'bộ': '套',
+    },
+  });
+
+  function applyNativeUiChrome(root, nativeLang) {
+    if (!root || !nativeLang || nativeLang === 'vi') return;
+    const dict = NATIVE_UI_CHROME[nativeLang];
+    const packKey = nativeLang === 'zh_cn' ? 'zh-CN' : nativeLang === 'zh_tw' ? 'zh-TW' : nativeLang;
+    const globalExact = NS.i18nPacks?.[packKey]?.exact || {};
+    const translateStr = (raw) => {
+      let s = String(raw || '');
+      const trimmed = s.trim();
+      if (!trimmed) return s;
+      if (dict && dict[trimmed]) return s.replace(trimmed, dict[trimmed]);
+      if (globalExact[trimmed]) return s.replace(trimmed, globalExact[trimmed]);
+      if (dict) {
+        for (const [k, v] of Object.entries(dict)) {
+          if (s.includes(k)) s = s.split(k).join(v);
+        }
+      }
+      return s;
+    };
+    // Chỉ dịch khung nút bấm & nhãn giao diện — TUYỆT ĐỐI giữ nguyên dữ liệu học trong <tbody>!
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    const nodes = [];
+    let n;
+    while ((n = walker.nextNode())) {
+      const parent = n.parentElement;
+      if (!parent || parent.closest('tbody') || parent.closest('[data-ll51-keep-orig]')) continue;
+      nodes.push(n);
+    }
+    for (const tn of nodes) {
+      const next = translateStr(tn.nodeValue);
+      if (next !== tn.nodeValue) tn.nodeValue = next;
+    }
+    root.querySelectorAll('input[placeholder], textarea[placeholder]').forEach((el) => {
+      if (el.closest('tbody')) return;
+      const ph = el.getAttribute('placeholder');
+      if (ph) {
+        const next = translateStr(ph);
+        if (next !== ph) el.setAttribute('placeholder', next);
+      }
+    });
+  }
+
   function render() {
     if (!state.modalEl) return;
     // Giữ nguyên vị trí cuộn của modal & bảng khi re-render (không bao giờ giật lên đầu trang!)
@@ -943,6 +1101,7 @@
       </div>
     `;
     bindEvents();
+    if (isStudio) applyNativeUiChrome(state.modalEl, state.nativeLang);
     const newBody = state.modalEl.querySelector('.ll51-body');
     const newTable = state.modalEl.querySelector('.ll51-table-wrap');
     if (newBody && prevBodyScroll > 0) newBody.scrollTop = prevBodyScroll;

@@ -642,14 +642,14 @@
         modal.setAttribute('aria-modal', 'true');
         modal.innerHTML = `
           <div class="w-full max-w-[1440px] h-[96dvh] sm:h-[94dvh] mx-auto rounded-2xl border border-zinc-700/80 bg-zinc-950/98 shadow-2xl flex flex-col overflow-hidden">
-            <!-- Header gọn gàng căn giữa đầy đủ -->
-            <div class="w-full px-3 sm:px-6 py-3 border-b border-zinc-800 bg-zinc-900/95 flex flex-wrap items-center justify-between gap-2 shrink-0">
+            <!-- Header gọn gàng căn giữa đầy đủ (relative z-20 chống bị che phủ nút Đóng!) -->
+            <div class="relative z-20 w-full px-3 sm:px-6 py-3 border-b border-zinc-800 bg-zinc-900/95 flex flex-wrap items-center justify-between gap-2 shrink-0">
               <div class="flex items-center gap-2.5 min-w-0">
                 <img src="assets/app-icon-192.png" alt="Logo ĐăngLovePDF" class="w-9 h-9 rounded-xl object-cover border-2 border-rose-400/80 shadow-md shrink-0" />
                 <div class="min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
                     <h2 class="text-sm sm:text-base font-black text-rose-300 tracking-tight">ĐăngLovePDF ( ͡° ͜ʖ ͡°)</h2>
-                    <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/50 text-emerald-300 text-[10px] font-extrabold">🔒 48 Công cụ Premium · Xử lý 100% trên máy</span>
+                    <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/50 text-emerald-300 text-[10px] font-extrabold">🔒 49 Công cụ Premium · Xử lý 100% trên máy</span>
                   </div>
                 </div>
               </div>
@@ -666,22 +666,42 @@
         `;
         document.body.appendChild(modal);
 
-        modal.querySelector('#btn-mod46-close-studio')?.addEventListener('click', () => {
+        // Event delegation cấp root: Đóng / Làm tệp mới / Quay lại Danh mục KHÔNG BAO GIỜ bị liệt dù đang chạy tác vụ lỗi!
+        const forceCloseStudio = () => {
           this.cancelled = true;
-          this.resetWorkspaceState();
           modal.classList.add('hidden');
+          try { this.resetWorkspaceState(); } catch (_eReset) {}
+        };
+        modal.addEventListener('click', (ev) => {
+          const closeBtn = ev.target?.closest?.('#btn-mod46-close-studio');
+          if (closeBtn) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            forceCloseStudio();
+            return;
+          }
+          const newFileBtn = ev.target?.closest?.('#btn-mod46-header-new-file');
+          if (newFileBtn) {
+            ev.preventDefault();
+            if (!this.activeTool) return;
+            this.cancelled = true;
+            try { this.resetWorkspaceState(); } catch (_eR) {}
+            this.renderUploadOrWorkspaceScreen();
+            return;
+          }
+          const backBtn = ev.target?.closest?.('#btn-mod46-back-hub');
+          if (backBtn) {
+            ev.preventDefault();
+            this.cancelled = true;
+            this.activeTool = null;
+            try { this.resetWorkspaceState(); } catch (_eR2) {}
+            this.renderHubScreen('', true);
+          }
         });
-        modal.querySelector('#btn-mod46-header-new-file')?.addEventListener('click', () => {
-          if (!this.activeTool) return;
-          this.cancelled = true;
-          this.resetWorkspaceState();
-          this.renderUploadOrWorkspaceScreen();
-        });
-        modal.querySelector('#btn-mod46-back-hub')?.addEventListener('click', () => {
-          this.cancelled = true;
-          this.activeTool = null;
-          this.resetWorkspaceState();
-          this.renderHubScreen('', true);
+        document.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Escape' && !modal.classList.contains('hidden')) {
+            forceCloseStudio();
+          }
         });
       }
       modal.classList.remove('hidden');
@@ -736,14 +756,14 @@
         const cards = filteredTools
           .map(
             (t) => `
-          <button type="button" data-mod46-tool="${t.id}" class="text-left p-3 rounded-2xl border border-zinc-700/80 hover:border-rose-400/80 bg-zinc-900/90 hover:bg-zinc-800/90 transition flex items-start gap-3 cursor-pointer shadow-sm">
+          <button type="button" data-mod46-tool="${t.id}" class="text-left p-3 rounded-2xl border ${t.featured ? 'border-2 border-amber-400 bg-gradient-to-br from-teal-950/90 via-sky-950/90 to-indigo-950/90 shadow-[0_0_22px_rgba(251,191,36,0.38)] animate-pulse' : 'border-zinc-700/80 hover:border-rose-400/80 bg-zinc-900/90 hover:bg-zinc-800/90 shadow-sm'} transition flex items-start gap-3 cursor-pointer">
             <span class="text-2xl leading-none shrink-0 mt-0.5">${t.icon}</span>
             <div class="min-w-0 flex-1 space-y-1">
               <div class="flex items-center justify-between gap-1.5 flex-wrap">
-                <span class="text-xs sm:text-[13px] font-black text-zinc-100">${escHtml(t.name)}</span>
-                <span class="px-1.5 py-0.5 rounded-md bg-zinc-950 border border-zinc-700 text-[9.5px] font-bold text-amber-300 whitespace-nowrap">${escHtml(t.badge)}</span>
+                <span class="text-xs sm:text-[13px] font-black ${t.featured ? 'text-amber-200' : 'text-zinc-100'}">${escHtml(t.name)}</span>
+                <span class="px-1.5 py-0.5 rounded-md ${t.featured ? 'bg-amber-400 text-zinc-950 font-black' : 'bg-zinc-950 border border-zinc-700 font-bold text-amber-300'} text-[9.5px] whitespace-nowrap">${escHtml(t.badge)}</span>
               </div>
-              <p class="text-[11px] text-zinc-400 leading-snug">${escHtml(t.desc)}</p>
+              <p class="text-[11px] ${t.featured ? 'text-sky-100/90' : 'text-zinc-400'} leading-snug">${escHtml(t.desc)}</p>
             </div>
           </button>`
           )

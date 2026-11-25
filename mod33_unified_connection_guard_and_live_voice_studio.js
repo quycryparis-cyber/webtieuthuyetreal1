@@ -1378,6 +1378,36 @@
       if (typeof Audio !== 'function') return false;
       const langMeta = SUPPORTED_VOICE_LANGS[targetLang] || SUPPORTED_VOICE_LANGS['vi-VN'];
       const tl = langMeta.gttsTl || 'vi';
+      // Chia nhỏ câu dài cho tiếng Nhật / Hàn / Trung (tối đa 62 ký tự CJK để không bao giờ vượt giới hạn URL 200 byte của Google TTS!)
+      const isCjkLang = /^(ja|ko|zh)/i.test(tl);
+      const maxChunk = isCjkLang ? 62 : 145;
+      const safeClauses = [];
+      (clauses || []).forEach((c) => {
+        const raw = String(c?.text || '').trim();
+        if (!raw) return;
+        if (raw.length <= maxChunk) {
+          safeClauses.push(c);
+        } else {
+          const parts = raw.split(/(?<=[.!?。！？,，、;；:：\s])/).filter(Boolean);
+          let buf = '';
+          for (const p of parts) {
+            if ((buf + p).length > maxChunk) {
+              if (buf.trim()) safeClauses.push({ text: buf.trim(), pauseAfterMs: 65 });
+              if (p.length > maxChunk) {
+                for (let k = 0; k < p.length; k += maxChunk) {
+                  safeClauses.push({ text: p.slice(k, k + maxChunk), pauseAfterMs: 45 });
+                }
+                buf = '';
+              } else {
+                buf = p;
+              }
+            } else {
+              buf += p;
+            }
+          }
+          if (buf.trim()) safeClauses.push({ text: buf.trim(), pauseAfterMs: c.pauseAfterMs || 90 });
+        }
+      });
       this.isSpeaking = true;
       let idx = 0;
 
@@ -1390,14 +1420,14 @@
           this.stop();
           return;
         }
-        if (idx >= clauses.length) {
+        if (idx >= safeClauses.length) {
           this.isSpeaking = false;
           this.currentGttsAudio = null;
           if (typeof options.onComplete === 'function') options.onComplete();
           return;
         }
 
-        const item = clauses[idx];
+        const item = safeClauses[idx];
         idx += 1;
         const primaryUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(
           tl

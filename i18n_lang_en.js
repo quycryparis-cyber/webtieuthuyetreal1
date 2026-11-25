@@ -64,6 +64,9 @@
 };
 
   const exact = Object.freeze({
+    "📄 Xuất Báo Cáo PDF (4 Chế Độ)": "📄 Export Pro PDF Report (4 Modes)",
+    "Phối Màu Báo Cáo Khoa Học 10 Theme Đẹp (DOCX / XLSX / PDF)": "Beautify Reports with 10 Scientific Themes (DOCX / XLSX / PDF)",
+    "✨ Nên thử · 10 Theme": "✨ Try Now · 10 Themes",
     "📺 Xem video mini và phát nền: Tắt": "📺 Mini Video & Background Play: Off",
     "✅ Bấm vào đây để bật video mini, phát nền đã sẵn sàng": "✅ Tap here to open Mini Video — Background Play Ready",
     "PHẦN 2 — SƠ ĐỒ, BIỂU ĐỒ & HÌNH ẢNH BẢN TIN 20 PHÚT": "PART 2 — DIAGRAMS, CHARTS & VISUALS OF THE 20-MIN BRIEFING",

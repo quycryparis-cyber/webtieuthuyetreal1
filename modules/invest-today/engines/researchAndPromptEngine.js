@@ -902,10 +902,30 @@ ${checklistLines}`;
       `- Thị trường chung (VN-Index tham chiếu): P/E ${vn.pe}x (TB 10Y: 14,0x), Earnings Yield ${vn.earningsYieldPct.toFixed(2)}% vs TPCP 10Y ${vn.bond10yPct}%, Chi phí vốn Damodaran Ke = ${vn.damodaranKe.toFixed(2)}%, Margin/Thanh khoản: ~${vn.marginSessions.toFixed(0)} phiên.`,
     ];
     if (stock) {
-      const label = anonymize ? 'TÀI SẢN X (ĐÃ ẨN DANH THEO KỸ THUẬT GLASSERMAN–LIN)' : `${stock.symbol} (${stock.companyName})`;
+      const label = anonymize ? 'TÀI SẢN X (ĐÃ ẨN DANH THEO KỸ THUẬT GLASSERMAN–LIN)' : `${stock.symbol} (${stock.companyName} · ${stock.exchange || 'HOSE'})`;
       lines.push(
-        `- Cổ phiếu đang xem: ${label} | Nhóm ngành: ${stock.sectorChecklist?.sectorLabel || stock.sector} | Giá: ${Number.isFinite(stock.price) ? INV.utils.formatVnd(stock.price, 0) + ' ' + stock.currency : 'DATA_MISSING'}`
+        `- Cổ phiếu đang phân tích: ${label} | Ngành: ${stock.industryName || stock.sectorChecklist?.sectorLabel || stock.sector} | Giá hiện tại: ${Number.isFinite(stock.price) ? INV.utils.formatVnd(stock.price, 0) + ' ' + stock.currency : 'DATA_MISSING'}${Number.isFinite(stock.changePct) ? ` (${stock.changePct >= 0 ? '+' : ''}${stock.changePct.toFixed(2)}%)` : ''}`
       );
+      const metrics = [
+        Number.isFinite(stock.marketCap) ? `Vốn hóa: ${(stock.marketCap / 1e12).toFixed(2)} nghìn tỷ` : '',
+        Number.isFinite(stock.pe) ? `P/E: ${stock.pe.toFixed(2)}x` : '',
+        Number.isFinite(stock.pb) ? `P/B: ${stock.pb.toFixed(2)}x` : '',
+        Number.isFinite(stock.eps) ? `EPS: ${Math.round(stock.eps).toLocaleString('vi-VN')} đ` : '',
+        Number.isFinite(stock.evEbitda) ? `EV/EBITDA: ${stock.evEbitda.toFixed(2)}x` : '',
+        Number.isFinite(stock.roe) ? `ROE: ${stock.roe.toFixed(2)}%` : '',
+        Number.isFinite(stock.roa) ? `ROA: ${stock.roa.toFixed(2)}%` : '',
+        Number.isFinite(stock.dividendYield) ? `Cổ tức: ${stock.dividendYield.toFixed(2)}%` : '',
+        Number.isFinite(stock.rev5yGrowth) ? `Tăng trưởng DT 5Y: ${stock.rev5yGrowth.toFixed(1)}%` : '',
+        Number.isFinite(stock.ni5yGrowth) ? `Tăng trưởng LN 5Y: ${stock.ni5yGrowth.toFixed(1)}%` : '',
+      ].filter(Boolean);
+      if (metrics.length) {
+        lines.push(`- Dữ liệu tài chính sống (${stock.liveSource?.name || 'Live'}): ${metrics.join(' | ')}`);
+      }
+      if (stock.simplizeScores) {
+        const s = stock.simplizeScores;
+        lines.push(`- Điểm chất lượng 5 trụ cột (thang 5): Định giá ${s.valuation}/5 · Tăng trưởng ${s.growth}/5 · Hiệu quả ${s.performance}/5 · Sức khỏe tài chính ${s.health}/5 · Cổ tức ${s.dividend}/5.`);
+      }
+      lines.push('- Yêu cầu bổ sung: Hãy phân tích định giá, lợi thế cạnh tranh (Moat), rủi ro BCTC và xuất kèm khối JSON INVEST_INTEL_SYNC_V2 đầy đủ để Web vẽ biểu đồ trực quan!');
     }
     return lines.join('\n');
   }

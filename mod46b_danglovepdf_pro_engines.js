@@ -31,6 +31,7 @@
       title: 'Cụm 1: Tổ chức, Tách/Gộp, Dàn trang & Cấu trúc PDF',
       accent: 'emerald',
       tools: [
+        { id: 'beautify_10_themes', icon: '🎨', featured: true, name: 'Phối Màu Báo Cáo Khoa Học 10 Theme Đẹp (DOCX / XLSX / PDF)', badge: '✨ Nên thử · 10 Theme', desc: 'Đưa file Word, Excel hoặc PDF bình thường vào → Tự động đóng trang bìa, banner tiêu đề & bảng kẻ sọc theo 10 bộ màu Báo cáo Tài chính / Khoa học cực đẹp, xuất ra PDF / DOCX / XLSX!', accept: '.docx,.xlsx,.xls,.pdf,.md,.txt', multiple: false, minFiles: 1, actionLabel: '✨ Áp dụng Theme & Xuất Báo Cáo Đẹp' },
         { id: 'merge', icon: '🧩', name: 'Gộp PDF (Merge)', badge: 'Nhiều PDF → 1 PDF', desc: 'Nối nhiều file PDF thành 1 file, kéo đổi thứ tự & sắp xếp A→Z cực nhanh.', accept: '.pdf', multiple: true, minFiles: 2, actionLabel: 'Gộp PDF ngay' },
         { id: 'split', icon: '✂️', name: 'Tách PDF đa chế độ', badge: 'Khoảng / Lẻ / N trang / MB', desc: 'Cắt theo khoảng (1-3, 5), tách lẻ từng trang, tách mỗi N trang hoặc theo mức dung lượng MB.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Tách PDF ngay' },
         { id: 'organize', icon: '🗂️', name: 'Sắp xếp, Xoay, Nhân bản & Xóa trang', badge: 'PDF → PDF', desc: 'Xem từng trang nhỏ, xoay 90°/180°/270°, nhân bản, đổi thứ tự, xóa hoặc chèn trang trắng.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Lưu bản PDF mới' },
@@ -283,7 +284,53 @@
   // ==========================================================================
   // 3. TÙY CHỌN UI RIÊNG CHO 22 CÔNG CỤ PRO MỚI & CÁC CHẾ ĐỘ NÂNG CAO
   // ==========================================================================
+  const REPORT_THEMES_10 = Object.freeze([
+    { id: 'navy_teal', name: '1. Tài Chính Doanh Nghiệp (Navy – Teal · Chuẩn Vinamilk)', primary: '#1b365d', secondary: '#0f4c68', accent: '#14b8a6', bg: '#ffffff', zebra: '#f1f5f9', text: '#1e293b' },
+    { id: 'emerald_esg', name: '2. ESG & Phát Triển Bền Vững (Emerald – Mint)', primary: '#064e3b', secondary: '#065f46', accent: '#10b981', bg: '#ffffff', zebra: '#ecfdf5', text: '#0f172a' },
+    { id: 'oxford_burgundy', name: '3. Học Thuật & Nghiên Cứu Oxford (Burgundy – Cream)', primary: '#581c2c', secondary: '#7f1d1d', accent: '#d97706', bg: '#fffdf9', zebra: '#fef2f2', text: '#1f2937' },
+    { id: 'royal_ai', name: '4. Công Nghệ & AI Hiện Đại (Royal Indigo – Cyan)', primary: '#1e1b4b', secondary: '#312e81', accent: '#06b6d4', bg: '#ffffff', zebra: '#eef2ff', text: '#1e293b' },
+    { id: 'private_gold', name: '5. Ngân Hàng Tư Nhân & Cao Cấp (Obsidian – Gold)', primary: '#18181b', secondary: '#27272a', accent: '#eab308', bg: '#ffffff', zebra: '#fefce8', text: '#18181b' },
+    { id: 'nordic_slate', name: '6. Tối Giản Bắc Âu (Nordic Slate – Sky)', primary: '#334155', secondary: '#475569', accent: '#0284c7', bg: '#ffffff', zebra: '#f8fafc', text: '#0f172a' },
+    { id: 'biomed_ocean', name: '7. Khoa Học Y Sinh & Dược Phẩm (Deep Ocean – Aqua)', primary: '#0c4a6e', secondary: '#075985', accent: '#38bdf8', bg: '#ffffff', zebra: '#f0f9ff', text: '#0f172a' },
+    { id: 'forest_econ', name: '8. Kinh Tế Vĩ Mô Editorial (Forest Green – Sand)', primary: '#14532d', secondary: '#166534', accent: '#ca8a04', bg: '#fefdf8', zebra: '#f0fdf4', text: '#1c1917' },
+    { id: 'corp_violet', name: '9. Chiến Lược Tập Đoàn (Deep Violet – Lavender)', primary: '#3b0764', secondary: '#581c87', accent: '#a855f7', bg: '#ffffff', zebra: '#faf5ff', text: '#1e1b4b' },
+    { id: 'charcoal_exec', name: '10. Ban Lãnh Đạo Sang Trọng (Charcoal – Copper)', primary: '#1f2937', secondary: '#374151', accent: '#ea580c', bg: '#ffffff', zebra: '#fff7ed', text: '#111827' },
+  ]);
+
   function buildProOptionsHtml(ctrl, toolId) {
+    if (toolId === 'beautify_10_themes') {
+      return `
+        <div class="space-y-3 text-xs">
+          <div class="p-2.5 rounded-xl bg-teal-950/50 border border-teal-500/40 text-teal-100">
+            ✨ Hỗ trợ đầu vào <strong>.DOCX, .XLSX, .PDF, .MD, .TXT</strong> — tự động nhận diện tiêu đề, bảng số liệu &amp; đoạn văn để phối màu chuyên nghiệp như Báo cáo Tài chính / Khoa học!
+          </div>
+          <label class="block space-y-1"><span class="font-bold text-amber-300">🎨 Chọn 1 trong 10 Theme Màu Khoa Học / Chuyên Gia:</span>
+            <select id="opt-pro-theme10-id" class="w-full px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-700 font-bold text-zinc-100">
+              ${REPORT_THEMES_10.map((th) => `<option value="${th.id}">${th.name}</option>`).join('')}
+            </select>
+          </label>
+          <div class="grid grid-cols-5 gap-1.5">
+            ${REPORT_THEMES_10.map((th, i) => `
+              <div title="${th.name}" class="rounded-lg p-1.5 border border-zinc-700/80 text-center text-[10px] font-black text-white" style="background:linear-gradient(135deg,${th.primary},${th.secondary});border-bottom:3px solid ${th.accent};">#${i + 1}</div>
+            `).join('')}
+          </div>
+          <label class="block space-y-1"><span class="font-bold">📤 Định dạng tệp đầu ra:</span>
+            <select id="opt-pro-theme10-fmt" class="w-full px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-700 font-bold text-zinc-100">
+              <option value="pdf">📄 Báo Cáo PDF Sắc Nét (Có Trang Bìa + Banner Màu + Bảng Sọc)</option>
+              <option value="docx">📘 File Word (.DOCX) Đã Phối Màu &amp; Đóng Khung Tiêu Đề</option>
+              <option value="xlsx">📊 File Excel (.XLSX) Cấu Trúc Bảng Gọn Đẹp</option>
+            </select>
+          </label>
+          <label class="block space-y-1"><span class="font-bold">🔤 Phông chữ trình bày:</span>
+            <select id="opt-pro-theme10-font" class="w-full px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-700 font-bold text-zinc-100">
+              <option value="sans">Hiện đại (Segoe UI / Arial Sans)</option>
+              <option value="serif">Học thuật / Báo chí (Georgia Serif)</option>
+              <option value="classic">Sách in cổ điển (Palatino Classic)</option>
+            </select>
+          </label>
+        </div>
+      `;
+    }
     if (toolId === 'extract_pages') {
       return `
         <label class="block space-y-1"><span class="font-bold">Chế độ xử lý trang:</span>
@@ -654,6 +701,9 @@ Chương 3: Tổng kết | 12</textarea>
 
   function readProOptions() {
     return {
+      theme10Id: document.getElementById('opt-pro-theme10-id')?.value || 'navy_teal',
+      theme10OutFmt: document.getElementById('opt-pro-theme10-fmt')?.value || 'pdf',
+      theme10Font: document.getElementById('opt-pro-theme10-font')?.value || 'sans',
       // Mở rộng cho Split / Watermark / Page Numbers / Sign / OCR / PDF->DOCX
       splitEveryN: Math.max(1, Number(document.getElementById('opt-mod46-split-everyn')?.value || 2)),
       splitMaxMb: Math.max(0.2, Number(document.getElementById('opt-mod46-split-maxmb')?.value || 5)),
@@ -757,6 +807,309 @@ Chương 3: Tổng kết | 12</textarea>
     } = helpers;
 
     const outputs = [];
+
+    // 0. BIẾN ĐỔI BÁO CÁO KHOA HỌC 10 THEME ĐẸP (DOCX / XLSX / PDF -> PDF / DOCX / XLSX)
+    if (tool.id === 'beautify_10_themes') {
+      const f = ctrl.files[0];
+      const ext = String(f.name || '').split('.').pop().toLowerCase();
+      const theme = REPORT_THEMES_10.find((t) => t.id === pro.theme10Id) || REPORT_THEMES_10[0];
+      const outFmt = pro.theme10OutFmt || 'pdf';
+      const fontMap = {
+        sans: '"Segoe UI", Arial, sans-serif',
+        serif: 'Georgia, "Times New Roman", serif',
+        classic: '"Palatino Linotype", Georgia, serif',
+      };
+      const ff = fontMap[pro.theme10Font] || fontMap.sans;
+      const docTitle = baseName(f.name).replace(/[_-]+/g, ' ');
+      prog(15, `Đang đọc cấu trúc tài liệu (${ext.toUpperCase()})...`);
+
+      // Bước 1: Trích xuất cấu trúc thống nhất: [{ type: 'heading'|'paragraph'|'table', text?, rows? }]
+      const blocks = [];
+      if (ext === 'docx') {
+        const JSZip = await ensureJsZip();
+        const zip = await JSZip.loadAsync(f.bytes);
+        const xmlStr = await zip.file('word/document.xml')?.async('string');
+        if (xmlStr) {
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(xmlStr, 'application/xml');
+          const body = xmlDoc.getElementsByTagName('w:body')[0];
+          if (body) {
+            for (const child of Array.from(body.childNodes)) {
+              const ln = child.localName || child.nodeName;
+              if (ln === 'p' || ln === 'w:p') {
+                const txt = Array.from(child.getElementsByTagName('w:t')).map((t) => t.textContent || '').join('').trim();
+                if (!txt) continue;
+                const pStyle = child.getElementsByTagName('w:pStyle')[0]?.getAttribute('w:val') || '';
+                const isH = /heading|title|subtitle/i.test(pStyle) || (txt.length < 90 && /^([IVX0-9]+[.)]|CHƯƠNG|PHẦN|MỤC)/i.test(txt));
+                blocks.push({ type: isH ? 'heading' : 'paragraph', text: txt });
+              } else if (ln === 'tbl' || ln === 'w:tbl') {
+                const rows = Array.from(child.getElementsByTagName('w:tr')).map((tr) =>
+                  Array.from(tr.getElementsByTagName('w:tc')).map((tc) =>
+                    Array.from(tc.getElementsByTagName('w:t')).map((t) => t.textContent || '').join(' ').trim()
+                  )
+                ).filter((r) => r.some(Boolean));
+                if (rows.length) blocks.push({ type: 'table', rows });
+              }
+            }
+          }
+        }
+      } else if (ext === 'xlsx' || ext === 'xls') {
+        const XLSX = await ensureXlsx();
+        const wb = XLSX.read(f.bytes, { type: 'array' });
+        wb.SheetNames.forEach((sn) => {
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' })
+            .map((r) => r.map((c) => String(c ?? '').trim()))
+            .filter((r) => r.some(Boolean));
+          if (rows.length) {
+            blocks.push({ type: 'heading', text: `Bảng tính: ${sn}` });
+            blocks.push({ type: 'table', rows });
+          }
+        });
+      } else if (ext === 'pdf') {
+        const pdfjsLib = await ensurePdfJs();
+        const pdfDoc = await pdfjsLib.getDocument({ data: f.bytes.slice(0) }).promise;
+        const maxP = Math.min(pdfDoc.numPages, 60);
+        for (let pno = 1; pno <= maxP; pno++) {
+          const page = await pdfDoc.getPage(pno);
+          const tc = await page.getTextContent();
+          const lineMap = new Map();
+          for (const it of tc.items || []) {
+            const s = String(it.str || '').trim();
+            if (!s) continue;
+            const yKey = Math.round((it.transform?.[5] || 0) / 6) * 6;
+            if (!lineMap.has(yKey)) lineMap.set(yKey, []);
+            lineMap.get(yKey).push({ x: it.transform?.[4] || 0, s });
+          }
+          const sortedY = [...lineMap.keys()].sort((a, b) => b - a);
+          for (const yk of sortedY) {
+            const lineTxt = lineMap.get(yk).sort((a, b) => a.x - b.x).map((o) => o.s).join(' ').trim();
+            if (!lineTxt) continue;
+            const isH = lineTxt.length < 88 && (/^([IVX0-9]+[.)]|CHƯƠNG|PHẦN|BÁO CÁO)/i.test(lineTxt) || lineTxt === lineTxt.toUpperCase());
+            blocks.push({ type: isH ? 'heading' : 'paragraph', text: lineTxt });
+          }
+        }
+      } else {
+        const rawTxt = new TextDecoder('utf-8').decode(f.bytes);
+        rawTxt.split(/\r?\n/).forEach((ln) => {
+          const t = ln.trim();
+          if (!t) return;
+          if (/^#{1,6}\s+/.test(t)) blocks.push({ type: 'heading', text: t.replace(/^#{1,6}\s+/, '').replace(/\*/g, '') });
+          else blocks.push({ type: 'paragraph', text: t.replace(/\*/g, '') });
+        });
+      }
+
+      if (!blocks.length) {
+        blocks.push({ type: 'heading', text: docTitle });
+        blocks.push({ type: 'paragraph', text: 'Tài liệu đã được nạp thành công nhưng không có văn bản thuần (có thể là ảnh scan). Hãy chạy OCR trước rồi áp dụng 10 Theme!' });
+      }
+
+      prog(45, `Đang áp dụng Theme "${theme.name}" và xuất ${outFmt.toUpperCase()}...`);
+
+      if (outFmt === 'xlsx') {
+        const XLSX = await ensureXlsx();
+        const wb = XLSX.utils.book_new();
+        const summaryRows = [
+          ['BÁO CÁO ĐÃ PHỐI MÀU KHOA HỌC (ĐĂNGLOVEPDF — 10 THEME)'],
+          ['Tài liệu gốc', f.name],
+          ['Theme đã áp dụng', theme.name],
+          ['Ngày xuất', new Date().toLocaleDateString('vi-VN')],
+          [],
+          ['Loại mục', 'Nội dung chính'],
+        ];
+        let tblIdx = 0;
+        blocks.forEach((b) => {
+          if (b.type === 'table') {
+            tblIdx += 1;
+            const wsTbl = XLSX.utils.aoa_to_sheet(b.rows);
+            XLSX.utils.book_append_sheet(wb, wsTbl, `Bang_${tblIdx}`.slice(0, 31));
+          } else {
+            summaryRows.push([b.type === 'heading' ? 'TIÊU ĐỀ' : 'Nội dung', b.text]);
+          }
+        });
+        const wsMain = XLSX.utils.aoa_to_sheet(summaryRows);
+        XLSX.utils.book_append_sheet(wb, wsMain, 'Tong_Quan_Bao_Cao');
+        const arrBuf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        outputs.push({
+          name: `${baseName(f.name)}_${theme.id}.xlsx`,
+          blob: new Blob([arrBuf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+        });
+        return outputs;
+      }
+
+      if (outFmt === 'docx') {
+        const JSZip = await ensureJsZip();
+        const zip = new JSZip();
+        const pHex = theme.primary.replace('#', '').toUpperCase();
+        const aHex = theme.accent.replace('#', '').toUpperCase();
+        const zHex = theme.zebra.replace('#', '').toUpperCase();
+        const escXml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const bodyXml = [
+          `<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="${pHex}"/><w:spacing w:before="120" w:after="200"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="36"/></w:rPr><w:t>${escXml(docTitle.toUpperCase())}</w:t></w:r></w:p>`,
+          `<w:p><w:pPr><w:spacing w:after="200"/></w:pPr><w:r><w:rPr><w:i/><w:color w:val="${aHex}"/><w:sz w:val="20"/></w:rPr><w:t>${escXml(`Theme: ${theme.name} · Xuất bởi ĐăngLovePDF`)}</w:t></w:r></w:p>`,
+        ];
+        for (const b of blocks) {
+          if (b.type === 'heading') {
+            bodyXml.push(`<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="${pHex}"/><w:pBdr><w:left w:val="single" w:sz="24" w:space="6" w:color="${aHex}"/></w:pBdr><w:spacing w:before="200" w:after="100"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="26"/></w:rPr><w:t>${escXml(b.text)}</w:t></w:r></w:p>`);
+          } else if (b.type === 'table') {
+            const trs = b.rows.slice(0, 120).map((row, ri) => {
+              const fill = ri === 0 ? pHex : ri % 2 === 0 ? zHex : 'FFFFFF';
+              const txtCol = ri === 0 ? 'FFFFFF' : '1E293B';
+              const boldTag = ri === 0 ? '<w:b/>' : '';
+              const tcs = row.slice(0, 10).map((cell) => `<w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr><w:p><w:r><w:rPr>${boldTag}<w:color w:val="${txtCol}"/><w:sz w:val="20"/></w:rPr><w:t>${escXml(cell)}</w:t></w:r></w:p></w:tc>`).join('');
+              return `<w:tr>${tcs}</w:tr>`;
+            }).join('');
+            bodyXml.push(`<w:tbl><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:color="CBD5E1"/><w:bottom w:val="single" w:sz="4" w:color="CBD5E1"/><w:insideH w:val="single" w:sz="4" w:color="CBD5E1"/></w:tblBorders></w:tblPr>${trs}</w:tbl>`);
+          } else {
+            bodyXml.push(`<w:p><w:pPr><w:spacing w:after="100"/></w:pPr><w:r><w:rPr><w:color w:val="1E293B"/><w:sz w:val="22"/></w:rPr><w:t>${escXml(b.text)}</w:t></w:r></w:p>`);
+          }
+        }
+        zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+        zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+        zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${bodyXml.join('')}</w:body></w:document>`);
+        const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        outputs.push({ name: `${baseName(f.name)}_${theme.id}.docx`, blob });
+        return outputs;
+      }
+
+      // Mặc định: Xuất PDF Sắc Nét Có Trang Bìa + Banner Màu + Bảng Kẻ Sọc
+      const { PDFDocument } = await ensurePdfLib();
+      const outPdf = await PDFDocument.create();
+      const W = 1240;
+      const H = 1754;
+      const makePageCanvas = () => {
+        const cv = document.createElement('canvas');
+        cv.width = W;
+        cv.height = H;
+        const c = cv.getContext('2d');
+        c.fillStyle = theme.bg;
+        c.fillRect(0, 0, W, H);
+        c.textBaseline = 'top';
+        return { cv, c };
+      };
+      const wrapCv = (c, txt, mw) => {
+        const ws = String(txt || '').trim().split(/\s+/).filter(Boolean);
+        if (!ws.length) return [''];
+        const out = [];
+        let cur = '';
+        for (const w of ws) {
+          const cand = cur ? `${cur} ${w}` : w;
+          if (c.measureText(cand).width <= mw) cur = cand;
+          else { if (cur) out.push(cur); cur = w; }
+        }
+        if (cur) out.push(cur);
+        return out;
+      };
+      const canvases = [];
+      // Trang bìa
+      const cover = makePageCanvas();
+      const cg = cover.c.createLinearGradient(0, 0, W, H);
+      cg.addColorStop(0, theme.primary);
+      cg.addColorStop(1, theme.secondary);
+      cover.c.fillStyle = cg;
+      cover.c.fillRect(0, 0, W, H);
+      cover.c.fillStyle = theme.accent;
+      cover.c.fillRect(0, 0, 22, H);
+      cover.c.fillStyle = '#ffffff';
+      cover.c.font = `900 54px ${ff}`;
+      let cy = 320;
+      wrapCv(cover.c, docTitle.toUpperCase(), W - 200).forEach((ln) => { cover.c.fillText(ln, 100, cy); cy += 68; });
+      cover.c.fillStyle = theme.accent;
+      cover.c.fillRect(100, cy + 20, 240, 8);
+      cover.c.fillStyle = 'rgba(255,255,255,0.85)';
+      cover.c.font = `700 24px ${ff}`;
+      cover.c.fillText(`Bộ phối màu: ${theme.name}`, 100, cy + 64);
+      cover.c.fillText(`Ngày định dạng: ${new Date().toLocaleDateString('vi-VN')} · ĐăngLovePDF 10-Theme Studio`, 100, H - 110);
+      canvases.push(cover.cv);
+
+      // Các trang nội dung
+      let curP = makePageCanvas();
+      const paintHdr = (c) => {
+        c.fillStyle = theme.primary;
+        c.fillRect(0, 0, W, 86);
+        c.fillStyle = theme.accent;
+        c.fillRect(0, 82, W, 4);
+        c.fillStyle = '#ffffff';
+        c.font = `800 24px ${ff}`;
+        c.fillText(docTitle.slice(0, 68), 72, 28);
+      };
+      paintHdr(curP.c);
+      let y = 122;
+      const maxW = W - 144;
+      const maxY = H - 100;
+      const ensureSp = (need) => {
+        if (y + need > maxY) {
+          canvases.push(curP.cv);
+          curP = makePageCanvas();
+          paintHdr(curP.c);
+          y = 122;
+        }
+      };
+
+      for (const b of blocks) {
+        if (b.type === 'heading') {
+          ensureSp(72);
+          y += 8;
+          const bgGrad = curP.c.createLinearGradient(72, y, 72 + maxW, y);
+          bgGrad.addColorStop(0, theme.primary);
+          bgGrad.addColorStop(1, theme.secondary);
+          curP.c.fillStyle = bgGrad;
+          curP.c.fillRect(72, y, maxW, 50);
+          curP.c.fillStyle = theme.accent;
+          curP.c.fillRect(72, y, 10, 50);
+          curP.c.fillStyle = '#ffffff';
+          curP.c.font = `900 22px ${ff}`;
+          curP.c.fillText(b.text.slice(0, 84), 96, y + 12);
+          y += 64;
+        } else if (b.type === 'table') {
+          const cols = Math.min(8, Math.max(1, ...(b.rows.map((r) => r.length))));
+          const colW = Math.floor(maxW / cols);
+          for (let ri = 0; ri < b.rows.length; ri++) {
+            const row = b.rows[ri];
+            curP.c.font = `${ri === 0 ? '800' : '500'} 17px ${ff}`;
+            const cellLines = Array.from({ length: cols }, (_, ci) => wrapCv(curP.c, row[ci] || '', colW - 18).slice(0, 4));
+            const rh = Math.max(36, Math.max(...cellLines.map((a) => a.length)) * 22 + 14);
+            ensureSp(rh + 4);
+            curP.c.fillStyle = ri === 0 ? theme.primary : ri % 2 === 0 ? theme.zebra : theme.bg;
+            curP.c.fillRect(72, y, maxW, rh);
+            curP.c.strokeStyle = '#cbd5e1';
+            curP.c.strokeRect(72, y, maxW, rh);
+            curP.c.fillStyle = ri === 0 ? '#ffffff' : theme.text;
+            cellLines.forEach((lns, ci) => {
+              lns.forEach((ln, li) => curP.c.fillText(ln, 82 + ci * colW, y + 8 + li * 22));
+            });
+            y += rh;
+          }
+          y += 14;
+        } else {
+          curP.c.font = `500 20px ${ff}`;
+          const lines = wrapCv(curP.c, b.text, maxW);
+          for (const ln of lines) {
+            ensureSp(32);
+            curP.c.fillStyle = theme.text;
+            curP.c.font = `500 20px ${ff}`;
+            curP.c.fillText(ln, 72, y);
+            y += 30;
+          }
+          y += 6;
+        }
+      }
+      canvases.push(curP.cv);
+
+      for (let i = 0; i < canvases.length; i++) {
+        prog(60 + Math.round(((i + 1) / canvases.length) * 36), `Đang đóng gói trang PDF ${i + 1}/${canvases.length}...`);
+        const jpgUrl = canvases[i].toDataURL('image/jpeg', 0.92);
+        const bytes = await (await fetch(jpgUrl)).arrayBuffer();
+        const img = await outPdf.embedJpg(bytes);
+        const p = outPdf.addPage([595.28, 841.89]);
+        p.drawImage(img, { x: 0, y: 0, width: 595.28, height: 841.89 });
+      }
+      const pdfBytes = await outPdf.save();
+      outputs.push({
+        name: `${baseName(f.name)}_${theme.id}.pdf`,
+        blob: new Blob([pdfBytes], { type: 'application/pdf' }),
+      });
+      return outputs;
+    }
 
     // 1. TRÍCH XUẤT & ĐẢO NGƯỢC TRANG
     if (tool.id === 'extract_pages') {

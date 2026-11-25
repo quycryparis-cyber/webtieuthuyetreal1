@@ -87,8 +87,11 @@
 
   function formatInlineMd(str) {
     return esc(str)
-      .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#0f2942;font-weight:800;">$1</strong>')
-      .replace(/`([^`]+)`/g, '<code style="padding:1px 6px;border-radius:5px;background:#e2e8f0;color:#0f2942;font-size:12px;">$1</code>');
+      .replace(/\*\*\*(.+?)\*\*\*/g, '<strong style="font-weight:800;"><em>$1</em></strong>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:800;">$1</strong>')
+      .replace(/\*([^*\n]+?)\*/g, '<em style="opacity:0.86;">$1</em>')
+      .replace(/`([^`]+)`/g, '<code style="padding:1px 6px;border-radius:5px;background:rgba(148,163,184,0.22);font-size:0.9em;">$1</code>')
+      .replace(/\*/g, '');
   }
 
   /**
@@ -174,7 +177,7 @@
       if (/^\d+\.\s+/.test(trimmed) && trimmed.length < 95) {
         htmlParts.push(`<div class="exec-subhead">${formatInlineMd(trimmed)}</div>`);
       } else {
-        htmlParts.push(`<p style="margin:6px 0 10px;color:#1e293b;">${formatInlineMd(trimmed)}</p>`);
+        htmlParts.push(`<p style="margin:6px 0 10px;color:inherit;">${formatInlineMd(trimmed)}</p>`);
       }
       i++;
     }
@@ -792,7 +795,7 @@
       const oldTxt = btnEl?.textContent || '';
       if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ Đang dựng PDF bìa & biểu đồ...'; }
       try {
-        const res = await W20.exportWisdomReportPdf(state.scanResult, state.geminiParsed);
+        const res = await W20.exportWisdomReportPdf(state.scanResult, state.geminiParsed, loadReaderPrefs());
         toast(`✅ Đã xuất Báo cáo PDF sắc nét (${res.pages} trang · gồm Trang Bìa + Biểu đồ + 8 Trụ cột)!`, 'success', 4200);
       } catch (err) {
         toast('⚠️ Lỗi xuất PDF: ' + (err?.message || err), 'error', 3600);
@@ -873,18 +876,121 @@
     });
   }
 
+  const READER_PREF_KEY = 'bi_w20_reader_prefs_v1';
+  const READER_SIZES = Object.freeze({
+    md: { label: 'Vừa', px: 15 },
+    lg: { label: 'Lớn', px: 17.5 },
+    xl: { label: 'Rất lớn', px: 20 },
+    xxl: { label: 'Cực đại', px: 23 },
+  });
+  const READER_FONTS = Object.freeze({
+    sans: { label: 'Hiện đại (Sans)', css: '"Segoe UI", system-ui, -apple-system, sans-serif' },
+    serif: { label: 'Báo chí (Serif)', css: 'Georgia, "Times New Roman", serif' },
+    classic: { label: 'Sách in (Classic)', css: '"Palatino Linotype", "Book Antiqua", Palatino, serif' },
+    mono: { label: 'Kỹ thuật (Mono)', css: '"Cascadia Mono", Consolas, monospace' },
+  });
+
+  function loadReaderPrefs() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(READER_PREF_KEY) || '{}');
+      return {
+        size: READER_SIZES[raw.size] ? raw.size : 'lg',
+        font: READER_FONTS[raw.font] ? raw.font : 'sans',
+        paperTheme: raw.paperTheme === 'dark' ? 'dark' : 'light',
+      };
+    } catch (_e) {
+      return { size: 'lg', font: 'sans', paperTheme: 'light' };
+    }
+  }
+
+  function saveReaderPrefs(next) {
+    try { localStorage.setItem(READER_PREF_KEY, JSON.stringify(next)); } catch (_e) {}
+  }
+
+  function renderReaderControlsBarHtml() {
+    const p = loadReaderPrefs();
+    return `
+      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 mb-3 rounded-xl border border-zinc-300/60 dark:border-zinc-700/80 bg-zinc-100/80 dark:bg-zinc-900/80 text-xs">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="font-extrabold opacity-80">🔤 Cỡ chữ:</span>
+          ${Object.entries(READER_SIZES).map(([k, v]) => `
+            <button type="button" data-w20-rsize="${k}" class="px-2.5 py-1 rounded-lg font-extrabold cursor-pointer transition ${p.size === k ? 'bg-teal-600 text-white shadow' : 'bg-zinc-200/80 dark:bg-zinc-800 hover:bg-teal-500/20'}">${v.label}</button>
+          `).join('')}
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <select id="w20-rfont-sel" class="px-2.5 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 font-bold text-xs cursor-pointer">
+            ${Object.entries(READER_FONTS).map(([k, v]) => `<option value="${k}" ${p.font === k ? 'selected' : ''}>Kiểu: ${v.label}</option>`).join('')}
+          </select>
+          <button type="button" id="w20-rtheme-toggle" class="px-2.5 py-1 rounded-lg font-extrabold cursor-pointer border border-zinc-400/50 ${p.paperTheme === 'dark' ? 'bg-slate-900 text-amber-300' : 'bg-white text-slate-900'}">
+            ${p.paperTheme === 'dark' ? '🌙 Nền báo cáo: Tối' : '☀️ Nền báo cáo: Sáng'}
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  function applyReaderStyles(host) {
+    if (!host) return;
+    const p = loadReaderPrefs();
+    const sz = READER_SIZES[p.size]?.px || 17.5;
+    const ff = READER_FONTS[p.font]?.css || READER_FONTS.sans.css;
+    host.style.fontSize = `${sz}px`;
+    host.style.fontFamily = ff;
+    host.querySelectorAll('.exec-report-paper').forEach((paper) => {
+      paper.style.fontSize = `${sz}px`;
+      paper.style.fontFamily = ff;
+      if (p.paperTheme === 'dark') {
+        paper.style.background = '#0f172a';
+        paper.style.color = '#f1f5f9';
+        paper.style.borderColor = '#334155';
+      } else {
+        paper.style.background = '#ffffff';
+        paper.style.color = '#1e293b';
+        paper.style.borderColor = '#cbd5e1';
+      }
+    });
+  }
+
+  function bindReaderControlEvents(host) {
+    if (!host) return;
+    host.querySelectorAll('[data-w20-rsize]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = loadReaderPrefs();
+        p.size = btn.getAttribute('data-w20-rsize') || 'lg';
+        saveReaderPrefs(p);
+        render();
+      });
+    });
+    host.querySelector('#w20-rfont-sel')?.addEventListener('change', (ev) => {
+      const p = loadReaderPrefs();
+      p.font = ev.target.value || 'sans';
+      saveReaderPrefs(p);
+      applyReaderStyles(host);
+    });
+    host.querySelector('#w20-rtheme-toggle')?.addEventListener('click', () => {
+      const p = loadReaderPrefs();
+      p.paperTheme = p.paperTheme === 'dark' ? 'light' : 'dark';
+      saveReaderPrefs(p);
+      render();
+    });
+  }
+
   function render() {
     if (!state.hostEl || !state.hostEl.isConnected) return;
+    let inner = '';
     if (state.phase === 'location_gate') {
-      state.hostEl.innerHTML = renderLocationGateHtml();
+      inner = renderLocationGateHtml();
     } else if (state.phase === 'scanning') {
-      state.hostEl.innerHTML = renderScanningHtml();
+      inner = renderScanningHtml();
     } else if (state.phase === 'hub_2step') {
-      state.hostEl.innerHTML = renderHub2StepHtml();
+      inner = renderHub2StepHtml();
     } else {
-      state.hostEl.innerHTML = renderDashboardHtml();
+      inner = renderDashboardHtml();
     }
+    state.hostEl.innerHTML = `${renderReaderControlsBarHtml()}${inner}`;
     bindEvents();
+    bindReaderControlEvents(state.hostEl);
+    applyReaderStyles(state.hostEl);
     NS.i18n?.translateElement?.(state.hostEl);
   }
 

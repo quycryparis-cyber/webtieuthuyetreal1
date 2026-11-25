@@ -47,6 +47,9 @@
 };
 
   const exact = Object.freeze({
+    "📄 Xuất Báo Cáo PDF (4 Chế Độ)": "📄 匯出專業PDF報告（4種模式）",
+    "Phối Màu Báo Cáo Khoa Học 10 Theme Đẹp (DOCX / XLSX / PDF)": "10套科研報告配色美化（DOCX / XLSX / PDF）",
+    "✨ Nên thử · 10 Theme": "✨ 推薦體驗 · 10套主題",
     "📺 Xem video mini và phát nền: Tắt": "📺 迷你影片與背景播放：關閉",
     "✅ Bấm vào đây để bật video mini, phát nền đã sẵn sàng": "✅ 點擊此處開啟迷你影片，背景播放已就緒",
     "PHẦN 2 — SƠ ĐỒ, BIỂU ĐỒ & HÌNH ẢNH BẢN TIN 20 PHÚT": "第2部分 — 20分鐘簡報圖表、流程圖與視覺彙整",

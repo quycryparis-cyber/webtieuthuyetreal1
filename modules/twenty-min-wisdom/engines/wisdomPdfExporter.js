@@ -405,8 +405,8 @@
       });
     });
 
-    // --- KHỐI 4 (Đáy trang 2): MÔ HÌNH TƯ DUY & DÒNG THỜI GIAN ---
-    drawRoundedRect(ctx, 72, 1336, W - 144, 310, 20);
+    // --- KHỐI 4 (Đáy trang 2): MÔ HÌNH TƯ DUY & DÒNG THỜI GIAN (0% CẮT CHỮ!) ---
+    drawRoundedRect(ctx, 72, 1316, W - 144, 344, 20);
     ctx.fillStyle = '#f5f3ff';
     ctx.fill();
     ctx.strokeStyle = '#c4b5fd';
@@ -414,37 +414,44 @@
     ctx.stroke();
 
     ctx.fillStyle = '#5b21b6';
-    ctx.font = '900 24px "Segoe UI", Arial, sans-serif';
-    ctx.fillText('4. Mô Hình Tư Duy & Mốc Thời Gian Đáng Nhớ', 100, 1362);
+    ctx.font = '900 23px "Segoe UI", Arial, sans-serif';
+    ctx.fillText('4. Mô Hình Tư Duy & Mốc Thời Gian Đáng Nhớ', 100, 1338);
 
     const models = (Array.isArray(syncData?.mental_models) ? syncData.mental_models : []).slice(0, 2);
     models.forEach((mm, idx) => {
       const mx = 100 + idx * 532;
-      drawRoundedRect(ctx, mx, 1408, 504, 118, 14);
+      drawRoundedRect(ctx, mx, 1378, 504, 126, 14);
       ctx.fillStyle = '#ffffff';
       ctx.fill();
       ctx.strokeStyle = '#a78bfa';
       ctx.lineWidth = 1.5;
       ctx.stroke();
       ctx.fillStyle = '#6d28d9';
-      ctx.font = '800 19px "Segoe UI", Arial, sans-serif';
-      ctx.fillText(String(mm.title || '').slice(0, 42), mx + 18, 1422);
+      ctx.font = '800 18px "Segoe UI", Arial, sans-serif';
+      const titleLines = wrapCanvasText(ctx, String(mm.title || '').replace(/\*/g, ''), 468).slice(0, 2);
+      titleLines.forEach((ln, li) => ctx.fillText(ln, mx + 18, 1390 + li * 21));
       ctx.fillStyle = '#334155';
-      ctx.font = '600 17px "Segoe UI", Arial, sans-serif';
-      wrapCanvasText(ctx, mm.lesson || '', 468).slice(0, 3).forEach((ln, li) => {
-        ctx.fillText(ln, mx + 18, 1452 + li * 23);
+      ctx.font = '600 16px "Segoe UI", Arial, sans-serif';
+      const lessonTop = 1394 + titleLines.length * 21 + 4;
+      wrapCanvasText(ctx, String(mm.lesson || '').replace(/\*/g, ''), 468).slice(0, 3).forEach((ln, li) => {
+        ctx.fillText(ln, mx + 18, lessonTop + li * 21);
       });
     });
 
     const timeline = (Array.isArray(syncData?.timeline) ? syncData.timeline : []).slice(0, 3);
-    timeline.forEach((t, idx) => {
-      const ty = 1546 + idx * 30;
+    let tyCursor = 1518;
+    timeline.forEach((t) => {
+      if (tyCursor > 1638) return;
       ctx.fillStyle = '#059669';
-      ctx.font = '800 17px "Segoe UI", Arial, sans-serif';
-      ctx.fillText(`• [${String(t.time || 'Hôm nay')}]`, 100, ty);
+      ctx.font = '800 16px "Segoe UI", Arial, sans-serif';
+      ctx.fillText(`• [${String(t.time || 'Hôm nay')}]`, 100, tyCursor);
       ctx.fillStyle = '#1e293b';
-      ctx.font = '600 17px "Segoe UI", Arial, sans-serif';
-      ctx.fillText(String(t.event || '').slice(0, 88), 235, ty);
+      ctx.font = '600 15.5px "Segoe UI", Arial, sans-serif';
+      const evLines = wrapCanvasText(ctx, String(t.event || '').replace(/\*/g, ''), 890).slice(0, 2);
+      evLines.forEach((ln, li) => {
+        ctx.fillText(ln, 232, tyCursor + li * 20);
+      });
+      tyCursor += Math.max(24, evLines.length * 20 + 6);
     });
 
     return canvas;
@@ -588,7 +595,7 @@
         const isBullet = /^[-*•]\s+/.test(trimmed);
         const clean = trimmed
           .replace(/^[-*•]\s+/, '• ')
-          .replace(/\*\*/g, '')
+          .replace(/\*/g, '')
           .replace(/`/g, '');
         const isSubNum = /^\d+\.\s+/.test(clean) && clean.length < 95;
         if (isSubNum) {

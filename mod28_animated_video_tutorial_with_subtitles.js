@@ -2094,11 +2094,14 @@
         const neuralVoice = globalScope.NoirStudio?.neuralVoice;
         if (neuralVoice && typeof neuralVoice.speakText === 'function') {
           const isIntlLang = this.language !== 'vi-VN';
-          const hasNativeNeural = neuralVoice.getRankedVoicesForLanguage?.(this.language)?.some?.((v) => /natural|neural|google/i.test(v.name || ''));
+          const isKoJa = this.language === 'ko-KR' || this.language === 'ja-JP';
+          const hasNativeNeural = neuralVoice.getRankedVoicesForLanguage?.(this.language)?.some?.((v) =>
+            isKoJa ? /natural|neural/i.test(v.name || '') : /natural|neural|google/i.test(v.name || '')
+          );
           const spoken = neuralVoice.speakText(textToRead, this.language, {
             source: 'VIDEO',
             suppressInstallModal: true,
-            preferGoogleTts: isIntlLang && !hasNativeNeural,
+            preferGoogleTts: (isIntlLang || isKoJa) && !hasNativeNeural,
             rate: Math.min(1.32, Math.max(0.88, this.playbackRate * 1.0)),
             pitch: 1.0,
             isAllowedFn: () => Boolean(this.enabled && this.isPlayerPlayingFn()),

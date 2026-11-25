@@ -849,25 +849,32 @@
     lines.push('2. Tổng hợp tin mới nhất hôm nay đủ 8 Trụ cột (Thế giới, Công nghệ/AI, Kinh tế, Khu vực của tôi, Y học/Sức khỏe, Pháp luật/Chính sách, Tâm lý/Quản trị, Khoa học/Văn hóa) — mỗi ý đều nêu rõ nguồn chính thống.');
     lines.push('3. Rút ra 3 "Mô hình Tư duy / Hành động Thực tế" áp dụng ngay hôm nay.');
     lines.push('');
-    lines.push('=== PHẦN 2 — KHỐI JSON ĐỒNG BỘ BIỂU ĐỒ & SƠ ĐỒ (BẮT BUỘC GIỮ ĐÚNG CHUẨN) ===');
-    lines.push('Cuối câu trả lời, xuất ĐÚNG 1 khối ```json theo chuẩn WISDOM_20MIN_SYNC_V1:');
+    lines.push('=== PHẦN 2 — KHỐI JSON ĐỒNG BỘ BIỂU ĐỒ & SƠ ĐỒ (BẮT BUỘC ĐỦ 8 SỰ KIỆN CHO CẢ 8 TRỤ CỘT) ===');
+    lines.push('Cuối câu trả lời, xuất ĐÚNG 1 khối ```json theo chuẩn WISDOM_20MIN_SYNC_V1 (BẮT BUỘC có đủ 6–8 mục trong `impact_scores` VÀ đủ 6–8 chuỗi trong `causal_mindmap.chains` tương ứng với các sự kiện lớn của 8 Trụ cột, KHÔNG rút gọn còn 3 mục!):');
     lines.push('```json');
     lines.push(JSON.stringify({
       schema: 'WISDOM_20MIN_SYNC_V1',
       headline: 'Tiêu đề toàn cảnh hôm nay từ báo chí chính thống (<= 90 ký tự)',
       reading_plan_20m: CATEGORIES.map((c) => ({ label: c.title.replace(/^\d+\.\s*/, ''), minutes: c.minutes, color: c.color })),
       impact_scores: [
-        { topic: 'Sự kiện chính thống 1 hôm nay', score: 90, category: 'Thế giới', note: 'Nguồn: Reuters/AP' },
-        { topic: 'Sự kiện chính thống 2 hôm nay', score: 85, category: 'Công nghệ', note: 'Nguồn: MIT/Nature' },
-        { topic: 'Sự kiện chính thống 3 hôm nay', score: 78, category: 'Kinh tế', note: 'Nguồn: FT/IMF' },
-        { topic: 'Sự kiện chính thống 4 hôm nay', score: 72, category: 'Y học / Pháp lý', note: 'Nguồn: WHO/NIH' },
+        { topic: 'Sự kiện 1 (Thế giới & Địa chính trị)', score: 92, category: 'Thế giới', note: 'Nguồn: BBC/AP' },
+        { topic: 'Sự kiện 2 (Công nghệ & AI)', score: 88, category: 'Công nghệ', note: 'Nguồn: BBC Tech/MIT' },
+        { topic: 'Sự kiện 3 (Kinh tế & Vĩ mô)', score: 85, category: 'Kinh tế', note: 'Nguồn: BBC Business/WB' },
+        { topic: 'Sự kiện 4 (Khu vực & Quốc gia)', score: 82, category: 'Khu vực', note: 'Nguồn: VnExpress' },
+        { topic: 'Sự kiện 5 (Y học & Sức khỏe)', score: 78, category: 'Y học', note: 'Nguồn: WHO/NIH' },
+        { topic: 'Sự kiện 6 (Pháp luật & Chính sách)', score: 75, category: 'Pháp luật', note: 'Nguồn: Báo Chính thống' },
+        { topic: 'Sự kiện 7 (Quản trị & Tư duy)', score: 70, category: 'Quản trị', note: 'Nguồn: HBR' },
+        { topic: 'Sự kiện 8 (Khoa học & Vũ trụ)', score: 68, category: 'Khoa học', note: 'Nguồn: NASA/Nature' },
       ],
       causal_mindmap: {
-        center: 'Bản đồ Tri thức Hôm nay',
+        center: 'Bản đồ Tri thức 8 Trụ Cột Hôm nay',
         chains: [
-          { cause: 'Sự kiện gốc 1 hôm nay', mechanism: 'Cơ chế tác động', effect: 'Hệ quả đời sống & công việc' },
-          { cause: 'Sự kiện gốc 2 hôm nay', mechanism: 'Cơ chế tác động', effect: 'Hệ quả tài chính & kỹ năng' },
-          { cause: 'Sự kiện gốc 3 hôm nay', mechanism: 'Cơ chế tác động', effect: 'Hệ quả sức khỏe & chính sách' },
+          { cause: 'Sự kiện gốc 1 (Thế giới)', mechanism: 'Cơ chế lan truyền', effect: 'Hệ quả đời sống & công việc' },
+          { cause: 'Sự kiện gốc 2 (Công nghệ/AI)', mechanism: 'Cơ chế tác động', effect: 'Hệ quả nghề nghiệp & đầu tư' },
+          { cause: 'Sự kiện gốc 3 (Kinh tế/Vĩ mô)', mechanism: 'Cơ chế truyền dẫn', effect: 'Hệ quả tài chính cá nhân' },
+          { cause: 'Sự kiện gốc 4 (Khu vực)', mechanism: 'Cơ chế thực thi', effect: 'Hệ quả sinh hoạt địa phương' },
+          { cause: 'Sự kiện gốc 5 (Y học/Sức khỏe)', mechanism: 'Cơ chế dịch tễ/lâm sàng', effect: 'Hành động bảo vệ sức khỏe' },
+          { cause: 'Sự kiện gốc 6 (Pháp luật/Chính sách)', mechanism: 'Quy định mới áp dụng', effect: 'Điều cần tuân thủ & chuẩn bị' },
         ],
       },
       timeline: [

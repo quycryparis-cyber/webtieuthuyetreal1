@@ -1679,9 +1679,93 @@
               text: arr.map((a) => a.text).join(' '),
             });
           });
+          // Nếu trang là ảnh scan / PDF xuất từ ảnh không có lớp chữ gốc -> tự động quét nhận diện các mảng chữ từ pixel canvas để vẫn sửa được từng mảng trực tiếp!
+          if (!blocks.length) {
+            try {
+              const cw = pdfCanvas.width;
+              const ch = pdfCanvas.height;
+              const imgData = pCtx.getImageData(0, 0, cw, ch).data;
+              const rowInk = new Uint32Array(ch);
+              const stepX = Math.max(2, Math.floor(cw / 280));
+              // Lấy màu nền đại diện ở góc mép trang
+              const bgR = imgData[0] ?? 255;
+              const bgG = imgData[1] ?? 255;
+              const bgB = imgData[2] ?? 255;
+              for (let py = 0; py < ch; py += 2) {
+                let cnt = 0;
+                for (let px = Math.floor(cw * 0.03); px < Math.floor(cw * 0.97); px += stepX) {
+                  const idx = (py * cw + px) * 4;
+                  const diff = Math.abs(imgData[idx] - bgR) + Math.abs(imgData[idx + 1] - bgG) + Math.abs(imgData[idx + 2] - bgB);
+                  if (diff > 75) cnt += 1;
+                }
+                rowInk[py] = cnt;
+                if (py + 1 < ch) rowInk[py + 1] = cnt;
+              }
+              const bands = [];
+              let inBand = false;
+              let bStart = 0;
+              let emptyRun = 0;
+              for (let py = 0; py < ch; py++) {
+                if (rowInk[py] >= 3) {
+                  if (!inBand) { inBand = true; bStart = py; }
+                  emptyRun = 0;
+                } else if (inBand) {
+                  emptyRun += 1;
+                  if (emptyRun >= Math.max(6, Math.round(ch * 0.006))) {
+                    const bEnd = py - emptyRun;
+                    if (bEnd - bStart >= Math.max(10, Math.round(ch * 0.008))) {
+                      bands.push([bStart, bEnd]);
+                    }
+                    inBand = false;
+                    emptyRun = 0;
+                  }
+                }
+              }
+              if (inBand && ch - bStart >= 10) bands.push([bStart, ch - 1]);
+              const scaleFactor = this.pageScale * this.outputScale;
+              for (const [y1, y2] of bands.slice(0, 48)) {
+                let minX = cw;
+                let maxX = 0;
+                for (let py = y1; py <= y2; py += 2) {
+                  for (let px = Math.floor(cw * 0.02); px < Math.floor(cw * 0.98); px += stepX) {
+                    const idx = (py * cw + px) * 4;
+                    const diff = Math.abs(imgData[idx] - bgR) + Math.abs(imgData[idx + 1] - bgG) + Math.abs(imgData[idx + 2] - bgB);
+                    if (diff > 75) {
+                      if (px < minX) minX = px;
+                      if (px > maxX) maxX = px;
+                    }
+                  }
+                }
+                if (maxX - minX < 24) continue;
+                const bx = Math.max(0, (minX - 6) / scaleFactor);
+                const by = Math.max(0, (y1 - 3) / scaleFactor);
+                const bw = Math.max(40, (maxX - minX + 12) / scaleFactor);
+                const bh = Math.max(14, (y2 - y1 + 6) / scaleFactor);
+                const cols = sampleBlockColors(pCtx, bx, by, bw, bh, this.pageScale, this.outputScale);
+                blocks.push({
+                  x: bx,
+                  y: by,
+                  w: bw,
+                  h: bh,
+                  fontSize: Math.max(11, Math.min(28, Math.round(bh * 0.72))),
+                  fontFamily: 'sans-serif',
+                  bold: bh > 22,
+                  italic: false,
+                  inkColor: cols.inkColor,
+                  bgColor: cols.bgColor,
+                  text: '[Bấm để sửa mảng chữ ảnh scan này]',
+                  isVisualScanBlock: true,
+                });
+              }
+            } catch (_eScanBlk) {}
+          }
           this.extractedBlocksByPage[this.currentPage] = blocks;
-          if (!blocks.length && hintEl) {
-            hintEl.textContent = '📄 Trang này là ảnh scan chưa có lớp chữ gốc — bạn vẫn có thể chèn chữ mới / tô sáng / vẽ, hoặc dùng công cụ OCR để nhận diện chữ!';
+          if (hintEl) {
+            if (!blocks.length) {
+              hintEl.textContent = '📄 Trang trắng hoặc chưa có mảng chữ — bạn có thể chọn "+ Chèn chữ" để gõ chữ trực tiếp vào bất kỳ vị trí nào!';
+            } else if (blocks[0]?.isVisualScanBlock) {
+              hintEl.textContent = `🔍 Trang ảnh scan không có lớp chữ gốc — đã tự động nhận diện ${blocks.length} mảng chữ (viền nét đứt xanh): bấm thẳng vào bất kỳ mảng nào để sửa đè chuẩn màu nền ngay!`;
+            }
           }
         }
 

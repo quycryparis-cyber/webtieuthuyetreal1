@@ -224,16 +224,114 @@
     return '';
   }
 
+  let activeTtsAudio = null;
+  let activeTtsToken = 0;
+
+  function splitTtsChunks(text, isCjk) {
+    const maxLen = isCjk ? 62 : 145;
+    const s = String(text || '').trim();
+    if (s.length <= maxLen) return [s];
+    const parts = s.split(/(?<=[.!?。！？,，、;；:：\s])/).filter(Boolean);
+    const out = [];
+    let cur = '';
+    for (const p of parts) {
+      if ((cur + p).length > maxLen) {
+        if (cur.trim()) out.push(cur.trim());
+        if (p.length > maxLen) {
+          for (let i = 0; i < p.length; i += maxLen) out.push(p.slice(i, i + maxLen));
+          cur = '';
+        } else {
+          cur = p;
+        }
+      } else {
+        cur += p;
+      }
+    }
+    if (cur.trim()) out.push(cur.trim());
+    return out.length ? out : [s.slice(0, maxLen)];
+  }
+
+  function playGoogleTtsFallback(cleanText, langCode, bcp47) {
+    if (typeof Audio !== 'function') return false;
+    const tlMap = { vi: 'vi', en: 'en', zh_cn: 'zh-CN', zh_tw: 'zh-TW', ja: 'ja', ko: 'ko' };
+    const tl = tlMap[langCode] || 'en';
+    const isCjk = langCode === 'ja' || langCode === 'ko' || langCode === 'zh_cn' || langCode === 'zh_tw';
+    const chunks = splitTtsChunks(cleanText, isCjk);
+    activeTtsToken += 1;
+    const myTok = activeTtsToken;
+    if (activeTtsAudio) {
+      try { activeTtsAudio.pause(); activeTtsAudio.src = ''; } catch (_e) {}
+      activeTtsAudio = null;
+    }
+    let idx = 0;
+    const playNext = () => {
+      if (myTok !== activeTtsToken || idx >= chunks.length) return;
+      const chunk = chunks[idx++];
+      const u1 = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(tl)}&q=${encodeURIComponent(chunk)}`;
+      const u2 = `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=${encodeURIComponent(tl)}&q=${encodeURIComponent(chunk)}`;
+      const tryPlay = (url, isBackup) => {
+        const audio = new Audio();
+        try { audio.referrerPolicy = 'no-referrer'; } catch (_e) {}
+        audio.preload = 'auto';
+        audio.src = url;
+        activeTtsAudio = audio;
+        const onFail = () => {
+          if (myTok !== activeTtsToken) return;
+          if (!isBackup) {
+            tryPlay(u2, true);
+          } else if (globalScope.speechSynthesis) {
+            try {
+              const ut = new SpeechSynthesisUtterance(chunk);
+              ut.lang = bcp47;
+              ut.onend = playNext;
+              globalScope.speechSynthesis.speak(ut);
+            } catch (_e2) {}
+          }
+        };
+        audio.onended = playNext;
+        audio.onerror = onFail;
+        const p = audio.play();
+        if (p && typeof p.catch === 'function') p.catch(onFail);
+      };
+      tryPlay(u1, false);
+    };
+    playNext();
+    return true;
+  }
+
   function speakText(langCode, text) {
     try {
-      if (!globalScope.speechSynthesis) return false;
-      globalScope.speechSynthesis.cancel();
       const clean = String(text || '').replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, '').trim();
       if (!clean) return false;
       const meta = LANGUAGES.find((l) => l.code === langCode) || LANGUAGES[0];
+      try { globalScope.speechSynthesis?.cancel?.(); } catch (_e) {}
+      // Ưu tiên Động cơ giọng AI 6 ngôn ngữ (Mod 33) + bắt buộc Google TTS chuẩn bản xứ cho Tiếng Nhật & Tiếng Hàn khi máy thiếu giọng OS Natural!
+      const nv = globalScope.NoirStudio?.neuralVoice;
+      const voices = globalScope.speechSynthesis?.getVoices?.() || [];
+      const prefix = meta.bcp47.toLowerCase().split('-')[0];
+      const hasRealOsVoice = voices.some((v) => {
+        const vl = String(v.lang || '').toLowerCase();
+        const vn = String(v.name || '');
+        if (!vl.startsWith(prefix)) return false;
+        // Bỏ qua stub giọng Chrome Google offline hay bị câm trên Windows với ja/ko
+        if ((prefix === 'ja' || prefix === 'ko') && /^google\s/i.test(vn) && !/natural|neural/i.test(vn)) return false;
+        return true;
+      });
+      const preferCloud = prefix === 'ja' || prefix === 'ko' || !hasRealOsVoice;
+      if (nv && typeof nv.speakText === 'function') {
+        nv.stop?.();
+        const ok = nv.speakText(clean, meta.bcp47, { rate: 0.94, preferGoogleTts: preferCloud });
+        if (ok) return true;
+      }
+      if (preferCloud && (typeof navigator === 'undefined' || navigator.onLine !== false)) {
+        if (playGoogleTtsFallback(clean, meta.code, meta.bcp47)) return true;
+      }
+      if (!globalScope.speechSynthesis) return false;
       const u = new SpeechSynthesisUtterance(clean);
       u.lang = meta.bcp47;
       u.rate = 0.92;
+      const matched = voices.find((v) => String(v.lang || '').toLowerCase().startsWith(prefix));
+      if (matched) u.voice = matched;
       globalScope.speechSynthesis.speak(u);
       return true;
     } catch (_e) {

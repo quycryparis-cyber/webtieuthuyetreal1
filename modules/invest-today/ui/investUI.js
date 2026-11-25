@@ -832,6 +832,18 @@
                   </div>
                 </div>
 
+                <!-- Bảng chỉ số tài chính sống từ Simplize (CORS=*) -->
+                ${
+                  st.live && (Number.isFinite(st.pe) || Number.isFinite(st.roe) || Number.isFinite(st.marketCap))
+                    ? `<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <div class="inv-card-soft"><div class="text-[11px] text-zinc-500">Vốn hóa (${esc(st.exchange || 'HOSE')})</div><div class="inv-num font-black">${Number.isFinite(st.marketCap) ? `${(st.marketCap / 1e12).toFixed(2)} nghìn tỷ` : '—'}</div></div>
+                        <div class="inv-card-soft"><div class="text-[11px] text-zinc-500">Định giá P/E · P/B</div><div class="inv-num font-black text-sky-600 dark:text-sky-400">${Number.isFinite(st.pe) ? `${st.pe.toFixed(2)}x` : '—'} · ${Number.isFinite(st.pb) ? `${st.pb.toFixed(2)}x` : '—'}</div></div>
+                        <div class="inv-card-soft"><div class="text-[11px] text-zinc-500">ROE · ROA · Cổ tức</div><div class="inv-num font-black text-emerald-600 dark:text-emerald-400">${Number.isFinite(st.roe) ? `${st.roe.toFixed(1)}%` : '—'} · ${Number.isFinite(st.roa) ? `${st.roa.toFixed(1)}%` : '—'} · ${Number.isFinite(st.dividendYield) ? `${st.dividendYield.toFixed(1)}%` : '—'}</div></div>
+                        <div class="inv-card-soft"><div class="text-[11px] text-zinc-500">Tăng trưởng 5Y (DT / LN)</div><div class="inv-num font-black text-violet-600 dark:text-violet-400">${Number.isFinite(st.rev5yGrowth) ? `${st.rev5yGrowth.toFixed(1)}%` : '—'} / ${Number.isFinite(st.ni5yGrowth) ? `${st.ni5yGrowth.toFixed(1)}%` : '—'}</div></div>
+                      </div>`
+                    : ''
+                }
+
                 <!-- 4 ô kiểm tra sức khỏe đúng theo đặc thù ngành -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   ${(st.sectorChecklist?.cards || [])
@@ -1689,31 +1701,235 @@
   }
 
   // --------------------------------------------------------------------------
+  // BỘ TÙY CHỈNH CỠ CHỮ (4 MỨC — MẶC ĐỊNH RẤT RÕ), PHÔNG CHỮ & NỀN SÁNG/TỐI
+  // + POP-UP XUẤT PDF CHUYÊN NGHIỆP 4 CHẾ ĐỘ (TỔNG QUÁT / VÀNG / CHỨNG KHOÁN / NHÀ ĐẤT)
+  // --------------------------------------------------------------------------
+  const INV_READER_KEY = 'bi_inv49_reader_prefs_v1';
+  const INV_SIZES = Object.freeze({
+    md: { label: 'Vừa', px: 15 },
+    lg: { label: 'Lớn', px: 17.5 },
+    xl: { label: 'Rất lớn', px: 20 },
+    xxl: { label: 'Cực đại', px: 23 },
+  });
+  const INV_FONTS = Object.freeze({
+    sans: { label: 'Hiện đại (Sans)', css: '"Segoe UI", system-ui, -apple-system, sans-serif' },
+    serif: { label: 'Báo chí (Serif)', css: 'Georgia, "Times New Roman", serif' },
+    classic: { label: 'Sách in (Classic)', css: '"Palatino Linotype", "Book Antiqua", Palatino, serif' },
+    mono: { label: 'Kỹ thuật (Mono)', css: '"Cascadia Mono", Consolas, monospace' },
+  });
+
+  function loadInvReaderPrefs() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(INV_READER_KEY) || '{}');
+      return {
+        size: INV_SIZES[raw.size] ? raw.size : 'lg',
+        font: INV_FONTS[raw.font] ? raw.font : 'sans',
+        paperTheme: raw.paperTheme === 'dark' ? 'dark' : 'light',
+      };
+    } catch (_e) {
+      return { size: 'lg', font: 'sans', paperTheme: 'light' };
+    }
+  }
+
+  function saveInvReaderPrefs(p) {
+    try { localStorage.setItem(INV_READER_KEY, JSON.stringify(p)); } catch (_e) {}
+  }
+
+  function renderInvReaderBarHtml() {
+    const p = loadInvReaderPrefs();
+    return `
+      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 mb-3 rounded-xl border border-zinc-300/60 dark:border-zinc-700/80 bg-zinc-100/80 dark:bg-zinc-900/80 text-xs">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="font-extrabold opacity-80">🔤 Cỡ chữ:</span>
+          ${Object.entries(INV_SIZES).map(([k, v]) => `
+            <button type="button" data-inv-rsize="${k}" class="px-2.5 py-1 rounded-lg font-extrabold cursor-pointer transition ${p.size === k ? 'bg-emerald-600 text-white shadow' : 'bg-zinc-200/80 dark:bg-zinc-800 hover:bg-emerald-500/20'}">${v.label}</button>
+          `).join('')}
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <select id="inv-rfont-sel" class="px-2.5 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 font-bold text-xs cursor-pointer">
+            ${Object.entries(INV_FONTS).map(([k, v]) => `<option value="${k}" ${p.font === k ? 'selected' : ''}>Kiểu: ${v.label}</option>`).join('')}
+          </select>
+          <button type="button" id="inv-rtheme-toggle" class="px-2.5 py-1 rounded-lg font-extrabold cursor-pointer border border-zinc-400/50 ${p.paperTheme === 'dark' ? 'bg-slate-900 text-amber-300' : 'bg-white text-slate-900'}">
+            ${p.paperTheme === 'dark' ? '🌙 Nền báo cáo: Tối' : '☀️ Nền báo cáo: Sáng'}
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  function applyInvReaderStyles(host) {
+    if (!host) return;
+    const p = loadInvReaderPrefs();
+    const sz = INV_SIZES[p.size]?.px || 17.5;
+    const ff = INV_FONTS[p.font]?.css || INV_FONTS.sans.css;
+    host.style.fontSize = `${sz}px`;
+    host.style.fontFamily = ff;
+    host.querySelectorAll('.inv-exec-paper').forEach((paper) => {
+      paper.style.fontSize = `${sz}px`;
+      paper.style.fontFamily = ff;
+      paper.style.background = p.paperTheme === 'dark' ? '#0f172a' : '#ffffff';
+      paper.style.color = p.paperTheme === 'dark' ? '#f1f5f9' : '#1e293b';
+    });
+  }
+
+  function bindInvReaderEvents(host) {
+    if (!host) return;
+    host.querySelectorAll('[data-inv-rsize]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = loadInvReaderPrefs();
+        p.size = btn.getAttribute('data-inv-rsize') || 'lg';
+        saveInvReaderPrefs(p);
+        render();
+      });
+    });
+    host.querySelector('#inv-rfont-sel')?.addEventListener('change', (ev) => {
+      const p = loadInvReaderPrefs();
+      p.font = ev.target.value || 'sans';
+      saveInvReaderPrefs(p);
+      applyInvReaderStyles(host);
+    });
+    host.querySelector('#inv-rtheme-toggle')?.addEventListener('click', () => {
+      const p = loadInvReaderPrefs();
+      p.paperTheme = p.paperTheme === 'dark' ? 'light' : 'dark';
+      saveInvReaderPrefs(p);
+      render();
+    });
+    host.querySelector('#inv-btn-open-pdf-export-modal')?.addEventListener('click', () => openInvestPdfExportModal());
+  }
+
+  function openInvestPdfExportModal() {
+    document.getElementById('inv-pdf-export-modal')?.remove();
+    const esc = INV.utils.escapeHtml;
+    const st = INV.stateManager.stockData;
+    const hasStock = Boolean(st && st.symbol);
+    const areaLabel = INV.stateManager.realEstateData?.areaLabel || INV.stateManager.userRegion?.areaLabel || 'Chưa chọn khu vực';
+    const p = loadInvReaderPrefs();
+
+    const modal = document.createElement('div');
+    modal.id = 'inv-pdf-export-modal';
+    modal.className = 'fixed inset-0 z-[2147483640] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4';
+    modal.innerHTML = `
+      <div class="w-full max-w-2xl rounded-2xl border-2 border-emerald-400/70 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+        <div class="px-5 py-3.5 bg-gradient-to-r from-[#0b2239] via-[#163b63] to-[#0f4c68] border-b border-teal-500/40 flex items-center justify-between gap-2">
+          <div>
+            <div class="text-sm sm:text-base font-black text-white">📄 Xuất Báo Cáo PDF Chuyên Nghiệp (4 Chế Độ)</div>
+            <div class="text-xs text-teal-200/90">Định dạng Báo Cáo Tài Chính Navy–Teal có trang bìa, bảng số liệu &amp; biểu đồ</div>
+          </div>
+          <button type="button" id="inv-pdf-m-close" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
+        </div>
+
+        <div class="p-4 sm:p-5 space-y-4 overflow-y-auto text-sm">
+          <!-- Tùy chỉnh kiểu chữ, 4 cỡ chữ & nền PDF -->
+          <div class="rounded-xl border border-zinc-800 bg-zinc-900/90 p-3 flex flex-wrap items-center gap-2 text-xs">
+            <span class="font-extrabold text-teal-300">🎨 Tùy chỉnh PDF:</span>
+            <select id="inv-pdf-opt-size" class="px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700 font-bold">
+              ${Object.entries(INV_SIZES).map(([k, v]) => `<option value="${k}" ${p.size === k ? 'selected' : ''}>Cỡ chữ: ${v.label}</option>`).join('')}
+            </select>
+            <select id="inv-pdf-opt-font" class="px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700 font-bold">
+              ${Object.entries(INV_FONTS).map(([k, v]) => `<option value="${k}" ${p.font === k ? 'selected' : ''}>Phông: ${v.label}</option>`).join('')}
+            </select>
+            <select id="inv-pdf-opt-theme" class="px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700 font-bold">
+              <option value="light" ${p.paperTheme === 'light' ? 'selected' : ''}>☀️ Nền giấy trắng (In đẹp)</option>
+              <option value="dark" ${p.paperTheme === 'dark' ? 'selected' : ''}>🌙 Nền tối (Đọc màn hình)</option>
+            </select>
+          </div>
+
+          <!-- 4 lựa chọn xuất file -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button type="button" data-inv-pdf-mode="overview" class="text-left p-4 rounded-xl border-2 border-emerald-500/60 bg-emerald-950/35 hover:bg-emerald-900/45 transition cursor-pointer space-y-1">
+              <div class="text-sm font-black text-emerald-300">1. 📊 Xuất file phân tích Tổng quát</div>
+              <div class="text-xs text-zinc-300">Toàn cảnh 4 kênh, biểu đồ điểm hấp dẫn, Radar rủi ro &amp; bài phân tích Gemini.</div>
+            </button>
+
+            <button type="button" data-inv-pdf-mode="gold" class="text-left p-4 rounded-xl border-2 border-amber-500/60 bg-amber-950/35 hover:bg-amber-900/45 transition cursor-pointer space-y-1">
+              <div class="text-sm font-black text-amber-300">2. 🥇 Xuất file phân tích Giá Vàng</div>
+              <div class="text-xs text-zinc-300">Giá XAU/USD, SJC nội địa, độ chênh lệch nội–ngoại, spread &amp; cảnh báo chốt chặn.</div>
+            </button>
+
+            <button type="button" data-inv-pdf-mode="stock" ${hasStock ? '' : 'disabled'} class="text-left p-4 rounded-xl border-2 ${hasStock ? 'border-sky-500/60 bg-sky-950/35 hover:bg-sky-900/45 cursor-pointer' : 'border-zinc-700 bg-zinc-900/60 opacity-60 cursor-not-allowed'} transition space-y-1">
+              <div class="text-sm font-black ${hasStock ? 'text-sky-300' : 'text-zinc-400'}">3. 📈 Xuất file phân tích Chứng khoán ${hasStock ? `(${esc(st.symbol)})` : '🔒'}</div>
+              <div class="text-xs ${hasStock ? 'text-zinc-300' : 'text-amber-300/90'}">
+                ${hasStock ? `Đã sẵn sàng dữ liệu sống của ${esc(st.symbol)} (${esc(st.companyName)}) — P/E, P/B, ROE, Tăng trưởng 5Y.` : 'Chưa chọn mã chứng khoán & quét thông tin! Hãy vào tab Chứng khoán nhập mã (vd: FPT) và chạy kiểm tra trước.'}
+              </div>
+            </button>
+
+            <div class="p-4 rounded-xl border-2 border-teal-500/60 bg-teal-950/35 space-y-2">
+              <button type="button" data-inv-pdf-mode="real_estate" class="w-full text-left cursor-pointer space-y-1">
+                <div class="text-sm font-black text-teal-300">4. 🏠 Xuất file phân tích Nhà đất</div>
+                <div class="text-xs text-zinc-300">Khu vực hiện tại: <strong class="text-white">${esc(areaLabel)}</strong></div>
+              </button>
+              <button type="button" id="inv-pdf-change-re-area" class="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-black cursor-pointer">📍 Đổi khu vực nhà đất</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const closeIt = () => modal.remove();
+    modal.querySelector('#inv-pdf-m-close')?.addEventListener('click', closeIt);
+    modal.addEventListener('click', (ev) => { if (ev.target === modal) closeIt(); });
+    modal.querySelector('#inv-pdf-change-re-area')?.addEventListener('click', () => {
+      closeIt();
+      openChangeRegionConfirmModal();
+    });
+    modal.querySelectorAll('[data-inv-pdf-mode]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (btn.disabled) return;
+        const mode = btn.getAttribute('data-inv-pdf-mode') || 'overview';
+        const opts = {
+          size: modal.querySelector('#inv-pdf-opt-size')?.value || p.size,
+          font: modal.querySelector('#inv-pdf-opt-font')?.value || p.font,
+          paperTheme: modal.querySelector('#inv-pdf-opt-theme')?.value || p.paperTheme,
+        };
+        btn.disabled = true;
+        const oldHtml = btn.innerHTML;
+        btn.innerHTML = '<div class="text-sm font-black text-emerald-300">⏳ Đang dựng file PDF sắc nét...</div>';
+        try {
+          const res = await INV.pdfExporter.exportInvestPdf(mode, opts);
+          NS.utils?.showToast?.(`✅ Đã xuất Báo cáo PDF (${res.pages} trang) thành công!`, 'success', 4000);
+          closeIt();
+        } catch (err) {
+          NS.utils?.showToast?.('⚠️ ' + (err?.message || err), 'error', 4200);
+          btn.disabled = false;
+          btn.innerHTML = oldHtml;
+        }
+      });
+    });
+  }
+
+  // --------------------------------------------------------------------------
   // RENDER TỔNG KHUNG & GẮN SỰ KIỆN
   // --------------------------------------------------------------------------
   function render() {
     const host = INV.stateManager.hostEl;
     if (!host || !host.isConnected) return;
 
-    // Pha A: Cổng xác định vị trí & chờ xác nhận
+    // Pha A: Cổng xác định vị trí & chờ xác nhận (có sẵn thanh chỉnh cỡ chữ 4 mức ngay màn hình đầu!)
     if (!INV.stateManager.userRegion || uiState.wizardStage === 'location_gate') {
-      host.innerHTML = renderLocationGateScreen();
+      host.innerHTML = `${renderInvReaderBarHtml()}${renderLocationGateScreen()}`;
       bindLocationGateEvents(host);
+      bindInvReaderEvents(host);
+      applyInvReaderStyles(host);
       NS.i18n?.translateElement?.(host);
       return;
     }
 
     // Pha B: Màn hình chờ Loading tra cứu toàn diện
     if (uiState.wizardStage === 'loading_full_scan') {
-      host.innerHTML = renderFullScanLoadingScreen();
+      host.innerHTML = `${renderInvReaderBarHtml()}${renderFullScanLoadingScreen()}`;
+      bindInvReaderEvents(host);
+      applyInvReaderStyles(host);
       NS.i18n?.translateElement?.(host);
       return;
     }
 
     // Pha C: Màn hình 2 Bước gọn gàng trước khi vào phân tích chi tiết
     if (uiState.wizardStage === 'two_step_setup') {
-      host.innerHTML = renderTwoStepSetupScreen();
+      host.innerHTML = `${renderInvReaderBarHtml()}${renderTwoStepSetupScreen()}`;
       bindTwoStepEvents(host);
+      bindInvReaderEvents(host);
+      applyInvReaderStyles(host);
       NS.i18n?.translateElement?.(host);
       return;
     }
@@ -1730,8 +1946,9 @@
     else bodyHtml = renderOverviewTab();
 
     host.innerHTML = `
+      ${renderInvReaderBarHtml()}
       <div class="inv-root space-y-4">
-        <!-- Header gọn nhẹ + Nút Đổi vị trí NỔI BẬT -->
+        <!-- Header gọn nhẹ + Nút Đổi vị trí + Nút Xuất PDF Nổi bật Nhấp nháy -->
         <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-zinc-200 dark:border-zinc-800">
           <div>
             <h3 class="text-base font-black tracking-tight flex items-center gap-2 flex-wrap">
@@ -1742,7 +1959,10 @@
             </h3>
             <p class="text-[11.5px] text-zinc-500 dark:text-zinc-400">Tra cứu nhanh khi cần — Không chạy ngầm tốn máy · Bám sát ${esc(reg.countryName)} (${esc(reg.centralBank)}, ${esc(reg.stockIndex)})</p>
           </div>
-          <div class="flex flex-wrap items-center gap-1.5">
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" id="inv-btn-open-pdf-export-modal" class="inv-gemini-copy-demo-btn px-4 py-2.5 rounded-xl font-black text-sm text-white cursor-pointer shadow-xl border-2 border-amber-300" style="background:linear-gradient(135deg,#059669 0%,#0d9488 50%,#0284c7 100%);">
+              📄 Xuất Báo Cáo PDF (4 Chế Độ)
+            </button>
             <button type="button" id="inv-btn-back-to-2steps" class="inv-secondary-btn text-xs py-1.5 px-3">🔁 Màn hình 2 Bước</button>
             <button type="button" id="inv-btn-header-gemini" class="inv-gemini-btn text-xs py-2 px-3">
               🪟 Mở cùng Gemini
@@ -1764,6 +1984,8 @@
       </div>`;
 
     bindEvents(host);
+    bindInvReaderEvents(host);
+    applyInvReaderStyles(host);
     NS.i18n?.translateElement?.(host);
   }
 

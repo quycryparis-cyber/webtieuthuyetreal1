@@ -822,11 +822,57 @@
     let pe = NaN;
     let pb = NaN;
     let roe = NaN;
+    let roa = NaN;
+    let eps = NaN;
+    let evEbitda = NaN;
+    let marketCap = NaN;
+    let dividendYield = NaN;
+    let rev5yGrowth = NaN;
+    let ni5yGrowth = NaN;
+    let industryName = '';
+    let exchange = isVnTicker ? 'HOSE' : '';
+    let simplizeScores = null;
     let volume = NaN;
     let liveSource = null;
 
-    // 1) Thử nguồn SSI iBoard (200 OK!) & VNDirect công khai cho mã Việt Nam
+    // 0) TIER-1 TRỰC TIẾP CORS=* CHO MÃ VIỆT NAM: Simplize Official Summary API (200 OK · đủ Giá, P/E, P/B, ROE, ROA, EPS, Vốn hóa, Tăng trưởng 5 năm!)
     if (isVnTicker) {
+      try {
+        const simpUrl = `https://api.simplize.vn/api/company/summary/${encodeURIComponent(sym)}`;
+        const res = await INV.networkAdapter.fetchJson(simpUrl, { signal, timeoutMs: 8000, preferDirect: true });
+        const d = res?.data?.data;
+        if (d && (Number(d.priceClose) > 0 || Number(d.priceReferrance) > 0)) {
+          price = Number(d.priceClose || d.priceReferrance);
+          changePct = Number(d.pctChange);
+          companyName = d.nameVi || d.name || d.nameEn || sym;
+          industryName = d.industryActivity || d.bcEconomicSectorName || '';
+          exchange = d.stockExchange || 'HOSE';
+          volume = Number(d.volume || 0);
+          pe = Number(d.peRatio);
+          pb = Number(d.pbRatio);
+          roe = Number(d.roe);
+          roa = Number(d.roa);
+          eps = Number(d.epsRatio);
+          evEbitda = Number(d.evEbitdaRatio);
+          marketCap = Number(d.marketCap);
+          dividendYield = Number(d.dividendYieldCurrent);
+          rev5yGrowth = Number(d.revenue5yGrowth);
+          ni5yGrowth = Number(d.netIncome5yGrowth);
+          simplizeScores = {
+            valuation: Number(d.valuationPoint || 0),
+            growth: Number(d.growthPoint || 0),
+            performance: Number(d.passPerformancePoint || 0),
+            health: Number(d.financialHealthPoint || 0),
+            dividend: Number(d.dividendPoint || 0),
+            updated: d.analysisUpdated || INV.utils.todayIso(),
+          };
+          liveSource = { name: `Simplize Live (${exchange} · ${simplizeScores.updated})`, url: `https://simplize.vn/co-phieu/${sym}` };
+        }
+      } catch (_eSimp) {}
+    }
+
+    // 1) Fallback SSI iBoard & VNDirect cho mã Việt Nam (nếu Simplize tạm gián đoạn)
+    if (isVnTicker && !Number.isFinite(price)) {
       try {
         const ssiUrl = `https://iboard-query.ssi.com.vn/stock/${encodeURIComponent(sym)}`;
         const res = await INV.networkAdapter.fetchJson(ssiUrl, { signal, timeoutMs: 7000 });
@@ -925,6 +971,8 @@
     const payload = {
       symbol: sym,
       companyName,
+      industryName,
+      exchange,
       sector,
       sectorChecklist,
       price,
@@ -934,6 +982,14 @@
       pe,
       pb,
       roe,
+      roa,
+      eps,
+      evEbitda,
+      marketCap,
+      dividendYield,
+      rev5yGrowth,
+      ni5yGrowth,
+      simplizeScores,
       live: Number.isFinite(price),
       liveSource,
       links,

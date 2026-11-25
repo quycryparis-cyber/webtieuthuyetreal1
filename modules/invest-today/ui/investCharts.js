@@ -296,8 +296,10 @@
   function renderRadarRiskSvg(axes) {
     const items = (Array.isArray(axes) ? axes : []).slice(0, 8);
     if (items.length < 3) return '';
-    const cx = 150;
-    const cy = 115;
+    const W = 440;
+    const H = 268;
+    const cx = 220;
+    const cy = 134;
     const maxR = 72;
     const n = items.length;
     const pt = (idx, ratio) => {
@@ -323,19 +325,32 @@
       .map((it, i) => {
         const [x, y] = pt(i, Math.max(0.1, Math.min(1, (Number(it.level) || 0) / 100)));
         const col = Number(it.level) >= 75 ? '#f43f5e' : Number(it.level) >= 50 ? '#f59e0b' : '#10b981';
-        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.6" fill="${col}" />`;
+        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${col}" />`;
       })
       .join('');
     const labels = items
       .map((it, i) => {
         const [x, y] = pt(i, 1.24);
         const anchor = x < cx - 18 ? 'end' : x > cx + 18 ? 'start' : 'middle';
-        return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" font-size="8.8" font-weight="700" fill="currentColor" opacity="0.88">${esc(it.label)} (${Math.round(Number(it.level) || 0)})</text>`;
+        const fullTxt = `${String(it.label || '').trim()} (${Math.round(Number(it.level) || 0)})`;
+        const words = fullTxt.split(/\s+/);
+        let l1 = fullTxt;
+        let l2 = '';
+        if (fullTxt.length > 18 && words.length >= 3) {
+          const mid = Math.ceil(words.length / 2);
+          l1 = words.slice(0, mid).join(' ');
+          l2 = words.slice(mid).join(' ');
+        }
+        const adjY = y < cy - 55 ? y - 6 : y > cy + 55 ? y + 10 : y;
+        if (l2) {
+          return `<text x="${x.toFixed(1)}" y="${(adjY - 5).toFixed(1)}" text-anchor="${anchor}" font-size="10.2" font-weight="800" fill="currentColor" opacity="0.92"><tspan x="${x.toFixed(1)}" dy="0">${esc(l1)}</tspan><tspan x="${x.toFixed(1)}" dy="12.5">${esc(l2)}</tspan></text>`;
+        }
+        return `<text x="${x.toFixed(1)}" y="${adjY.toFixed(1)}" text-anchor="${anchor}" font-size="10.2" font-weight="800" fill="currentColor" opacity="0.92">${esc(l1)}</text>`;
       })
       .join('');
 
     return `
-      <svg viewBox="0 0 300 230" style="width:100%;max-width:340px;height:auto;margin:0 auto;display:block;" role="img" aria-label="Biểu đồ Radar mức độ rủi ro">
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:440px;height:auto;margin:0 auto;display:block;overflow:visible;" role="img" aria-label="Biểu đồ Radar mức độ rủi ro">
         ${rings}
         ${spokes}
         <polygon points="${dataPoly}" fill="rgba(244,63,94,0.22)" stroke="#f43f5e" stroke-width="2" />

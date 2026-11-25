@@ -47,6 +47,9 @@
 };
 
   const exact = Object.freeze({
+    "📄 Xuất Báo Cáo PDF (4 Chế Độ)": "📄 전문가 PDF 리포트 내보내기 (4가지 모드)",
+    "Phối Màu Báo Cáo Khoa Học 10 Theme Đẹp (DOCX / XLSX / PDF)": "10가지 과학 리포트 테마 자동 디자인 (DOCX / XLSX / PDF)",
+    "✨ Nên thử · 10 Theme": "✨ 추천 · 10테마",
     "📺 Xem video mini và phát nền: Tắt": "📺 미니 비디오 및 백그라운드 재생: 끔",
     "✅ Bấm vào đây để bật video mini, phát nền đã sẵn sàng": "✅ 여기를 눌러 미니 비디오 켜기 (백그라운드 재생 준비 완료)",
     "PHẦN 2 — SƠ ĐỒ, BIỂU ĐỒ & HÌNH ẢNH BẢN TIN 20 PHÚT": "제2부 — 20분 브리핑 도표, 차트 및 시각화",
