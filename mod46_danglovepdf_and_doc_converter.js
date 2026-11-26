@@ -1269,11 +1269,38 @@
               loader?.update?.('✅ AI đã hoàn tất chuẩn hóa! Đang nạp vào bản xem trước...', 96);
             }
           } catch (err) {
-            this.toast(`⚠️ AI gặp trục trặc (${err?.message || 'Lỗi'}), đang dùng thuật toán Code chuẩn.`, 'error', 3500);
-          } finally {
-            loader?.close?.();
-            this.renderUploadOrWorkspaceScreen();
+            const f0 = this.files[0];
+            const promptTxt = gBridge.buildTaskManualPrompt?.('theme10_beautify', { fileName: f0?.name || 'Tai_lieu' }) || gBridge.PROMPT_CHINH_TIEU_DE_CHUAN;
+            loader?.showError?.(
+              '⚠️ Không thể tự động định dạng bằng Gemini API',
+              String(err?.message || err),
+              {
+                manualFallback: {
+                  taskTitle: 'Phối Màu 10 Theme — Dán Markdown chuẩn từ Gemini Web',
+                  promptText: promptTxt,
+                  attachFileName: f0?.name || '',
+                  attachFileBlob: f0?.file || (f0?.bytes ? new Blob([f0.bytes]) : null),
+                  applyBtnLabel: '✅ Nạp Markdown vào 10 Theme & Xuất PDF đẹp',
+                  onApplyPasted: (md) => {
+                    const stitched = gBridge.stitchContinueTables(md);
+                    const parsers = global.NoirStructuredParsers || NS.structuredParsers;
+                    const astLib = global.NoirDocAst || NS.docAst;
+                    if (parsers && astLib) {
+                      const ast = parsers.parseMarkdownToAst(stitched, { filename: f0?.name || 'ai_manual.md' });
+                      const blocks = astLib.astToLegacyBlocks(ast);
+                      this.theme10OverrideBlocks = blocks;
+                      this._theme10AnalyzedCache = { fileId: f0?.id, blocks, ast };
+                      this.renderUploadOrWorkspaceScreen();
+                      this.toast('✅ Đã nạp xong nội dung chuẩn từ Gemini! Bấm "Áp dụng Theme" để xuất PDF.', 'success', 4000);
+                    }
+                  },
+                },
+              }
+            );
+            return;
           }
+          loader?.close?.();
+          this.renderUploadOrWorkspaceScreen();
         }, 40);
       }
 
@@ -1796,21 +1823,34 @@
       });
       bindQuickProAi('#btn-pro-ai-scan-pii', async (gBridge) => {
         const loader = gBridge.showAiFullLoadingOverlay?.('🛡️ AI đang quét dữ liệu nhạy cảm (PII)...', 'Tìm Họ tên, CCCD, SĐT, Email, STK, Địa chỉ để điền sẵn vào danh sách che đen');
+        let promptTxt = '';
+        const applyPii = (raw) => {
+          const inp = body.querySelector('#opt-pro-redact-words');
+          if (inp && raw) inp.value = String(raw).replace(/```[^\n]*\n?|```/g, '').replace(/\r?\n/g, ', ').trim();
+          this.toast('✅ AI đã điền sẵn danh sách từ khóa nhạy cảm cần che đen!', 'success', 3200);
+        };
         try {
           const txt = await extractQuickPdfSampleText(8);
-          const raw = await gBridge.callGeminiText(`Liệt kê chính xác các chuỗi thông tin cá nhân nhạy cảm (SĐT, CCCD, Email, Số tài khoản, Địa chỉ nhà, Tên cá nhân cần ẩn) xuất hiện trong văn bản sau, ngăn cách bằng dấu phẩy trên 1 dòng duy nhất. Không giải thích:\n${txt}`, { temperature: 0.1 });
-          const inp = body.querySelector('#opt-pro-redact-words');
-          if (inp && raw) inp.value = raw.replace(/\r?\n/g, ', ').trim();
-          this.toast('✅ AI đã điền sẵn danh sách từ khóa nhạy cảm cần che đen!', 'success', 3200);
-        } catch (e) { this.toast(`⚠️ ${e?.message || e}`, 'error', 3500); }
-        finally { loader?.close?.(); }
+          promptTxt = gBridge.buildTaskManualPrompt('redact_pii', { text: txt });
+          const raw = await gBridge.callGeminiText(promptTxt, { taskType: 'fast_light', temperature: 0.1 });
+          applyPii(raw);
+          loader?.close?.();
+        } catch (e) {
+          loader?.showError?.('⚠️ Lỗi AI quét PII', String(e?.message || e), {
+            manualFallback: promptTxt ? {
+              taskTitle: 'Che Đen PII — Dán danh sách từ khóa nhạy cảm từ Gemini',
+              promptText: promptTxt,
+              applyBtnLabel: '✅ Điền ngay vào ô Che đen vĩnh viễn',
+              onApplyPasted: applyPii,
+            } : null,
+          });
+        }
       });
       bindQuickProAi('#btn-pro-ai-gen-meta', async (gBridge) => {
         const loader = gBridge.showAiFullLoadingOverlay?.('🧾 AI đang sinh Siêu dữ liệu PDF...', 'Đọc trang đầu để tạo Tiêu đề, Tác giả & Từ khóa chuẩn');
-        try {
-          const txt = await extractQuickPdfSampleText(3);
-          const raw = await gBridge.callGeminiText(`Từ nội dung đầu tài liệu sau, trả về JSON duy nhất {"title":"...","author":"...","keywords":"từ1, từ2, từ3"}:\n${txt}`, { temperature: 0.1 });
-          const m = raw.match(/\{[\s\S]*\}/);
+        let promptTxt = '';
+        const applyMeta = (raw) => {
+          const m = String(raw || '').match(/\{[\s\S]*\}/);
           if (m) {
             const obj = JSON.parse(m[0]);
             if (obj.title && body.querySelector('#opt-pro-meta-title')) body.querySelector('#opt-pro-meta-title').value = obj.title;
@@ -1818,33 +1858,75 @@
             if (obj.keywords && body.querySelector('#opt-pro-meta-keywords')) body.querySelector('#opt-pro-meta-keywords').value = obj.keywords;
             this.toast('✅ AI đã điền sẵn Tiêu đề, Tác giả & Từ khóa!', 'success', 3000);
           }
-        } catch (e) { this.toast(`⚠️ ${e?.message || e}`, 'error', 3500); }
-        finally { loader?.close?.(); }
+        };
+        try {
+          const txt = await extractQuickPdfSampleText(3);
+          promptTxt = gBridge.buildTaskManualPrompt('metadata_seo', { text: txt });
+          const raw = await gBridge.callGeminiText(promptTxt, { taskType: 'fast_light', temperature: 0.1 });
+          applyMeta(raw);
+          loader?.close?.();
+        } catch (e) {
+          loader?.showError?.('⚠️ Lỗi AI tạo Metadata', String(e?.message || e), {
+            manualFallback: promptTxt ? {
+              taskTitle: 'Siêu dữ liệu PDF — Dán JSON Metadata từ Gemini',
+              promptText: promptTxt,
+              applyBtnLabel: '✅ Điền Tiêu đề, Tác giả & Từ khóa ngay',
+              onApplyPasted: applyMeta,
+            } : null,
+          });
+        }
       });
       bindQuickProAi('#btn-pro-ai-split-kw', async (gBridge) => {
         const loader = gBridge.showAiFullLoadingOverlay?.('🪓 AI đang phân tích điểm ngắt hồ sơ...', 'Tìm từ khóa tiêu đề lặp lại giữa các hồ sơ/hóa đơn');
-        try {
-          const txt = await extractQuickPdfSampleText(6);
-          const raw = await gBridge.callGeminiText(`Tìm 1 cụm từ khóa tiêu đề ngắn xuất hiện ở đầu mỗi hồ sơ/chương/hóa đơn trong văn bản sau để tách tệp PDF. Chỉ trả về đúng cụm từ khóa đó:\n${txt}`, { temperature: 0.1 });
+        let promptTxt = '';
+        const applySplitKw = (raw) => {
           const inp = body.querySelector('#opt-pro-split-kw');
           const sel = body.querySelector('#opt-pro-smart-split');
-          if (inp && raw) inp.value = raw.split(/\r?\n/)[0].replace(/["']/g, '').trim();
+          if (inp && raw) inp.value = String(raw).split(/\r?\n/)[0].replace(/["'`]/g, '').trim();
           if (sel) sel.value = 'split_keyword';
           this.toast('✅ AI đã chọn chế độ Tách theo từ khóa & điền sẵn từ khóa!', 'success', 3000);
-        } catch (e) { this.toast(`⚠️ ${e?.message || e}`, 'error', 3500); }
-        finally { loader?.close?.(); }
+        };
+        try {
+          const txt = await extractQuickPdfSampleText(6);
+          promptTxt = gBridge.buildTaskManualPrompt('split_keyword', { text: txt });
+          const raw = await gBridge.callGeminiText(promptTxt, { taskType: 'fast_light', temperature: 0.1 });
+          applySplitKw(raw);
+          loader?.close?.();
+        } catch (e) {
+          loader?.showError?.('⚠️ Lỗi AI gợi ý từ khóa ngắt', String(e?.message || e), {
+            manualFallback: promptTxt ? {
+              taskTitle: 'Tách PDF Thông Minh — Dán từ khóa ngắt từ Gemini',
+              promptText: promptTxt,
+              applyBtnLabel: '✅ Điền từ khóa ngắt ngay',
+              onApplyPasted: applySplitKw,
+            } : null,
+          });
+        }
       });
       bindQuickProAi('#btn-pro-ai-fill-form', async (gBridge) => {
         const ta = body.querySelector('#opt-pro-form-data');
         const userNote = String(ta?.value || '').trim();
         if (!userNote) { this.toast('ℹ️ Hãy gõ hoặc dán thông tin cá nhân bất kỳ vào ô trên rồi bấm nút AI để chuẩn hóa thành TenO=GiaTri.', 'info', 3500); return; }
         const loader = gBridge.showAiFullLoadingOverlay?.('📝 AI đang ánh xạ dữ liệu vào Biểu mẫu...', 'Chuyển ghi chú tự do sang cặp TênÔ=GiáTrị chuẩn AcroForm');
-        try {
-          const raw = await gBridge.callGeminiText(`Chuyển đoạn thông tin sau thành danh sách các dòng chuẩn "TenTruong=GiaTri" (không dấu cho TenTruong, mỗi dòng 1 mục, không giải thích):\n${userNote}`, { temperature: 0.1 });
-          if (ta && raw) ta.value = raw.replace(/```[^\n]*\n?|```/g, '').trim();
+        const promptTxt = gBridge.buildTaskManualPrompt('form_fill', { text: userNote });
+        const applyForm = (raw) => {
+          if (ta && raw) ta.value = String(raw).replace(/```[^\n]*\n?|```/g, '').trim();
           this.toast('✅ AI đã chuyển xong sang định dạng điền Form!', 'success', 2800);
-        } catch (e) { this.toast(`⚠️ ${e?.message || e}`, 'error', 3500); }
-        finally { loader?.close?.(); }
+        };
+        try {
+          const raw = await gBridge.callGeminiText(promptTxt, { taskType: 'fast_light', temperature: 0.1 });
+          applyForm(raw);
+          loader?.close?.();
+        } catch (e) {
+          loader?.showError?.('⚠️ Lỗi AI chuẩn hóa Form', String(e?.message || e), {
+            manualFallback: {
+              taskTitle: 'Điền Form AcroForm — Dán cặp TenTruong=GiaTri từ Gemini',
+              promptText: promptTxt,
+              applyBtnLabel: '✅ Nạp dữ liệu vào Biểu mẫu ngay',
+              onApplyPasted: applyForm,
+            },
+          });
+        }
       });
       body.querySelector('#btn-mod46-add-blank-page')?.addEventListener('click', () => {
         this.pagesState.push({
@@ -3035,7 +3117,29 @@
                   this.toast(`✅ Gemini Vision đã đọc sâu ${vRes.pageCount} trang & dựng lại AST sạch!`, 'success', 3600);
                 } catch (err) {
                   if (stEl) { stEl.classList.remove('hidden'); stEl.textContent = '⚠️ ' + (err?.message || err); }
-                  this.toast('⚠️ ' + (err?.message || err), 'error', 4000);
+                  const errOv = geminiBridge.showAiFullLoadingOverlay?.('⚠️ Gemini Flash gặp giới hạn', String(err?.message || err));
+                  errOv?.showError?.('⚠️ Không thể đọc tự động qua API', String(err?.message || err), {
+                    onRetry: () => execVision(),
+                    manualFallback: {
+                      taskTitle: 'Đọc sâu Tài liệu — Dán Markdown chuẩn từ Gemini Web',
+                      promptText: geminiBridge.buildTaskManualPrompt('theme10_beautify', { fileName: primaryFile?.name || 'Tai_lieu.pdf' }),
+                      attachFileName: primaryFile?.name || '',
+                      attachFileBlob: primaryFile?.file || (primaryFile?.bytes ? new Blob([primaryFile.bytes]) : null),
+                      applyBtnLabel: '✅ Nạp Markdown vào Cấu trúc & Xem Trước PDF',
+                      onApplyPasted: (md) => {
+                        const stitched = geminiBridge.stitchContinueTables(md);
+                        const parsers = global.NoirStructuredParsers || NS.structuredParsers;
+                        const astLib = global.NoirDocAst || NS.docAst;
+                        if (parsers && astLib) {
+                          const ast = parsers.parseMarkdownToAst(stitched, { filename: primaryFile?.name || 'ai_manual.md' });
+                          const blocks = astLib.astToLegacyBlocks(ast);
+                          this._theme10AnalyzedCache = { fileId: primaryFile.id, blocks, ast };
+                          renderV2TocAndVision(blocks, ast?.meta || {});
+                          this.toast('✅ Đã nạp xong nội dung từ Gemini Web & dựng lại AST chuẩn!', 'success', 3800);
+                        }
+                      },
+                    },
+                  });
                 } finally {
                   if (btnV && btnV.isConnected) btnV.disabled = false;
                 }
@@ -3895,6 +3999,62 @@
         this.renderResultScreen(inputTotalSize);
       } catch (err) {
         const msg = String(err?.message || err || 'Lỗi không xác định');
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        const aiManualTools = ['icr_handwriting_pdf', 'ocr_pdf', 'pdf_to_docx', 'pdf_to_excel'];
+        if (gBridge && aiManualTools.includes(tool.id)) {
+          this.renderUploadOrWorkspaceScreen();
+          const f0 = this.files[0];
+          const taskKey = tool.id === 'icr_handwriting_pdf' ? 'icr_handwriting' : (tool.id === 'ocr_pdf' ? 'ocr_fast' : tool.id);
+          const promptTxt = gBridge.buildTaskManualPrompt(taskKey, { fileName: f0?.name || 'Tai_lieu', icrMode: pro.icrMode });
+          const ov = gBridge.showAiFullLoadingOverlay?.('⚠️ Gemini API gặp giới hạn', msg);
+          ov?.showError?.(`⚠️ Không thể chạy tự động ${tool.name}`, msg, {
+            onRetry: () => this.executeActiveTool(),
+            manualFallback: {
+              taskTitle: `${tool.name} — Dán kết quả từ Gemini Web`,
+              promptText: promptTxt,
+              attachFileName: f0?.name || '',
+              attachFileBlob: f0?.file || (f0?.bytes ? new Blob([f0.bytes]) : null),
+              applyBtnLabel: '✅ Đóng gói kết quả & Xuất tệp ngay',
+              onApplyPasted: async (pastedText) => {
+                const cleanOut = String(pastedText || '').trim();
+                const manualOuts = [];
+                if (tool.id === 'pdf_to_excel' || (tool.id === 'icr_handwriting_pdf' && pro.icrOut === 'xlsx')) {
+                  const XLSX = await ensureXlsx();
+                  let rows = [];
+                  try {
+                    const jm = cleanOut.match(/\[[\s\S]*\]/);
+                    if (jm) {
+                      const p = JSON.parse(jm[0]);
+                      if (Array.isArray(p) && Array.isArray(p[0])) rows = p;
+                    }
+                  } catch (_eJ) {}
+                  if (!rows.length) {
+                    rows = cleanOut.split(/\r?\n/).filter((l) => l.trim() && !/^\|?[\s:|-]+\|?$/.test(l.trim())).map((l) => (l.includes('|') ? l.replace(/^\||\|$/g, '').split('|').map((c) => c.trim()) : [l.trim()]));
+                  }
+                  const ws = XLSX.utils.aoa_to_sheet(rows.length ? rows : [[cleanOut]]);
+                  const wb = XLSX.utils.book_new();
+                  XLSX.utils.book_append_sheet(wb, ws, 'KetQua_AI');
+                  const arr = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                  manualOuts.push({ name: `${baseName}_AI.xlsx`, blob: new Blob([arr], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) });
+                } else if (pro.icrOut === 'pdf') {
+                  const pdfBlob = await renderLinesToVietnamesePdfBlob(`${baseName} (AI)`, cleanOut.split(/\r?\n/), () => {});
+                  manualOuts.push({ name: `${baseName}_AI.pdf`, blob: pdfBlob });
+                } else if (opts.p2dOut === 'md' || pro.icrOut === 'md' || pro.ocrOutFormat === 'md') {
+                  manualOuts.push({ name: `${baseName}_AI.md`, blob: new Blob([cleanOut], { type: 'text/markdown;charset=utf-8' }) });
+                } else if (opts.p2dOut === 'txt' || pro.icrOut === 'txt' || pro.ocrOutFormat === 'txt') {
+                  manualOuts.push({ name: `${baseName}_AI.txt`, blob: new Blob([cleanOut], { type: 'text/plain;charset=utf-8' }) });
+                } else {
+                  const docxBlob = await buildDocxBlobFromParagraphs(`${baseName}_AI`, cleanOut.split(/\r?\n/));
+                  manualOuts.push({ name: `${baseName}_AI.docx`, blob: docxBlob });
+                }
+                this.resultItems = manualOuts.map((o) => ({ name: o.name, blob: o.blob, size: o.blob.size, url: this.trackUrl(o.blob) }));
+                this.resultZipItem = null;
+                this.renderResultScreen(inputTotalSize);
+              },
+            },
+          });
+          return;
+        }
         this.toast(`❌ Có lỗi khi xử lý: ${msg}`, 'error', 4500);
         this.renderUploadOrWorkspaceScreen();
       }

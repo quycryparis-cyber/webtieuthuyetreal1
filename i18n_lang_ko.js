@@ -5372,6 +5372,17 @@
     "🤖 Tóm tắt AI": "🤖 AI 요약",
     "⚡ Chế độ Siêu tốc Gemini Flash Native (Đọc thẳng PDF/Ảnh 1 lượt — nhanh gấp 10× & chính xác 99%)": "⚡ 초고속 Gemini Flash 네이티브 모드 (PDF/이미지 원샷 인식 — 10배 빠름 & 99% 정확도)",
     "🤖 Hậu kiểm OCR bằng Gemini AI (sửa lỗi dấu tiếng Việt & tách từ)": "🤖 Gemini AI로 OCR 후처리 검수 (성조 및 띄어쓰기 오류 수정)",
+
+    "⚡ API Key tạm hết hạn mức miễn phí (HTTP 429)": "⚡ API 키 무료 할당량 초과 (HTTP 429)",
+    "Google giới hạn số lượt gọi API miễn phí/phút hoặc ngày. Bạn có thể chuyển ngay sang chế độ Gemini Web 0-Token (Miễn phí 100%) bằng nút nổi bật bên dưới!": "Google은 분당/일일 무료 API 호출을 제한합니다. 아래 강조된 버튼으로 0-Token Gemini 웹 모드(100% 무료)로 즉시 전환하세요!",
+    "📋 Copy Prompt thủ công & Mở Gemini ngay (0-Token)": "📋 수동 프롬프트 복사 및 지금 Gemini 열기 (0-Token)",
+    "🔄 Thử lại API": "🔄 API 재시도",
+    "🔑 Kiểm tra / Đổi API Key": "🔑 API 키 확인 / 변경",
+    "🔁 Chép lại Prompt": "🔁 프롬프트 다시 복사",
+    "🚀 Mở lại Gemini": "🚀 Gemini 다시 열기",
+    "✅ Áp dụng kết quả & Hoàn tất ngay": "✅ 결과 적용 및 지금 완료",
+    "✅ Đồng bộ 6 Biểu đồ & Xuất thẳng PDF ngay": "✅ 6개 차트 동기화 및 지금 PDF 내보내기",
+    "✅ Tổng hợp 8 Trụ cột & Xuất thẳng PDF ngay": "✅ 8대 핵심 영역 종합 및 지금 PDF 내보내기",
   });
 
   const promptExact = Object.freeze({

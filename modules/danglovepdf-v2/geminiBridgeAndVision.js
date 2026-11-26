@@ -22,12 +22,25 @@
   const API_VERIFIED_STORAGE_KEY = 'noir_gemini_key_verified_v1';
   const API_COOKIE_NAME = 'noir_gemini_api_key_ck';
   const IDB_BACKUP_KEY = '__noir_persist_api_key_v1';
-  const DEFAULT_VISION_MODELS = Object.freeze([
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-2.5-flash-lite',
-    'gemini-flash-latest',
-  ]);
+  const TASK_MODEL_PROFILES = Object.freeze({
+    // Tác vụ nhẹ (Verify, Metadata, Split keyword, Form, PII, Auto-TOC, sửa chính tả) -> Ưu tiên Flash-Lite hạn mức cao nhất & < 1s
+    fast_light: Object.freeze(['gemini-2.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash']),
+    // Tác vụ đa phương thức tệp (10 Theme PDF gốc, OCR 1 lượt, ICR chữ viết tay, Bóc bảng Excel, Dịch trang) -> Flash chính xác nhất, tự lùi sang Flash-Lite khi 429
+    doc_multimodal: Object.freeze(['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite']),
+    // Tác vụ phân tích chuyên sâu dài (Mod 49 Đầu tư, Mod 50 30 phút thông thái, So sánh Diff, Tóm tắt PDF) -> Flash + tự xoay vòng Flash-Lite / Pro khi 429
+    deep_analysis: Object.freeze(['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro', 'gemini-2.0-flash']),
+  });
+
+  const DEFAULT_VISION_MODELS = TASK_MODEL_PROFILES.doc_multimodal;
+
+  function getOptimalModelsForTask(taskType = 'doc_multimodal') {
+    return TASK_MODEL_PROFILES[taskType] || TASK_MODEL_PROFILES.doc_multimodal;
+  }
+
+  function isQuota429Error(errOrMsg) {
+    const s = String(errOrMsg?.message || errOrMsg || '');
+    return /\b429\b|quota|rate[\s-]*limit|RESOURCE_EXHAUSTED|exceeded your current quota/i.test(s);
+  }
 
   const PROMPT_CHINH_TIEU_DE_CHUAN = [
     'Bạn là chuyên gia biên tập và chuẩn hóa tài liệu học thuật / tài chính đa ngôn ngữ.',
@@ -499,7 +512,8 @@
       parts = [],
       systemInstruction = '',
       apiKey = getApiKey(),
-      models = DEFAULT_VISION_MODELS,
+      taskType = 'doc_multimodal',
+      models = null,
       temperature = 0.2,
       maxOutputTokens = 8192,
       useGoogleSearch = false,
@@ -507,6 +521,7 @@
       fetchImpl = global.fetch?.bind(global),
       onRetry = null,
     } = opts;
+    const resolvedModels = Array.isArray(models) && models.length ? models : getOptimalModelsForTask(taskType);
 
     const cleanKey = String(apiKey || '').trim();
     if (!cleanKey) {
@@ -530,7 +545,7 @@
     let lastErr = null;
     const backoffDelays = [1500, 3500, 7000];
 
-    for (const modelName of models) {
+    for (const modelName of resolvedModels) {
       for (let attempt = 0; attempt <= backoffDelays.length; attempt++) {
         if (signal?.aborted) throw new Error('Đã hủy yêu cầu Gemini API.');
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(cleanKey)}`;
@@ -845,7 +860,8 @@
       parts = null,
       systemInstruction = '',
       apiKey = getApiKey(),
-      models = DEFAULT_VISION_MODELS,
+      taskType = 'deep_analysis',
+      models = null,
       temperature = 0.2,
       maxOutputTokens = 8192,
       useGoogleSearch = true,
@@ -877,7 +893,7 @@
       return p;
     };
 
-    const modelList = Array.isArray(models) && models.length ? models : DEFAULT_VISION_MODELS;
+    const modelList = Array.isArray(models) && models.length ? models : getOptimalModelsForTask(taskType);
     // Nếu useGoogleSearch = true, thử trước CÓ Google Search; nếu toàn bộ bị từ chối/HTTP 400/429 thì tự động hạ cấp KHÔNG tools để đảm bảo vẫn chạy thành công 100%!
     const searchPasses = useGoogleSearch ? [true, false] : [false];
     let lastErr = null;
@@ -1011,23 +1027,59 @@
         logEl.scrollTop = logEl.scrollHeight;
       },
       showError(errTitle, errDetail, handlers = {}) {
+        const is429 = isQuota429Error(errDetail);
         if (spinEl) spinEl.style.display = 'none';
-        if (titleEl) { titleEl.style.color = '#fda4af'; titleEl.textContent = String(errTitle || '⚠️ AI gặp lỗi khi xử lý'); }
-        if (subEl) { subEl.style.color = '#fecdd3'; subEl.textContent = String(errDetail || 'Vui lòng kiểm tra lại API Key hoặc kết nối mạng.'); }
-        if (barEl) barEl.style.background = '#f43f5e';
+        if (titleEl) {
+          titleEl.style.color = is429 ? '#fcd34d' : '#fda4af';
+          titleEl.textContent = is429
+            ? '⚡ API Key tạm hết hạn mức miễn phí (HTTP 429)'
+            : String(errTitle || '⚠️ AI gặp lỗi khi xử lý');
+        }
+        if (subEl) {
+          subEl.style.color = is429 ? '#fef3c7' : '#fecdd3';
+          subEl.textContent = is429
+            ? 'Google giới hạn số lượt gọi API miễn phí/phút hoặc ngày. Bạn có thể chuyển ngay sang chế độ Gemini Web 0-Token (Miễn phí 100%) bằng nút nổi bật bên dưới!'
+            : String(errDetail || 'Vui lòng kiểm tra lại API Key hoặc kết nối mạng.');
+        }
+        if (barEl) barEl.style.background = is429 ? 'linear-gradient(90deg,#f59e0b,#10b981)' : '#f43f5e';
         if (actEl) {
           actEl.style.display = 'flex';
           actEl.innerHTML = '';
-          const mkBtn = (txt, bg, cb) => {
+          const mkBtn = (txt, bg, cb, fullWidth = false, pulse = false) => {
             const b = doc.createElement('button');
             b.type = 'button';
             b.textContent = txt;
-            b.style.cssText = `padding:9px 14px;border-radius:11px;border:none;background:${bg};color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;`;
+            if (pulse) b.className = 'noir-ai-blink-btn';
+            b.style.cssText = `${fullWidth ? 'width:100%;padding:12px 16px;font-size:13.5px;' : 'padding:9px 14px;font-size:12.5px;'}border-radius:12px;border:none;background:${bg};color:#fff;font-weight:700;cursor:pointer;`;
             b.addEventListener('click', cb);
             actEl.appendChild(b);
           };
+          if (handlers.manualFallback && handlers.manualFallback.promptText) {
+            const mf = handlers.manualFallback;
+            const fileTip = mf.attachFileName
+              ? ` (Kèm gửi tệp "${mf.attachFileName}")`
+              : '';
+            mkBtn(
+              `📋 Copy Prompt thủ công & Mở Gemini ngay (0-Token)${fileTip}`,
+              'linear-gradient(90deg,#10b981,#0284c7)',
+              async () => {
+                await copyTextToClipboard(mf.promptText);
+                try {
+                  if (NS.geminiSplitBridge?.launchExternalSplitWindow) {
+                    NS.geminiSplitBridge.launchExternalSplitWindow('GEMINI', false);
+                  } else {
+                    global.open('https://gemini.google.com/app', '_blank', 'noopener,noreferrer');
+                  }
+                } catch (_eOpen) {}
+                overlay.remove();
+                openManualPasteResultModal(mf);
+              },
+              true,
+              true
+            );
+          }
           if (typeof handlers.onRetry === 'function') {
-            mkBtn('🔄 Thử lại ngay', '#059669', () => { overlay.remove(); handlers.onRetry(); });
+            mkBtn('🔄 Thử lại API', '#059669', () => { overlay.remove(); handlers.onRetry(); });
           }
           mkBtn('🔑 Kiểm tra / Đổi API Key', '#0284c7', () => {
             overlay.remove();
@@ -1323,10 +1375,327 @@
     return codeLines;
   }
 
+  /**
+   * BỘ KHUNG PROMPT CHI TIẾT THEO TỪNG TÁC VỤ (để Gemini Web hiểu chuẩn 100% định dạng code của trang web)
+   */
+  function buildTaskManualPrompt(taskId, ctx = {}) {
+    const fileName = ctx.fileName || 'Tai_lieu';
+    const rawText = String(ctx.text || '').trim();
+    switch (taskId) {
+      case 'theme10_beautify':
+        return [
+          PROMPT_CHINH_TIEU_DE_CHUAN,
+          '',
+          `TỆP ĐÍNH KÈM: "${fileName}".`,
+          'HƯỚNG DẪN ĐẶC BIỆT CHO TRÌNH PHỐI MÀU 10 THEME (ĐĂNGLOVEPDF):',
+          '- Hãy đọc ĐẦY ĐỦ 100% nội dung từ tệp tôi đính kèm (từ trang đầu đến trang cuối, kể cả bảng biểu, công thức & tài liệu tham khảo).',
+          '- Trả kết quả bằng Markdown chuẩn (#, ##, ###, ####, bảng GFM có `<!-- CONTINUE_TABLE -->` nếu bảng vắt trang, LaTeX `$...$` / `$$...$$`, giữ nguyên tiền tệ `$28.40` không bọc LaTeX).',
+          '- Không thêm lời chào mở đầu hay lời kết; chỉ xuất đúng nội dung Markdown hoàn chỉnh để tôi dán trực tiếp về trang web xuất PDF đẹp!',
+          rawText ? `\n--- VĂN BẢN THAM CHIẾU ĐÃ TRÍCH ---\n${rawText.slice(0, 12000)}` : '',
+        ].filter(Boolean).join('\n');
+
+      case 'auto_toc':
+        return [
+          'Bạn là bộ tạo Mục Lục tự động (Auto TOC) của hệ thống ĐăngLovePDF.',
+          `Tệp: "${fileName}".`,
+          'YÊU CẦU ĐỊNH DẠNG BẮT BUỘC (để code trang web nhận diện tức thì):',
+          '- Mỗi dòng là đúng 1 đề mục theo cấu trúc: `Tên mục | Số trang` (ví dụ: `CHƯƠNG 1. MỞ ĐẦU | 3`).',
+          '- Giữ đúng phân cấp Chương, Phần, I., II., 1., 1.1., 1.1.1.',
+          '- TUYỆT ĐỐI LOẠI BỎ các dòng mục lục cũ có dấu chấm kéo dài (như `KHẢO........55`), tên Bảng/Hình và đoạn văn thường.',
+          '- Không giải thích thêm, chỉ xuất danh sách `Tên mục | Số trang`.',
+          rawText ? `\n--- CÁC ỨNG VIÊN TIÊU ĐỀ TRONG TỆP ---\n${rawText.slice(0, 12000)}` : '',
+        ].filter(Boolean).join('\n');
+
+      case 'icr_handwriting': {
+        const modeDesc = {
+          handwriting_general: 'Đọc chính xác 100% chữ viết tay tiếng Việt & Anh, giữ đúng đề mục, gạch đầu dòng, ngày tháng.',
+          table_survey_checkbox: 'Đọc toàn bộ phiếu khảo sát/bảng viết tay, đánh dấu ô đã tick là `[☑]` và ô chưa tick là `[☐]`. Kẻ mọi bảng bằng Markdown GFM `| Cột 1 | Cột 2 |`.',
+          medical_rx_form: 'Đọc kỹ đơn thuốc, tên thuốc, liều lượng, ghi chú bác sĩ hoặc hóa đơn viết tay. Chữ quá mờ đánh dấu `[cần đối chiếu]`.',
+          math_notes_latex: 'Chuyển toàn bộ công thức Toán/Tài chính viết tay sang LaTeX `$...$` và `$$...$$` kèm lời giải chữ viết tay.',
+        };
+        return [
+          'Bạn là chuyên gia ICR (Intelligent Character Recognition) đọc chữ viết tay của hệ thống ĐăngLovePDF.',
+          `Tệp viết tay tôi đính kèm: "${fileName}".`,
+          `CHẾ ĐỘ: ${modeDesc[ctx.icrMode] || modeDesc.handwriting_general}`,
+          'QUY TẮC: Không tóm tắt, không bỏ sót bất kỳ chữ nào. Chỉ trả về văn bản/bảng đã số hóa sạch để trang web đóng gói thẳng sang Word/Excel/PDF.',
+        ].join('\n');
+      }
+
+      case 'ocr_fast':
+        return [
+          'Bạn là động cơ OCR siêu chính xác của ĐăngLovePDF.',
+          `Hãy đọc toàn bộ tệp PDF/Ảnh scan tôi đính kèm ("${fileName}") và trích xuất CHÍNH XÁC 100% toàn bộ văn bản (tiếng Việt đầy đủ dấu, giữ nguyên phân đoạn, tiêu đề, bảng biểu GFM và số liệu).`,
+          'Không thêm lời bình mở đầu/kết thúc; chỉ trả nội dung đã nhận diện để tôi dán về trang web xuất file ngay.',
+        ].join('\n');
+
+      case 'pdf_to_docx':
+        return [
+          'Bạn là bộ chuyển đổi PDF → Word/Markdown chuẩn hóa của ĐăngLovePDF.',
+          `Hãy đọc tệp "${fileName}" tôi đính kèm (hoặc văn bản bên dưới), nối liền các dòng bị ngắt sai, sửa lỗi tách dấu/dính chữ tiếng Việt, giữ chuẩn đề mục # / ## / ### và bảng GFM.`,
+          'Tuyệt đối KHÔNG tóm tắt hay làm mất số liệu. Chỉ xuất nội dung hoàn chỉnh.',
+          rawText ? `\n--- VĂN BẢN THÔ TỪ PDF ---\n${rawText.slice(0, 12000)}` : '',
+        ].filter(Boolean).join('\n');
+
+      case 'pdf_to_excel':
+        return [
+          'Bạn là bộ bóc bảng PDF → Excel của ĐăngLovePDF.',
+          `Hãy đọc tất cả bảng dữ liệu trong tệp "${fileName}" tôi đính kèm (hoặc dữ liệu bên dưới).`,
+          'QUY TẮC QUAN TRỌNG: Gộp gọn các ô bị xuống dòng lẻ thành 1 ô duy nhất cùng hàng; giữ nguyên 100% số liệu.',
+          'ĐỊNH DẠNG TRẢ VỀ: Bảng Markdown GFM `| Cột 1 | Cột 2 | ... |` HOẶC mảng JSON 2D `[["Cột 1","Cột 2"],...]`. Không giải thích thêm.',
+          rawText ? `\n--- DỮ LIỆU THÔ QUÉT TỪ PDF ---\n${rawText.slice(0, 12000)}` : '',
+        ].filter(Boolean).join('\n');
+
+      case 'redact_pii':
+        return [
+          'Bạn là trợ lý Che Đen Bảo Mật (True Redaction PII) của ĐăngLovePDF.',
+          'Hãy liệt kê CHÍNH XÁC các chuỗi thông tin cá nhân nhạy cảm (SĐT, CCCD/CMND, Email, Số tài khoản, Địa chỉ nhà riêng, Tên/Lương bí mật) có trong văn bản dưới đây.',
+          'ĐỊNH DẠNG BẮT BUỘC: 1 dòng duy nhất, các chuỗi ngăn cách bởi dấu phẩy `, ` (VD: `0912345678, 079099001234, an@gmail.com`). Không giải thích thêm.',
+          `\n--- VĂN BẢN PDF ---\n${rawText.slice(0, 12000)}`,
+        ].join('\n');
+
+      case 'metadata_seo':
+        return [
+          'Bạn là trợ lý tạo Siêu dữ liệu PDF (Metadata) của ĐăngLovePDF.',
+          'Từ nội dung trang đầu tài liệu dưới đây, hãy trả về ĐÚNG 1 đối tượng JSON duy nhất:',
+          '{"title": "Tiêu đề chuẩn gọn", "author": "Tác giả hoặc Tổ chức", "keywords": "từ khóa 1, từ khóa 2, từ khóa 3"}',
+          `\n--- NỘI DUNG TRANG ĐẦU ---\n${rawText.slice(0, 10000)}`,
+        ].join('\n');
+
+      case 'split_keyword':
+        return [
+          'Bạn là trợ lý Tách PDF thông minh theo từ khóa của ĐăngLovePDF.',
+          'Hãy tìm 1 cụm từ khóa tiêu đề ngắn xuất hiện lặp lại ở đầu mỗi hồ sơ/hóa đơn/chương trong văn bản sau để hệ thống tự động tách tệp.',
+          'Chỉ trả về ĐÚNG cụm từ khóa đó trên 1 dòng duy nhất, không dấu ngoặc kép, không giải thích.',
+          `\n--- VĂN BẢN PDF ---\n${rawText.slice(0, 10000)}`,
+        ].join('\n');
+
+      case 'form_fill':
+        return [
+          'Bạn là trợ lý Điền Biểu Mẫu AcroForm của ĐăngLovePDF.',
+          'Hãy chuyển đoạn ghi chú thông tin cá nhân sau thành danh sách các dòng chuẩn `TenTruong=GiaTri` (TenTruong viết liền không dấu, mỗi dòng 1 mục, không giải thích):',
+          `\n--- GHI CHÚ ---\n${rawText.slice(0, 8000)}`,
+        ].join('\n');
+
+      case 'compare_diff':
+        return [
+          'Bạn là chuyên gia đối chiếu hợp đồng & tài liệu của ĐăngLovePDF.',
+          'Hãy tóm tắt ngắn gọn thành gạch đầu dòng các điểm thay đổi QUAN TRỌNG NHẤT (số liệu, giá tiền, điều khoản pháp lý, thời hạn, tên riêng) giữa Bản cũ (#1) và Bản mới (#2):',
+          `\n--- DANH SÁCH THAY ĐỔI ---\n${rawText.slice(0, 12000)}`,
+        ].join('\n');
+
+      case 'viewer_summary':
+        return [
+          `Bạn là trợ lý đọc hiểu PDF của ĐăngLovePDF. Hãy tóm tắt cô đọng, dễ hiểu tài liệu "${fileName}" theo đúng 3 mục:`,
+          '1. Tổng quan nhanh (2 câu)',
+          '2. 5 điểm / số liệu cốt lõi nhất',
+          '3. Kết luận & Hành động gợi ý',
+          rawText ? `\n--- NỘI DUNG TÀI LIỆU ---\n${rawText.slice(0, 14000)}` : '',
+        ].filter(Boolean).join('\n');
+
+      case 'editor_polish':
+        return [
+          'Bạn là trợ lý sửa chính tả trực tiếp trên PDF Editor của ĐăngLovePDF.',
+          'Sửa lỗi dính chữ/tách dấu/chính tả cho từng dòng có chỉ số `[i]`. CHỈ trả về JSON array `[{"i": 0, "t": "chuỗi đã sửa"}]` cho các dòng cần sửa:',
+          `\n${rawText.slice(0, 12000)}`,
+        ].join('\n');
+
+      case 'editor_translate':
+        return [
+          `Bạn là trợ lý dịch thuật PDF Editor của ĐăngLovePDF. Hãy dịch tự nhiên, gọn gàng từng dòng \`[i]\` sang ${ctx.targetLang || 'English'} sao cho vừa khung trang PDF.`,
+          'CHỈ trả về JSON array `[{"i": 0, "t": "bản dịch"}]`:',
+          `\n${rawText.slice(0, 12000)}`,
+        ].join('\n');
+
+      case 'editor_redact':
+        return [
+          'Bạn là trợ lý Che Đen PII trên PDF Editor của ĐăngLovePDF.',
+          'Tìm chỉ số các dòng `[i]` chứa thông tin nhạy cảm (SĐT, CCCD, Email, STK, Địa chỉ nhà, Lương bí mật). CHỈ trả về JSON array các chỉ số, VD `[2, 5]`:',
+          `\n${rawText.slice(0, 12000)}`,
+        ].join('\n');
+
+      case 'editor_summary':
+        return [
+          'Tóm tắt trang tài liệu sau thành TỐI ĐA 3 dòng ngắn (mỗi dòng <= 48 ký tự, bắt đầu bằng `• `) để dán Sticky Note lên góc trang PDF:',
+          `\n${rawText.slice(0, 8000)}`,
+        ].join('\n');
+
+      case 'editor_table':
+        return [
+          'Trích xuất toàn bộ bảng biểu từ các mảnh chữ có tọa độ `[x=...,y=...]` sau thành JSON array 2D `[["Cột 1","Cột 2"],...]`. Gộp các ô bị xuống dòng về cùng hàng:',
+          `\n${rawText.slice(0, 12000)}`,
+        ].join('\n');
+
+      case 'editor_ocr':
+        return [
+          `Tôi đính kèm ảnh/trang scan của tệp "${fileName}". Hãy đọc toàn bộ dòng chữ từ trên xuống dưới và trả về JSON array duy nhất:`,
+          '[{"yPct": 5, "xPct": 10, "wPct": 70, "text": "nội dung dòng"}] (tọa độ ước lượng theo % từ 0 đến 100).',
+        ].join('\n');
+
+      default:
+        return rawText || PROMPT_CHINH_TIEU_DE_CHUAN;
+    }
+  }
+
+  /**
+   * MÀN HÌNH DÁN KẾT QUẢ THỦ CÔNG CHUYÊN BIỆT (Tự động chuyển tới ngay khi người dùng bấm "Copy Prompt thủ công & Mở Gemini")
+   * Hỗ trợ đầy đủ: Mod 49, Mod 50 & mọi công cụ ĐăngLovePDF!
+   */
+  function openManualPasteResultModal(opts = {}) {
+    const doc = global.document;
+    if (!doc) return null;
+    doc.getElementById('noir-manual-paste-result-modal')?.remove();
+
+    const {
+      taskTitle = 'Dán kết quả từ Gemini Web (0-Token)',
+      promptText = '',
+      attachFileName = '',
+      attachFileBlob = null,
+      pastePlaceholder = 'PC: nhấn Ctrl + V | Mobile: CHẠM GIỮ 1–2 giây vào khung này rồi bấm "Dán"...',
+      applyBtnLabel = '✅ Áp dụng kết quả & Hoàn tất ngay',
+      onApplyPasted = null,
+    } = opts;
+
+    const modal = doc.createElement('div');
+    modal.id = 'noir-manual-paste-result-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:2147483642;background:rgba(5,9,18,0.9);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:14px;font-family:"Be Vietnam Pro",system-ui,-apple-system,sans-serif;';
+    modal.innerHTML = `
+      <div style="max-width:680px;width:100%;max-height:92dvh;display:flex;flex-direction:column;background:linear-gradient(155deg,#0f172a,#111827);border:1.5px solid rgba(52,211,153,0.55);border-radius:22px;color:#f8fafc;box-shadow:0 26px 70px rgba(0,0,0,0.75);overflow:hidden;">
+        <div style="padding:14px 18px;background:#090d16;border-bottom:1px solid rgba(148,163,184,0.2);display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="font-size:15px;font-weight:700;color:#6ee7b7;">📋 ${String(taskTitle).replace(/</g, '&lt;')}</div>
+          <button type="button" id="noir-mp-close" style="padding:5px 10px;border-radius:9px;border:1px solid rgba(148,163,184,0.3);background:#1e293b;color:#f8fafc;font-size:12px;font-weight:700;cursor:pointer;">✕ Đóng</button>
+        </div>
+
+        <div style="padding:16px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:11px;font-size:12.5px;">
+          <div style="padding:10px 12px;border-radius:12px;background:rgba(16,185,129,0.14);border:1px solid rgba(52,211,153,0.45);color:#a7f3d0;line-height:1.5;">
+            <b>✅ Đã tự động sao chép câu lệnh đầy đủ &amp; mở Gemini!</b><br/>
+            Sang tab Gemini → <b>Dán (Ctrl+V / chạm giữ → Dán)</b> → Gửi → Cuối câu trả lời bấm nút <b>📋 Sao chép phản hồi</b> rồi quay lại đây dán vào ô dưới!
+          </div>
+
+          ${attachFileName ? `
+            <div style="padding:10px 12px;border-radius:12px;background:rgba(245,158,11,0.15);border:1px solid rgba(251,191,36,0.5);color:#fde68a;line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;">
+              <span>📎 <b>Nhớ gửi kèm tệp trên Gemini:</b> Bấm dấu <b>(+)</b> trên Gemini để tải tệp <b>"${String(attachFileName).replace(/</g, '&lt;')}"</b> lên cùng câu lệnh vừa copy!</span>
+              ${attachFileBlob ? '<button type="button" id="noir-mp-dl-file" style="padding:6px 10px;border-radius:8px;border:none;background:#d97706;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer;">⬇️ Tải bản sao tệp</button>' : ''}
+            </div>
+          ` : ''}
+
+          <div id="noir-mp-return-banner" style="display:none;padding:9px 12px;border-radius:12px;background:rgba(56,189,248,0.16);border:1px solid rgba(56,189,248,0.55);color:#bae6fd;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+            <span>✨ Bạn vừa quay lại từ Gemini! Bấm nút bên cạnh để dán nhanh kết quả:</span>
+            <button type="button" id="noir-mp-quick-paste-btn" style="padding:6px 12px;border-radius:8px;border:none;background:#0284c7;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📋 Dán nhanh ngay</button>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <button type="button" id="noir-mp-paste-clip" style="padding:8px 12px;border-radius:10px;border:none;background:#0284c7;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📋 Dán từ Clipboard</button>
+            <button type="button" id="noir-mp-recopy" style="padding:8px 12px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e2e8f0;font-size:12px;font-weight:700;cursor:pointer;">🔁 Chép lại Prompt</button>
+            <button type="button" id="noir-mp-reopen-gemini" style="padding:8px 12px;border-radius:10px;border:1px solid rgba(167,139,250,0.45);background:#4c1d95;color:#ede9fe;font-size:12px;font-weight:700;cursor:pointer;">🚀 Mở lại Gemini</button>
+          </div>
+
+          <textarea id="noir-manual-paste-input" rows="8" placeholder="${String(pastePlaceholder).replace(/"/g, '&quot;')}" style="width:100%;padding:12px;border-radius:14px;border:1.5px solid rgba(56,189,248,0.45);background:#090d16;color:#f8fafc;font-size:12.5px;font-family:ui-monospace,Consolas,monospace;line-height:1.5;box-sizing:border-box;resize:vertical;"></textarea>
+          <div id="noir-mp-err" style="display:none;color:#fda4af;font-size:12px;font-weight:700;"></div>
+        </div>
+
+        <div style="padding:12px 18px;background:#090d16;border-top:1px solid rgba(148,163,184,0.2);display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;">
+          <button type="button" id="noir-mp-cancel" style="padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,0.3);background:#1e293b;color:#cbd5e1;font-size:12.5px;font-weight:700;cursor:pointer;">Hủy</button>
+          <button type="button" id="noir-manual-paste-apply" class="noir-ai-blink-btn" style="padding:10px 18px;border-radius:12px;border:none;background:linear-gradient(90deg,#10b981,#059669);color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;">${String(applyBtnLabel).replace(/</g, '&lt;')}</button>
+        </div>
+      </div>
+    `;
+    doc.body.appendChild(modal);
+
+    const ta = modal.querySelector('#noir-manual-paste-input');
+    const errEl = modal.querySelector('#noir-mp-err');
+    const applyBtn = modal.querySelector('#noir-manual-paste-apply');
+    const retBanner = modal.querySelector('#noir-mp-return-banner');
+    let unwatch = null;
+
+    const closeModal = () => {
+      try { unwatch?.(); } catch (_eU) {}
+      modal.remove();
+    };
+    unwatch = watchClipboardReturn(() => {
+      if (retBanner && modal.isConnected) retBanner.style.display = 'flex';
+    });
+
+    const pasteFromClip = async () => {
+      try {
+        const clip = await global.navigator?.clipboard?.readText?.();
+        if (clip && ta) {
+          ta.value = clip;
+          if (errEl) errEl.style.display = 'none';
+          NS.utils?.showToast?.('✅ Đã dán kết quả từ Clipboard!', 'success', 2400);
+        } else {
+          ta?.focus();
+          NS.utils?.showToast?.('ℹ️ Hãy bấm Ctrl+V (hoặc chạm giữ → Dán trên điện thoại) vào ô văn bản.', 'info', 3000);
+        }
+      } catch (_eCl) {
+        ta?.focus();
+        NS.utils?.showToast?.('ℹ️ Hãy bấm Ctrl+V (hoặc chạm giữ → Dán trên điện thoại) vào ô văn bản.', 'info', 3000);
+      }
+    };
+
+    modal.querySelector('#noir-mp-close')?.addEventListener('click', closeModal);
+    modal.querySelector('#noir-mp-cancel')?.addEventListener('click', closeModal);
+    modal.querySelector('#noir-mp-paste-clip')?.addEventListener('click', pasteFromClip);
+    modal.querySelector('#noir-mp-quick-paste-btn')?.addEventListener('click', pasteFromClip);
+    modal.querySelector('#noir-mp-recopy')?.addEventListener('click', async () => {
+      await copyTextToClipboard(promptText);
+      NS.utils?.showToast?.('✅ Đã sao chép lại toàn bộ Prompt!', 'success', 2400);
+    });
+    modal.querySelector('#noir-mp-reopen-gemini')?.addEventListener('click', () => {
+      if (NS.geminiSplitBridge?.launchExternalSplitWindow) {
+        NS.geminiSplitBridge.launchExternalSplitWindow('GEMINI', false);
+      } else {
+        global.open('https://gemini.google.com/app', '_blank', 'noopener,noreferrer');
+      }
+    });
+    modal.querySelector('#noir-mp-dl-file')?.addEventListener('click', () => {
+      if (!attachFileBlob) return;
+      try {
+        const u = URL.createObjectURL(attachFileBlob);
+        const a = doc.createElement('a');
+        a.href = u;
+        a.download = attachFileName || 'document';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(u), 8000);
+      } catch (_eDl) {}
+    });
+
+    applyBtn?.addEventListener('click', async () => {
+      const val = String(ta?.value || '').trim();
+      if (!val || val.length < 3) {
+        if (errEl) {
+          errEl.textContent = '⚠️ Vui lòng dán kết quả câu trả lời từ Gemini vào khung trên trước khi áp dụng!';
+          errEl.style.display = 'block';
+        }
+        ta?.focus();
+        return;
+      }
+      if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = '⏳ Đang xử lý kết quả...'; }
+      try {
+        if (typeof onApplyPasted === 'function') {
+          await onApplyPasted(val);
+        }
+        closeModal();
+      } catch (applyErr) {
+        if (errEl) {
+          errEl.textContent = `❌ Lỗi áp dụng kết quả: ${applyErr?.message || applyErr}`;
+          errEl.style.display = 'block';
+        }
+        if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = applyBtnLabel; }
+      }
+    });
+
+    return { close: closeModal };
+  }
+
   const exported = Object.freeze({
     API_STORAGE_KEY,
     PROMPT_CHINH_TIEU_DE_CHUAN,
+    TASK_MODEL_PROFILES,
     DEFAULT_VISION_MODELS,
+    getOptimalModelsForTask,
+    isQuota429Error,
+    buildTaskManualPrompt,
+    openManualPasteResultModal,
     getApiKey,
     setApiKey,
     clearApiKey,

@@ -2256,57 +2256,10 @@
           '🚀 Đang chạy quy trình Đầu Tư AI → PDF...',
           'Bước 1/4: Kiểm tra dữ liệu thị trường, bài báo & link nguồn thật'
         );
-        try {
-          // Bước 1: Đảm bảo Code đã quét đủ chỉ tiêu & bài báo có link nguồn trước khi gửi Gemini
-          if (!INV.stateManager.evaluationReport?.items?.length) {
-            loader?.update?.('🔍 Bước 1/4: Đang quét 34 chỉ tiêu vĩ mô & báo chí chính thống...', 16);
-            loader?.addLog?.('⏳ Đang chạy bộ quét dữ liệu vĩ mô & báo chí...', 'info');
-            await INV.researchEvaluator.runEvaluation({ depth: 'full', force: false }).catch(() => null);
-          }
-          const rep0 = INV.stateManager.evaluationReport || {};
-          const itemCnt = rep0.items?.length || 0;
-          const newsCnt = rep0.live_headlines?.length || 0;
-          loader?.addLog?.(`✅ Bước 1: Code đã thu thập ${itemCnt} chỉ tiêu + ${newsCnt} bài báo có link nguồn gốc.`, 'ok');
-
-          if (uiState.w2Focus === 'stock' && tickerVal && INV.stockEngine?.lookupStockSnapshot) {
-            loader?.update?.(`📊 Đang quét báo cáo tài chính mã ${tickerVal}...`, 26);
-            uiState.stockInput = tickerVal;
-            const st = await INV.stockEngine.lookupStockSnapshot(tickerVal).catch(() => null);
-            if (st) {
-              INV.stateManager.stockData = st;
-              loader?.addLog?.(`✅ Đã lấy dữ liệu cổ phiếu ${st.symbol} (${st.companyName || ''}).`, 'ok');
-            }
-          }
-
-          // Bước 2: Đóng gói Prompt đầy đủ dữ liệu + Gửi sang Gemini API (tự fallback nếu Google Search hạn chế)
-          const promptText = INV.promptComposer.buildGeminiPrompt({
-            mode: uiState.w2Mode || 'veteran30',
-            focus: uiState.w2Focus || 'general',
-            userGoal: gVal,
-            fieldNotes: nVal,
-          });
-          loader?.update?.('🧠 Bước 2/4: Đang gửi Prompt + Dữ liệu sang Gemini AI...', 44);
-          loader?.setSub?.(`Đã đóng gói ${promptText.length.toLocaleString('vi-VN')} ký tự dữ liệu & lệnh phân tích`);
-          loader?.addLog?.(`📤 Bước 2: Đã gửi Prompt đầy đủ (${promptText.length.toLocaleString('vi-VN')} ký tự) tới Gemini API...`, 'info');
-
-          const aiRes = await gBridge.callGeminiWithGrounding({
-            prompt: promptText,
-            apiKey,
-            temperature: 0.2,
-            maxOutputTokens: 8192,
-            useGoogleSearch: true,
-          });
-          const reply = String(aiRes?.text || '').trim();
-          if (!reply) throw new Error('Gemini trả về phản hồi rỗng.');
-          loader?.addLog?.(
-            `✅ Bước 3: Gemini (${aiRes.model}${aiRes.usedGrounding ? ' + Google Search' : ''}) đã hoàn tất (${reply.length.toLocaleString('vi-VN')} ký tự, ${aiRes.groundingUrls?.length || 0} nguồn bổ sung).`,
-            'ok'
-          );
-
-          // Bước 3: Đồng bộ đầy đủ cả unifiedAnalytics & evaluationReport (6 biểu đồ + kết luận + citations)
-          loader?.update?.('📊 Bước 3/4: Đang đồng bộ phân tích AI vào 6 biểu đồ & bảng quyết định...', 76);
+        let builtPromptText = '';
+        const applyInvestReplyAndExport = async (replyText, groundingUrls = []) => {
           const parsed = INV.deterministicExtractor?.parseGeminiStructuredReply
-            ? INV.deterministicExtractor.parseGeminiStructuredReply(reply)
+            ? INV.deterministicExtractor.parseGeminiStructuredReply(replyText)
             : { ok: false };
           const prevRep = INV.stateManager.evaluationReport || { items: [], triggered_breakers: [], live_headlines: [] };
           if (parsed.ok && parsed.data) {
@@ -2342,10 +2295,10 @@
             };
           }
           if (INV.stateManager.evaluationReport) {
-            INV.stateManager.evaluationReport.gemini_raw_note = reply.slice(0, 8000);
-            if (Array.isArray(aiRes?.groundingUrls) && aiRes.groundingUrls.length) {
+            INV.stateManager.evaluationReport.gemini_raw_note = String(replyText || '').slice(0, 8000);
+            if (Array.isArray(groundingUrls) && groundingUrls.length) {
               const existing = INV.stateManager.evaluationReport.live_headlines || [];
-              const extraLinks = aiRes.groundingUrls.map((g) => ({
+              const extraLinks = groundingUrls.map((g) => ({
                 title: g.title || g.url,
                 source: 'Google Search Grounding',
                 url: g.url,
@@ -2354,31 +2307,100 @@
               INV.stateManager.evaluationReport.live_headlines = [...existing, ...extraLinks];
             }
           }
-
-          // Bước 4: Đâm thẳng sang Xuất & Mở Xem Trước PDF theo đúng trọng tâm người dùng chọn!
           const focusToPdfMode = uiState.w2Focus === 'gold'
             ? 'gold'
             : uiState.w2Focus === 'real_estate'
               ? 'real_estate'
               : (uiState.w2Focus === 'stock' && INV.stateManager.stockData?.symbol ? 'stock' : 'overview');
-          loader?.update?.('📄 Bước 4/4: Đang dựng & mở thẳng Báo cáo PDF hoàn chỉnh...', 92);
-          loader?.addLog?.(`📄 Bước 4: Đang dựng file PDF (${focusToPdfMode}) kèm đầy đủ biểu đồ & trích dẫn...`, 'info');
-
           INV.storageAdapter.setSession('wizard_stage', 'dashboard');
           uiState.wizardStage = 'dashboard';
           INV.stateManager.activeTab = 'overview';
           uiState.highlightExportPdfCta = true;
           render();
-
           const pdfRes = await INV.pdfExporter.exportInvestPdf(focusToPdfMode, loadInvReaderPrefs());
-          loader?.close?.();
           NS.utils?.showToast?.(`✅ Đã hoàn tất AI & xuất thẳng Báo cáo PDF (${pdfRes.pages} trang — đủ 100% trích dẫn & biểu đồ)!`, 'success', 5000);
+          return pdfRes;
+        };
+
+        try {
+          if (!INV.stateManager.evaluationReport?.items?.length) {
+            loader?.update?.('🔍 Bước 1/4: Đang quét 34 chỉ tiêu vĩ mô & báo chí chính thống...', 16);
+            loader?.addLog?.('⏳ Đang chạy bộ quét dữ liệu vĩ mô & báo chí...', 'info');
+            await INV.researchEvaluator.runEvaluation({ depth: 'full', force: false }).catch(() => null);
+          }
+          const rep0 = INV.stateManager.evaluationReport || {};
+          const itemCnt = rep0.items?.length || 0;
+          const newsCnt = rep0.live_headlines?.length || 0;
+          loader?.addLog?.(`✅ Bước 1: Code đã thu thập ${itemCnt} chỉ tiêu + ${newsCnt} bài báo có link nguồn gốc.`, 'ok');
+
+          if (uiState.w2Focus === 'stock' && tickerVal && INV.stockEngine?.lookupStockSnapshot) {
+            loader?.update?.(`📊 Đang quét báo cáo tài chính mã ${tickerVal}...`, 26);
+            uiState.stockInput = tickerVal;
+            const st = await INV.stockEngine.lookupStockSnapshot(tickerVal).catch(() => null);
+            if (st) {
+              INV.stateManager.stockData = st;
+              loader?.addLog?.(`✅ Đã lấy dữ liệu cổ phiếu ${st.symbol} (${st.companyName || ''}).`, 'ok');
+            }
+          }
+
+          builtPromptText = INV.promptComposer.buildGeminiPrompt({
+            mode: uiState.w2Mode || 'veteran30',
+            focus: uiState.w2Focus || 'general',
+            userGoal: gVal,
+            fieldNotes: nVal,
+          });
+          loader?.update?.('🧠 Bước 2/4: Đang gửi Prompt + Dữ liệu sang Gemini AI...', 44);
+          loader?.setSub?.(`Đã đóng gói ${builtPromptText.length.toLocaleString('vi-VN')} ký tự dữ liệu & lệnh phân tích`);
+          loader?.addLog?.(`📤 Bước 2: Đã gửi Prompt đầy đủ (${builtPromptText.length.toLocaleString('vi-VN')} ký tự) tới Gemini API...`, 'info');
+
+          const aiRes = await gBridge.callGeminiWithGrounding({
+            prompt: builtPromptText,
+            apiKey,
+            taskType: 'deep_analysis',
+            temperature: 0.2,
+            maxOutputTokens: 8192,
+            useGoogleSearch: true,
+          });
+          const reply = String(aiRes?.text || '').trim();
+          if (!reply) throw new Error('Gemini trả về phản hồi rỗng.');
+          loader?.addLog?.(
+            `✅ Bước 3: Gemini (${aiRes.model}${aiRes.usedGrounding ? ' + Google Search' : ''}) đã hoàn tất (${reply.length.toLocaleString('vi-VN')} ký tự, ${aiRes.groundingUrls?.length || 0} nguồn bổ sung).`,
+            'ok'
+          );
+
+          loader?.update?.('📄 Bước 4/4: Đang đồng bộ 6 biểu đồ & xuất thẳng Báo cáo PDF...', 88);
+          loader?.addLog?.('📄 Bước 4: Đang dựng file PDF kèm đầy đủ biểu đồ & trích dẫn...', 'info');
+          await applyInvestReplyAndExport(reply, aiRes?.groundingUrls || []);
+          loader?.close?.();
         } catch (err) {
           loader?.addLog?.(`❌ Lỗi: ${err?.message || err}`, 'err');
+          if (!builtPromptText) {
+            try {
+              builtPromptText = INV.promptComposer.buildGeminiPrompt({
+                mode: uiState.w2Mode || 'veteran30',
+                focus: uiState.w2Focus || 'general',
+                userGoal: gVal,
+                fieldNotes: nVal,
+              });
+            } catch (_ePr) {}
+          }
           loader?.showError?.(
             '⚠️ Không thể hoàn tất luồng Đầu Tư AI tự động',
             String(err?.message || err),
-            { onRetry: () => runFullAutoInvest(), onChangeKey: () => render() }
+            {
+              onRetry: () => runFullAutoInvest(),
+              onChangeKey: () => render(),
+              manualFallback: builtPromptText
+                ? {
+                    taskTitle: 'Đầu Tư Hôm Nay — Dán kết quả Gemini Web → Xuất PDF ngay',
+                    promptText: builtPromptText,
+                    applyBtnLabel: '✅ Đồng bộ 6 Biểu đồ & Xuất thẳng PDF ngay',
+                    onApplyPasted: async (pasted) => {
+                      await applyInvestReplyAndExport(pasted, []);
+                    },
+                  }
+                : null,
+            }
           );
         }
       };

@@ -5393,6 +5393,17 @@
     "🤖 Tóm tắt AI": "🤖 AI Summary",
     "⚡ Chế độ Siêu tốc Gemini Flash Native (Đọc thẳng PDF/Ảnh 1 lượt — nhanh gấp 10× & chính xác 99%)": "⚡ Ultra-Fast Gemini Flash Native Mode (1-shot PDF/Image read — 10× faster & 99% accurate)",
     "🤖 Hậu kiểm OCR bằng Gemini AI (sửa lỗi dấu tiếng Việt & tách từ)": "🤖 Post-verify OCR with Gemini AI (fix diacritics & word splits)",
+
+    "⚡ API Key tạm hết hạn mức miễn phí (HTTP 429)": "⚡ API Key Free Quota Reached (HTTP 429)",
+    "Google giới hạn số lượt gọi API miễn phí/phút hoặc ngày. Bạn có thể chuyển ngay sang chế độ Gemini Web 0-Token (Miễn phí 100%) bằng nút nổi bật bên dưới!": "Google limits free API requests per minute/day. Switch instantly to 0-Token Gemini Web mode (100% free) using the highlighted button below!",
+    "📋 Copy Prompt thủ công & Mở Gemini ngay (0-Token)": "📋 Copy Manual Prompt & Open Gemini Now (0-Token)",
+    "🔄 Thử lại API": "🔄 Retry API",
+    "🔑 Kiểm tra / Đổi API Key": "🔑 Verify / Change API Key",
+    "🔁 Chép lại Prompt": "🔁 Copy Prompt Again",
+    "🚀 Mở lại Gemini": "🚀 Reopen Gemini",
+    "✅ Áp dụng kết quả & Hoàn tất ngay": "✅ Apply Result & Finish Now",
+    "✅ Đồng bộ 6 Biểu đồ & Xuất thẳng PDF ngay": "✅ Sync 6 Charts & Export PDF Now",
+    "✅ Tổng hợp 8 Trụ cột & Xuất thẳng PDF ngay": "✅ Synthesize 8 Pillars & Export PDF Now",
   });
 
   const promptExact = Object.freeze({

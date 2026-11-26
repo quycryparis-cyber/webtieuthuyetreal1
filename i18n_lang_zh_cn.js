@@ -5372,6 +5372,17 @@
     "🤖 Tóm tắt AI": "🤖 AI 总结",
     "⚡ Chế độ Siêu tốc Gemini Flash Native (Đọc thẳng PDF/Ảnh 1 lượt — nhanh gấp 10× & chính xác 99%)": "⚡ Gemini Flash 原生极速模式（PDF/图片单次直读 — 提速 10 倍，准确率 99%）",
     "🤖 Hậu kiểm OCR bằng Gemini AI (sửa lỗi dấu tiếng Việt & tách từ)": "🤖 使用 Gemini AI 校对 OCR 结果（修复声调与分词错误）",
+
+    "⚡ API Key tạm hết hạn mức miễn phí (HTTP 429)": "⚡ API 密钥免费配额暂时用尽 (HTTP 429)",
+    "Google giới hạn số lượt gọi API miễn phí/phút hoặc ngày. Bạn có thể chuyển ngay sang chế độ Gemini Web 0-Token (Miễn phí 100%) bằng nút nổi bật bên dưới!": "Google 限制了每分钟/每天的免费 API 调用次数。点击下方高亮按钮即可立即切换到 0-Token Gemini 网页版模式（100% 免费）！",
+    "📋 Copy Prompt thủ công & Mở Gemini ngay (0-Token)": "📋 手动复制提示词并立即打开 Gemini (0-Token)",
+    "🔄 Thử lại API": "🔄 重试 API",
+    "🔑 Kiểm tra / Đổi API Key": "🔑 验证 / 更换 API 密钥",
+    "🔁 Chép lại Prompt": "🔁 重新复制提示词",
+    "🚀 Mở lại Gemini": "🚀 重新打开 Gemini",
+    "✅ Áp dụng kết quả & Hoàn tất ngay": "✅ 应用结果并立即完成",
+    "✅ Đồng bộ 6 Biểu đồ & Xuất thẳng PDF ngay": "✅ 同步 6 张图表并立即导出 PDF",
+    "✅ Tổng hợp 8 Trụ cột & Xuất thẳng PDF ngay": "✅ 汇总 8 大支柱并立即导出 PDF",
   });
 
   const promptExact = Object.freeze({

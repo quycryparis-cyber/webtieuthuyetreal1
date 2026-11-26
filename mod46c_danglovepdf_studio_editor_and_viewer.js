@@ -545,19 +545,7 @@
       }
       if (!pdfDoc) return;
       const loader = gBridge.showAiFullLoadingOverlay?.('🤖 AI đang đọc & tóm tắt tài liệu PDF...', 'Tổng hợp ý chính, số liệu quan trọng và các điểm cần lưu ý');
-      try {
-        const limit = Math.min(pdfDoc.numPages, 12);
-        const chunks = [];
-        for (let i = 1; i <= limit; i++) {
-          const pg = await pdfDoc.getPage(i);
-          const tc = await pg.getTextContent();
-          chunks.push(`[Trang ${i}] ` + tc.items.map((it) => it.str).join(' '));
-        }
-        const summary = await gBridge.callGeminiText(
-          `Hãy tóm tắt cô đọng, dễ hiểu tài liệu "${resItem?.name || 'PDF'}" thành: (1) Tổng quan 2 câu, (2) 5 điểm/số liệu quan trọng nhất, (3) Kết luận & hành động gợi ý:\n\n${chunks.join('\n').slice(0, 14000)}`,
-          { temperature: 0.2, maxOutputTokens: 2048 }
-        );
-        loader?.close?.();
+      const showViewerSummaryDrawer = (summaryText) => {
         pv.querySelector('#mod46-pv-ai-drawer')?.remove();
         const drawer = document.createElement('div');
         drawer.id = 'mod46-pv-ai-drawer';
@@ -569,11 +557,32 @@
           </div>
           <div class="p-3.5 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap text-zinc-200"></div>
         `;
-        drawer.querySelector('.overflow-y-auto').textContent = summary;
+        drawer.querySelector('.overflow-y-auto').textContent = summaryText;
         drawer.querySelector('#btn-pv-ai-drawer-close')?.addEventListener('click', () => drawer.remove());
         pv.appendChild(drawer);
+      };
+      let promptTxt = '';
+      try {
+        const limit = Math.min(pdfDoc.numPages, 12);
+        const chunks = [];
+        for (let i = 1; i <= limit; i++) {
+          const pg = await pdfDoc.getPage(i);
+          const tc = await pg.getTextContent();
+          chunks.push(`[Trang ${i}] ` + tc.items.map((it) => it.str).join(' '));
+        }
+        promptTxt = gBridge.buildTaskManualPrompt('viewer_summary', { fileName: resItem?.name || 'PDF', text: chunks.join('\n') });
+        const summary = await gBridge.callGeminiText(promptTxt, { taskType: 'deep_analysis', temperature: 0.2, maxOutputTokens: 2048 });
+        loader?.close?.();
+        showViewerSummaryDrawer(summary);
       } catch (err) {
-        loader?.showError?.('⚠️ Lỗi tóm tắt PDF bằng AI', String(err?.message || err));
+        loader?.showError?.('⚠️ Lỗi tóm tắt PDF bằng AI', String(err?.message || err), {
+          manualFallback: promptTxt ? {
+            taskTitle: 'Tóm tắt PDF — Dán kết quả từ Gemini Web',
+            promptText: promptTxt,
+            applyBtnLabel: '✅ Hiển thị bản Tóm tắt ngay',
+            onApplyPasted: (pasted) => showViewerSummaryDrawer(pasted),
+          } : null,
+        });
       }
     });
 
@@ -2105,13 +2114,10 @@
         const blocks = this.extractedBlocksByPage[this.currentPage] || [];
         if (!blocks.length) { notifyEditor('⚠️ Trang này chưa có lớp chữ gốc — hãy thử OCR AI trang Scan.'); return; }
         const loader = gBridge.showAiFullLoadingOverlay?.('✨ AI đang sửa chính tả trang PDF...', 'Đang chuẩn hóa từng dòng chữ gốc trên trang');
-        try {
-          const payload = blocks.slice(0, 80).map((b, i) => `[${i}] ${b.text}`).join('\n');
-          const raw = await gBridge.callGeminiText(
-            `Sửa lỗi dính chữ/tách dấu/chính tả tiếng Việt & Anh cho từng dòng sau. Chỉ trả JSON array [{"i":0,"t":"chuỗi đã sửa"}] cho những dòng cần sửa:\n${payload}`,
-            { temperature: 0.1, maxOutputTokens: 4096 }
-          );
-          const m = raw.match(/\[[\s\S]*\]/);
+        const payload = blocks.slice(0, 80).map((b, i) => `[${i}] ${b.text}`).join('\n');
+        const promptTxt = gBridge.buildTaskManualPrompt('editor_polish', { text: payload });
+        const applyPolish = (raw) => {
+          const m = String(raw || '').match(/\[[\s\S]*\]/);
           const edits = m ? JSON.parse(m[0]) : [];
           if (Array.isArray(edits) && edits.length) {
             this._pushUndo();
@@ -2137,10 +2143,15 @@
           } else {
             notifyEditor(`✅ Trang ${this.currentPage} đã sạch chuẩn, không cần sửa thêm.`);
           }
-        } catch (err) {
-          notifyEditor(`⚠️ Lỗi AI sửa chữ: ${err?.message || 'Thử lại'}`);
-        } finally {
+        };
+        try {
+          const raw = await gBridge.callGeminiText(promptTxt, { taskType: 'fast_light', temperature: 0.1, maxOutputTokens: 4096 });
+          applyPolish(raw);
           loader?.close?.();
+        } catch (err) {
+          loader?.showError?.('⚠️ Lỗi AI sửa chữ', String(err?.message || err), {
+            manualFallback: { taskTitle: 'PDF Editor — Dán JSON sửa chính tả từ Gemini', promptText: promptTxt, applyBtnLabel: '✅ Áp dụng sửa chữ lên trang PDF', onApplyPasted: applyPolish },
+          });
         }
       });
 
@@ -2151,17 +2162,14 @@
         const blocks = this.extractedBlocksByPage[this.currentPage] || [];
         if (!blocks.length) { notifyEditor('⚠️ Trang này chưa có văn bản để dịch.'); return; }
         const loader = gBridge.showAiFullLoadingOverlay?.('🌐 AI đang dịch trang PDF...', 'Tự động phát hiện ngôn ngữ & giữ bố cục gốc');
-        try {
-          const slice = blocks.slice(0, 75);
-          const sampleTxt = slice.map((b) => b.text).join(' ');
-          const hasVi = /[ăâđêôơưáàảãạắằẳẵặấầẩẫậéèẻẽẹếềểễệóòỏõọốồổỗộớờởỡợúùủũụứừửữựíìỉĩịýỳỷỹỵ]/i.test(sampleTxt);
-          const targetLang = hasVi ? 'English' : 'Tiếng Việt';
-          const payload = slice.map((b, i) => `[${i}] ${b.text}`).join('\n');
-          const raw = await gBridge.callGeminiText(
-            `Dịch ngắn gọn tự nhiên từng dòng sang ${targetLang} sao cho vừa khung giấy. Trả JSON array [{"i":0,"t":"..."}]:\n${payload}`,
-            { temperature: 0.2, maxOutputTokens: 8192 }
-          );
-          const m = raw.match(/\[[\s\S]*\]/);
+        const slice = blocks.slice(0, 75);
+        const sampleTxt = slice.map((b) => b.text).join(' ');
+        const hasVi = /[ăâđêôơưáàảãạắằẳẵặấầẩẫậéèẻẽẹếềểễệóòỏõọốồổỗộớờởỡợúùủũụứừửữựíìỉĩịýỳỷỹỵ]/i.test(sampleTxt);
+        const targetLang = hasVi ? 'English' : 'Tiếng Việt';
+        const payload = slice.map((b, i) => `[${i}] ${b.text}`).join('\n');
+        const promptTxt = gBridge.buildTaskManualPrompt('editor_translate', { text: payload, targetLang });
+        const applyTrans = (raw) => {
+          const m = String(raw || '').match(/\[[\s\S]*\]/);
           const edits = m ? JSON.parse(m[0]) : [];
           if (Array.isArray(edits) && edits.length) {
             this._pushUndo();
@@ -2183,10 +2191,15 @@
             redrawOverlay();
             notifyEditor(`🌐 Đã dịch trang ${this.currentPage} sang ${targetLang}!`);
           }
-        } catch (err) {
-          notifyEditor(`⚠️ Lỗi AI dịch trang: ${err?.message || 'Thử lại'}`);
-        } finally {
+        };
+        try {
+          const raw = await gBridge.callGeminiText(promptTxt, { taskType: 'doc_multimodal', temperature: 0.2, maxOutputTokens: 8192 });
+          applyTrans(raw);
           loader?.close?.();
+        } catch (err) {
+          loader?.showError?.('⚠️ Lỗi AI dịch trang', String(err?.message || err), {
+            manualFallback: { taskTitle: `PDF Editor — Dán JSON bản dịch (${targetLang}) từ Gemini`, promptText: promptTxt, applyBtnLabel: '✅ Áp dụng bản dịch lên trang PDF', onApplyPasted: applyTrans },
+          });
         }
       });
 
@@ -2197,13 +2210,10 @@
         const blocks = this.extractedBlocksByPage[this.currentPage] || [];
         if (!blocks.length) { notifyEditor('⚠️ Không có khối chữ trên trang.'); return; }
         const loader = gBridge.showAiFullLoadingOverlay?.('🛡️ AI đang quét dữ liệu nhạy cảm (PII)...', 'Tìm SĐT, CCCD, Email, Số tài khoản để che đen an toàn');
-        try {
-          const payload = blocks.slice(0, 120).map((b, i) => `[${i}] ${b.text}`).join('\n');
-          const raw = await gBridge.callGeminiText(
-            `Tìm chỉ số các dòng chứa thông tin cá nhân nhạy cảm (SĐT, CCCD/CMND, Email, Số tài khoản ngân hàng, Địa chỉ nhà riêng, Lương/mức thu nhập bí mật). Trả JSON array các index, ví dụ [2, 5]:\n${payload}`,
-            { temperature: 0.1, maxOutputTokens: 1024 }
-          );
-          const m = raw.match(/\[[\s\S]*\]/);
+        const payload = blocks.slice(0, 120).map((b, i) => `[${i}] ${b.text}`).join('\n');
+        const promptTxt = gBridge.buildTaskManualPrompt('editor_redact', { text: payload });
+        const applyRedact = (raw) => {
+          const m = String(raw || '').match(/\[[\s\S]*\]/);
           const idxs = m ? JSON.parse(m[0]) : [];
           if (Array.isArray(idxs) && idxs.length) {
             this._pushUndo();
@@ -2215,14 +2225,19 @@
               redCount++;
             }
             redrawOverlay();
-            notifyEditor(`🛡️ AI đã che đen ${redCount} vùng nhạy cảm (Ctrl+Z/Hoàn tác nếu cần).`);
+            notifyEditor(`🛡️ AI đã che đen ${redCount} vùng nhạy cảm (Hoàn tác nếu cần).`);
           } else {
             notifyEditor(`✅ Không phát hiện dữ liệu PII nhạy cảm trên trang ${this.currentPage}.`);
           }
-        } catch (err) {
-          notifyEditor(`⚠️ Lỗi quét PII AI: ${err?.message || 'Thử lại'}`);
-        } finally {
+        };
+        try {
+          const raw = await gBridge.callGeminiText(promptTxt, { taskType: 'fast_light', temperature: 0.1, maxOutputTokens: 1024 });
+          applyRedact(raw);
           loader?.close?.();
+        } catch (err) {
+          loader?.showError?.('⚠️ Lỗi quét PII AI', String(err?.message || err), {
+            manualFallback: { taskTitle: 'PDF Editor — Dán mảng chỉ số PII từ Gemini', promptText: promptTxt, applyBtnLabel: '✅ Che đen ngay các vùng nhạy cảm', onApplyPasted: applyRedact },
+          });
         }
       });
 
@@ -2234,11 +2249,8 @@
         const txt = blocks.map((b) => b.text).join('\n').trim();
         if (!txt) { notifyEditor('⚠️ Trang này trống.'); return; }
         const loader = gBridge.showAiFullLoadingOverlay?.('📝 AI đang tóm tắt & tạo Ghi chú trang...', 'Tổng hợp ý chính cô đọng để gắn lên góc trang');
-        try {
-          const sum = await gBridge.callGeminiText(
-            `Tóm tắt trang tài liệu sau thành TỐI ĐA 3 dòng ngắn (mỗi dòng <= 48 ký tự, bắt đầu bằng "• ") để gắn lên ghi chú góc giấy:\n${txt.slice(0, 6000)}`,
-            { temperature: 0.2, maxOutputTokens: 512 }
-          );
+        const promptTxt = gBridge.buildTaskManualPrompt('editor_summary', { text: txt });
+        const applySum = (sum) => {
           const lines = String(sum || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(0, 3);
           if (lines.length) {
             this._pushUndo();
@@ -2254,10 +2266,15 @@
             redrawOverlay();
             notifyEditor('📝 Đã dán Ghi chú Tóm tắt AI ở góc trên-phải trang!');
           }
-        } catch (err) {
-          notifyEditor(`⚠️ Lỗi tóm tắt AI: ${err?.message || 'Thử lại'}`);
-        } finally {
+        };
+        try {
+          const sum = await gBridge.callGeminiText(promptTxt, { taskType: 'fast_light', temperature: 0.2, maxOutputTokens: 512 });
+          applySum(sum);
           loader?.close?.();
+        } catch (err) {
+          loader?.showError?.('⚠️ Lỗi tóm tắt AI', String(err?.message || err), {
+            manualFallback: { taskTitle: 'PDF Editor — Dán 3 dòng Tóm tắt từ Gemini', promptText: promptTxt, applyBtnLabel: '✅ Dán Sticky Note lên trang PDF', onApplyPasted: applySum },
+          });
         }
       });
 
@@ -2268,13 +2285,10 @@
         const blocks = this.extractedBlocksByPage[this.currentPage] || [];
         if (!blocks.length) { notifyEditor('⚠️ Trang này chưa có bảng để trích xuất.'); return; }
         const loader = gBridge.showAiFullLoadingOverlay?.('📊 AI đang bóc bảng trang PDF sang CSV/Excel...', 'Nhận diện hàng & cột và xuất file tải về');
-        try {
-          const payload = blocks.map((b) => `[x=${Math.round(b.x)},y=${Math.round(b.y)}] ${b.text}`).join('\n');
-          const raw = await gBridge.callGeminiText(
-            `Trích xuất toàn bộ bảng biểu từ các mảnh chữ có tọa độ sau thành JSON array 2D [[col1,col2,...],...]. Nếu ô bị ngắt xuống dòng ở dưới thì gộp lại thành 1 ô:\n${payload.slice(0, 10000)}`,
-            { temperature: 0.1, maxOutputTokens: 8192 }
-          );
-          const m = raw.match(/\[[\s\S]*\]/);
+        const payload = blocks.map((b) => `[x=${Math.round(b.x)},y=${Math.round(b.y)}] ${b.text}`).join('\n');
+        const promptTxt = gBridge.buildTaskManualPrompt('editor_table', { text: payload });
+        const applyTbl = (raw) => {
+          const m = String(raw || '').match(/\[[\s\S]*\]/);
           const rows = m ? JSON.parse(m[0]) : [];
           if (Array.isArray(rows) && rows.length) {
             const csv = '\uFEFF' + rows.map((r) => (Array.isArray(r) ? r : [r]).map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -2289,10 +2303,15 @@
           } else {
             notifyEditor('⚠️ Không tìm thấy cấu trúc bảng rõ ràng trên trang này.');
           }
-        } catch (err) {
-          notifyEditor(`⚠️ Lỗi bóc bảng AI: ${err?.message || 'Thử lại'}`);
-        } finally {
+        };
+        try {
+          const raw = await gBridge.callGeminiText(promptTxt, { taskType: 'doc_multimodal', temperature: 0.1, maxOutputTokens: 8192 });
+          applyTbl(raw);
           loader?.close?.();
+        } catch (err) {
+          loader?.showError?.('⚠️ Lỗi bóc bảng AI', String(err?.message || err), {
+            manualFallback: { taskTitle: 'PDF Editor — Dán mảng JSON 2D bảng từ Gemini', promptText: promptTxt, applyBtnLabel: '✅ Xuất ngay file CSV mở bằng Excel', onApplyPasted: applyTbl },
+          });
         }
       });
 
@@ -2300,19 +2319,10 @@
       container.querySelector('#btn-mod46-ai-ed-ocr')?.addEventListener('click', async () => {
         const gBridge = requireAiBridge(() => container.querySelector('#btn-mod46-ai-ed-ocr')?.click());
         if (!gBridge) return;
-        const loader = gBridge.showAiFullLoadingOverlay?.('👁️ Gemini Vision đang OCR trang Scan...', 'Nhận diện chữ từ ảnh canvas thành khối văn bản sửa được');
-        try {
-          const dataUrl = pdfCanvas.toDataURL('image/jpeg', 0.85);
-          const b64 = dataUrl.split(',')[1] || '';
-          const raw = await gBridge.callGeminiGenerateContent({
-            parts: [
-              { inlineData: { mimeType: 'image/jpeg', data: b64 } },
-              { text: 'Hãy đọc toàn bộ các dòng chữ trong ảnh trang tài liệu này từ trên xuống dưới. Trả về JSON array [{"yPct": 5, "xPct": 10, "wPct": 70, "text": "..."}] (tọa độ ước lượng theo % từ 0-100). Chỉ trả JSON.' },
-            ],
-            temperature: 0.1,
-            maxOutputTokens: 8192,
-          });
-          const m = raw.match(/\[[\s\S]*\]/);
+        const loader = gBridge.showAiFullLoadingOverlay?.('👁️ Gemini Flash đang OCR trang Scan...', 'Nhận diện chữ từ ảnh canvas thành khối văn bản sửa được');
+        const promptTxt = gBridge.buildTaskManualPrompt('editor_ocr', { fileName: `${fileRec?.name || 'Trang'}_P${this.currentPage}.jpg` });
+        const applyOcr = (raw) => {
+          const m = String(raw || '').match(/\[[\s\S]*\]/);
           const items = m ? JSON.parse(m[0]) : [];
           if (Array.isArray(items) && items.length) {
             const bw = this.baseWidth || 595;
@@ -2334,10 +2344,34 @@
               notifyEditor(`👁️ OCR AI đã nhận diện ${ocrBlocks.length} dòng — bấm vào khung xanh để sửa trực tiếp!`);
             }
           }
-        } catch (err) {
-          notifyEditor(`⚠️ Lỗi OCR AI: ${err?.message || 'Thử lại'}`);
-        } finally {
+        };
+        const dataUrl = pdfCanvas.toDataURL('image/jpeg', 0.85);
+        try {
+          const b64 = dataUrl.split(',')[1] || '';
+          const raw = await gBridge.callGeminiGenerateContent({
+            taskType: 'doc_multimodal',
+            parts: [
+              { inlineData: { mimeType: 'image/jpeg', data: b64 } },
+              { text: promptTxt },
+            ],
+            temperature: 0.1,
+            maxOutputTokens: 8192,
+          });
+          applyOcr(raw);
           loader?.close?.();
+        } catch (err) {
+          let jpgBlob = null;
+          try { jpgBlob = await (await fetch(dataUrl)).blob(); } catch (_eB) {}
+          loader?.showError?.('⚠️ Lỗi OCR AI trang Scan', String(err?.message || err), {
+            manualFallback: {
+              taskTitle: 'PDF Editor OCR — Dán JSON dòng chữ từ Gemini',
+              promptText: promptTxt,
+              attachFileName: `Trang_${this.currentPage}_Scan.jpg`,
+              attachFileBlob: jpgBlob,
+              applyBtnLabel: '✅ Nạp khối chữ sửa trực tiếp lên trang',
+              onApplyPasted: applyOcr,
+            },
+          });
         }
       });
 
