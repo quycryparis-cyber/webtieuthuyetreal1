@@ -423,18 +423,22 @@
       }
 
       if (matrix.length >= 2 && nCols <= 12) {
-        tableRegions.push({
-          xMin,
-          xMax,
-          yMin,
-          yMax,
-          colCount: nCols,
-          node: ast.nodes.table({
-            headerRows: [matrix[0]],
-            bodyRows: matrix.slice(1),
-            pageNo,
-          }),
-        });
+        const hdrRow = matrix[0];
+        const bdyRows = mergeTableContinuationRows(matrix.slice(1), ast);
+        if (bdyRows.length) {
+          tableRegions.push({
+            xMin,
+            xMax,
+            yMin,
+            yMax,
+            colCount: nCols,
+            node: ast.nodes.table({
+              headerRows: [hdrRow],
+              bodyRows: bdyRows,
+              pageNo,
+            }),
+          });
+        }
       }
     };
 
@@ -748,9 +752,13 @@
     }
 
     if (!bodyLogicalRows.length) return null;
+    const cleanedBody = mergeTableContinuationRows(
+      bodyLogicalRows.map((r) => r.cells),
+      ast
+    );
     return ast.nodes.table({
       headerRows: [mergedHeaderCells],
-      bodyRows: bodyLogicalRows.map((r) => r.cells),
+      bodyRows: cleanedBody,
       pageNo: candRows[0].pageNo,
     });
   }
@@ -1009,8 +1017,52 @@
   }
 
   // ============================================================================
-  // TẦNG 4B: NỐI BẢNG VẮT TRANG + GẮN CAPTION & NGUỒN
+  // TẦNG 4B: GOM Ô NỐI TIẾP TRỐNG CỘT KHÓA + NỐI BẢNG VẮT TRANG + GẮN CAPTION
   // ============================================================================
+  function isContinuationRowPair(prevCells, curCells) {
+    if (!prevCells || !curCells || !curCells.length) return false;
+    const cellTxt = (c) => normNfc(c?.text ?? c ?? '').replace(/\s+/g, ' ').trim();
+    const col0 = cellTxt(curCells[0]);
+    const otherNonEmpty = curCells.slice(1).some((c) => cellTxt(c) !== '');
+    const looksNewKey = /^(?:\d{1,3}\.\s+\S|GP\d+\b|STT\b|Bước\s*\d+|Nhóm\b|Tiêu\s+chí\b|Chỉ\s+tiêu\b|[A-Z]\.\s+\S)/i.test(col0);
+    if (!col0 && otherNonEmpty) return true;
+    if (col0 && !looksNewKey && /^[a-zà-ỹ,(]/.test(col0)) return true;
+    return false;
+  }
+
+  function mergeTwoTableRows(prevCells, curCells, ast) {
+    const len = Math.max(prevCells.length, curCells.length);
+    const out = [];
+    const cellTxt = (c) => normNfc(c?.text ?? c ?? '').replace(/\s+/g, ' ').trim();
+    for (let ci = 0; ci < len; ci++) {
+      const a = prevCells[ci];
+      const b = curCells[ci];
+      const ta = cellTxt(a);
+      const tb = cellTxt(b);
+      const mergedStr = [ta, tb].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+      if (a && typeof a === 'object' && Object.prototype.hasOwnProperty.call(a, 'text')) {
+        out.push(ast.makeTableCell(mergedStr, { ...a, align: a.align, isHeader: a.isHeader }));
+      } else {
+        out.push(mergedStr);
+      }
+    }
+    return out;
+  }
+
+  function mergeTableContinuationRows(rows = [], ast) {
+    const out = [];
+    for (const r of rows) {
+      if (!Array.isArray(r) || !r.some((c) => normNfc(c?.text ?? c ?? '').trim() !== '')) continue;
+      const prev = out[out.length - 1];
+      if (prev && isContinuationRowPair(prev, r)) {
+        out[out.length - 1] = mergeTwoTableRows(prev, r, ast);
+      } else {
+        out.push(r.slice());
+      }
+    }
+    return out;
+  }
+
   function headerSimilarity(rowA = [], rowB = []) {
     const a = rowA.map((c) => normNfc(c?.text ?? c).toLowerCase()).filter(Boolean);
     const b = rowB.map((c) => normNfc(c?.text ?? c).toLowerCase()).filter(Boolean);
@@ -1053,11 +1105,12 @@
         const hdr2 = cur.headerRows?.[0] || [];
         const sim = headerSimilarity(hdr1, hdr2);
         const appendRows = sim >= 0.55 ? cur.bodyRows : [...cur.headerRows, ...cur.bodyRows];
+        const mergedBody = mergeTableContinuationRows([...prev.bodyRows, ...appendRows], ast);
         const merged = ast.nodes.table({
           caption: prev.caption,
           sourceNote: cur.sourceNote || prev.sourceNote,
           headerRows: prev.headerRows,
-          bodyRows: [...prev.bodyRows, ...appendRows],
+          bodyRows: mergedBody,
           pageNo: prev.pageNo,
         });
         out[out.length - 1] = merged;
@@ -1365,6 +1418,7 @@
   const exported = Object.freeze({
     joinPdfItemsByGeometry,
     extractVectorTablesFromOps,
+    mergeTableContinuationRows,
     isMathRegionNotTable,
     evaluatePdfComplexity,
     parsePdfGeometryToAst,

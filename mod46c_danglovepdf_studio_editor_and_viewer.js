@@ -1241,6 +1241,16 @@
             <button type="button" id="btn-mod46-ed-redo" class="px-2 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 font-bold cursor-pointer" title="Làm lại">↪️</button>
             <button type="button" id="btn-mod46-ed-clear-page" class="px-2 py-1.5 rounded-xl bg-rose-900/70 hover:bg-rose-600 text-rose-100 font-bold cursor-pointer">🧹 Xóa trang này</button>
           </div>
+          <!-- Thanh 6 Công cụ Trợ lý AI PDF Editor (1 chạm) -->
+          <div class="p-2 rounded-2xl border border-cyan-500/35 bg-zinc-950/90 flex flex-wrap items-center gap-1.5 text-[11px]">
+            <span class="px-2 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 font-bold">✨ Trợ lý AI (1 chạm):</span>
+            <button type="button" id="btn-mod46-ai-ed-polish" class="px-2.5 py-1.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white font-bold cursor-pointer">✨ Sửa chính tả trang</button>
+            <button type="button" id="btn-mod46-ai-ed-translate" class="px-2.5 py-1.5 rounded-xl bg-sky-700/80 hover:bg-sky-600 text-white font-bold cursor-pointer">🌐 Dịch trang AI</button>
+            <button type="button" id="btn-mod46-ai-ed-redact" class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-rose-700 text-rose-200 font-bold border border-rose-500/40 cursor-pointer">🛡️ Che đen PII AI</button>
+            <button type="button" id="btn-mod46-ai-ed-summary" class="px-2.5 py-1.5 rounded-xl bg-amber-700/80 hover:bg-amber-600 text-white font-bold cursor-pointer">📝 Tóm tắt &amp; Dán Note</button>
+            <button type="button" id="btn-mod46-ai-ed-table" class="px-2.5 py-1.5 rounded-xl bg-teal-700/80 hover:bg-teal-600 text-white font-bold cursor-pointer">📊 Bóc bảng → Excel</button>
+            <button type="button" id="btn-mod46-ai-ed-ocr" class="px-2.5 py-1.5 rounded-xl bg-violet-700/80 hover:bg-violet-600 text-white font-bold cursor-pointer">👁️ OCR AI trang Scan</button>
+          </div>
 
           <!-- Thanh thuộc tính kiểu Word + Điều hướng trang -->
           <div class="flex flex-wrap items-center justify-between gap-2 px-2 py-1.5 rounded-xl bg-zinc-900/90 border border-zinc-800 text-[11px]">
@@ -2031,6 +2041,263 @@
         this._pushUndo();
         this.objectsByPage[this.currentPage] = [];
         redrawOverlay();
+      });
+
+      // 6 NÚT TRỢ LÝ AI TRONG PDF EDITOR
+      const requireAiBridge = (cb) => {
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        if (!gBridge?.hasApiKey?.()) {
+          gBridge?.openApiKeyQuickModal?.({ onSaved: () => cb(gBridge) });
+          return null;
+        }
+        return gBridge;
+      };
+      const notifyEditor = (msg) => {
+        const badgeEl = container.querySelector('#mod46-ed-font-badge');
+        if (badgeEl) badgeEl.textContent = msg;
+      };
+
+      // 1. Sửa chính tả & khoảng trắng tách chữ trên trang hiện tại
+      container.querySelector('#btn-mod46-ai-ed-polish')?.addEventListener('click', async () => {
+        const gBridge = requireAiBridge(() => container.querySelector('#btn-mod46-ai-ed-polish')?.click());
+        if (!gBridge) return;
+        const blocks = this.extractedBlocksByPage[this.currentPage] || [];
+        if (!blocks.length) { notifyEditor('⚠️ Trang này chưa có lớp chữ gốc — hãy thử OCR AI trang Scan.'); return; }
+        const loader = gBridge.showAiFullLoadingOverlay?.('✨ AI đang sửa chính tả trang PDF...', 'Đang chuẩn hóa từng dòng chữ gốc trên trang');
+        try {
+          const payload = blocks.slice(0, 80).map((b, i) => `[${i}] ${b.text}`).join('\n');
+          const raw = await gBridge.callGeminiText(
+            `Sửa lỗi dính chữ/tách dấu/chính tả tiếng Việt & Anh cho từng dòng sau. Chỉ trả JSON array [{"i":0,"t":"chuỗi đã sửa"}] cho những dòng cần sửa:\n${payload}`,
+            { temperature: 0.1, maxOutputTokens: 4096 }
+          );
+          const m = raw.match(/\[[\s\S]*\]/);
+          const edits = m ? JSON.parse(m[0]) : [];
+          if (Array.isArray(edits) && edits.length) {
+            this._pushUndo();
+            let count = 0;
+            for (const ed of edits) {
+              const blk = blocks[Number(ed?.i)];
+              const newTxt = String(ed?.t || '').trim();
+              if (!blk || !newTxt || newTxt === blk.text) continue;
+              this.getPageObjects(this.currentPage).push({
+                type: 'replace_text',
+                x: blk.x, y: blk.y, w: blk.w, h: blk.h,
+                text: newTxt,
+                fontSize: Math.max(8, Math.round(blk.fontSize || 12)),
+                fontFamily: blk.fontFamily || '"Be Vietnam Pro", Arial, sans-serif',
+                fontMeta: blk.fontMeta || null,
+                bold: Boolean(blk.bold), italic: Boolean(blk.italic), underline: false,
+                color: blk.inkColor || '#0f172a', bgColor: blk.bgColor || '#ffffff',
+              });
+              count++;
+            }
+            redrawOverlay();
+            notifyEditor(`✅ AI đã sửa ${count} dòng chữ trên trang ${this.currentPage}!`);
+          } else {
+            notifyEditor(`✅ Trang ${this.currentPage} đã sạch chuẩn, không cần sửa thêm.`);
+          }
+        } catch (err) {
+          notifyEditor(`⚠️ Lỗi AI sửa chữ: ${err?.message || 'Thử lại'}`);
+        } finally {
+          loader?.close?.();
+        }
+      });
+
+      // 2. Dịch toàn trang AI (EN <-> VI)
+      container.querySelector('#btn-mod46-ai-ed-translate')?.addEventListener('click', async () => {
+        const gBridge = requireAiBridge(() => container.querySelector('#btn-mod46-ai-ed-translate')?.click());
+        if (!gBridge) return;
+        const blocks = this.extractedBlocksByPage[this.currentPage] || [];
+        if (!blocks.length) { notifyEditor('⚠️ Trang này chưa có văn bản để dịch.'); return; }
+        const loader = gBridge.showAiFullLoadingOverlay?.('🌐 AI đang dịch trang PDF...', 'Tự động phát hiện ngôn ngữ & giữ bố cục gốc');
+        try {
+          const slice = blocks.slice(0, 75);
+          const sampleTxt = slice.map((b) => b.text).join(' ');
+          const hasVi = /[ăâđêôơưáàảãạắằẳẵặấầẩẫậéèẻẽẹếềểễệóòỏõọốồổỗộớờởỡợúùủũụứừửữựíìỉĩịýỳỷỹỵ]/i.test(sampleTxt);
+          const targetLang = hasVi ? 'English' : 'Tiếng Việt';
+          const payload = slice.map((b, i) => `[${i}] ${b.text}`).join('\n');
+          const raw = await gBridge.callGeminiText(
+            `Dịch ngắn gọn tự nhiên từng dòng sang ${targetLang} sao cho vừa khung giấy. Trả JSON array [{"i":0,"t":"..."}]:\n${payload}`,
+            { temperature: 0.2, maxOutputTokens: 8192 }
+          );
+          const m = raw.match(/\[[\s\S]*\]/);
+          const edits = m ? JSON.parse(m[0]) : [];
+          if (Array.isArray(edits) && edits.length) {
+            this._pushUndo();
+            for (const ed of edits) {
+              const blk = slice[Number(ed?.i)];
+              const tr = String(ed?.t || '').trim();
+              if (!blk || !tr) continue;
+              this.getPageObjects(this.currentPage).push({
+                type: 'replace_text',
+                x: blk.x, y: blk.y, w: blk.w, h: blk.h,
+                text: tr,
+                fontSize: Math.max(8, Math.round(blk.fontSize || 11)),
+                fontFamily: blk.fontFamily || '"Be Vietnam Pro", Arial, sans-serif',
+                fontMeta: blk.fontMeta || null,
+                bold: Boolean(blk.bold), italic: Boolean(blk.italic), underline: false,
+                color: blk.inkColor || '#0f172a', bgColor: blk.bgColor || '#ffffff',
+              });
+            }
+            redrawOverlay();
+            notifyEditor(`🌐 Đã dịch trang ${this.currentPage} sang ${targetLang}!`);
+          }
+        } catch (err) {
+          notifyEditor(`⚠️ Lỗi AI dịch trang: ${err?.message || 'Thử lại'}`);
+        } finally {
+          loader?.close?.();
+        }
+      });
+
+      // 3. Tự động phát hiện & che đen PII nhạy cảm bằng AI
+      container.querySelector('#btn-mod46-ai-ed-redact')?.addEventListener('click', async () => {
+        const gBridge = requireAiBridge(() => container.querySelector('#btn-mod46-ai-ed-redact')?.click());
+        if (!gBridge) return;
+        const blocks = this.extractedBlocksByPage[this.currentPage] || [];
+        if (!blocks.length) { notifyEditor('⚠️ Không có khối chữ trên trang.'); return; }
+        const loader = gBridge.showAiFullLoadingOverlay?.('🛡️ AI đang quét dữ liệu nhạy cảm (PII)...', 'Tìm SĐT, CCCD, Email, Số tài khoản để che đen an toàn');
+        try {
+          const payload = blocks.slice(0, 120).map((b, i) => `[${i}] ${b.text}`).join('\n');
+          const raw = await gBridge.callGeminiText(
+            `Tìm chỉ số các dòng chứa thông tin cá nhân nhạy cảm (SĐT, CCCD/CMND, Email, Số tài khoản ngân hàng, Địa chỉ nhà riêng, Lương/mức thu nhập bí mật). Trả JSON array các index, ví dụ [2, 5]:\n${payload}`,
+            { temperature: 0.1, maxOutputTokens: 1024 }
+          );
+          const m = raw.match(/\[[\s\S]*\]/);
+          const idxs = m ? JSON.parse(m[0]) : [];
+          if (Array.isArray(idxs) && idxs.length) {
+            this._pushUndo();
+            let redCount = 0;
+            for (const id of idxs) {
+              const blk = blocks[Number(id)];
+              if (!blk) continue;
+              this.getPageObjects(this.currentPage).push({ type: 'redact', x: blk.x, y: blk.y, w: Math.max(24, blk.w), h: Math.max(12, blk.h) });
+              redCount++;
+            }
+            redrawOverlay();
+            notifyEditor(`🛡️ AI đã che đen ${redCount} vùng nhạy cảm (Ctrl+Z/Hoàn tác nếu cần).`);
+          } else {
+            notifyEditor(`✅ Không phát hiện dữ liệu PII nhạy cảm trên trang ${this.currentPage}.`);
+          }
+        } catch (err) {
+          notifyEditor(`⚠️ Lỗi quét PII AI: ${err?.message || 'Thử lại'}`);
+        } finally {
+          loader?.close?.();
+        }
+      });
+
+      // 4. Tóm tắt trang & dán hộp Sticky Note AI lên trang
+      container.querySelector('#btn-mod46-ai-ed-summary')?.addEventListener('click', async () => {
+        const gBridge = requireAiBridge(() => container.querySelector('#btn-mod46-ai-ed-summary')?.click());
+        if (!gBridge) return;
+        const blocks = this.extractedBlocksByPage[this.currentPage] || [];
+        const txt = blocks.map((b) => b.text).join('\n').trim();
+        if (!txt) { notifyEditor('⚠️ Trang này trống.'); return; }
+        const loader = gBridge.showAiFullLoadingOverlay?.('📝 AI đang tóm tắt & tạo Ghi chú trang...', 'Tổng hợp ý chính cô đọng để gắn lên góc trang');
+        try {
+          const sum = await gBridge.callGeminiText(
+            `Tóm tắt trang tài liệu sau thành TỐI ĐA 3 dòng ngắn (mỗi dòng <= 48 ký tự, bắt đầu bằng "• ") để gắn lên ghi chú góc giấy:\n${txt.slice(0, 6000)}`,
+            { temperature: 0.2, maxOutputTokens: 512 }
+          );
+          const lines = String(sum || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(0, 3);
+          if (lines.length) {
+            this._pushUndo();
+            const nx = Math.max(20, (this.baseWidth || 595) - 250);
+            const ny = 18;
+            this.getPageObjects(this.currentPage).push({ type: 'rect', x: nx, y: ny, w: 232, h: 24 + lines.length * 16, color: '#d97706' });
+            lines.forEach((ln, li) => {
+              this.getPageObjects(this.currentPage).push({
+                type: 'add_text', x: nx + 8, y: ny + 6 + li * 16, text: ln.slice(0, 52),
+                fontSize: 10, fontFamily: '"Be Vietnam Pro", Arial, sans-serif', bold: li === 0, italic: false, underline: false, color: '#92400e',
+              });
+            });
+            redrawOverlay();
+            notifyEditor('📝 Đã dán Ghi chú Tóm tắt AI ở góc trên-phải trang!');
+          }
+        } catch (err) {
+          notifyEditor(`⚠️ Lỗi tóm tắt AI: ${err?.message || 'Thử lại'}`);
+        } finally {
+          loader?.close?.();
+        }
+      });
+
+      // 5. Bóc bảng trang hiện tại sang CSV/Excel
+      container.querySelector('#btn-mod46-ai-ed-table')?.addEventListener('click', async () => {
+        const gBridge = requireAiBridge(() => container.querySelector('#btn-mod46-ai-ed-table')?.click());
+        if (!gBridge) return;
+        const blocks = this.extractedBlocksByPage[this.currentPage] || [];
+        if (!blocks.length) { notifyEditor('⚠️ Trang này chưa có bảng để trích xuất.'); return; }
+        const loader = gBridge.showAiFullLoadingOverlay?.('📊 AI đang bóc bảng trang PDF sang CSV/Excel...', 'Nhận diện hàng & cột và xuất file tải về');
+        try {
+          const payload = blocks.map((b) => `[x=${Math.round(b.x)},y=${Math.round(b.y)}] ${b.text}`).join('\n');
+          const raw = await gBridge.callGeminiText(
+            `Trích xuất toàn bộ bảng biểu từ các mảnh chữ có tọa độ sau thành JSON array 2D [[col1,col2,...],...]. Nếu ô bị ngắt xuống dòng ở dưới thì gộp lại thành 1 ô:\n${payload.slice(0, 10000)}`,
+            { temperature: 0.1, maxOutputTokens: 8192 }
+          );
+          const m = raw.match(/\[[\s\S]*\]/);
+          const rows = m ? JSON.parse(m[0]) : [];
+          if (Array.isArray(rows) && rows.length) {
+            const csv = '\uFEFF' + rows.map((r) => (Array.isArray(r) ? r : [r]).map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${(fileRec?.name || 'Bang').replace(/\.pdf$/i, '')}_Trang${this.currentPage}.csv`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+            notifyEditor(`📊 Đã xuất bảng trang ${this.currentPage} (${rows.length} hàng) ra CSV mở bằng Excel!`);
+          } else {
+            notifyEditor('⚠️ Không tìm thấy cấu trúc bảng rõ ràng trên trang này.');
+          }
+        } catch (err) {
+          notifyEditor(`⚠️ Lỗi bóc bảng AI: ${err?.message || 'Thử lại'}`);
+        } finally {
+          loader?.close?.();
+        }
+      });
+
+      // 6. OCR AI trang Scan thành khối chữ chỉnh sửa được
+      container.querySelector('#btn-mod46-ai-ed-ocr')?.addEventListener('click', async () => {
+        const gBridge = requireAiBridge(() => container.querySelector('#btn-mod46-ai-ed-ocr')?.click());
+        if (!gBridge) return;
+        const loader = gBridge.showAiFullLoadingOverlay?.('👁️ Gemini Vision đang OCR trang Scan...', 'Nhận diện chữ từ ảnh canvas thành khối văn bản sửa được');
+        try {
+          const dataUrl = pdfCanvas.toDataURL('image/jpeg', 0.85);
+          const b64 = dataUrl.split(',')[1] || '';
+          const raw = await gBridge.callGeminiGenerateContent({
+            parts: [
+              { inlineData: { mimeType: 'image/jpeg', data: b64 } },
+              { text: 'Hãy đọc toàn bộ các dòng chữ trong ảnh trang tài liệu này từ trên xuống dưới. Trả về JSON array [{"yPct": 5, "xPct": 10, "wPct": 70, "text": "..."}] (tọa độ ước lượng theo % từ 0-100). Chỉ trả JSON.' },
+            ],
+            temperature: 0.1,
+            maxOutputTokens: 8192,
+          });
+          const m = raw.match(/\[[\s\S]*\]/);
+          const items = m ? JSON.parse(m[0]) : [];
+          if (Array.isArray(items) && items.length) {
+            const bw = this.baseWidth || 595;
+            const bh = this.baseHeight || 842;
+            const ocrBlocks = items.map((it) => ({
+              x: (Number(it?.xPct || 8) / 100) * bw,
+              y: (Number(it?.yPct || 8) / 100) * bh,
+              w: Math.max(60, (Number(it?.wPct || 65) / 100) * bw),
+              h: 16,
+              text: String(it?.text || '').trim(),
+              fontSize: 12,
+              fontFamily: '"Be Vietnam Pro", Arial, sans-serif',
+              fontMeta: null,
+              bold: false, italic: false, inkColor: '#0f172a', bgColor: '#ffffff',
+            })).filter((b) => b.text);
+            if (ocrBlocks.length) {
+              this.extractedBlocksByPage[this.currentPage] = ocrBlocks;
+              renderEditableTextBlocks();
+              notifyEditor(`👁️ OCR AI đã nhận diện ${ocrBlocks.length} dòng — bấm vào khung xanh để sửa trực tiếp!`);
+            }
+          }
+        } catch (err) {
+          notifyEditor(`⚠️ Lỗi OCR AI: ${err?.message || 'Thử lại'}`);
+        } finally {
+          loader?.close?.();
+        }
       });
 
       await renderPage(1);

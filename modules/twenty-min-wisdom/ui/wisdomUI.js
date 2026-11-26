@@ -438,6 +438,17 @@
               </div>
             ` : `
               <div class="space-y-2">
+                ${(() => {
+                  const gB = globalScope.NoirGeminiBridge || NS.geminiBridge;
+                  const hasG = Boolean(gB?.hasApiKey?.());
+                  return hasG
+                    ? `<div id="wis20-gate-ai-status" class="px-3 py-2 rounded-xl border border-emerald-500/45 bg-emerald-950/30 text-emerald-300 text-xs font-bold">
+                         ✅ Đã liên kết Gemini API Key — AI 1 chạm xuất PDF sẵn sàng!
+                       </div>`
+                    : `<button type="button" id="wis20-gate-btn-connect-ai" class="noir-ai-blink-btn wis20-btn w-full py-2.5 bg-gradient-to-r from-sky-600 to-indigo-600 text-white font-bold">
+                         🔗 Kết nối AI của bạn (Mở khóa AI 1 chạm → Xuất PDF ngay)
+                       </button>`;
+                })()}
                 <button type="button" id="wis20-btn-detect-gps" class="wis20-btn wis20-btn-primary w-full py-2.5" ${state.gpsStatus === 'detecting' ? 'disabled' : ''}>
                   ${state.gpsStatus === 'detecting' ? '⏳ Đang xin quyền Vị trí (GPS) &amp; nhận diện khu vực...' : '📡 Tự động dò vị trí (GPS)'}
                 </button>
@@ -564,6 +575,31 @@
               </select>
               <input id="wis20-custom-topic" type="text" class="wis20-input" placeholder="Tùy chọn: Chủ đề muốn ưu tiên (VD: AI Agent, năng lượng xanh, giá dầu...)" value="${esc(state.customTopic)}" />
             </div>
+
+            ${(() => {
+              const gB = globalScope.NoirGeminiBridge || NS.geminiBridge;
+              const hasG = Boolean(gB?.hasApiKey?.());
+              if (hasG) {
+                return `
+                  <div class="p-3.5 rounded-xl border-2 border-emerald-500/50 bg-emerald-500/10 space-y-2 text-center">
+                    <div class="text-xs font-bold text-emerald-600 dark:text-emerald-300">✅ Đã liên kết Gemini API Key — Không cần Copy/Paste thủ công!</div>
+                    <button type="button" id="wis20-btn-full-auto-ai-pdf" class="noir-ai-blink-btn wis20-btn w-full py-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 text-white text-sm sm:text-base font-bold shadow-xl">
+                      🚀 Tự động hoàn toàn với AI → Xuất PDF ngay
+                    </button>
+                  </div>
+                `;
+              }
+              return `
+                <button type="button" id="wis20-hub-btn-connect-ai" class="noir-ai-blink-btn wis20-btn w-full py-3 bg-gradient-to-r from-sky-600 to-indigo-600 text-white text-xs sm:text-sm font-bold shadow-lg">
+                  🔗 Kết nối AI của bạn (Mở khóa nút Tự động hoàn toàn với AI → Xuất PDF ngay)
+                </button>
+              `;
+            })()}
+
+            ${(() => {
+              const gB = globalScope.NoirGeminiBridge || NS.geminiBridge;
+              const hasG = Boolean(gB?.hasApiKey?.());
+              const manualSteps = `
             <div class="flex flex-wrap gap-2">
               <button type="button" id="wis20-btn-copy-gemini" class="wis20-btn wis20-btn-gemini flex-1 py-2.5">
                 📋 Tự động sao chép &amp; Mở Gemini
@@ -604,7 +640,11 @@
                 </button>
               ` : ''}
             </div>
-          </div>
+          </div>`;
+              return hasG
+                ? `<details class="rounded-xl border border-zinc-400/30 p-2"><summary class="text-xs font-bold opacity-75 cursor-pointer">⚙️ Tùy chọn nâng cao (Copy Prompt / Dán kết quả thủ công)</summary><div class="pt-3 space-y-3">${manualSteps}</div></details>`
+                : manualSteps;
+            })()}
         </div>
       </div>
     `;
@@ -861,6 +901,16 @@
     if (!root) return;
 
     // Phase 1 events
+    if (state.phase === 'location_gate') {
+      try {
+        (globalScope.NoirGeminiBridge || NS.geminiBridge)?.maybeShowWelcomeApiUpsellModal?.('mod50', () => render());
+      } catch (_eUp50) {}
+    }
+    const openKeyAndRefresh50 = () => {
+      (globalScope.NoirGeminiBridge || NS.geminiBridge)?.openApiKeyQuickModal?.({ onSaved: () => render() });
+    };
+    root.querySelector('#wis20-gate-btn-connect-ai')?.addEventListener('click', openKeyAndRefresh50);
+    root.querySelector('#wis20-hub-btn-connect-ai')?.addEventListener('click', openKeyAndRefresh50);
     root.querySelector('#wis20-btn-detect-gps')?.addEventListener('click', () => runGpsDetection());
     root.querySelector('#wis20-btn-retry-gps')?.addEventListener('click', () => runGpsDetection());
     root.querySelector('#wis20-btn-confirm-gps')?.addEventListener('click', () => {
@@ -928,6 +978,46 @@
       state.customTopic = ev.target.value || '';
     });
     root.querySelector('#wis20-btn-copy-gemini')?.addEventListener('click', () => copyPromptAndOpenGemini());
+    root.querySelector('#wis20-btn-full-auto-ai-pdf')?.addEventListener('click', async () => {
+      const bridge = globalScope.NoirGeminiBridge || NS.geminiBridge;
+      if (!bridge?.hasApiKey?.() || !state.scanResult) {
+        bridge?.openApiKeyQuickModal?.({ onSaved: () => render() });
+        return;
+      }
+      const loader = bridge.showAiFullLoadingOverlay?.(
+        '🚀 AI đang tổng hợp 8 trụ cột & xuất Báo cáo PDF...',
+        'Bước 1/3: Gửi dữ liệu thật + Google Search Grounding tới Gemini'
+      );
+      try {
+        const promptText = W20.buildGeminiWisdomPrompt(state.scanResult, {
+          focusMode: state.focusMode,
+          customTopic: state.customTopic,
+        });
+        const aiRes = await bridge.callGeminiWithGrounding({
+          prompt: promptText,
+          temperature: 0.2,
+          maxOutputTokens: 8192,
+          useGoogleSearch: true,
+        });
+        const reply = aiRes?.text || '';
+        loader?.update?.('📊 Bước 2/3: Tổng hợp biểu đồ & phân tích chuyên sâu...', 68);
+        state.geminiReplyRaw = reply;
+        if (typeof W20.parseGeminiWisdomReply === 'function') {
+          state.geminiParsed = W20.parseGeminiWisdomReply(reply);
+        }
+        state.phase = 'dashboard';
+        state.activeTab = 'briefing';
+        state.highlightExportPdfCta = true;
+        loader?.update?.('📄 Bước 3/3: Đang dựng & tải xuống Báo cáo PDF hoàn chỉnh...', 90);
+        const res = await W20.exportWisdomReportPdf(state.scanResult, state.geminiParsed, loadReaderPrefs());
+        loader?.close?.();
+        render();
+        toast(`✅ Đã xuất xong Báo cáo PDF 30 Phút Thông Thái (${res.pages} trang — kèm Trang Bìa, Biểu đồ & Đầy đủ Trích dẫn)!`, 'success', 4800);
+      } catch (err) {
+        loader?.close?.();
+        toast('⚠️ Lỗi AI 1 chạm: ' + (err?.message || err), 'error', 4200);
+      }
+    });
     root.querySelector('#wis20-btn-gemini-api-direct')?.addEventListener('click', async () => {
       const bridge = globalScope.NoirGeminiBridge || NS.geminiBridge;
       if (!bridge || !state.scanResult) return;
@@ -1026,7 +1116,7 @@
     xxl: { label: 'Cực đại', px: 23 },
   });
   const READER_FONTS = Object.freeze({
-    sans: { label: 'Hiện đại (Sans)', css: '"Segoe UI", system-ui, -apple-system, sans-serif' },
+    sans: { label: 'Hiện đại (Sans)', css: '"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif' },
     serif: { label: 'Báo chí (Serif)', css: 'Georgia, "Times New Roman", serif' },
     classic: { label: 'Sách in (Classic)', css: '"Palatino Linotype", "Book Antiqua", Palatino, serif' },
     mono: { label: 'Kỹ thuật (Mono)', css: '"Cascadia Mono", Consolas, monospace' },

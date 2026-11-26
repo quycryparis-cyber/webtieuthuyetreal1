@@ -15,6 +15,10 @@
 
   function getActiveGeminiApiKey() {
     try {
+      const fromBridge = globalScope.NoirGeminiBridge?.getApiKey?.() || NS.geminiBridge?.getApiKey?.();
+      if (fromBridge && String(fromBridge).trim().length > 10) return String(fromBridge).trim();
+      const primary = localStorage.getItem('noir_gemini_api_key');
+      if (primary && primary.trim().length > 10) return primary.trim();
       const fromVault = NS.apiVault?.getActiveApiKey?.() || NS.apiVault?.getCurrentKey?.();
       if (fromVault && String(fromVault).trim().length > 10) return String(fromVault).trim();
       const rawVault = localStorage.getItem('noir_v36_api_key_vault_v1');
@@ -24,7 +28,7 @@
         const active = list.find((k) => k && k.key && k.enabled !== false) || list[0];
         if (active?.key) return String(active.key).trim();
       }
-      const fallback = localStorage.getItem('gemini_api_key') || localStorage.getItem('noir_gemini_api_key');
+      const fallback = localStorage.getItem('gemini_api_key');
       if (fallback && fallback.trim().length > 10) return fallback.trim();
     } catch (_e) {}
     return '';
@@ -119,43 +123,107 @@
     return out;
   }
 
-  async function runGeminiGroundedSearch(items, kb, signal) {
-    const apiKey = getActiveGeminiApiKey();
-    if (!apiKey) return null;
-
+  async function runGeminiGroundedBatch(batchItems, kb, apiKey, signal) {
     const today = INV.utils.todayIso();
-    const checklistLines = items
+    const checklistLines = batchItems
       .map((it, idx) => `${idx + 1}. [${it.id}] ${it.plain_label} (${it.technical_label}) — đơn vị: ${it.unit}`)
       .join('\n');
 
-    const prompt = `Hôm nay là ngày ${today}. Hãy dùng công cụ Google Search tìm dữ liệu mới nhất và đáng tin cậy nhất (ưu tiên nguồn: ${kb.trusted_sources.slice(0, 12).join(', ')}) cho từng đề mục sau.
+    const prompt = `Hôm nay là ngày ${today}. Hãy dùng công cụ Google Search tìm dữ liệu MỚI NHẤT, CHÍNH XÁC NHẤT (ưu tiên nguồn: ${kb.trusted_sources.slice(0, 12).join(', ')}) cho ĐẦY ĐỦ TỪNG ĐỀ MỤC SAU (${batchItems.length} mục).
 QUY TẮC BẮT BUỘC:
-- KHÔNG BỊA SỐ LIỆU. Nếu đề mục nào không tìm được số mới đáng tin cậy, ghi value là null và status là "DATA_MISSING".
-- Mỗi đề mục bắt buộc trả về đúng định dạng JSON mảng các đối tượng:
+- Dùng Google Search tra cứu kỹ từng mục trước khi kết luận; KHÔNG bỏ trống hàng loạt. Chỉ khi thực sự không tồn tại số liệu mới ghi "DATA_MISSING".
+- Đưa đường dẫn thực từ Google Search vào source_url.
+- Chỉ trả JSON array hợp lệ theo schema:
 [{"id":"...", "value":"...", "as_of_date":"YYYY-MM-DD", "source_name":"...", "source_url":"https://...", "status":"ok|DATA_MISSING", "signal":"positive|neutral|caution|danger", "plain_explanation":"1-2 câu tiếng Việt bình dân dễ hiểu"}]
-Chỉ trả về JSON hợp lệ, không thêm chữ ngoài JSON.
 
-DANH SÁCH ĐỀ MỤC:
+DANH SÁCH ĐỀ MỤC (${batchItems.length} MỤC):
 ${checklistLines}`;
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
-    const resp = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal,
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        tools: [{ google_search: {} }],
-        generationConfig: { temperature: 0.15 },
-      }),
-    });
-    if (!resp.ok) throw new Error(`Gemini Search HTTP ${resp.status}`);
-    const data = await resp.json();
-    const rawText = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('\n') || '';
+    const gBridge = globalScope.NoirGeminiBridge || NS.geminiBridge;
+    let rawText = '';
+    let groundingUrls = [];
+    if (gBridge?.callGeminiWithGrounding) {
+      const res = await gBridge.callGeminiWithGrounding({
+        prompt,
+        apiKey,
+        temperature: 0.15,
+        maxOutputTokens: 8192,
+        useGoogleSearch: true,
+        signal,
+      });
+      rawText = res?.text || '';
+      groundingUrls = res?.groundingUrls || [];
+    } else {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal,
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          tools: [{ google_search: {} }],
+          generationConfig: { temperature: 0.15, maxOutputTokens: 8192 },
+        }),
+      });
+      if (!resp.ok) throw new Error(`Gemini Search HTTP ${resp.status}`);
+      const data = await resp.json();
+      const cand = data?.candidates?.[0] || {};
+      rawText = cand?.content?.parts?.map((p) => p.text || '').join('\n') || '';
+      groundingUrls = (cand?.groundingMetadata?.groundingChunks || [])
+        .map((c) => ({ url: c?.web?.uri || '', title: c?.web?.title || '' }))
+        .filter((u) => u.url);
+    }
     const jsonMatch = rawText.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) return null;
+    if (!jsonMatch) return [];
     const parsed = JSON.parse(jsonMatch[0]);
-    return Array.isArray(parsed) ? parsed : null;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((row, idx) => {
+      if (row && !row.source_url && groundingUrls.length) {
+        const gPick = groundingUrls[idx % groundingUrls.length];
+        return { ...row, source_url: gPick.url, source_name: row.source_name || gPick.title || 'Google Search Grounding' };
+      }
+      return row;
+    });
+  }
+
+  async function runGeminiGroundedSearch(items, kb, signal) {
+    const apiKey = getActiveGeminiApiKey();
+    if (!apiKey) return null;
+    const list = Array.isArray(items) ? items : [];
+    if (!list.length) return [];
+
+    // Chia đôi danh sách thành 2 lô song song gọn nhẹ để không bị cắt JSON & giảm tối đa DATA_MISSING
+    const mid = Math.ceil(list.length / 2);
+    const batches = mid < list.length ? [list.slice(0, mid), list.slice(mid)] : [list];
+    const batchResults = await Promise.all(
+      batches.map((b) => runGeminiGroundedBatch(b, kb, apiKey, signal).catch(() => []))
+    );
+    const merged = [];
+    for (const arr of batchResults) {
+      if (Array.isArray(arr)) merged.push(...arr);
+    }
+
+    // Lượt quét bổ sung cho những mục vẫn báo DATA_MISSING hoặc chưa được trả lời
+    const resolvedIds = new Set(merged.filter((r) => r && r.value !== null && r.status !== 'DATA_MISSING').map((r) => r.id));
+    const unresolved = list.filter((it) => !resolvedIds.has(it.id));
+    if (unresolved.length > 0 && unresolved.length <= 16) {
+      try {
+        const retryArr = await runGeminiGroundedBatch(unresolved, kb, apiKey, signal);
+        if (Array.isArray(retryArr)) {
+          for (const r of retryArr) {
+            if (!r || !r.id) continue;
+            const existIdx = merged.findIndex((x) => x && x.id === r.id);
+            if (existIdx >= 0) {
+              if (r.value !== null && r.status !== 'DATA_MISSING') merged[existIdx] = r;
+            } else {
+              merged.push(r);
+            }
+          }
+        }
+      } catch (_eRetry) {}
+    }
+
+    return merged;
   }
 
   // ==========================================================================

@@ -354,6 +354,7 @@
     }
     if (ACADEMIC_TAG_CALLOUT_RE.test(cleanText)) return fail('academic_tag_callout');
     if (/^https?:\/\/\S+$/i.test(cleanText)) return fail('url_only');
+    if (/\.{3,}\s*\d{1,4}\s*$/.test(cleanText)) return fail('rule3_dotted_toc_line');
 
     // Luật 4 (math / calculation step guard): Phép tính / bước giải toán / công thức => CẤM vào TOC
     if (

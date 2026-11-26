@@ -1465,7 +1465,20 @@
           </div>
 
           <div class="flex flex-col items-center gap-2.5">
-            <button type="button" id="inv-gate-btn-gps" class="inv-primary-btn" ${uiState.gateLoading ? 'disabled' : ''}>
+            ${(() => {
+          const gBridge = globalScope.NoirGeminiBridge || NS.geminiBridge;
+          const hasGKey = Boolean(gBridge?.hasApiKey?.() || INV.researchEngine?.getActiveGeminiApiKey?.());
+          return hasGKey
+            ? `<div id="inv-gate-ai-status" class="max-w-lg mx-auto px-3.5 py-2 rounded-xl border border-emerald-500/45 bg-emerald-950/35 text-emerald-300 text-xs font-bold mb-2">
+                 ✅ Đã liên kết Gemini API Key — Chế độ AI 1 chạm tự động xuất PDF đã sẵn sàng!
+               </div>`
+            : `<div id="inv-gate-ai-status" class="max-w-lg mx-auto mb-2">
+                 <button type="button" id="inv-gate-btn-connect-ai" class="noir-ai-blink-btn w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold cursor-pointer shadow-lg">
+                   🔗 Kết nối AI của bạn (Mở khóa tự động xuất PDF 1 chạm)
+                 </button>
+               </div>`;
+        })()}
+        <button type="button" id="inv-gate-btn-gps" class="inv-primary-btn" ${uiState.gateLoading ? 'disabled' : ''}>
               ${uiState.gateLoading ? '⏳ Đang dò vị trí GPS của bạn...' : '📍 Cho phép truy cập Vị trí (GPS)'}
             </button>
             ${uiState.gateStatus ? `<div class="text-xs font-bold text-emerald-600 dark:text-emerald-400">${esc(uiState.gateStatus)}</div>` : ''}
@@ -1645,7 +1658,40 @@
               </label>
             </div>
             ${uiState.w2AutoMergeNotice ? `<div class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">${esc(uiState.w2AutoMergeNotice)}</div>` : ''}
+            ${curFocus === 'stock' ? `
+              <div class="max-w-md mx-auto text-left space-y-1">
+                <label class="text-xs font-bold text-sky-700 dark:text-sky-300">📊 Mã cổ phiếu muốn AI phân tích sâu (tùy chọn):</label>
+                <input id="inv-w2-stock-ticker" type="text" value="${esc(uiState.stockInput || INV.stateManager.stockData?.symbol || '')}" placeholder="VD: FPT, VCB, HPG, NVDA, AAPL..." class="w-full px-3 py-2 rounded-xl border border-sky-400/50 bg-white dark:bg-zinc-950 text-xs uppercase font-bold" />
+              </div>
+            ` : ''}
 
+            ${(() => {
+              const gBridge = globalScope.NoirGeminiBridge || NS.geminiBridge;
+              const hasGKey = Boolean(gBridge?.hasApiKey?.() || INV.researchEngine?.getActiveGeminiApiKey?.());
+              if (hasGKey) {
+                return `
+                  <div class="p-4 rounded-2xl border-2 border-emerald-500/55 bg-emerald-500/10 space-y-2.5 max-w-2xl mx-auto">
+                    <div class="text-xs font-bold text-emerald-700 dark:text-emerald-300">✅ Đã liên kết Gemini API Key — Không cần Copy/Paste thủ công nữa!</div>
+                    <button type="button" id="inv-w2-btn-full-auto-ai" class="noir-ai-blink-btn w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 hover:from-emerald-500 hover:to-sky-500 text-white font-bold text-sm sm:text-base shadow-xl cursor-pointer transition">
+                      🚀 Tự động hoàn toàn với AI
+                    </button>
+                    <p class="text-[11px] text-zinc-600 dark:text-zinc-300">1 chạm: Tạo Prompt chuẩn + Chạy Gemini AI &amp; Google Search + Đồng bộ 6 biểu đồ + Mở thẳng Báo cáo PDF!</p>
+                  </div>
+                `;
+              }
+              return `
+                <div class="max-w-2xl mx-auto pb-1">
+                  <button type="button" id="inv-w2-btn-connect-ai" class="noir-ai-blink-btn w-full py-3 px-5 rounded-2xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-lg cursor-pointer transition">
+                    🔗 Kết nối AI của bạn (Mở khóa nút Tự động hoàn toàn với AI 1 chạm)
+                  </button>
+                </div>
+              `;
+            })()}
+
+            ${(() => {
+              const gBridge = globalScope.NoirGeminiBridge || NS.geminiBridge;
+              const hasGKey = Boolean(gBridge?.hasApiKey?.() || INV.researchEngine?.getActiveGeminiApiKey?.());
+              const manualInner = `
             <!-- Nút chính Bước 1: Copy sẵn & Chuyển hướng sang Gemini ngay -->
             <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
               <button type="button" id="inv-w2-btn-launch-gemini" class="inv-gemini-btn text-xs sm:text-sm py-2.5 px-5">
@@ -1708,7 +1754,12 @@
                     </div>`
               }
             </div>
-          </div>
+          </div>`;
+              if (hasGKey) {
+                return `<details class="max-w-2xl mx-auto text-left rounded-xl border border-zinc-300/60 dark:border-zinc-700/70 p-2.5"><summary class="text-xs font-bold text-zinc-500 dark:text-zinc-400 cursor-pointer">⚙️ Tùy chọn nâng cao (Copy Prompt / Dán kết quả thủ công)</summary><div class="pt-3 space-y-3">${manualInner}</div></details>`;
+              }
+              return `<div>${manualInner}</div>`;
+            })()}
 
           <div class="pt-2 text-center">
             <button type="button" id="inv-w2-btn-skip-to-dashboard" class="text-[11px] text-zinc-500 hover:text-emerald-500 underline cursor-pointer">
@@ -1871,12 +1922,15 @@
               <div class="text-xs text-zinc-300">Giá XAU/USD, SJC nội địa, độ chênh lệch nội–ngoại, spread &amp; cảnh báo chốt chặn.</div>
             </button>
 
-            <button type="button" data-inv-pdf-mode="stock" ${hasStock ? '' : 'disabled'} class="text-left p-4 rounded-xl border-2 ${hasStock ? 'border-sky-500/60 bg-sky-950/35 hover:bg-sky-900/45 cursor-pointer' : 'border-zinc-700 bg-zinc-900/60 opacity-60 cursor-not-allowed'} transition space-y-1">
-              <div class="text-sm font-black ${hasStock ? 'text-sky-300' : 'text-zinc-400'}">3. 📈 Xuất file phân tích Chứng khoán ${hasStock ? `(${esc(st.symbol)})` : '🔒'}</div>
-              <div class="text-xs ${hasStock ? 'text-zinc-300' : 'text-amber-300/90'}">
-                ${hasStock ? `Đã sẵn sàng dữ liệu sống của ${esc(st.symbol)} (${esc(st.companyName)}) — P/E, P/B, ROE, Tăng trưởng 5Y.` : 'Chưa chọn mã chứng khoán & quét thông tin! Hãy vào tab Chứng khoán nhập mã (vd: FPT) và chạy kiểm tra trước.'}
-              </div>
-            </button>
+            <div class="text-left p-4 rounded-xl border-2 ${hasStock ? 'border-sky-500/60 bg-sky-950/35' : 'border-sky-500/45 bg-sky-950/20'} transition space-y-2">
+              <button type="button" data-inv-pdf-mode="stock" class="w-full text-left cursor-pointer space-y-1">
+                <div class="text-sm font-bold text-sky-300">3. 📈 Xuất file phân tích Chứng khoán ${hasStock ? `(${esc(st.symbol)})` : '(Tự quét nhanh ngay tại đây!)'}</div>
+                <div class="text-xs text-zinc-300">
+                  ${hasStock ? `Đã sẵn sàng dữ liệu sống của ${esc(st.symbol)} (${esc(st.companyName)}) — P/E, P/B, ROE, Tăng trưởng 5Y.` : 'Nhập mã cổ phiếu (VD: FPT, VCB, NVDA) vào ô bên dưới rồi bấm để quét &amp; xuất PDF ngay:'}
+                </div>
+              </button>
+              <input id="inv-pdf-quick-stock-inp" type="text" value="${esc(hasStock ? st.symbol : (uiState.stockInput || ''))}" placeholder="Nhập mã cổ phiếu (VD: FPT, HPG, VCB, AAPL...)" class="w-full px-3 py-1.5 rounded-lg bg-zinc-950 border border-sky-500/45 text-xs text-white uppercase font-bold" />
+            </div>
 
             <div class="p-4 rounded-xl border-2 border-teal-500/60 bg-teal-950/35 space-y-2">
               <button type="button" data-inv-pdf-mode="real_estate" class="w-full text-left cursor-pointer space-y-1">
@@ -1909,8 +1963,23 @@
         };
         btn.disabled = true;
         const oldHtml = btn.innerHTML;
-        btn.innerHTML = '<div class="text-sm font-black text-emerald-300">⏳ Đang dựng file PDF sắc nét...</div>';
         try {
+          if (mode === 'stock') {
+            const inpTicker = String(modal.querySelector('#inv-pdf-quick-stock-inp')?.value || '').trim().toUpperCase();
+            if (inpTicker && INV.stateManager.stockData?.symbol?.toUpperCase() !== inpTicker) {
+              btn.innerHTML = `<div class="text-sm font-bold text-sky-300">⏳ Đang quét dữ liệu cổ phiếu ${esc(inpTicker)}...</div>`;
+              const stSnap = await INV.stockEngine.lookupStockSnapshot(inpTicker);
+              if (stSnap) INV.stateManager.stockData = stSnap;
+            }
+            if (!INV.stateManager.stockData?.symbol) {
+              btn.disabled = false;
+              btn.innerHTML = oldHtml;
+              NS.utils?.showToast?.('⚠️ Vui lòng nhập mã cổ phiếu (VD: FPT, VCB, NVDA) trước khi xuất PDF Chứng khoán!', 'warning', 3200);
+              modal.querySelector('#inv-pdf-quick-stock-inp')?.focus();
+              return;
+            }
+          }
+          btn.innerHTML = '<div class="text-sm font-bold text-emerald-300">⏳ Đang dựng file PDF sắc nét...</div>';
           const res = await INV.pdfExporter.exportInvestPdf(mode, opts);
           NS.utils?.showToast?.(`✅ Đã xuất Báo cáo PDF (${res.pages} trang) thành công!`, 'success', 4000);
           closeIt();
@@ -2080,6 +2149,12 @@
   }
 
   function bindLocationGateEvents(host) {
+    try {
+      (globalScope.NoirGeminiBridge || NS.geminiBridge)?.maybeShowWelcomeApiUpsellModal?.('mod49', () => render());
+    } catch (_eUp) {}
+    host.querySelector('#inv-gate-btn-connect-ai')?.addEventListener('click', () => {
+      (globalScope.NoirGeminiBridge || NS.geminiBridge)?.openApiKeyQuickModal?.({ onSaved: () => render() });
+    });
     const sel = host.querySelector('#inv-gate-country-sel');
     const inp = host.querySelector('#inv-gate-area-inp');
     sel?.addEventListener('change', () => { uiState.gateCountry = sel.value; });
@@ -2159,6 +2234,83 @@
     };
     goalEl?.addEventListener('blur', autoMergeInputs);
     notesEl?.addEventListener('blur', autoMergeInputs);
+
+    host.querySelector('#inv-w2-btn-connect-ai')?.addEventListener('click', () => {
+      (globalScope.NoirGeminiBridge || NS.geminiBridge)?.openApiKeyQuickModal?.({ onSaved: () => render() });
+    });
+
+    host.querySelector('#inv-w2-btn-full-auto-ai')?.addEventListener('click', async () => {
+      const gBridge = globalScope.NoirGeminiBridge || NS.geminiBridge;
+      const apiKey = gBridge?.getApiKey?.() || INV.researchEngine?.getActiveGeminiApiKey?.();
+      if (!apiKey) {
+        gBridge?.openApiKeyQuickModal?.({ onSaved: () => render() });
+        return;
+      }
+      const gVal = (goalEl?.value || '').trim();
+      const nVal = (notesEl?.value || '').trim();
+      const tickerVal = (host.querySelector('#inv-w2-stock-ticker')?.value || '').trim().toUpperCase();
+      INV.storageAdapter.savePrefs({ promptMode: uiState.w2Mode, userGoal: gVal, fieldNotes: nVal });
+
+      const loader = gBridge?.showAiFullLoadingOverlay?.(
+        '🚀 AI đang phân tích toàn diện & dựng Báo cáo PDF...',
+        'Bước 1/4: Chuẩn hóa dữ liệu thị trường theo thời gian thực'
+      );
+      try {
+        if (uiState.w2Focus === 'stock' && tickerVal && INV.stockEngine?.lookupStockSnapshot) {
+          loader?.update?.(`📊 Đang quét dữ liệu doanh nghiệp mã ${tickerVal}...`, 22);
+          uiState.stockInput = tickerVal;
+          const st = await INV.stockEngine.lookupStockSnapshot(tickerVal).catch(() => null);
+          if (st) INV.stateManager.stockData = st;
+        }
+        loader?.update?.('🧠 Bước 2/4: Gemini AI & Google Search đang phân tích chuyên sâu...', 42);
+        const promptText = INV.promptComposer.buildGeminiPrompt({
+          mode: uiState.w2Mode || 'veteran30',
+          focus: uiState.w2Focus || 'general',
+          userGoal: gVal,
+          fieldNotes: nVal,
+        });
+        const aiRes = await gBridge.callGeminiWithGrounding({
+          prompt: promptText,
+          apiKey,
+          temperature: 0.2,
+          maxOutputTokens: 8192,
+          useGoogleSearch: true,
+        });
+        const reply = aiRes?.text || '';
+        loader?.update?.('📊 Bước 3/4: Đồng bộ phân tích AI vào 6 biểu đồ & bảng quyết định...', 74);
+        const parsed = INV.deterministicExtractor?.parseGeminiStructuredReply
+          ? INV.deterministicExtractor.parseGeminiStructuredReply(reply)
+          : { ok: false };
+        if (parsed.ok && parsed.data) {
+          INV.stateManager.unifiedAnalytics = parsed.data;
+        }
+        if (INV.stateManager.evaluationReport) {
+          INV.stateManager.evaluationReport.gemini_raw_note = reply.slice(0, 6000);
+          if (Array.isArray(aiRes?.groundingUrls) && aiRes.groundingUrls.length) {
+            const existing = INV.stateManager.evaluationReport.live_headlines || [];
+            const extraLinks = aiRes.groundingUrls.map((g) => ({
+              title: g.title || g.url,
+              source: 'Google Search Grounding',
+              url: g.url,
+              selected_for_prompt: true,
+            }));
+            INV.stateManager.evaluationReport.live_headlines = [...existing, ...extraLinks];
+          }
+        }
+        loader?.update?.('📄 Bước 4/4: Đang mở Bảng Xuất Báo Cáo PDF 4 Chế Độ...', 95);
+        INV.storageAdapter.setSession('wizard_stage', 'dashboard');
+        uiState.wizardStage = 'dashboard';
+        INV.stateManager.activeTab = 'overview';
+        uiState.highlightExportPdfCta = true;
+        loader?.close?.();
+        render();
+        openInvestPdfExportModal();
+        NS.utils?.showToast?.('✅ AI đã phân tích & đồng bộ hoàn tất! Chọn mẫu PDF để tải ngay.', 'success', 4200);
+      } catch (err) {
+        loader?.close?.();
+        NS.utils?.showToast?.(`⚠️ Lỗi chạy AI tự động: ${err?.message || err}`, 'error', 4200);
+      }
+    });
 
     // Bước 1: Copy sẵn câu lệnh (đúng chế độ + trọng tâm + khẩu vị/BCTC) & chuyển hướng thẳng sang Gemini!
     host.querySelector('#inv-w2-btn-launch-gemini')?.addEventListener('click', async () => {

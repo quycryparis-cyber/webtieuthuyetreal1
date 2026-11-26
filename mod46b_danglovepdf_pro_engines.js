@@ -1517,9 +1517,14 @@ XacNhan=true</textarea>
             <option value="prefix">[Số trang] · (Tiêu đề) — Báo chí</option>
           </select>
         </label>
-        <div class="flex items-center justify-between gap-2 pt-1">
+        <div class="flex items-center justify-between gap-2 pt-1 flex-wrap">
           <span class="font-bold">Danh sách mục (Mỗi dòng: Tên mục | Số trang):</span>
-          <button type="button" id="btn-pro-toc-autodetect" class="px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-[10.5px] font-black cursor-pointer shrink-0">🔍 Quét tự động từ PDF</button>
+          <div class="flex items-center gap-1.5 shrink-0">
+            ${(global.NoirGeminiBridge || NS.geminiBridge)?.hasApiKey?.()
+              ? `<button type="button" id="btn-pro-toc-autodetect" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold cursor-pointer">🤖 Quét tự động bằng AI và code</button>`
+              : `<button type="button" id="btn-pro-toc-autodetect" class="px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-[10.5px] font-bold cursor-pointer">🔍 Quét tự động từ PDF</button>
+                 <button type="button" id="btn-pro-toc-connect-ai" class="px-2 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[10.5px] font-bold cursor-pointer">🔗 Kết nối AI</button>`}
+          </div>
         </div>
         <textarea id="opt-pro-toc-lines" rows="6" placeholder="Đang tự quét tiêu đề, Bảng &amp; Hình từ PDF..." class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700 text-[11.5px]">Chương 1: Khởi đầu | 1
 Chương 2: Diễn biến chính | 5
@@ -1546,13 +1551,15 @@ Chương 3: Tổng kết | 12</textarea>
     }
 
     if (toolId === 'pdf_to_excel') {
+      const hasG = Boolean((global.NoirGeminiBridge || NS.geminiBridge)?.hasApiKey?.());
       return `
         <label class="block space-y-1"><span class="font-bold">Định dạng bảng xuất ra:</span>
           <select id="opt-pro-p2x-out" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
             <option value="xlsx">Excel (.XLSX — Nhiều cột chuẩn)</option>
             <option value="csv">CSV UTF-8 (Mở Excel tiếng Việt không lỗi dấu)</option>
           </select>
-        </label>`;
+        </label>
+        <label class="flex items-center gap-2 pt-1"><input id="opt-pro-p2x-ai-clean" type="checkbox" ${hasG ? 'checked' : ''} class="accent-emerald-400" /><span>✨ Dùng AI gộp ô bảng bị ngắt dòng &amp; chuẩn hóa cột (${hasG ? 'Gemini đã nối' : 'Cần API Key'})</span></label>`;
     }
 
     if (toolId === 'deskew_denoise') {
@@ -1727,6 +1734,7 @@ Chương 3: Tổng kết | 12</textarea>
       epubOut: document.getElementById('opt-pro-epub-out')?.value || 'pdf',
       epubTitle: document.getElementById('opt-pro-epub-title')?.value?.trim() || '',
       p2xOut: document.getElementById('opt-pro-p2x-out')?.value || 'xlsx',
+      p2xAiClean: Boolean(document.getElementById('opt-pro-p2x-ai-clean')?.checked),
       deskewDeg: Number(document.getElementById('opt-pro-deskew-deg')?.value || 0),
       denoiseWhite: Boolean(document.getElementById('opt-pro-denoise-white')?.checked),
       metaScrub: Boolean(document.getElementById('opt-pro-meta-scrub')?.checked),
@@ -3855,6 +3863,32 @@ Chương 3: Tổng kết | 12</textarea>
         const ws = XLSX.utils.aoa_to_sheet(pageRows.length ? pageRows : [['(Trang không có dữ liệu bảng)']]);
         XLSX.utils.book_append_sheet(wb, ws, `Trang_${i}`);
         allRows.push(...pageRows);
+      }
+      if (pro.p2xAiClean && (global.NoirGeminiBridge || NS.geminiBridge)?.hasApiKey?.() && allRows.length > 1) {
+        try {
+          prog(92, '🤖 AI đang chuẩn hóa & gộp ô bảng bị xuống dòng...');
+          const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+          const previewJson = JSON.stringify(allRows.slice(0, 75));
+          const aiRaw = await gBridge.callGeminiText(
+            `Đây là mảng JSON 2D các hàng bảng quét từ PDF. Một số hàng dài bị tách xuống dòng làm ô cột 0 bị trống. Hãy gộp phần nối tiếp vào đúng hàng trên và trả về MẢNG JSON 2D duy nhất:\n${previewJson}`,
+            { temperature: 0.1, maxOutputTokens: 8192 }
+          );
+          const m = aiRaw.match(/\[[\s\S]*\]/);
+          if (m) {
+            const parsedRows = JSON.parse(m[0]);
+            if (Array.isArray(parsedRows) && parsedRows.length) {
+              allRows.splice(0, Math.min(75, allRows.length), ...parsedRows);
+              const wsCleaned = XLSX.utils.aoa_to_sheet(allRows);
+              const wbCleaned = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wbCleaned, wsCleaned, 'Bang_AI_ChuanHoa');
+              if (pro.p2xOut !== 'csv') {
+                const arrClean = XLSX.write(wbCleaned, { bookType: 'xlsx', type: 'array' });
+                outputs.push({ name: `${baseName}_Bang_AI.xlsx`, blob: new Blob([arrClean], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) });
+                return outputs;
+              }
+            }
+          }
+        } catch (_eP2xAi) {}
       }
       if (pro.p2xOut === 'csv') {
         const wsAll = XLSX.utils.aoa_to_sheet(allRows.length ? allRows : [['(Trống)']]);

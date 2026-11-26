@@ -773,6 +773,12 @@
       modal.classList.remove('hidden');
       modal.style.display = 'flex';
       try { NS.i18n?.translateElement?.(modal); } catch (_eTrModal) {}
+      try {
+        (global.NoirGeminiBridge || NS.geminiBridge)?.maybeShowWelcomeApiUpsellModal?.('danglovepdf', () => {
+          if (this.activeTool) this.renderUploadOrWorkspaceScreen();
+          else this.renderHubScreen();
+        });
+      } catch (_eUpsell) {}
 
       if (initialToolId) {
         const found = getActiveAllTools().find((t) => t.id === initialToolId);
@@ -1106,40 +1112,31 @@
         const hasGKey = Boolean(geminiBridge?.hasApiKey?.());
 
         const aiHelperBarHtml = isTheme10
-          ? `<div id="mod46-ai-helper-bar" class="rounded-2xl border border-cyan-500/35 bg-zinc-900/85 p-3 flex flex-wrap items-center justify-between gap-2">
-               <div class="flex flex-wrap items-center gap-2">
-                 <button type="button" id="btn-mod46-copy-std-prompt" class="px-3 py-1.5 rounded-xl bg-amber-600/25 hover:bg-amber-600/40 border border-amber-400/50 text-amber-200 text-xs font-bold cursor-pointer transition">📋 Prompt chỉnh tiêu đề chuẩn</button>
-                 <button type="button" id="btn-mod46-view-std-prompt" class="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-bold cursor-pointer transition">👁️ Xem Prompt</button>
+          ? `<div id="mod46-ai-helper-bar" class="rounded-2xl border ${hasGKey ? 'border-emerald-500/45 bg-emerald-950/25' : 'border-cyan-500/35 bg-zinc-900/85'} p-3 flex flex-wrap items-center justify-between gap-2">
+               <div class="text-xs font-bold ${hasGKey ? 'text-emerald-300' : 'text-cyan-200'}">
+                 ${hasGKey ? '✅ Đã liên kết Gemini API Key — Sẵn sàng tự động định dạng PDF chuẩn 1 chạm!' : '💡 Kết nối Gemini API Key miễn phí để tự động chuẩn hóa tiêu đề, bảng biểu & xuất PDF siêu đẹp!'}
                </div>
-               <button type="button" id="btn-mod46-gemini-key-pill" class="px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition ${hasGKey ? 'border-emerald-500/50 bg-emerald-950/40 text-emerald-300' : 'border-cyan-500/45 bg-cyan-950/35 text-cyan-200'}">
-                 ${hasGKey ? '✅ Gemini API Key (Đã đồng bộ)' : '🔑 Gắn API Key (Tùy chọn)'}
-               </button>
-             </div>
-             <div class="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-zinc-900 border border-zinc-800">
-               <button type="button" id="btn-mod46-tab-upload" class="py-2 px-3 rounded-xl text-xs sm:text-sm font-bold cursor-pointer transition ${inputTab === 'upload' ? 'bg-rose-600 text-white shadow' : 'text-zinc-300 hover:bg-zinc-800'}">📂 Tải File (DOCX / XLSX / PDF)</button>
-               <button type="button" id="btn-mod46-tab-paste-ai" class="py-2 px-3 rounded-xl text-xs sm:text-sm font-bold cursor-pointer transition ${inputTab === 'paste_ai' ? 'bg-emerald-600 text-white shadow' : 'text-zinc-300 hover:bg-zinc-800'}">📋 Dán Văn Bản Từ AI (Markdown / LaTeX)</button>
+               <div class="flex flex-wrap items-center gap-2">
+                 <button type="button" id="btn-mod46-view-std-prompt" class="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-bold cursor-pointer transition">👁️ Xem Prompt chuẩn</button>
+                 <button type="button" id="btn-mod46-gemini-key-pill" class="px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition ${hasGKey ? 'border-emerald-500/50 bg-emerald-950/50 text-emerald-300' : 'border-cyan-500/45 bg-cyan-950/40 text-cyan-200'}">
+                   ${hasGKey ? '🔑 Đổi API Key' : '🔗 Kết nối AI của bạn'}
+                 </button>
+               </div>
              </div>`
           : '';
 
-        const pasteAiPanelHtml = isTheme10 && inputTab === 'paste_ai'
-          ? `<div id="mod46-ai-paste-panel" class="rounded-3xl border-2 border-emerald-500/45 bg-zinc-900/80 p-4 sm:p-6 space-y-3">
-               <div class="flex flex-wrap items-center justify-between gap-2">
-                 <div class="text-sm font-bold text-emerald-300">✨ Dán trực tiếp kết quả Markdown / LaTeX từ Gemini Web hoặc ChatGPT</div>
-                 <div class="flex flex-wrap items-center gap-1.5">
-                   <button type="button" id="btn-mod46-ai-paste-clip" class="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold cursor-pointer">📋 Dán từ Clipboard</button>
-                   <a id="btn-mod46-open-gemini-web" href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold">🚀 Mở Gemini</a>
-                 </div>
-               </div>
-               <div id="mod46-ai-focus-return-banner" class="hidden px-3 py-2 rounded-xl border border-amber-400/60 bg-amber-950/35 text-xs text-amber-200 flex items-center justify-between gap-2">
-                 <span>✨ Bạn vừa quay lại từ Gemini! Bấm vào đây để dán nhanh kết quả từ Clipboard:</span>
-                 <button type="button" id="btn-mod46-focus-quick-paste" class="px-2.5 py-1 rounded-lg bg-amber-500 text-zinc-950 font-bold cursor-pointer">Dán nhanh ngay</button>
-               </div>
-               <input id="input-mod46-ai-doc-title" type="text" value="${escHtml(this.theme10AiDocTitle || 'Bao_Cao_Tu_AI')}" placeholder="Tên tài liệu (ví dụ: Bao_Cao_Tai_Chinh_2026)" class="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-700 text-zinc-100 text-xs font-bold" />
-               <textarea id="textarea-mod46-ai-markdown" rows="9" placeholder="# CHƯƠNG 1. MỞ ĐẦU&#10;&#10;Giá cổ phiếu $28.40 đạt mục tiêu $70tr...&#10;&#10;$$V_{op} = \\sum \\frac{FCF_t}{(1+WACC)^t}$$&#10;&#10;**Bảng 1: Tổng hợp**&#10;| Chỉ tiêu | Giá trị |&#10;| :--- | ---: |&#10;| Doanh thu | 1.250 tỷ |" class="w-full p-3 rounded-2xl bg-zinc-950 border border-zinc-700 text-zinc-100 text-xs font-mono leading-relaxed">${escHtml(this.theme10AiDraftMd || '')}</textarea>
-               <div class="flex flex-wrap items-center justify-between gap-2">
-                 <span class="text-[11px] text-zinc-400">Hỗ trợ giữ nguyên tiền tệ ($28.40, $70tr), công thức LaTeX ($...$, $$...$$) và bảng GFM có Nguồn.</span>
-                 <button type="button" id="btn-mod46-ingest-ai-markdown" class="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold shadow-lg cursor-pointer">✨ Nạp văn bản &amp; Chuyển sang Cấu hình Báo Cáo</button>
-               </div>
+        const theme10CtaBelowDropzoneHtml = isTheme10
+          ? `<div id="mod46-theme10-ai-cta-box" class="rounded-2xl border border-zinc-800 bg-zinc-900/85 p-4 space-y-2.5 text-center">
+               ${hasGKey
+                 ? `<button type="button" id="btn-mod46-run-ai-beautify" class="noir-ai-blink-btn w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-sm sm:text-base shadow-xl cursor-pointer transition">
+                      ✨ Định dạng văn bản chính xác bằng AI để xuất PDF đẹp
+                    </button>`
+                 : `<button type="button" id="btn-mod46-connect-ai" class="noir-ai-blink-btn w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-sm sm:text-base shadow-xl cursor-pointer transition">
+                      🔗 Kết nối AI của bạn
+                    </button>`}
+               <button type="button" id="btn-mod46-skip-ai" class="w-full py-2 px-4 rounded-xl border border-zinc-700 bg-zinc-950/80 hover:bg-zinc-800 text-zinc-300 text-xs font-semibold cursor-pointer transition">
+                 Tôi không cần AI (Bạn bỏ qua AI, độ chính xác của file sẽ giảm đi đáng kể)
+               </button>
              </div>`
           : '';
 
@@ -1147,91 +1144,67 @@
           <div class="max-w-3xl mx-auto py-4 space-y-4">
             <div class="text-center space-y-1.5">
               <div class="text-4xl">${tool.icon}</div>
-              <h3 class="text-lg sm:text-xl font-black text-zinc-100">${escHtml(tool.name)}</h3>
+              <h3 class="text-lg sm:text-xl font-bold text-zinc-100">${escHtml(tool.name)}</h3>
               <p class="text-xs sm:text-sm text-zinc-400">${escHtml(tool.desc)}</p>
             </div>
 
             ${themeHeadingNoticeHtml}
             ${aiHelperBarHtml}
-            ${pasteAiPanelHtml}
 
-            <div id="mod46-dropzone" class="${inputTab === 'paste_ai' ? 'hidden ' : ''}rounded-3xl border-2 border-dashed border-rose-400/60 hover:border-rose-300 bg-zinc-900/70 p-8 sm:p-12 text-center space-y-4 transition cursor-pointer">
+            <div id="mod46-dropzone" class="rounded-3xl border-2 border-dashed border-rose-400/60 hover:border-rose-300 bg-zinc-900/70 p-8 sm:p-12 text-center space-y-4 transition cursor-pointer">
               <div class="text-5xl">📂</div>
-              <div class="text-sm sm:text-base font-extrabold text-zinc-200">Kéo thả tệp vào đây hoặc bấm nút bên dưới</div>
+              <div class="text-sm sm:text-base font-bold text-zinc-200">Kéo thả tệp vào đây hoặc bấm nút bên dưới</div>
               <div>
                 <input id="input-mod46-file-picker" type="file" accept="${escHtml(tool.accept)}" ${tool.multiple ? 'multiple' : ''} class="hidden" />
-                <button type="button" id="btn-mod46-select-files" class="px-6 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-sm shadow-xl transition cursor-pointer">
+                <button type="button" id="btn-mod46-select-files" class="px-6 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm shadow-xl transition cursor-pointer">
                   📂 Chọn tệp từ máy tính
                 </button>
               </div>
               <div class="text-[11px] text-zinc-400">Hỗ trợ: <span class="font-bold text-amber-300">${escHtml(tool.badge)}</span></div>
             </div>
+
+            ${theme10CtaBelowDropzoneHtml}
           </div>
         `;
         if (isTheme10) {
-          body.querySelector('#btn-mod46-copy-std-prompt')?.addEventListener('click', () => geminiBridge?.copyStandardPrompt?.());
           body.querySelector('#btn-mod46-view-std-prompt')?.addEventListener('click', () => geminiBridge?.openPromptPreviewModal?.());
-          body.querySelector('#btn-mod46-gemini-key-pill')?.addEventListener('click', () => {
+          const openKeyModalAndRefresh = () => {
             geminiBridge?.openApiKeyQuickModal?.({ onSaved: () => this.renderUploadOrWorkspaceScreen() });
-          });
-          body.querySelector('#btn-mod46-tab-upload')?.addEventListener('click', () => {
-            this.theme10InputTab = 'upload';
-            this.renderUploadOrWorkspaceScreen();
-          });
-          body.querySelector('#btn-mod46-tab-paste-ai')?.addEventListener('click', () => {
-            this.theme10InputTab = 'paste_ai';
-            this.renderUploadOrWorkspaceScreen();
-          });
-          const mdTa = body.querySelector('#textarea-mod46-ai-markdown');
-          const titleInp = body.querySelector('#input-mod46-ai-doc-title');
-          mdTa?.addEventListener('input', () => { this.theme10AiDraftMd = mdTa.value; });
-          titleInp?.addEventListener('input', () => { this.theme10AiDocTitle = titleInp.value; });
-          const doPasteFromClip = async () => {
-            try {
-              const clip = await global.navigator?.clipboard?.readText?.();
-              if (clip && mdTa) {
-                mdTa.value = clip;
-                this.theme10AiDraftMd = clip;
-                this.toast('✅ Đã dán văn bản từ Clipboard!', 'success', 2400);
-              } else {
-                this.toast('ℹ️ Trình duyệt không cho đọc tự động — hãy bấm Ctrl+V hoặc chạm giữ -> Dán vào khung.', 'info', 2800);
-                mdTa?.focus();
-              }
-            } catch (_eClip) {
-              this.toast('ℹ️ Hãy bấm Ctrl+V hoặc chạm giữ -> Dán trực tiếp vào khung văn bản.', 'info', 2800);
-              mdTa?.focus();
-            }
           };
-          body.querySelector('#btn-mod46-ai-paste-clip')?.addEventListener('click', doPasteFromClip);
-          body.querySelector('#btn-mod46-focus-quick-paste')?.addEventListener('click', doPasteFromClip);
-          body.querySelector('#btn-mod46-open-gemini-web')?.addEventListener('click', () => {
-            const unwatch = geminiBridge?.watchClipboardReturn?.(() => {
-              const bnr = document.getElementById('mod46-ai-focus-return-banner');
-              if (bnr) bnr.classList.remove('hidden');
-              unwatch?.();
-            });
+          body.querySelector('#btn-mod46-gemini-key-pill')?.addEventListener('click', openKeyModalAndRefresh);
+          body.querySelector('#btn-mod46-connect-ai')?.addEventListener('click', openKeyModalAndRefresh);
+          body.querySelector('#btn-mod46-skip-ai')?.addEventListener('click', () => {
+            this.pendingTheme10AiFormat = false;
+            this.toast('ℹ️ Đã chọn chế độ không dùng AI. Hãy chọn tệp để tiếp tục bằng thuật toán Code.', 'info', 2800);
+            body.querySelector('#input-mod46-file-picker')?.click();
           });
-          body.querySelector('#btn-mod46-ingest-ai-markdown')?.addEventListener('click', () => {
-            const rawMd = String(mdTa?.value || '').trim();
-            if (!rawMd || rawMd.length < 10) {
-              this.toast('⚠️ Vui lòng dán nội dung Markdown / văn bản từ AI trước khi tiếp tục.', 'warning', 3000);
-              mdTa?.focus();
+          body.querySelector('#btn-mod46-run-ai-beautify')?.addEventListener('click', () => {
+            if (!this.files.length) {
+              const old = document.getElementById('mod46-need-file-popup');
+              if (old) old.remove();
+              const pop = document.createElement('div');
+              pop.id = 'mod46-need-file-popup';
+              pop.style.cssText = 'position:fixed;inset:0;z-index:2147483610;background:rgba(5,9,18,0.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;';
+              pop.innerHTML = `
+                <div class="max-w-sm w-full rounded-2xl border border-amber-400/50 bg-zinc-900 p-5 text-center space-y-3 shadow-2xl">
+                  <div class="text-3xl">📄</div>
+                  <div class="text-sm font-bold text-amber-200 leading-relaxed">Bạn phải tải lên tệp bạn muốn chỉnh sửa đã</div>
+                  <div class="flex gap-2 justify-center pt-1">
+                    <button type="button" id="btn-mod46-pop-pick-ai" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer">📂 Chọn tệp &amp; Chạy AI ngay</button>
+                    <button type="button" id="btn-mod46-pop-close" class="px-3.5 py-2 rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold cursor-pointer">Đóng</button>
+                  </div>
+                </div>
+              `;
+              document.body.appendChild(pop);
+              pop.querySelector('#btn-mod46-pop-close')?.addEventListener('click', () => pop.remove());
+              pop.addEventListener('click', (ev) => { if (ev.target === pop) pop.remove(); });
+              pop.querySelector('#btn-mod46-pop-pick-ai')?.addEventListener('click', () => {
+                pop.remove();
+                this.pendingTheme10AiFormat = true;
+                body.querySelector('#input-mod46-file-picker')?.click();
+              });
               return;
             }
-            const cleanTitle = String(titleInp?.value || 'Bao_Cao_Tu_AI').trim().replace(/[\\/:*?"<>|]/g, '_') || 'Bao_Cao_Tu_AI';
-            const bytes = new TextEncoder().encode(rawMd);
-            this.resetWorkspaceState();
-            this.files = [{
-              id: `ai_md_${Date.now()}`,
-              name: `${cleanTitle}.md`,
-              size: bytes.byteLength,
-              bytes,
-              text: rawMd,
-              ext: 'md',
-              pageCount: 1,
-              thumbUrl: '',
-            }];
-            this.renderUploadOrWorkspaceScreen();
           });
         }
         const picker = body.querySelector('#input-mod46-file-picker');
@@ -1261,6 +1234,35 @@
       const totalBytes = this.files.reduce((s, f) => s + f.size, 0);
       const over300Mb = totalBytes > 300 * 1024 * 1024;
       const canRun = tool.noFileRequired || this.files.length >= (tool.minFiles || 1);
+      const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+
+      if (this.pendingTheme10AiFormat && isTheme10 && this.files[0] && gBridge?.hasApiKey?.()) {
+        this.pendingTheme10AiFormat = false;
+        setTimeout(async () => {
+          const loader = gBridge.showAiFullLoadingOverlay?.(
+            '✨ AI đang tự động đọc & chuẩn hóa tài liệu...',
+            'Đang kết hợp thuật toán phân tích cấu trúc và Gemini API để tạo PDF đẹp nhất!'
+          );
+          try {
+            const extractor = global.NoirExtractStructuredBlocksFromFile || NS.dangLovePdfPro?.extractStructuredBlocksFromFile;
+            loader?.update?.('🔍 Đang trích xuất cấu trúc gốc từ tệp...', 20);
+            const rawBlocks = extractor ? await extractor(this.files[0], { ensurePdfJs, ensureJsZip, ensureXlsx }) : [];
+            const formatted = await gBridge.runAiFormatDocumentToAst?.(rawBlocks, {
+              fileName: this.files[0].name,
+              onProgress: (pct, msg) => loader?.update?.(msg, pct),
+            });
+            if (Array.isArray(formatted) && formatted.length) {
+              this.theme10OverrideBlocks = formatted;
+              loader?.update?.('✅ AI đã hoàn tất chuẩn hóa! Đang nạp vào bản xem trước...', 96);
+            }
+          } catch (err) {
+            this.toast(`⚠️ AI gặp trục trặc (${err?.message || 'Lỗi'}), đang dùng thuật toán Code chuẩn.`, 'error', 3500);
+          } finally {
+            loader?.close?.();
+            this.renderUploadOrWorkspaceScreen();
+          }
+        }, 40);
+      }
 
       body.innerHTML = `
         <div class="max-w-6xl mx-auto space-y-3">
@@ -1661,6 +1663,7 @@
           </label>`;
       }
       if (id === 'pdf_to_docx') {
+        const hasG = Boolean((global.NoirGeminiBridge || NS.geminiBridge)?.hasApiKey?.());
         return `
           <label class="block space-y-1"><span class="font-bold">Định dạng xuất ra:</span>
             <select id="opt-p2d-out" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
@@ -1669,7 +1672,8 @@
               <option value="txt">Văn bản thuần (.TXT)</option>
               <option value="json">Dữ liệu JSON (.JSON kèm tọa độ &amp; cỡ chữ)</option>
             </select>
-          </label>`;
+          </label>
+          <label class="flex items-center gap-2 pt-1"><input id="opt-p2d-ai-polish" type="checkbox" ${hasG ? 'checked' : ''} class="accent-emerald-400" /><span>✨ Dùng AI nối câu bị ngắt dòng &amp; chuẩn hóa văn bản (${hasG ? 'Gemini đã kết nối' : 'Cần API Key'})</span></label>`;
       }
       if (id === 'text_to_pdf_docx') {
         return `
@@ -1702,6 +1706,7 @@
           : `<p class="text-zinc-300">Mỗi trang PDF sẽ được chuyển thành 1 trang chiếu sắc nét trong file PowerPoint <strong>.PPTX</strong>.</p>`;
       }
       if (id === 'ocr_pdf') {
+        const hasG = Boolean((global.NoirGeminiBridge || NS.geminiBridge)?.hasApiKey?.());
         return `
           <label class="block space-y-1"><span class="font-bold">Ngôn ngữ nhận diện (Đa ngôn ngữ):</span>
             <select id="opt-ocr-lang" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
@@ -1722,6 +1727,7 @@
           </label>
           <label class="flex items-center gap-2"><input id="opt-ocr-smart-skip" type="checkbox" checked class="accent-teal-400" /><span>Smart Skip: Tự lấy chữ gốc với trang đã có lớp văn bản</span></label>
           <label class="flex items-center gap-2"><input id="opt-ocr-denoise" type="checkbox" checked class="accent-teal-400" /><span>Tiền xử lý: Tẩy nền ố vàng, khử bóng &amp; làm nét trước khi OCR</span></label>
+          <label class="flex items-center gap-2"><input id="opt-ocr-ai-polish" type="checkbox" ${hasG ? 'checked' : ''} class="accent-emerald-400" /><span>🤖 Hậu kiểm OCR bằng Gemini AI (sửa lỗi dấu tiếng Việt &amp; tách từ)</span></label>
           <p class="text-[11px] text-zinc-400">Chạy trực tiếp trên CPU máy bạn — giữ nguyên ảnh gốc sắc nét ở bản thành phẩm.</p>`;
       }
       const proOpt = NS.dangLovePdfPro?.buildProOptionsHtml?.(this, id);
@@ -2359,7 +2365,35 @@
               if (!silent) this.toast('Không thể quét cấu trúc tự động từ tệp PDF này.', 'warning', 2500);
             }
           };
-          body.querySelector('#btn-pro-toc-autodetect')?.addEventListener('click', () => runAutoTocDetect(false));
+          body.querySelector('#btn-pro-toc-autodetect')?.addEventListener('click', async () => {
+            const btn = body.querySelector('#btn-pro-toc-autodetect');
+            const origTxt = btn?.textContent || '';
+            const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+            if (btn) btn.textContent = gBridge?.hasApiKey?.() ? '⏳ AI + Code đang quét...' : '⏳ Đang quét...';
+            try {
+              await runAutoTocDetect(false);
+              const taEl = body.querySelector('#opt-pro-toc-lines');
+              const extractor = global.NoirExtractStructuredBlocksFromFile || NS.dangLovePdfPro?.extractStructuredBlocksFromFile;
+              if (gBridge?.hasApiKey?.() && typeof gBridge.runAiAndCodeAutoToc === 'function' && this.files[0] && taEl && extractor) {
+                const blocks = await extractor(this.files[0], { ensurePdfJs, ensureJsZip, ensureXlsx });
+                const aiLines = await gBridge.runAiAndCodeAutoToc(blocks, {
+                  codeTocBuilder: () => String(taEl.value || '').split(/\r?\n/).filter(Boolean),
+                  maxPage: this.files[0].pageCount || 999,
+                });
+                if (Array.isArray(aiLines) && aiLines.length) {
+                  taEl.value = aiLines.join('\n');
+                  this.toast(`🤖 Đã quét mục lục thông minh bằng AI và Code (${aiLines.length} mục)!`, 'success', 2800);
+                }
+              }
+            } finally {
+              if (btn) btn.textContent = origTxt;
+            }
+          });
+          body.querySelector('#btn-pro-toc-connect-ai')?.addEventListener('click', () => {
+            (global.NoirGeminiBridge || NS.geminiBridge)?.openApiKeyQuickModal?.({
+              onSaved: () => this.renderUploadOrWorkspaceScreen(),
+            });
+          });
           const initialTaVal = body.querySelector('#opt-pro-toc-lines')?.value?.trim() || '';
           if (!initialTaVal || /^Chương 1: Khởi đầu \| 1\s+Chương 2: Diễn biến chính \| 5\s+Chương 3: Tổng kết \| 12$/i.test(initialTaVal)) {
             runAutoTocDetect(true);
@@ -3013,10 +3047,12 @@
         i2pMargin: Number(document.getElementById('opt-i2p-margin')?.value || 24),
         docxOut: document.getElementById('opt-docx-out')?.value || 'pdf',
         p2dOut: document.getElementById('opt-p2d-out')?.value || 'docx',
+        p2dAiPolish: Boolean(document.getElementById('opt-p2d-ai-polish')?.checked),
         t2pOut: document.getElementById('opt-t2p-out')?.value || 'pdf',
         sheetOut: document.getElementById('opt-sheet-out')?.value || 'pdf',
         pptOut: document.getElementById('opt-ppt-out')?.value || 'pdf',
-        ocrLang: document.getElementById('opt-ocr-lang')?.value || 'vie+eng'
+        ocrLang: document.getElementById('opt-ocr-lang')?.value || 'vie+eng',
+        ocrAiPolish: Boolean(document.getElementById('opt-ocr-ai-polish')?.checked)
       };
 
       const inputTotalSize = this.files.reduce((s, f) => s + f.size, 0);
@@ -3510,6 +3546,21 @@
             mdLines.push('');
             jsonPages.push({ page: i, items: pageItems });
           }
+          if (opts.p2dAiPolish && (global.NoirGeminiBridge || NS.geminiBridge)?.hasApiKey?.() && paragraphs.length) {
+            try {
+              prog(89, '🤖 AI đang nối câu & chuẩn hóa chính tả...');
+              const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+              const sample = paragraphs.slice(0, 120).join('\n');
+              const refined = await gBridge.callGeminiText(
+                `Hãy chuẩn hóa chính tả, bỏ khoảng trắng thừa tách chữ, giữ nguyên cấu trúc đoạn văn sau và không tóm tắt:\n\n${sample}`,
+                { temperature: 0.1, maxOutputTokens: 8192 }
+              );
+              if (refined && refined.trim().length > sample.length * 0.4) {
+                const refLines = refined.split(/\r?\n/);
+                paragraphs.splice(0, Math.min(120, paragraphs.length), ...refLines);
+              }
+            } catch (_eP2dAi) {}
+          }
           if (opts.p2dOut === 'txt') {
             outputs.push({ name: `${baseName}.txt`, blob: new Blob([paragraphs.join('\n')], { type: 'text/plain;charset=utf-8' }) });
           } else if (opts.p2dOut === 'md') {
@@ -3670,7 +3721,20 @@
             fullTextParts.push(res?.data?.text || '');
             if (wantSearchablePdf) await appendSearchablePage(c, res?.data);
           }
-          const combinedText = fullTextParts.join('\n\n');
+          let combinedText = fullTextParts.join('\n\n');
+          if (opts.ocrAiPolish && (global.NoirGeminiBridge || NS.geminiBridge)?.hasApiKey?.() && combinedText.trim().length > 20) {
+            try {
+              prog(92, '🤖 AI đang hậu kiểm & sửa lỗi dấu tiếng Việt sau OCR...');
+              const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+              const polished = await gBridge.callGeminiText(
+                `Hãy sửa các lỗi nhận diện OCR (lỗi dấu tiếng Việt, ký tự vỡ, khoảng trắng thừa tách chữ) nhưng GIỮ NGUYÊN 100% nội dung & số liệu của văn bản sau:\n\n${combinedText.slice(0, 14000)}`,
+                { temperature: 0.1, maxOutputTokens: 8192 }
+              );
+              if (polished && polished.trim().length > combinedText.slice(0, 14000).length * 0.4) {
+                combinedText = polished + (combinedText.length > 14000 ? '\n\n' + combinedText.slice(14000) : '');
+              }
+            } catch (_eOcrAi) {}
+          }
           if (wantSearchablePdf && outPdf) {
             outputs.push({ name: `${baseName}_OCR_Searchable.pdf`, blob: new Blob([await outPdf.save()], { type: 'application/pdf' }) });
           } else if (pro.ocrOutFormat === 'docx') {

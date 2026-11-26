@@ -22,7 +22,7 @@
   const INV = (globalScope.NoirInvestToday = globalScope.NoirInvestToday || {});
 
   const FONT_MAP = {
-    sans: '"Segoe UI", Arial, sans-serif',
+    sans: '"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", Arial, sans-serif',
     serif: 'Georgia, "Times New Roman", serif',
     classic: '"Palatino Linotype", Georgia, serif',
     mono: 'Consolas, "Courier New", monospace',
@@ -96,7 +96,7 @@
     ctx.fillStyle = '#14b8a6';
     ctx.fillRect(0, 92, 1240, 4);
     ctx.fillStyle = '#ffffff';
-    ctx.font = `900 26px ${ff}`;
+    ctx.font = `700 6px ${ff}`;
     ctx.textBaseline = 'middle';
     ctx.fillText(cleanStr(title).slice(0, 74), 72, 48);
     ctx.textBaseline = 'top';
@@ -125,11 +125,11 @@
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.fillStyle = '#5eead4';
-    ctx.font = `800 20px ${ff}`;
+    ctx.font = `700 0px ${ff}`;
     ctx.fillText('BÁO CÁO PHÂN TÍCH ĐẦU TƯ CHUYÊN GIA', 110, 121);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = `900 52px ${ff}`;
+    ctx.font = `700 2px ${ff}`;
     let ty = 205;
     wrapText(ctx, modeMeta.title, W - 180).forEach((ln) => {
       ctx.fillText(ln, 84, ty);
@@ -160,7 +160,7 @@
       ctx.font = `700 18px ${ff}`;
       ctx.fillText(cleanStr(m.label), x + 24, y + 22);
       ctx.fillStyle = '#ffffff';
-      ctx.font = `900 30px ${ff}`;
+      ctx.font = `700 0px ${ff}`;
       wrapText(ctx, cleanStr(m.value || '—'), colW - 48).slice(0, 1).forEach((vln) => ctx.fillText(vln, x + 24, y + 58));
       ctx.fillStyle = '#5eead4';
       ctx.font = `600 16.5px ${ff}`;
@@ -190,7 +190,7 @@
     // 1. DONUT PHÂN BỔ VỐN (Trái trên)
     rr(ctx, 64, 126, 540, 490, 18);
     ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#0ea5e9'; ctx.font = `900 22px ${ff}`;
+    ctx.fillStyle = '#0ea5e9'; ctx.font = `700 2px ${ff}`;
     ctx.fillText('1. Gợi Ý Phân Bổ Vốn An Toàn (%)', 88, 150);
 
     const alloc = unified?.allocation_pct || { cash: 35, gold: 25, stock: 25, real_estate: 15 };
@@ -212,7 +212,7 @@
       ctx.stroke();
       ang += sw;
     });
-    ctx.fillStyle = ink; ctx.font = `900 30px ${ff}`; ctx.textAlign = 'center';
+    ctx.fillStyle = ink; ctx.font = `700 0px ${ff}`; ctx.textAlign = 'center';
     ctx.fillText('100%', dcx, dcy - 18);
     ctx.fillStyle = muted; ctx.font = `700 15px ${ff}`;
     ctx.fillText('TỶ TRỌNG', dcx, dcy + 18);
@@ -221,7 +221,7 @@
     slices.forEach((s, i) => {
       const ly = 240 + i * 54;
       ctx.fillStyle = s.color; ctx.fillRect(382, ly + 4, 18, 18);
-      ctx.fillStyle = ink; ctx.font = `800 17px ${ff}`;
+      ctx.fillStyle = ink; ctx.font = `700 7px ${ff}`;
       ctx.fillText(`${Math.round((s.val / totalA) * 100)}%`, 410, ly);
       ctx.fillStyle = muted; ctx.font = `600 15px ${ff}`;
       ctx.fillText(s.label, 410, ly + 22);
@@ -230,7 +230,7 @@
     // 2. RADAR 6 TRỤC RỦI RO (Phải trên)
     rr(ctx, 636, 126, 540, 490, 18);
     ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#f43f5e'; ctx.font = `900 22px ${ff}`;
+    ctx.fillStyle = '#f43f5e'; ctx.font = `700 2px ${ff}`;
     ctx.fillText('2. Biểu Đồ Radar 6 Mức Độ Rủi Ro', 660, 150);
 
     const radarAxes = (Array.isArray(unified?.risk_radar) && unified.risk_radar.length >= 3)
@@ -272,7 +272,7 @@
       ctx.beginPath(); ctx.arc(dx, dy, 6, 0, Math.PI * 2);
       ctx.fillStyle = Number(ax.level) >= 75 ? '#f43f5e' : '#f59e0b'; ctx.fill();
       const [lx, ly] = rPt(i, 1.28);
-      ctx.fillStyle = ink; ctx.font = `800 15px ${ff}`;
+      ctx.fillStyle = ink; ctx.font = `700 5px ${ff}`;
       ctx.textAlign = lx < rcx - 20 ? 'right' : lx > rcx + 20 ? 'left' : 'center';
       ctx.fillText(`${cleanStr(ax.label).slice(0, 18)} (${Math.round(Number(ax.level) || 0)})`, lx, ly - 8);
     });
@@ -281,7 +281,7 @@
     // 3. BIỂU ĐỒ CỘT 4 KÊNH ĐẦU TƯ (Giữa)
     rr(ctx, 64, 646, 1112, 360, 18);
     ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#10b981'; ctx.font = `900 22px ${ff}`;
+    ctx.fillStyle = '#10b981'; ctx.font = `700 2px ${ff}`;
     ctx.fillText('3. Biểu Đồ Điểm Hấp Dẫn 4 Kênh Đầu Tư (Thang 100)', 88, 670);
 
     const ch = report?.channel_scores || {};
@@ -293,9 +293,9 @@
     ];
     bars.forEach((b, i) => {
       const by = 720 + i * 68;
-      ctx.fillStyle = ink; ctx.font = `800 19px ${ff}`;
+      ctx.fillStyle = ink; ctx.font = `700 9px ${ff}`;
       ctx.fillText(`${b.label} — ${b.badge}`, 92, by);
-      ctx.fillStyle = b.color; ctx.font = `900 20px ${ff}`;
+      ctx.fillStyle = b.color; ctx.font = `700 0px ${ff}`;
       ctx.fillText(`${b.score}/100`, 1065, by);
       rr(ctx, 92, by + 28, 955, 22, 11);
       ctx.fillStyle = dark ? '#0f172a' : '#e2e8f0'; ctx.fill();
@@ -306,7 +306,7 @@
     // 4. MA TRẬN QUYẾT ĐỊNH 4 KÊNH (Đáy)
     rr(ctx, 64, 1036, 1112, 620, 18);
     ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#0d9488'; ctx.font = `900 22px ${ff}`;
+    ctx.fillStyle = '#0d9488'; ctx.font = `700 2px ${ff}`;
     ctx.fillText('4. Ma Trận Quyết Định Hành Động & Khuyến Nghị Chu Kỳ', 88, 1060);
 
     const dmList = Array.isArray(unified?.decision_matrix) && unified.decision_matrix.length
@@ -318,7 +318,7 @@
       ctx.fillStyle = dark ? '#0f172a' : '#ffffff'; ctx.fill();
       ctx.strokeStyle = cardBd; ctx.lineWidth = 1.5; ctx.stroke();
       ctx.fillStyle = '#0d9488'; ctx.fillRect(88, my, 8, 118);
-      ctx.fillStyle = ink; ctx.font = `900 19px ${ff}`;
+      ctx.fillStyle = ink; ctx.font = `700 9px ${ff}`;
       ctx.fillText(`${cleanStr(dm.channel)}  •  ${cleanStr(dm.decision)}`, 112, my + 14);
       ctx.fillStyle = muted; ctx.font = `600 17px ${ff}`;
       wrapText(ctx, dm.reason || '', 1016).slice(0, 3).forEach((ln, li) => {
@@ -347,7 +347,7 @@
       const pts = dataObj.goldHist?.points || [];
       rr(ctx, 64, 126, 1112, 620, 18);
       ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#f59e0b'; ctx.font = `900 24px ${ff}`;
+      ctx.fillStyle = '#f59e0b'; ctx.font = `700 4px ${ff}`;
       ctx.fillText('📈 Xu Hướng Giá Vàng Thế Giới 30 Ngày (PAXG / XAU-USD)', 92, 154);
 
       if (pts.length >= 2) {
@@ -380,7 +380,7 @@
       paintHeader(ctx, `PHẦN 1 — BIỂU ĐỒ CHẤT LƯỢNG 5 TRỤ CỘT & ĐỊNH GIÁ ${st.symbol}`, ff);
       rr(ctx, 64, 126, 1112, 560, 18);
       ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#0ea5e9'; ctx.font = `900 24px ${ff}`;
+      ctx.fillStyle = '#0ea5e9'; ctx.font = `700 4px ${ff}`;
       ctx.fillText(`📊 Điểm Chất Lượng 5 Trụ Cột Doanh Nghiệp — ${st.symbol} (${st.companyName})`, 92, 154);
 
       const sc = st.simplizeScores || { valuation: 3, growth: 3, performance: 3, health: 3, dividend: 3 };
@@ -393,9 +393,9 @@
       ];
       rows.forEach((r, idx) => {
         const ry = 225 + idx * 84;
-        ctx.fillStyle = ink; ctx.font = `800 20px ${ff}`;
+        ctx.fillStyle = ink; ctx.font = `700 0px ${ff}`;
         ctx.fillText(r.label, 96, ry);
-        ctx.fillStyle = r.color; ctx.font = `900 21px ${ff}`;
+        ctx.fillStyle = r.color; ctx.font = `700 1px ${ff}`;
         ctx.fillText(`${(r.val / 20).toFixed(1)} / 5.0`, 1040, ry);
         rr(ctx, 96, ry + 32, 930, 24, 12);
         ctx.fillStyle = dark ? '#0f172a' : '#e2e8f0'; ctx.fill();
@@ -409,7 +409,7 @@
     paintHeader(ctx, 'PHẦN 1 — BIỂU ĐỒ STRESS TEST LÃI SUẤT VAY NHÀ ĐẤT (10% – 15%)', ff);
     rr(ctx, 64, 126, 1112, 600, 18);
     ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#10b981'; ctx.font = `900 24px ${ff}`;
+    ctx.fillStyle = '#10b981'; ctx.font = `700 4px ${ff}`;
     ctx.fillText(`🏠 Áp Lực Trả Góp Hàng Tháng Theo Kịch Bản Lãi Suất (${dataObj.area})`, 92, 154);
 
     const rates = [9, 10.5, 12, 13.5, 15];
@@ -421,9 +421,9 @@
       const tr = pmt / 1e6;
       const ry = 230 + idx * 88;
       const col = rPct >= 13.5 ? '#f43f5e' : rPct >= 12 ? '#f59e0b' : '#10b981';
-      ctx.fillStyle = ink; ctx.font = `800 20px ${ff}`;
+      ctx.fillStyle = ink; ctx.font = `700 0px ${ff}`;
       ctx.fillText(`Lãi thả nổi ${rPct}%/năm (Vay mẫu 2,1 tỷ / 20 năm)`, 96, ry);
-      ctx.fillStyle = col; ctx.font = `900 21px ${ff}`;
+      ctx.fillStyle = col; ctx.font = `700 1px ${ff}`;
       ctx.fillText(`${tr.toFixed(1)} tr/tháng`, 1000, ry);
       rr(ctx, 96, ry + 34, 880, 24, 12);
       ctx.fillStyle = dark ? '#0f172a' : '#e2e8f0'; ctx.fill();
@@ -550,7 +550,7 @@
         cur.ctx.fillStyle = '#1b365d';
         cur.ctx.fillRect(72, y, maxW, 44);
         cur.ctx.fillStyle = '#ffffff';
-        cur.ctx.font = `800 ${Math.round(17.5 * sc)}px ${ff}`;
+        cur.ctx.font = `700 {Math.round(17.5 * sc)}px ${ff}`;
         headers.forEach((h, ci) => cur.ctx.fillText(cleanStr(h).slice(0, 34), 84 + ci * colW, y + 11));
         y += 44;
       };
@@ -598,7 +598,7 @@
         cur.ctx.lineWidth = 2;
         cur.ctx.stroke();
         cur.ctx.fillStyle = dark ? '#fde68a' : '#92400e';
-        cur.ctx.font = `800 ${Math.round(19 * sc)}px ${ff}`;
+        cur.ctx.font = `700 {Math.round(19 * sc)}px ${ff}`;
         cur.ctx.fillText(cleanStr(sec.paragraphs?.[0] || '⚠️ Tất cả thông tin, phân tích chỉ mang tính chất tham khảo.'), 94, y + 22);
         y += 84;
         continue;
@@ -612,7 +612,7 @@
       rr(cur.ctx, 72, y, maxW, 50, 9);
       cur.ctx.fillStyle = g; cur.ctx.fill();
       cur.ctx.fillStyle = '#14b8a6'; cur.ctx.fillRect(72, y, 10, 50);
-      cur.ctx.fillStyle = '#ffffff'; cur.ctx.font = `900 22px ${ff}`;
+      cur.ctx.fillStyle = '#ffffff'; cur.ctx.font = `700 2px ${ff}`;
       cur.ctx.fillText(cleanStr(sec.heading).slice(0, 82), 96, y + 13);
       if (sec.headingUrl && /^https?:\/\//i.test(sec.headingUrl)) {
         if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
@@ -690,9 +690,11 @@
       featured.map((h) => loadCorsImageSafe(h.imageUrl || h.image || h.thumbnail || ''))
     );
 
-    const { canvas, ctx } = createCanvas();
     const dark = readerOpts?.paperTheme === 'dark';
-    const ff = resolveFontFamily(readerOpts?.font);
+    const { canvas, ctx } = createA4(dark);
+    const W = canvas.width;
+    const H = canvas.height;
+    const ff = FONT_MAP[readerOpts?.font] || FONT_MAP.sans;
     ctx.fillStyle = dark ? '#0b1220' : '#ffffff';
     ctx.fillRect(0, 0, W, H);
     paintHeader(ctx, 'KHU VỰC HÌNH ẢNH & THẺ XEM TRƯỚC BÀI BÁO CHÍNH THỐNG', ff);
@@ -750,10 +752,10 @@
         ctx.arc(x + cardW - 46, y + 48, 70, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#fde68a';
-        ctx.font = `900 15px ${ff}`;
+        ctx.font = `700 5px ${ff}`;
         ctx.fillText(`📰 ${(h.source || 'BÁO CHÍ CHÍNH THỐNG').toUpperCase().slice(0, 32)}`, x + 22, y + 34);
         ctx.fillStyle = '#ffffff';
-        ctx.font = `900 22px ${ff}`;
+        ctx.font = `700 2px ${ff}`;
         wrapText(ctx, cleanStr(h.title || ''), cardW - 48).slice(0, 4).forEach((ln, li) => {
           ctx.fillText(ln, x + 22, y + 66 + li * 31);
         });
@@ -762,11 +764,11 @@
 
       // Nội dung tiêu đề & tóm tắt bên dưới
       ctx.fillStyle = dark ? '#38bdf8' : '#0369a1';
-      ctx.font = `800 14.5px ${ff}`;
+      ctx.font = `700 4.5px ${ff}`;
       ctx.fillText(`${cleanStr(h.source || 'Nguồn chính thống').slice(0, 28)}  ·  ${cleanStr(h.date || '')}`, x + 18, y + imgH + 22);
 
       ctx.fillStyle = dark ? '#f8fafc' : '#0f172a';
-      ctx.font = `900 19px ${ff}`;
+      ctx.font = `700 9px ${ff}`;
       const titleLines = wrapText(ctx, cleanStr(h.title || ''), cardW - 36).slice(0, 3);
       titleLines.forEach((ln, li) => ctx.fillText(ln, x + 18, y + imgH + 50 + li * 26));
 
@@ -783,7 +785,7 @@
       const normUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : (/^www\./i.test(rawUrl) ? `https://${rawUrl}` : '');
       if (normUrl) {
         ctx.fillStyle = dark ? '#34d399' : '#0d9488';
-        ctx.font = `800 14.5px ${ff}`;
+        ctx.font = `700 4.5px ${ff}`;
         ctx.fillText(`🔗 Bấm mở bài gốc: ${normUrl.slice(0, 44)}`, x + 18, y + cardH - 26);
         canvas.__pdfLinks.push({ x, y, w: cardW, h: cardH, url: normUrl });
       }
