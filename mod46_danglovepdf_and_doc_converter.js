@@ -1084,6 +1084,140 @@
       this.renderUploadOrWorkspaceScreen();
       // Render ảnh thu nhỏ PDF ngầm (Lazy, không làm đơ giao diện)
       this.renderPdfThumbnailsAsync();
+      // Hiện pop-up 3 lựa chọn AI (AI 1 chạm / AI Thủ công 0-Token / Không cần AI) sau khi nạp tệp cho các công cụ có tích hợp AI!
+      const AI_CHOICE_TOOLS = new Set([
+        'beautify_10_themes', 'theme_report', 'icr_handwriting_pdf', 'ocr_pdf',
+        'pdf_to_docx', 'pdf_to_excel', 'bookmarks_toc', 'true_redaction',
+        'metadata_editor', 'split_smart_books', 'form_filler_builder',
+      ]);
+      if (
+        AI_CHOICE_TOOLS.has(tool.id) &&
+        this.files.length > 0 &&
+        !this.pendingTheme10AiFormat &&
+        !global.__NOIR_AUTOTESTER_RUNNING__ &&
+        !this._suppressNextAiChoicePopup
+      ) {
+        setTimeout(() => this.openPostUploadAiChoiceModal(tool), 80);
+      }
+      this._suppressNextAiChoicePopup = false;
+    }
+
+    openPostUploadAiChoiceModal(tool) {
+      if (!tool || !this.files.length || global.__NOIR_AUTOTESTER_RUNNING__) return;
+      document.getElementById('mod46-post-upload-ai-choice-modal')?.remove();
+      const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+      const hasKey = Boolean(gBridge?.hasApiKey?.());
+      const f0 = this.files[0];
+      const modal = document.createElement('div');
+      modal.id = 'mod46-post-upload-ai-choice-modal';
+      modal.style.cssText = 'position:fixed;inset:0;z-index:2147483615;background:rgba(5,9,18,0.82);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;padding:16px;';
+      modal.innerHTML = `
+        <div class="w-full max-w-lg rounded-3xl border border-emerald-500/45 bg-zinc-950 p-5 sm:p-6 shadow-2xl space-y-3.5 text-center">
+          <div class="flex items-center justify-between gap-2 text-left">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-2xl">${tool.icon || '✨'}</span>
+              <div class="min-w-0">
+                <div class="text-sm font-bold text-emerald-300 truncate">Đã nạp tệp: ${escHtml(f0?.name || '')}</div>
+                <div class="text-[11px] text-zinc-400">Chọn cách xử lý cho "${escHtml(tool.name)}":</div>
+              </div>
+            </div>
+            <button type="button" id="btn-mod46-choice-close" class="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold cursor-pointer shrink-0">✕</button>
+          </div>
+          <div class="space-y-2.5 pt-1">
+            <button type="button" id="btn-mod46-choice-ai-auto" class="noir-ai-blink-btn w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-xs sm:text-sm shadow-xl cursor-pointer transition">
+              ${hasKey ? '✨ Định dạng & Xử lý chính xác bằng AI (1 chạm tự động)' : '🔗 Kết nối AI của bạn để xử lý chính xác 1 chạm'}
+            </button>
+            <button type="button" id="btn-mod46-choice-ai-manual" class="w-full py-3 px-4 rounded-xl border border-emerald-500/55 bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-200 font-bold text-xs sm:text-sm cursor-pointer transition">
+              📋 Dùng AI Thủ công (Không cần API Key · Copy Prompt + Gửi file lên Gemini → Dán kết quả)
+            </button>
+            <button type="button" id="btn-mod46-choice-no-ai" class="w-full py-2.5 px-4 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-semibold cursor-pointer transition">
+              Tôi không cần AI (Bạn bỏ qua AI, độ chính xác của file sẽ giảm đi đáng kể)
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      try { NS.i18n?.translateElement?.(modal); } catch (_eTrCh) {}
+      const closeChoice = () => modal.remove();
+      modal.querySelector('#btn-mod46-choice-close')?.addEventListener('click', closeChoice);
+      modal.querySelector('#btn-mod46-choice-no-ai')?.addEventListener('click', closeChoice);
+      modal.addEventListener('click', (ev) => { if (ev.target === modal) closeChoice(); });
+
+      const manualBtnIdMap = {
+        beautify_10_themes: '#btn-mod46-vision-manual-ai',
+        theme_report: '#btn-mod46-vision-manual-ai',
+        icr_handwriting_pdf: '#btn-pro-manual-ai-icr',
+        ocr_pdf: '#btn-pro-manual-ai-ocr',
+        pdf_to_docx: '#btn-pro-manual-ai-p2d',
+        pdf_to_excel: '#btn-pro-manual-ai-p2x',
+        bookmarks_toc: '#btn-pro-manual-ai-toc',
+        true_redaction: '#btn-pro-manual-ai-pii',
+        metadata_editor: '#btn-pro-manual-ai-meta',
+        split_smart_books: '#btn-pro-manual-ai-split',
+        form_filler_builder: '#btn-pro-manual-ai-form',
+      };
+      const autoBtnIdMap = {
+        beautify_10_themes: '#btn-mod46-run-gemini-vision',
+        theme_report: '#btn-mod46-run-gemini-vision',
+        icr_handwriting_pdf: '#btn-mod46-run-primary',
+        ocr_pdf: '#btn-mod46-run-primary',
+        pdf_to_docx: '#btn-mod46-run-primary',
+        pdf_to_excel: '#btn-mod46-run-primary',
+        bookmarks_toc: '#btn-pro-toc-autodetect',
+        true_redaction: '#btn-pro-ai-scan-pii',
+        metadata_editor: '#btn-pro-ai-gen-meta',
+        split_smart_books: '#btn-pro-ai-detect-split-kw',
+        form_filler_builder: '#btn-pro-ai-parse-form',
+      };
+
+      modal.querySelector('#btn-mod46-choice-ai-auto')?.addEventListener('click', () => {
+        closeChoice();
+        const triggerAuto = () => {
+          const targetBtn = document.querySelector(autoBtnIdMap[tool.id] || '#btn-mod46-run-primary');
+          if (targetBtn) {
+            targetBtn.click();
+          } else if (tool.id === 'beautify_10_themes' || tool.id === 'theme_report') {
+            this.pendingTheme10AiFormat = true;
+            this.renderUploadOrWorkspaceScreen();
+          }
+        };
+        if (!gBridge?.hasApiKey?.()) {
+          gBridge?.openApiKeyQuickModal?.({ onSaved: () => { this.renderUploadOrWorkspaceScreen(); setTimeout(triggerAuto, 150); } });
+        } else {
+          triggerAuto();
+        }
+      });
+
+      modal.querySelector('#btn-mod46-choice-ai-manual')?.addEventListener('click', () => {
+        closeChoice();
+        const manualSel = manualBtnIdMap[tool.id];
+        const btn = manualSel ? document.querySelector(manualSel) : null;
+        if (btn) {
+          btn.click();
+          return;
+        }
+        // Fallback trực tiếp cho Theme 10 nếu bản phân tích PDF chưa dựng xong v2Host
+        const promptTxt = gBridge?.buildTaskManualPrompt?.('theme10_beautify', { fileName: f0?.name || 'Tai_lieu.pdf' }) || gBridge?.PROMPT_CHINH_TIEU_DE_CHUAN || '';
+        gBridge?.openManualAiAssistantModal?.({
+          taskTitle: `${tool.name} — AI Thủ công (0-Token)`,
+          promptText: promptTxt,
+          attachFileName: f0?.name || '',
+          attachFileBlob: f0?.file || (f0?.bytes ? new Blob([f0.bytes]) : null),
+          applyBtnLabel: '✅ Nạp Markdown vào 10 Theme & Xuất PDF đẹp',
+          onApplyPasted: (md) => {
+            const stitched = gBridge?.stitchContinueTables ? gBridge.stitchContinueTables(md) : md;
+            const parsers = global.NoirStructuredParsers || NS.structuredParsers;
+            const astLib = global.NoirDocAst || NS.docAst;
+            if (parsers && astLib) {
+              const ast = parsers.parseMarkdownToAst(stitched, { filename: f0?.name || 'ai_manual.md' });
+              this.theme10OverrideBlocks = astLib.astToLegacyBlocks(ast);
+              this._suppressNextAiChoicePopup = true;
+              this.renderUploadOrWorkspaceScreen();
+              this.toast('✅ Đã nạp xong nội dung chuẩn từ Gemini! Chọn màu Theme và bấm Xuất PDF đẹp.', 'success', 4000);
+            }
+          },
+        });
+      });
     }
 
     async renderPdfThumbnailsAsync() {
@@ -3294,6 +3428,9 @@
                        <button type="button" id="btn-mod46-run-gemini-vision" class="px-3 py-1 rounded-lg bg-gradient-to-r from-violet-600 to-amber-600 hover:from-violet-500 hover:to-amber-500 text-white text-[11px] font-bold shadow cursor-pointer ${comp?.recommendGeminiVision ? 'animate-pulse' : ''}">
                          ⚡ Đọc Siêu Tốc bằng Gemini Flash (File gốc 1 lượt)
                        </button>
+                       <button type="button" id="btn-mod46-vision-manual-ai" class="px-3 py-1 rounded-lg border border-sky-400/65 bg-sky-950/60 hover:bg-sky-800/80 text-sky-100 text-[11px] font-bold shadow cursor-pointer">
+                         📋 Nhập lệnh AI Thủ công (0-Token)
+                       </button>
                      </div>
                    </div>
                    <div id="mod46-vision-status" class="text-[11px] text-cyan-300 hidden"></div>
@@ -3368,6 +3505,29 @@
             });
             v2Host.querySelector('#btn-mod46-vision-key-pill')?.addEventListener('click', () => {
               geminiBridge?.openApiKeyQuickModal?.({ onSaved: () => renderV2TocAndVision(this.theme10OverrideBlocks, meta) });
+            });
+            v2Host.querySelector('#btn-mod46-vision-manual-ai')?.addEventListener('click', () => {
+              if (!geminiBridge) return;
+              const promptTxt = geminiBridge.buildTaskManualPrompt('theme10_beautify', { fileName: primaryFile?.name || 'Tai_lieu.pdf' });
+              geminiBridge.openManualAiAssistantModal?.({
+                taskTitle: 'Đọc sâu Tài liệu 10 Theme — AI Thủ công (0-Token)',
+                promptText: promptTxt,
+                attachFileName: primaryFile?.name || '',
+                attachFileBlob: primaryFile?.file || (primaryFile?.bytes ? new Blob([primaryFile.bytes]) : null),
+                applyBtnLabel: '✅ Nạp Markdown vào Cấu trúc & Xem Trước PDF',
+                onApplyPasted: (md) => {
+                  const stitched = geminiBridge.stitchContinueTables ? geminiBridge.stitchContinueTables(md) : md;
+                  const parsers = global.NoirStructuredParsers || NS.structuredParsers;
+                  const astLib = global.NoirDocAst || NS.docAst;
+                  if (parsers && astLib) {
+                    const ast = parsers.parseMarkdownToAst(stitched, { filename: primaryFile?.name || 'ai_manual.md' });
+                    const blocks = astLib.astToLegacyBlocks(ast);
+                    this._theme10AnalyzedCache = { fileId: primaryFile.id, blocks, ast };
+                    renderV2TocAndVision(blocks, ast?.meta || {});
+                    this.toast('✅ Đã nạp xong nội dung cấu trúc từ Gemini Web! Bấm Áp dụng Theme để xuất PDF đẹp.', 'success', 4000);
+                  }
+                },
+              });
             });
             v2Host.querySelector('#btn-mod46-run-gemini-vision')?.addEventListener('click', async () => {
               if (!geminiBridge) return;

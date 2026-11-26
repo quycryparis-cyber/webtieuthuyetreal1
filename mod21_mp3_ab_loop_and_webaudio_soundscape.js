@@ -161,6 +161,62 @@
       reverbMix: 0.34,
       masterLowpassHz: 8200
     },
+    FAN: {
+      key: 'FAN',
+      label: '🌀 Tiếng Quạt',
+      fullName: 'Giả Lập Tiếng Quạt Đêm Êm Dịu (Soft Oscillating Fan)',
+      statusText: 'Đang phát: 🌀 Tiếng Quạt Đêm Êm Dịu',
+      description: 'Âm thanh gió quạt máy quay nhẹ đều nhịp hòa cùng tiếng động cơ trầm ấm, cực kỳ dễ chịu khi đọc viết hoặc ngủ.',
+      layers: {
+        rainDeepRumble: 0.0, rainMidWash: 0.0, rainWindowDrops: 0.0, thunderRoll: 0.0,
+        piano: 0.0, noirPad: 0.0, fireplaceHearth: 0.0, fireplaceCrackles: 0.0, oceanSurf: 0.0, oceanFoam: 0.0,
+        electricFan: 0.85, purePinkNoise: 0.0, pureWhiteNoise: 0.0, pureBlueNoise: 0.0
+      },
+      reverbMix: 0.08,
+      masterLowpassHz: 2400
+    },
+    PINK_NOISE: {
+      key: 'PINK_NOISE',
+      label: '🌸 Ồn Hồng',
+      fullName: 'Tiếng Ồn Hồng Thư Giãn (-3dB/octave Pink Noise)',
+      statusText: 'Đang phát: 🌸 Tiếng Ồn Hồng (Pink Noise)',
+      description: 'Âm sắc ấm áp cân bằng dải trầm giúp lọc tạp âm xung quanh, hỗ trợ tập trung sâu và thư giãn hệ thần kinh.',
+      layers: {
+        rainDeepRumble: 0.0, rainMidWash: 0.0, rainWindowDrops: 0.0, thunderRoll: 0.0,
+        piano: 0.0, noirPad: 0.0, fireplaceHearth: 0.0, fireplaceCrackles: 0.0, oceanSurf: 0.0, oceanFoam: 0.0,
+        electricFan: 0.0, purePinkNoise: 0.82, pureWhiteNoise: 0.0, pureBlueNoise: 0.0
+      },
+      reverbMix: 0.06,
+      masterLowpassHz: 4200
+    },
+    WHITE_NOISE: {
+      key: 'WHITE_NOISE',
+      label: '🤍 Ồn Trắng',
+      fullName: 'Tiếng Ồn Trắng Mềm Mại (Soft Focus White Noise)',
+      statusText: 'Đang phát: 🤍 Tiếng Ồn Trắng (White Noise)',
+      description: 'Màn chắn âm thanh đều nhẹ giúp cách ly tiếng ồn phòng học/quán cà phê và duy trì sự tập trung liên tục.',
+      layers: {
+        rainDeepRumble: 0.0, rainMidWash: 0.0, rainWindowDrops: 0.0, thunderRoll: 0.0,
+        piano: 0.0, noirPad: 0.0, fireplaceHearth: 0.0, fireplaceCrackles: 0.0, oceanSurf: 0.0, oceanFoam: 0.0,
+        electricFan: 0.0, purePinkNoise: 0.0, pureWhiteNoise: 0.72, pureBlueNoise: 0.0
+      },
+      reverbMix: 0.04,
+      masterLowpassHz: 4800
+    },
+    BLUE_NOISE: {
+      key: 'BLUE_NOISE',
+      label: '💙 Ồn Xanh',
+      fullName: 'Tiếng Ồn Xanh Trong Trẻo (+3dB/octave Soft Blue Noise)',
+      statusText: 'Đang phát: 💙 Tiếng Ồn Xanh (Blue Noise)',
+      description: 'Dải âm thanh thanh thoát tựa làn gió mát qua kẽ lá, tạo cảm giác tỉnh táo nhẹ nhàng không gây nặng đầu.',
+      layers: {
+        rainDeepRumble: 0.0, rainMidWash: 0.0, rainWindowDrops: 0.0, thunderRoll: 0.0,
+        piano: 0.0, noirPad: 0.0, fireplaceHearth: 0.0, fireplaceCrackles: 0.0, oceanSurf: 0.0, oceanFoam: 0.0,
+        electricFan: 0.0, purePinkNoise: 0.0, pureWhiteNoise: 0.0, pureBlueNoise: 0.74
+      },
+      reverbMix: 0.08,
+      masterLowpassHz: 7400
+    },
     OFF: {
       key: 'OFF',
       label: '🔇 Tắt Âm',
@@ -537,6 +593,36 @@
     }
 
     /**
+     * Tạo bộ đệm Blue Noise (+3dB/octave mềm mại) bằng vi phân bậc nhất + làm mịn biên độ
+     */
+    static createBlueNoiseBuffer(audioCtx, durationSec = 5.0) {
+      const sampleRate = audioCtx.sampleRate;
+      const frameCount = Math.floor(sampleRate * durationSec);
+      const buffer = audioCtx.createBuffer(2, frameCount, sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const output = buffer.getChannelData(ch);
+        let prev = 0.0;
+        let smooth = 0.0;
+        for (let i = 0; i < frameCount; i++) {
+          const white = Math.random() * 2 - 1;
+          const diff = (white - prev) * 0.5;
+          prev = white;
+          smooth = smooth * 0.35 + diff * 0.65;
+          output[i] = smooth * 0.55;
+        }
+        const fadeLen = Math.min(4096, Math.floor(frameCount * 0.05));
+        for (let i = 0; i < fadeLen; i++) {
+          const ratio = i / fadeLen;
+          const tailIdx = frameCount - fadeLen + i;
+          const blended = output[i] * ratio + output[tailIdx] * (1 - ratio);
+          output[i] = blended;
+          output[tailIdx] = blended;
+        }
+      }
+      return buffer;
+    }
+
+    /**
      * Tạo bộ đệm Impulse Response giả lập phòng hòa nhạc ấm áp (Concert Hall Reverb)
      * Hoàn toàn bằng thuật toán toán học (0MB dung lượng mạng)
      */
@@ -796,6 +882,7 @@
       this.pinkBuffer = WebAudioDspKernel.createPinkNoiseBuffer(ctx, 7.0);
       this.brownBuffer = WebAudioDspKernel.createBrownNoiseBuffer(ctx, 7.0);
       this.whiteBuffer = WebAudioDspKernel.createWhiteNoiseBuffer(ctx, 3.0);
+      this.blueBuffer = WebAudioDspKernel.createBlueNoiseBuffer(ctx, 5.0);
 
       // Master Gain & Filter & Analyser
       this.masterFilter = ctx.createBiquadFilter();
@@ -1046,6 +1133,88 @@
         gain: oceanFoamGain,
         lfo: foamLfo
       };
+
+      // 6. Nhánh Giả Lập Tiếng Quạt Đêm Êm Dịu (Pink/Brown breeze + LFO cánh quạt 0.24Hz + motor hum 108Hz)
+      const fanSrc = ctx.createBufferSource();
+      fanSrc.buffer = this.pinkBuffer;
+      fanSrc.loop = true;
+      const fanFilter = ctx.createBiquadFilter();
+      fanFilter.type = 'lowpass';
+      fanFilter.frequency.value = 440;
+      fanFilter.Q.value = 0.7;
+      const fanLfo = ctx.createOscillator();
+      const fanLfoGain = ctx.createGain();
+      fanLfo.type = 'sine';
+      fanLfo.frequency.value = 0.24;
+      fanLfoGain.gain.value = 65;
+      fanLfo.connect(fanLfoGain);
+      fanLfoGain.connect(fanFilter.frequency);
+      const fanMotor = ctx.createOscillator();
+      const fanMotorGain = ctx.createGain();
+      fanMotor.type = 'sine';
+      fanMotor.frequency.value = 108;
+      fanMotorGain.gain.value = 0.035;
+      const fanGain = ctx.createGain();
+      fanGain.gain.value = 0.0001;
+      fanSrc.connect(fanFilter);
+      fanFilter.connect(fanGain);
+      fanMotor.connect(fanMotorGain);
+      fanMotorGain.connect(fanGain);
+      fanGain.connect(this.dryBusGain);
+      fanSrc.start(0, Math.random() * 2.0);
+      fanLfo.start(0);
+      fanMotor.start(0);
+      this.continuousBranches.electricFan = { src: fanSrc, filter: fanFilter, gain: fanGain, lfo: fanLfo, motor: fanMotor };
+
+      // 7. Nhánh Tiếng Ồn Hồng Thuần Êm Dịu (Pure Pink Noise)
+      const pinkPureSrc = ctx.createBufferSource();
+      pinkPureSrc.buffer = this.pinkBuffer;
+      pinkPureSrc.loop = true;
+      const pinkPureFilter = ctx.createBiquadFilter();
+      pinkPureFilter.type = 'lowpass';
+      pinkPureFilter.frequency.value = 2600;
+      const pinkPureGain = ctx.createGain();
+      pinkPureGain.gain.value = 0.0001;
+      pinkPureSrc.connect(pinkPureFilter);
+      pinkPureFilter.connect(pinkPureGain);
+      pinkPureGain.connect(this.dryBusGain);
+      pinkPureSrc.start(0, Math.random() * 2.0);
+      this.continuousBranches.purePinkNoise = { src: pinkPureSrc, filter: pinkPureFilter, gain: pinkPureGain };
+
+      // 8. Nhánh Tiếng Ồn Trắng Mềm Mại (Soft Band-Limited White Noise)
+      const whitePureSrc = ctx.createBufferSource();
+      whitePureSrc.buffer = this.whiteBuffer;
+      whitePureSrc.loop = true;
+      const whiteHp = ctx.createBiquadFilter();
+      whiteHp.type = 'highpass';
+      whiteHp.frequency.value = 220;
+      const whiteLp = ctx.createBiquadFilter();
+      whiteLp.type = 'lowpass';
+      whiteLp.frequency.value = 3800;
+      const whitePureGain = ctx.createGain();
+      whitePureGain.gain.value = 0.0001;
+      whitePureSrc.connect(whiteHp);
+      whiteHp.connect(whiteLp);
+      whiteLp.connect(whitePureGain);
+      whitePureGain.connect(this.dryBusGain);
+      whitePureSrc.start(0, Math.random() * 1.5);
+      this.continuousBranches.pureWhiteNoise = { src: whitePureSrc, filter: whiteLp, gain: whitePureGain };
+
+      // 9. Nhánh Tiếng Ồn Xanh Thanh Thoát (Soft Blue Noise)
+      const bluePureSrc = ctx.createBufferSource();
+      bluePureSrc.buffer = this.blueBuffer || this.whiteBuffer;
+      bluePureSrc.loop = true;
+      const blueBp = ctx.createBiquadFilter();
+      blueBp.type = 'bandpass';
+      blueBp.frequency.value = 2400;
+      blueBp.Q.value = 0.55;
+      const bluePureGain = ctx.createGain();
+      bluePureGain.gain.value = 0.0001;
+      bluePureSrc.connect(blueBp);
+      blueBp.connect(bluePureGain);
+      bluePureGain.connect(this.dryBusGain);
+      bluePureSrc.start(0, Math.random() * 2.0);
+      this.continuousBranches.pureBlueNoise = { src: bluePureSrc, filter: blueBp, gain: bluePureGain };
     }
 
     /**
@@ -1115,6 +1284,10 @@
       setSmoothGain('fireplaceHearth', (layers.fireplaceHearth || 0) * this.layerUserMultipliers.fireplace * 0.52);
       setSmoothGain('oceanSurf', (layers.oceanSurf || 0) * this.layerUserMultipliers.ocean * 0.44);
       setSmoothGain('oceanFoam', (layers.oceanFoam || 0) * this.layerUserMultipliers.ocean * 0.32);
+      setSmoothGain('electricFan', (layers.electricFan || 0) * 0.55);
+      setSmoothGain('purePinkNoise', (layers.purePinkNoise || 0) * 0.48);
+      setSmoothGain('pureWhiteNoise', (layers.pureWhiteNoise || 0) * 0.22);
+      setSmoothGain('pureBlueNoise', (layers.pureBlueNoise || 0) * 0.28);
     }
 
     stopStochasticSchedulers() {
@@ -1670,6 +1843,46 @@
       binaural: 'BETA_LOGIC',
       mix: { rain: 0.9, thunder: 0.35, piano: 0.0, pad: 0.3, fireplace: 0.75, ocean: 0.0 },
       description: 'Sự hòa quyện giữa tiếng giọt mưa gõ lên cửa sổ kính màu và tiếng lửa sưởi ấm áp trong phòng đọc sách.'
+    },
+    {
+      id: 'SCENE_SOFT_ELECTRIC_FAN',
+      title: '🌀 Tiếng Quạt Đêm Êm Dịu (Electric Fan)',
+      genreTag: 'Nhẹ nhàng / Chống tạp âm / Dễ ngủ',
+      basePreset: 'FAN',
+      pianoMood: 'IMPRESSIONIST_DREAM',
+      binaural: 'OFF',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Giả lập tiếng gió quạt máy quay nhẹ đều nhịp cùng tiếng động cơ trầm ấm giúp tập trung viết hoặc thư giãn.'
+    },
+    {
+      id: 'SCENE_PINK_NOISE_CALM',
+      title: '🌸 Tiếng Ồn Hồng Thư Giãn (Pink Noise)',
+      genreTag: 'Tập trung sâu / Ấm tai / Học tập',
+      basePreset: 'PINK_NOISE',
+      pianoMood: 'NOIR_MELANCHOLY',
+      binaural: 'OFF',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Tần số hồng -3dB/quãng tám cực êm dịu, che tạp âm xung quanh mà không gây mỏi tai suốt nhiều giờ.'
+    },
+    {
+      id: 'SCENE_WHITE_NOISE_FOCUS',
+      title: '🤍 Tiếng Ồn Trắng Tập Trung (White Noise)',
+      genreTag: 'Làm việc / Cách âm / Tập trung cao',
+      basePreset: 'WHITE_NOISE',
+      pianoMood: 'NOIR_MELANCHOLY',
+      binaural: 'OFF',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Tiếng ồn trắng đã lọc mềm dải gắt tạo màng chắn âm thanh đều nhẹ cho phòng học và sáng tác.'
+    },
+    {
+      id: 'SCENE_BLUE_NOISE_BREEZE',
+      title: '💙 Tiếng Ồn Xanh Thanh Thoát (Blue Noise)',
+      genreTag: 'Tỉnh táo nhẹ / Trong trẻo / Đọc sách',
+      basePreset: 'BLUE_NOISE',
+      pianoMood: 'IMPRESSIONIST_DREAM',
+      binaural: 'OFF',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Tiếng ồn xanh dịu nhẹ như làn gió sớm lướt qua tán lá, giữ đầu óc tỉnh táo và thanh thản.'
     }
   ];
 

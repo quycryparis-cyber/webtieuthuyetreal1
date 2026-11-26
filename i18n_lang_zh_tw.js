@@ -5404,6 +5404,22 @@
     "Bước 1: Copy câu lệnh cấu trúc chuẩn & Mở thẳng sang Gemini (Miễn phí 0-Token)": "第 1 步：複製標準結構提示詞並直接開啟 Gemini（免費 0-Token）",
     "Bước 2: Dán câu trả lời từ Gemini vào khung dưới để trang web tự đọc & thực hiện:": "第 2 步：將 Gemini 的回覆貼到下方輸入框以自動解析並執行：",
     "Dùng AI Thủ công 0-Token không cần API Key": "使用無需 API 金鑰的 0-Token 手動 AI",
+
+    "✨ Định dạng & Xử lý chính xác bằng AI (1 chạm tự động)": "✨ AI 精準格式化與自動處理（一鍵）",
+    "🔗 Kết nối AI của bạn để xử lý chính xác 1 chạm": "🔗 連接您的 AI 開啟一鍵精準處理",
+    "📋 Nhập lệnh AI Thủ công (0-Token)": "📋 手動輸入 AI 指令 (0-Token)",
+    "🌀 Tiếng Quạt Đêm Êm Dịu (Electric Fan)": "🌀 輕柔夜風扇聲 (Electric Fan)",
+    "Nhẹ nhàng / Chống tạp âm / Dễ ngủ": "輕柔 / 隔絕雜音 / 助眠",
+    "Giả lập tiếng gió quạt máy quay nhẹ đều nhịp cùng tiếng động cơ trầm ấm giúp tập trung viết hoặc thư giãn.": "模擬輕柔均勻的風扇微風與溫暖低沉的馬達聲，助您專注寫作或深度放鬆。",
+    "🌸 Tiếng Ồn Hồng Thư Giãn (Pink Noise)": "🌸 舒緩粉紅噪音 (Pink Noise)",
+    "Tập trung sâu / Ấm tai / Học tập": "深度專注 / 柔和護耳 / 學習",
+    "Tần số hồng -3dB/quãng tám cực êm dịu, che tạp âm xung quanh mà không gây mỏi tai suốt nhiều giờ.": "柔和的 -3dB/倍頻程粉紅噪音，有效遮蔽環境雜音，長時間聆聽不傷耳。",
+    "🤍 Tiếng Ồn Trắng Tập Trung (White Noise)": "🤍 專注白噪音 (White Noise)",
+    "Làm việc / Cách âm / Tập trung cao": "工作 / 隔音 / 高度專注",
+    "Tiếng ồn trắng đã lọc mềm dải gắt tạo màng chắn âm thanh đều nhẹ cho phòng học và sáng tác.": "柔化高刺頻段的白噪音，為書房與創作空間營造平穩輕柔的聲學屏障。",
+    "💙 Tiếng Ồn Xanh Thanh Thoát (Blue Noise)": "💙 清澈藍噪音 (Blue Noise)",
+    "Tỉnh táo nhẹ / Trong trẻo / Đọc sách": "輕度提神 / 清澈 / 閱讀",
+    "Tiếng ồn xanh dịu nhẹ như làn gió sớm lướt qua tán lá, giữ đầu óc tỉnh táo và thanh thản.": "輕柔如晨風拂過樹梢的藍噪音，令頭腦保持清澈、清醒與寧靜。",
   });
 
   const promptExact = Object.freeze({

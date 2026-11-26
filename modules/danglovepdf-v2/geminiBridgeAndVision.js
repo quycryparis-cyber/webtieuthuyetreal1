@@ -296,7 +296,25 @@
 
   async function verifyApiKeyLive(rawKey, opts = {}) {
     const clean = sanitizeApiKey(rawKey);
-    const fetchImpl = opts.fetchImpl || global.fetch?.bind(global);
+    const desktopFetch = global.NoirDesktopLocalEngine?.geminiFetch
+      ? async (url, init = {}) => {
+          const r = await global.NoirDesktopLocalEngine.geminiFetch({
+            url,
+            method: init.method || 'GET',
+            headers: init.headers || {},
+            body: init.body,
+            timeoutMs: 14000,
+          });
+          if (!r || r.status === 0) throw new Error(r?.text || 'Desktop fetch error');
+          return {
+            ok: Boolean(r.ok),
+            status: Number(r.status),
+            text: async () => String(r.text || ''),
+            json: async () => JSON.parse(String(r.text || '{}')),
+          };
+        }
+      : null;
+    const fetchImpl = opts.fetchImpl || desktopFetch || global.fetch?.bind(global);
     if (!clean) {
       return { ok: false, message: 'Vui lòng nhập mã Google / Gemini API Key (bắt đầu bằng AIza... hoặc AQ...).' };
     }
@@ -307,9 +325,10 @@
       return { ok: true, modelEndpoint: 'gemini-2.5-flash-lite', transportId: 'AI_STUDIO_QUERY', message: 'Key hợp lệ (chế độ test).' };
     }
     // Ưu tiên tái sử dụng trình xác minh thật của màn hình chính (mod15) nếu đang ở Web gốc
-    if (!opts.forceDirect && NS.apiClient && typeof NS.apiClient.verifyKeyWithLowestFlashLite === 'function') {
+    const mainApiClient = NS.geminiRouter || NS.apiClient;
+    if (!opts.forceDirect && mainApiClient && typeof mainApiClient.verifyKeyWithLowestFlashLite === 'function') {
       try {
-        const res = await NS.apiClient.verifyKeyWithLowestFlashLite(clean, { autoSave: false, emitEvents: true });
+        const res = await mainApiClient.verifyKeyWithLowestFlashLite(clean, { autoSave: false, emitEvents: true });
         if (res?.ok || res?.verified) {
           if (res.transportType) saveVerifiedTransport(clean, res.transportType);
           return {
@@ -356,11 +375,11 @@
     }
 
     // Bước 2: Real-time ping generateContent qua tất cả transport (AI Studio + Vertex Express cho AQ.*)
-    const probeChain = Array.from(new Set([...discoveredFlash, 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-2.0-flash']));
+    const probeChain = Array.from(new Set([...discoveredFlash, 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.0-flash-001']));
     for (const tid of transportOrder) {
       const tr = GEMINI_TRANSPORTS[tid];
       if (!tr) continue;
-      for (const ep of probeChain.slice(0, 3)) {
+      for (const ep of probeChain.slice(0, 4)) {
         try {
           const pingRes = await fetchImpl(tr.buildGenerateUrl(ep, clean), {
             method: 'POST',
@@ -1710,9 +1729,9 @@
           `}
 
           ${attachFileName ? `
-            <div style="padding:10px 12px;border-radius:12px;background:rgba(245,158,11,0.16);border:1.5px solid rgba(251,191,36,0.55);color:#fde68a;line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;">
-              <span>📎 <b>Nhắc nhở quan trọng trên Gemini:</b> Hãy bấm dấu <b>(+)</b> trong khung chat Gemini để <b>tải tệp "${String(attachFileName).replace(/</g, '&lt;')}"</b> của bạn lên kèm câu lệnh vừa copy!</span>
-              ${attachFileBlob ? '<button type="button" id="noir-mp-dl-file" style="padding:6px 10px;border-radius:8px;border:none;background:#d97706;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer;">⬇️ Tải bản sao tệp</button>' : ''}
+            <div class="noir-ai-blink-btn" style="padding:12px 14px;border-radius:14px;background:linear-gradient(90deg,rgba(245,158,11,0.28),rgba(244,63,94,0.24));border:2px solid #fbbf24;color:#fef3c7;line-height:1.55;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;box-shadow:0 0 22px rgba(251,191,36,0.38);">
+              <span>🚨 <b>LƯU Ý BẮT BUỘC TRÊN GEMINI:</b> Sau khi bấm mở Gemini, hãy <b>bấm dấu (+)</b> trong khung chat để <b>NẠP TỆP "${String(attachFileName).replace(/</g, '&lt;')}"</b> của bạn lên cùng câu lệnh vừa copy thì Gemini mới đọc được đúng tài liệu!</span>
+              ${attachFileBlob ? '<button type="button" id="noir-mp-dl-file" style="padding:7px 11px;border-radius:9px;border:none;background:#d97706;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer;">⬇️ Tải bản sao tệp</button>' : ''}
             </div>
           ` : ''}
 

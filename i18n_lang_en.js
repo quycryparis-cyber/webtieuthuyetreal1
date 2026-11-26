@@ -5425,6 +5425,22 @@
     "Bước 1: Copy câu lệnh cấu trúc chuẩn & Mở thẳng sang Gemini (Miễn phí 0-Token)": "Step 1: Copy Structured Prompt & Open Gemini (Free 0-Token)",
     "Bước 2: Dán câu trả lời từ Gemini vào khung dưới để trang web tự đọc & thực hiện:": "Step 2: Paste Gemini reply below for automatic parsing & execution:",
     "Dùng AI Thủ công 0-Token không cần API Key": "Use 0-Token Manual AI without API Key",
+
+    "✨ Định dạng & Xử lý chính xác bằng AI (1 chạm tự động)": "✨ Format & Process Accurately with AI (1-Tap Auto)",
+    "🔗 Kết nối AI của bạn để xử lý chính xác 1 chạm": "🔗 Connect Your AI for 1-Tap Precision Processing",
+    "📋 Nhập lệnh AI Thủ công (0-Token)": "📋 Manual AI Prompt (0-Token)",
+    "🌀 Tiếng Quạt Đêm Êm Dịu (Electric Fan)": "🌀 Soft Night Electric Fan Hum",
+    "Nhẹ nhàng / Chống tạp âm / Dễ ngủ": "Gentle / Noise Masking / Sleep",
+    "Giả lập tiếng gió quạt máy quay nhẹ đều nhịp cùng tiếng động cơ trầm ấm giúp tập trung viết hoặc thư giãn.": "Simulated gentle oscillating fan breeze with warm motor hum for calm writing and deep relaxation.",
+    "🌸 Tiếng Ồn Hồng Thư Giãn (Pink Noise)": "🌸 Soothing Pink Noise",
+    "Tập trung sâu / Ấm tai / Học tập": "Deep Focus / Warm / Study",
+    "Tần số hồng -3dB/quãng tám cực êm dịu, che tạp âm xung quanh mà không gây mỏi tai suốt nhiều giờ.": "Smooth -3dB/octave pink noise that masks background distractions without ear fatigue for hours.",
+    "🤍 Tiếng Ồn Trắng Tập Trung (White Noise)": "🤍 Soft Focus White Noise",
+    "Làm việc / Cách âm / Tập trung cao": "Work / Sound Masking / High Focus",
+    "Tiếng ồn trắng đã lọc mềm dải gắt tạo màng chắn âm thanh đều nhẹ cho phòng học và sáng tác.": "Band-softened white noise forming a smooth acoustic curtain for study rooms and creative writing.",
+    "💙 Tiếng Ồn Xanh Thanh Thoát (Blue Noise)": "💙 Crisp Gentle Blue Noise",
+    "Tỉnh táo nhẹ / Trong trẻo / Đọc sách": "Light Alertness / Crisp / Reading",
+    "Tiếng ồn xanh dịu nhẹ như làn gió sớm lướt qua tán lá, giữ đầu óc tỉnh táo và thanh thản.": "Airy gentle blue noise like a morning breeze through leaves, keeping your mind crisp and calm.",
   });
 
   const promptExact = Object.freeze({

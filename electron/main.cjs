@@ -109,7 +109,6 @@ async function createMainWindow() {
     return { action: 'deny' };
   });
 
-  await mainWindow.loadURL(startUrl);
   let forceWindowClose = false;
   mainWindow.on('close', (ev) => {
     if (forceWindowClose || !mainWindow || mainWindow.isDestroyed()) return;
@@ -129,9 +128,36 @@ async function createMainWindow() {
     }
     return { ok: true };
   });
+  ipcMain.removeHandler?.('gemini:http-fetch');
+  ipcMain.handle('gemini:http-fetch', async (_ev, payload) => {
+    try {
+      const targetUrl = String(payload?.url || '');
+      if (!/^https:\/\/(generativelanguage|aiplatform)\.googleapis\.com\//i.test(targetUrl)) {
+        return { ok: false, status: 403, text: 'Disallowed host for gemini:http-fetch' };
+      }
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), Math.min(60000, Number(payload?.timeoutMs) || 20000));
+      try {
+        const resp = await fetch(targetUrl, {
+          method: payload?.method || 'POST',
+          headers: payload?.headers || { 'Content-Type': 'application/json' },
+          body: payload?.body,
+          signal: ctrl.signal,
+        });
+        const text = await resp.text();
+        return { ok: resp.ok, status: resp.status, text };
+      } finally {
+        clearTimeout(tmr);
+      }
+    } catch (err) {
+      return { ok: false, status: 0, text: String(err?.message || err) };
+    }
+  });
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+
+  await mainWindow.loadURL(startUrl);
 }
 
 // ============================================================================

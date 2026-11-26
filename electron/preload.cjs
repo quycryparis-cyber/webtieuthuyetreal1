@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('NoirDesktopLocalEngine', {
   runLocalTool: (payload) => ipcRenderer.invoke('danglovepdf:run-local-tool', payload),
   resolveSystemFont: (payload) => ipcRenderer.invoke('fonts:resolveSystemFont', payload),
   investFetch: (payload) => ipcRenderer.invoke('invest:http-fetch', payload),
+  geminiFetch: (payload) => ipcRenderer.invoke('gemini:http-fetch', payload),
   onExitConfirmRequest: (cb) => {
     if (typeof cb !== 'function') return;
     ipcRenderer.removeAllListeners('app:request-exit-confirm');

@@ -5404,6 +5404,22 @@
     "Bước 1: Copy câu lệnh cấu trúc chuẩn & Mở thẳng sang Gemini (Miễn phí 0-Token)": "1단계: 구조화된 프롬프트 복사 및 Gemini 바로 열기 (무료 0-Token)",
     "Bước 2: Dán câu trả lời từ Gemini vào khung dưới để trang web tự đọc & thực hiện:": "2단계: 자동 파싱 및 실행을 위해 아래에 Gemini 답변을 붙여넣으세요:",
     "Dùng AI Thủ công 0-Token không cần API Key": "API 키 없이 0-Token 수동 AI 사용",
+
+    "✨ Định dạng & Xử lý chính xác bằng AI (1 chạm tự động)": "✨ AI 정밀 서식 및 자동 처리 (원탭)",
+    "🔗 Kết nối AI của bạn để xử lý chính xác 1 chạm": "🔗 원탭 정밀 처리를 위해 AI 연결하기",
+    "📋 Nhập lệnh AI Thủ công (0-Token)": "📋 수동 AI 명령 입력 (0-Token)",
+    "🌀 Tiếng Quạt Đêm Êm Dịu (Electric Fan)": "🌀 부드러운 밤 선풍기 소리 (Electric Fan)",
+    "Nhẹ nhàng / Chống tạp âm / Dễ ngủ": "부드러움 / 소음 차단 / 숙면",
+    "Giả lập tiếng gió quạt máy quay nhẹ đều nhịp cùng tiếng động cơ trầm ấm giúp tập trung viết hoặc thư giãn.": "부드러운 선풍기 바람과 따뜻한 모터 소리를 재현하여 집중 글쓰기와 휴식을 돕습니다.",
+    "🌸 Tiếng Ồn Hồng Thư Giãn (Pink Noise)": "🌸 편안한 핑크 노이즈 (Pink Noise)",
+    "Tập trung sâu / Ấm tai / Học tập": "깊은 집중 / 부드러운 음색 / 학습",
+    "Tần số hồng -3dB/quãng tám cực êm dịu, che tạp âm xung quanh mà không gây mỏi tai suốt nhiều giờ.": "부드러운 -3dB/옥타브 핑크 노이즈로 장시간 들어도 귀 피로 없이 주변 소음을 차단합니다.",
+    "🤍 Tiếng Ồn Trắng Tập Trung (White Noise)": "🤍 집중 화이트 노이즈 (White Noise)",
+    "Làm việc / Cách âm / Tập trung cao": "업무 / 방음 / 고집중",
+    "Tiếng ồn trắng đã lọc mềm dải gắt tạo màng chắn âm thanh đều nhẹ cho phòng học và sáng tác.": "거친 고음을 부드럽게 다듬은 화이트 노이즈로 공부와 창작을 위한 쾌적한 음향 장막을 만듭니다.",
+    "💙 Tiếng Ồn Xanh Thanh Thoát (Blue Noise)": "💙 산뜻한 블루 노이즈 (Blue Noise)",
+    "Tỉnh táo nhẹ / Trong trẻo / Đọc sách": "가벼운 각성 / 맑음 / 독서",
+    "Tiếng ồn xanh dịu nhẹ như làn gió sớm lướt qua tán lá, giữ đầu óc tỉnh táo và thanh thản.": "나뭇잎 사이를 스치는 아침 바람 같은 부드러운 블루 노이즈로 맑고 차분한 집중을 유지합니다.",
   });
 
   const promptExact = Object.freeze({

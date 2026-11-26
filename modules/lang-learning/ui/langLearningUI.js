@@ -621,6 +621,7 @@
             Quét &amp; xuất trọn vẹn <b>${state.vocabList.length} từ vựng</b> (hoặc bộ đã tích chọn <b>${state.selectedIds.size} từ</b>) sang .PDF, .TSV &amp; .HTML tương tác Offline:
           </p>
           <select id="ll51-export-deck-sel" class="ll51-select w-full">
+            <option value="__starred_vocab__" ${state.starredIds.size > 0 && !useActiveDeckByDefault && !useQuickSelectedDefault ? '' : ''}>⭐ CHỈ XUẤT CÁC THẺ CÓ DẤU SAO YÊU THÍCH (${state.starredIds.size} từ — ${esc(primaryMeta.name)})</option>
             <option value="__all_vocab__" ${useAllVocabDefault ? 'selected' : ''}>🌍 QUÉT FULL TOÀN BỘ TỪ VỰNG WEB (${state.vocabList.length} từ — ${esc(primaryMeta.name)})</option>
             <option value="__quick_selected__" ${useQuickSelectedDefault ? 'selected' : ''}>⚡ Xuất toàn bộ từ đang tích chọn (${state.selectedIds.size}/${state.vocabList.length} từ — ${esc(primaryMeta.name)})</option>
             ${state.decks.map((d) => {
@@ -629,6 +630,10 @@
               return `<option value="${d.id}" ${useActiveDeckByDefault && activeDeck?.id === d.id ? 'selected' : ''}>🃏 ${esc(d.title)} (${cnt} thẻ${isLegacyShort ? ' · Bản cũ rút gọn' : ''})</option>`;
             }).join('')}
           </select>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" id="ll51-btn-pick-starred-export" class="ll51-btn ll51-btn-amber text-xs py-1.5 px-3">⭐ Chọn nhanh: Chỉ xuất ${state.starredIds.size} thẻ có dấu sao</button>
+            <span class="text-[11px] text-slate-400">Không cần xuất toàn bộ ${state.vocabList.length} thẻ nếu bạn chỉ muốn ôn các từ đã gắn sao ★!</span>
+          </div>
           <div class="space-y-2 pt-1">
             <button type="button" id="ll51-exp-fc-pdf" class="ll51-btn ll51-btn-primary w-full py-2.5">🖨️ Tải .PDF Thẻ Flashcard In Cắt 2 Mặt (A4 khớp gương)</button>
             <button type="button" id="ll51-exp-fc-tsv" class="ll51-btn ll51-btn-violet w-full py-2.5">🗂️ Tải .TSV Chuẩn Anki &amp; Quizlet (Nhập 1 chạm)</button>
@@ -642,6 +647,16 @@
   async function resolveDeckForExportAsync(onProgress) {
     const selVal = state.modalEl?.querySelector('#ll51-export-deck-sel')?.value || '__all_vocab__';
     const tgt = state.targetLangs[0] || 'en';
+    if (selVal === '__starred_vocab__') {
+      if (!state.starredIds.size) {
+        toast('⚠️ Bạn chưa gắn dấu sao ⭐ từ nào! Hãy gắn sao các từ muốn ôn ở Tab 1 hoặc khi học Flashcard.', 'warning', 3200);
+        return { title: 'Flashcard Sao', cards: [] };
+      }
+      return {
+        title: `Flashcard Có Sao (${state.starredIds.size} từ · ${getLangMeta(tgt).name})`,
+        cards: await buildDeckCardsAsync({ sourceMode: 'starred', targetLang: tgt, modeId: 'meaning', onProgress }),
+      };
+    }
     if (selVal === '__all_vocab__') {
       return {
         title: `Flashcard Full ${state.vocabList.length} Từ (${getLangMeta(tgt).name})`,
@@ -665,6 +680,16 @@
   function resolveDeckForExport() {
     const selVal = state.modalEl?.querySelector('#ll51-export-deck-sel')?.value || '__all_vocab__';
     const tgt = state.targetLangs[0] || 'en';
+    if (selVal === '__starred_vocab__') {
+      if (!state.starredIds.size) {
+        toast('⚠️ Bạn chưa gắn dấu sao ⭐ từ nào!', 'warning', 2800);
+        return { title: 'Flashcard Sao', cards: [] };
+      }
+      return {
+        title: `Flashcard Có Sao (${state.starredIds.size} từ · ${getLangMeta(tgt).name})`,
+        cards: buildDeckCards({ sourceMode: 'starred', targetLang: tgt, modeId: 'meaning' }),
+      };
+    }
     if (selVal === '__all_vocab__') {
       return {
         title: `Flashcard Full ${state.vocabList.length} Từ (${getLangMeta(tgt).name})`,
@@ -1014,7 +1039,16 @@
       render();
     });
 
-    // Tab 4 Export buttons (Xuất FULL toàn bộ từ đã chọn kèm tiến độ trực tiếp!)
+    // Tab 4 Export buttons (Xuất FULL hoặc CHỈ THẺ CÓ DẤU SAO ★!)
+    root.querySelector('#ll51-btn-pick-starred-export')?.addEventListener('click', () => {
+      const sel = root.querySelector('#ll51-export-deck-sel');
+      if (!state.starredIds.size) {
+        toast('⚠️ Bạn chưa gắn dấu sao ⭐ từ nào! Hãy gắn sao các từ muốn ôn ở Tab 1 hoặc khi học Flashcard.', 'warning', 3200);
+        return;
+      }
+      if (sel) sel.value = '__starred_vocab__';
+      toast(`⭐ Đã chọn xuất riêng ${state.starredIds.size} thẻ có dấu sao! Bấm PDF, TSV Anki hoặc HTML bên dưới để tải ngay.`, 'success', 3400);
+    });
     root.querySelector('#ll51-exp-pdf-full')?.addEventListener('click', async (ev) => {
       const btn = ev.currentTarget;
       const items = state.vocabList.filter((v) => state.selectedIds.has(v.id));

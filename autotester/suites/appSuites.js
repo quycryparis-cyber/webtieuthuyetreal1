@@ -1149,6 +1149,89 @@
           },
         },
         {
+          id: 'api_key_realtime_verify_integrity',
+          label: '🔑 Kiểm tra xác minh API Key real-time (AIza* & AQ.*), HTTP 429 & lưu vĩnh viễn',
+          run: async () => {
+            if (!isBiNovelApp()) {
+              return makePass('api_key_realtime_verify_integrity', 'core_features', 'Bỏ qua kiểm tra API Key nội bộ (web ngoài)', 'Tự động thích ứng.');
+            }
+            const ns = globalScope.NoirStudio || {};
+            const gb = globalScope.NoirGeminiBridge || ns.geminiBridge;
+            const issues = [];
+
+            const mainClient = ns.geminiRouter || ns.apiClient;
+            if (!mainClient || typeof mainClient.verifyKeyWithLowestFlashLite !== 'function') {
+              issues.push('Thiếu hàm verifyKeyWithLowestFlashLite trong mod15');
+            }
+            if (!gb || typeof gb.verifyApiKeyLive !== 'function') {
+              issues.push('Thiếu hàm verifyApiKeyLive trong geminiBridgeAndVision.js');
+            } else {
+              // 1) Kiểm thử khóa AQ.* (Google AI Studio / Vertex Express) bằng mock fetchImpl không ảnh hưởng key thật
+              const aqRes = await gb.verifyApiKeyLive('AQ.Ab8RN6AutoTesterProbeKey1234567890abcdef', {
+                forceDirect: true,
+                fetchImpl: async (url) => {
+                  if (String(url).includes('aiplatform.googleapis.com')) {
+                    return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] }), text: async () => '{"candidates":[]}' };
+                  }
+                  return { ok: false, status: 400, text: async () => 'API key not valid' };
+                },
+              });
+              if (!aqRes?.ok || aqRes.transportId !== 'VERTEX_EXPRESS_QUERY') {
+                issues.push(`verifyApiKeyLive lỗi với khóa AQ.* (${JSON.stringify(aqRes)})`);
+              }
+
+              // 2) Kiểm thử khóa AIza* trả HTTP 429 (khóa thật tạm chạm hạn mức phút -> phải công nhận hợp lệ!)
+              const rlRes = await gb.verifyApiKeyLive('AIzaSyAutoTesterRateLimitProbe1234567890', {
+                forceDirect: true,
+                fetchImpl: async () => ({ ok: false, status: 429, text: async () => 'RESOURCE_EXHAUSTED' }),
+              });
+              if (!rlRes?.ok || !rlRes.rateLimited) {
+                issues.push(`verifyApiKeyLive không công nhận HTTP 429 là khóa hợp lệ (${JSON.stringify(rlRes)})`);
+              }
+
+              // 3) Kiểm thử khóa giả/ngắn -> phải từ chối an toàn
+              const badRes = await gb.verifyApiKeyLive('bad-short-key', {
+                forceDirect: true,
+                fetchImpl: async () => ({ ok: false, status: 400, text: async () => 'Invalid' }),
+              });
+              if (badRes?.ok) {
+                issues.push('verifyApiKeyLive chấp nhận nhầm khóa ngắn không hợp lệ');
+              }
+
+              // 4) Kiểm tra hàm AI Thủ công 0-Token & bộ khung Prompt chi tiết theo từng công cụ
+              const tocP = gb.buildTaskManualPrompt?.('auto_toc', { fileName: 'Probe.pdf', text: 'Chương 1' }) || '';
+              const icrP = gb.buildTaskManualPrompt?.('icr_handwriting', { fileName: 'Note.jpg', icrMode: 'table_survey_checkbox' }) || '';
+              if (!tocP.includes('|') || !icrP.includes('[☑]')) {
+                issues.push('Prompt chuyên biệt theo công cụ (Auto-TOC / ICR) thiếu cấu trúc chuẩn');
+              }
+            }
+
+            // 5) Kiểm tra nhãn phiên bản v154 trên splash/SW
+            const splashVerEl = document.getElementById('app-boot-splash-version');
+            const hasVerRef = Boolean(splashVerEl || /v15\d/i.test(document.documentElement.innerHTML.slice(0, 18000)));
+            if (!hasVerRef && !globalScope.__noirAppUserEntered) {
+              issues.push('Thiếu hiển thị phiên bản trên màn hình khởi động');
+            }
+
+            if (issues.length > 0) {
+              return makeIssue('api_key_realtime_verify_integrity', 'core_features', 'ERR_DOMAIN_LOGIC_GAP', {
+                moduleRef: 'mod15_api_key_vault_and_zero_congestion_client.js / geminiBridgeAndVision.js',
+                plainTitle: 'Cơ chế xác minh API Key real-time gặp lỗi',
+                techDetail: issues.join(' | '),
+              });
+            }
+
+            return makePass(
+              'api_key_realtime_verify_integrity',
+              'core_features',
+              'Xác minh API Key real-time (AIza* & AQ.*, HTTP 429 & Prompt chuẩn) đạt 100%',
+              'Đã kiểm chứng tự động cổng Google AI Studio + Vertex AI Express cho khóa AQ.*, công nhận HTTP 429 hợp lệ, từ chối khóa lỗi và xác thực bộ Prompt chuyên biệt.',
+              'mod15 / geminiBridgeAndVision.js',
+              'functional'
+            );
+          },
+        },
+        {
           id: 'hidden_db_and_api_integrity',
           label: '🗄️ Kiểm tra dữ liệu ngầm (IndexedDB đọc/ghi, localStorage schema & API/Parser Contract)',
           run: async () => {

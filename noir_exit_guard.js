@@ -305,11 +305,10 @@
       }
     } catch (_eElectron) {}
 
-    // Browser / Mobile Back button & vuốt Back (popstate sentinel)
+    // Browser / Mobile Back button & vuốt Back (popstate sentinel — bảo vệ ngay từ màn hình nhập API đầu vào!)
     global.addEventListener('popstate', () => {
       lastPopstateAt = Date.now();
       if (exitConfirmed || global.__NOIR_EXIT_CONFIRMED__ || global.__NOIR_DISABLE_EXIT_SENTINEL__ || global.__NOIR_DISABLE_BEFOREUNLOAD_PROMPT__) return;
-      if (!sentinelArmed && !userInteracted) return;
       sentinelArmed = false;
       showExitConfirmModal(
         () => {
@@ -328,11 +327,10 @@
       );
     });
 
-    // Native browser close-tab / leave-site guard (trình duyệt Web; Electron dùng pop-up custom ở trên)
+    // Native browser close-tab / leave-site guard (bảo vệ ngay từ màn hình chào / nhập API đầu vào!)
     global.addEventListener('beforeunload', (ev) => {
       if (isDesktopElectron()) return;
       if (exitConfirmed || global.__NOIR_EXIT_CONFIRMED__ || global.__NOIR_DISABLE_BEFOREUNLOAD_PROMPT__) return;
-      if (!userInteracted) return;
       ev.preventDefault();
       ev.returnValue = EXIT_PROMPT_TEXT;
       return EXIT_PROMPT_TEXT;
