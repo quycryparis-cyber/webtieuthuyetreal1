@@ -596,9 +596,11 @@
               cl.forEach((ln, k) => cur.ctx.fillText(ln, 84 + ci * colW, y + 9 + k * 24));
             });
             if (rUrl && /^https?:\/\//i.test(rUrl)) {
-              cur.ctx.fillStyle = '#0369a1';
-              cur.ctx.font = '700 14.5px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
-              cur.ctx.fillText(`🔗 Bấm mở nguồn: ${rUrl.slice(0, 76)}`, 84, y + rowH - 22);
+              const rLinkTxt = `🔗 Bấm mở nguồn: ${rUrl.length > 76 ? rUrl.slice(0, 73) + '...' : rUrl}`;
+              cur.ctx.fillStyle = '#0284c7';
+              cur.ctx.font = '700 16px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
+              cur.ctx.fillText(rLinkTxt, 84, y + rowH - 25);
+              cur.ctx.fillRect(84, y + rowH - 6, Math.min(maxW - 28, cur.ctx.measureText(rLinkTxt).width), 1.5);
               if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
               cur.canvas.__pdfLinks.push({ x: 72, y, w: maxW, h: rowH, url: rUrl });
             }
@@ -1116,9 +1118,11 @@
       const rawUrl = String(item.url || '').trim();
       const normUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : (/^www\./i.test(rawUrl) ? `https://${rawUrl}` : '');
       if (normUrl) {
-        ctx.fillStyle = '#0d9488';
-        ctx.font = '700 14.5px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
-        ctx.fillText(`🔗 Bấm mở bài gốc: ${normUrl.slice(0, 44)}`, x + 18, y + cardH - 26);
+        const wLinkTxt = `🔗 Bấm mở bài gốc: ${normUrl.length > 42 ? normUrl.slice(0, 39) + '...' : normUrl}`;
+        ctx.fillStyle = '#0284c7';
+        ctx.font = '700 16px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
+        ctx.fillText(wLinkTxt, x + 18, y + cardH - 30);
+        ctx.fillRect(x + 18, y + cardH - 11, Math.min(cardW - 36, ctx.measureText(wLinkTxt).width), 1.5);
         canvas.__pdfLinks.push({ x, y, w: cardW, h: cardH, url: normUrl });
       }
     });

@@ -986,6 +986,50 @@
       state.customTopic = ev.target.value || '';
     });
     root.querySelector('#wis20-btn-copy-gemini')?.addEventListener('click', () => copyPromptAndOpenGemini());
+    const finalizeWisdomReplyState = (replyText, groundingUrls = []) => {
+      const cleanRaw = String(replyText || '').trim();
+      state.geminiReplyRaw = cleanRaw;
+      const parsed = typeof W20.parseGeminiWisdomReply === 'function'
+        ? W20.parseGeminiWisdomReply(cleanRaw, state.scanResult)
+        : null;
+      state.geminiParsed = parsed || {
+        markdownBody: cleanRaw.replace(/```json[\s\S]*?```/gi, '').trim() || cleanRaw,
+        syncData: W20.buildDefaultChartDataFromRaw ? W20.buildDefaultChartDataFromRaw(state.scanResult) : null,
+      };
+      if (!state.geminiParsed.markdownBody && cleanRaw) {
+        state.geminiParsed.markdownBody = cleanRaw.replace(/```json[\s\S]*?```/gi, '').trim() || cleanRaw;
+      }
+      // Hợp nhất các liên kết bài báo mới được Gemini trích dẫn + Grounding URLs vào danh mục để PDF bấm mở được 100%!
+      if (state.scanResult?.categoriesData) {
+        const worldArr = state.scanResult.categoriesData.world_geo || (state.scanResult.categoriesData.world_geo = []);
+        const seenUrls = new Set(
+          Object.values(state.scanResult.categoriesData).flat().map((x) => String(x?.url || '').toLowerCase()).filter(Boolean)
+        );
+        const pushCited = (title, url, src) => {
+          const cu = String(url || '').replace(/[.,;:!?)]+$/, '').trim();
+          if (!/^https?:\/\//i.test(cu) || seenUrls.has(cu.toLowerCase())) return;
+          seenUrls.add(cu.toLowerCase());
+          worldArr.unshift({
+            id: `gem-cite-${Date.now()}-${worldArr.length}`,
+            category: 'world_geo',
+            title: String(title || cu).replace(/\*/g, '').trim().slice(0, 180),
+            summary: `Nguồn bài báo cập nhật ngày ${new Date().toLocaleDateString('vi-VN')} trích dẫn trực tiếp trong báo cáo Gemini.`,
+            source: src || 'Trích dẫn Gemini',
+            url: cu,
+            publishedAt: new Date().toISOString(),
+            sha256: 'gemini-verified',
+            readMinutes: 2,
+          });
+        };
+        for (const m of cleanRaw.matchAll(/\[([^\]\n]{4,180})\]\((https?:\/\/[^\s)]+)\)/gi)) {
+          pushCited(m[1], m[2], 'Trích dẫn từ Gemini');
+        }
+        if (Array.isArray(groundingUrls)) {
+          groundingUrls.forEach((g) => pushCited(g?.title || g?.url, g?.url, 'Google Search Grounding'));
+        }
+      }
+    };
+
     root.querySelector('#wis20-btn-manual-ai-0token')?.addEventListener('click', () => {
       const bridge = globalScope.NoirGeminiBridge || NS.geminiBridge;
       if (!state.scanResult) return;
@@ -998,10 +1042,7 @@
         promptText,
         applyBtnLabel: '✅ Tổng hợp 8 Trụ cột & Xuất thẳng PDF ngay',
         onApplyPasted: async (pasted) => {
-          state.geminiReplyRaw = pasted;
-          if (typeof W20.parseGeminiWisdomReply === 'function') {
-            state.geminiParsed = W20.parseGeminiWisdomReply(pasted, state.scanResult);
-          }
+          finalizeWisdomReplyState(pasted, []);
           state.phase = 'dashboard';
           state.activeTab = 'briefing';
           state.highlightExportPdfCta = true;
@@ -1024,11 +1065,8 @@
           'Bước 1/4: Kiểm tra dữ liệu báo chí & đóng gói Prompt chuyên sâu'
         );
         let builtWisdomPrompt = '';
-        const applyWisdomReplyAndExport = async (replyText) => {
-          state.geminiReplyRaw = replyText;
-          if (typeof W20.parseGeminiWisdomReply === 'function') {
-            state.geminiParsed = W20.parseGeminiWisdomReply(replyText, state.scanResult);
-          }
+        const applyWisdomReplyAndExport = async (replyText, groundingUrls = []) => {
+          finalizeWisdomReplyState(replyText, groundingUrls);
           state.phase = 'dashboard';
           state.activeTab = 'briefing';
           state.highlightExportPdfCta = true;
@@ -1064,7 +1102,7 @@
 
           loader?.update?.('📄 Bước 4/4: Đang tổng hợp 8 trụ cột & xuất thẳng Báo cáo PDF...', 88);
           loader?.addLog?.('📄 Bước 4: Đang xuất PDF kèm Trang Bìa, Biểu đồ & Đầy đủ Trích dẫn...', 'info');
-          await applyWisdomReplyAndExport(reply);
+          await applyWisdomReplyAndExport(reply, aiRes.groundingUrls || []);
           loader?.close?.();
         } catch (err) {
           loader?.addLog?.(`❌ Lỗi: ${err?.message || err}`, 'err');

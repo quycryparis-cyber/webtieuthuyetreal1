@@ -104,7 +104,7 @@
   // --------------------------------------------------------------------------
   async function validateAndFreezeRecords(rawRecords, { maxAgeDays = 45 } = {}) {
     const nowMs = Date.now();
-    const maxFutureMs = nowMs + 15 * 60 * 1000; // Chặn tin tương lai (> 15 phút)
+    const maxFutureMs = nowMs + 18 * 3600 * 1000; // Chặn tin tương lai thật sự (> 18 giờ để không xóa nhầm tin hôm nay theo chênh lệch múi giờ GMT+7/UTC)
     const minValidMs = nowMs - Math.max(1, maxAgeDays) * 86400 * 1000;
     const seenIds = new Set();
     const accepted = [];
@@ -144,11 +144,11 @@
         continue;
       }
 
-      // Chốt 5: Temporal Sanity Check
+      // Chốt 5: Temporal Sanity Check (không ép T12:00:00Z gây lỗi tin hôm nay bị xem là tương lai tại GMT+7!)
       let pubIso = String(rec?.published_at || rec?.date || '').trim();
       let pubMs = NaN;
       if (pubIso) {
-        const d = new Date(pubIso.length === 10 ? `${pubIso}T12:00:00Z` : pubIso);
+        const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(pubIso) ? `${pubIso}T00:00:00` : pubIso);
         if (!Number.isNaN(d.getTime())) {
           pubMs = d.getTime();
           pubIso = d.toISOString();
@@ -186,6 +186,7 @@
         source_type: sourceType,
         canonical_url: parsedUrl.toString(),
         url: parsedUrl.toString(),
+        imageUrl: /^https?:\/\//i.test(String(rec?.imageUrl || rec?.image || '')) ? String(rec.imageUrl || rec.image) : '',
         published_at: pubIso,
         date: pubIso.slice(0, 10),
         verbatim_title: rawTitle,
@@ -197,6 +198,8 @@
         selected_for_prompt: rec?.selected_for_prompt !== false,
       });
     }
+
+    accepted.sort((a, b) => (Date.parse(b.published_at || b.date || '') || 0) - (Date.parse(a.published_at || a.date || '') || 0));
 
     return {
       accepted,

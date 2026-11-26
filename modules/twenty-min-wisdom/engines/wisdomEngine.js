@@ -715,12 +715,19 @@
       report('🔬 Đã quét Công bố Khoa học & AI Chính thức (Crossref DOI)', `${categoriesData.tech_science.length} mục`);
     })();
 
-    // 5) ĐỌC TRỰC TIẾP BÀI BÁO THẬT HÔM NAY TỪ BÁO CHÍ CHÍNH THỐNG & MỞ RỘNG TRỤ CỘT 4 KHU VỰC (13 PHÚT / 30 PHÚT)
+    // 5) ĐỌC TRỰC TIẾP BÀI BÁO THẬT HÔM NAY TỪ BÁO CHÍ CHÍNH THỐNG & GOOGLE NEWS NGÀY HIỆN TẠI (13 PHÚT / 30 PHÚT)
     const pLivePress = (async () => {
+      const localQueryArea = encodeURIComponent(`${loc.cityLabel || profile.name} tin mới hôm nay when:2d`);
+      const gnewsWorldToday = `https://news.google.com/rss/search?q=${encodeURIComponent('world geopolitics OR economy OR science breakthrough when:2d')}&hl=en-US&gl=US&ceid=US:en`;
+      const gnewsLocalToday = profile.code === 'VN'
+        ? `https://news.google.com/rss/search?q=${localQueryArea}&hl=vi&gl=VN&ceid=VN:vi`
+        : `https://news.google.com/rss/search?q=${encodeURIComponent(`${loc.cityLabel || profile.name} news today when:2d`)}&hl=en-US&gl=US&ceid=US:en`;
       const feedJobs = [
+        { cat: 'world_geo', name: 'Google News Thế giới (Hôm nay)', url: gnewsWorldToday, preferJina: false, max: 4 },
         { cat: 'world_geo', name: 'BBC News World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml', preferJina: false, max: 4 },
         { cat: 'tech_science', name: 'BBC Technology', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml', preferJina: false, max: 3 },
         { cat: 'economy_markets', name: 'BBC Business', url: 'https://feeds.bbci.co.uk/news/business/rss.xml', preferJina: false, max: 3 },
+        { cat: 'local_region', name: `Google News ${loc.cityLabel || profile.name} (Hôm nay)`, url: gnewsLocalToday, preferJina: false, max: 5 },
         { cat: 'local_region', name: profile.code === 'VN' ? 'VnExpress Thời sự' : 'AP News', url: profile.code === 'VN' ? 'https://vnexpress.net/rss/tin-moi-nhat.rss' : 'https://apnews.com/world-news', preferJina: profile.code !== 'VN', max: 6 },
         ...(profile.code === 'VN'
           ? [
@@ -781,8 +788,14 @@
           }
         })
       );
-      if (categoriesData.local_region.length > 1) {
-        categoriesData.local_region.sort((a, b) => (b.localPriority || 0) - (a.localPriority || 0));
+      for (const catKey of Object.keys(categoriesData)) {
+        if (categoriesData[catKey].length > 1) {
+          categoriesData[catKey].sort((a, b) => {
+            const pDiff = (b.localPriority || 0) - (a.localPriority || 0);
+            if (pDiff !== 0) return pDiff;
+            return (Date.parse(b.publishedAt || '') || 0) - (Date.parse(a.publishedAt || '') || 0);
+          });
+        }
       }
       report(`📰 Đã trích xuất bài báo thật & tin khu vực Trụ cột 4 (${loc.cityLabel || profile.name})`, `${liveArticlesCount} bài báo sống`);
     })();
@@ -910,8 +923,14 @@
           }));
         }
       }
-      if (categoriesData.local_region.length > 1) {
-        categoriesData.local_region.sort((a, b) => (b.localPriority || 0) - (a.localPriority || 0));
+      for (const catKey of Object.keys(categoriesData)) {
+        if (categoriesData[catKey].length > 1) {
+          categoriesData[catKey].sort((a, b) => {
+            const pDiff = (b.localPriority || 0) - (a.localPriority || 0);
+            if (pDiff !== 0) return pDiff;
+            return (Date.parse(b.publishedAt || '') || 0) - (Date.parse(a.publishedAt || '') || 0);
+          });
+        }
       }
       report('✅ Hoàn tất 8 Trụ cột Tri thức Chính thống (0 Wiki / 0 Blog)', '100% báo chính thống');
     })();

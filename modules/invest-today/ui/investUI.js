@@ -2245,12 +2245,93 @@
       (globalScope.NoirGeminiBridge || NS.geminiBridge)?.openApiKeyQuickModal?.({ onSaved: () => render() });
     });
 
+    // Helper chuẩn hóa & nạp trọn bộ phản hồi Gemini (toàn văn + JSON biểu đồ + trích dẫn URL) vào state trước khi xuất PDF!
+    const commitGeminiReplyToInvestState = (rawReply, groundingUrls = []) => {
+      const fullText = String(rawReply || '').trim();
+      const todayIso = INV.utils?.todayIso ? INV.utils.todayIso() : new Date().toISOString().slice(0, 10);
+      INV.stateManager.geminiReportProse = fullText;
+      try { INV.storageAdapter.setSession('gemini_report_prose', fullText); } catch (_eSt) {}
+
+      const parsed = INV.deterministicExtractor?.parseGeminiStructuredReply
+        ? INV.deterministicExtractor.parseGeminiStructuredReply(fullText)
+        : { ok: false };
+
+      const prevRep = INV.stateManager.evaluationReport || { items: [], triggered_breakers: [], live_headlines: [], as_of_date: todayIso };
+      if (parsed.ok && parsed.data) {
+        const synced = parsed.data;
+        INV.stateManager.unifiedAnalytics = synced;
+        const mkChannel = (key, name, fb) => {
+          const dm = (synced.decision_matrix || []).find((d) => String(d?.channel || '').toLowerCase().includes(fb)) || {};
+          const sc = synced.channel_scores?.[key] ?? 60;
+          return {
+            name,
+            score: sc,
+            signal: dm.signal || (sc >= 72 ? 'positive' : sc <= 48 ? 'danger' : 'caution'),
+            badge: dm.decision || (sc >= 72 ? 'Thuận lợi' : sc <= 48 ? 'Thận trọng cao' : 'Theo dõi'),
+            reason: dm.reason || prevRep.channel_scores?.[key]?.reason || '',
+          };
+        };
+        INV.stateManager.evaluationReport = {
+          ...prevRep,
+          as_of_date: synced.as_of_date || todayIso,
+          cycle_phase: synced.cycle_phase || prevRep.cycle_phase,
+          channel_scores: {
+            cash: mkChannel('cash', 'Tiền mặt / Tiết kiệm', 'tiền'),
+            gold: mkChannel('gold', 'Vàng', 'vàng'),
+            stock: mkChannel('stock', 'Chứng khoán', 'chứng'),
+            real_estate: mkChannel('real_estate', 'Nhà đất', 'đất'),
+          },
+          narrative_summary: {
+            opportunities: synced.verdict_summary?.opportunities?.length ? synced.verdict_summary.opportunities : prevRep.narrative_summary?.opportunities || [],
+            risks: synced.verdict_summary?.risks?.length ? synced.verdict_summary.risks : prevRep.narrative_summary?.risks || [],
+            current_outlook: synced.verdict_summary?.current_outlook || prevRep.narrative_summary?.current_outlook || '',
+            upcoming_outlook: synced.verdict_summary?.upcoming_outlook || prevRep.narrative_summary?.upcoming_outlook || '',
+          },
+        };
+      } else {
+        INV.stateManager.evaluationReport = { ...prevRep, as_of_date: prevRep.as_of_date || todayIso };
+      }
+
+      INV.stateManager.evaluationReport.gemini_raw_note = fullText.slice(0, 12000);
+
+      // Trích xuất toàn bộ liên kết nguồn được Gemini trích dẫn trong bài + Grounding URLs (dedup, gắn ngày hôm nay)
+      const existing = Array.isArray(INV.stateManager.evaluationReport.live_headlines) ? [...INV.stateManager.evaluationReport.live_headlines] : [];
+      const seenUrlSet = new Set(existing.map((h) => String(h?.url || '').toLowerCase()).filter(Boolean));
+      const addCited = (title, url, source = 'Nguồn trích dẫn Gemini') => {
+        const cleanU = String(url || '').replace(/[.,;:!?)]+$/, '').trim();
+        if (!/^https?:\/\//i.test(cleanU) || seenUrlSet.has(cleanU.toLowerCase())) return;
+        seenUrlSet.add(cleanU.toLowerCase());
+        let host = source;
+        try { host = new URL(cleanU).hostname.replace(/^www\./, ''); } catch (_eU) {}
+        existing.unshift({
+          title: String(title || host).replace(/\*/g, '').trim().slice(0, 180) || host,
+          source: source || host,
+          date: todayIso,
+          published_at: new Date().toISOString(),
+          url: cleanU,
+          selected_for_prompt: true,
+        });
+      };
+      for (const m of fullText.matchAll(/\[([^\]\n]{4,180})\]\((https?:\/\/[^\s)]+)\)/gi)) {
+        addCited(m[1], m[2], 'Trích dẫn từ Gemini');
+      }
+      if (Array.isArray(groundingUrls)) {
+        groundingUrls.forEach((g) => addCited(g?.title || g?.url, g?.url, 'Google Search Grounding'));
+      }
+      INV.stateManager.evaluationReport.live_headlines = existing;
+      return parsed;
+    };
+
     host.querySelector('#inv-w2-btn-manual-ai-0token')?.addEventListener('click', async () => {
       const gBridge = globalScope.NoirGeminiBridge || NS.geminiBridge;
       const gVal = (goalEl?.value || '').trim();
       const nVal = (notesEl?.value || '').trim();
       const tickerVal = (host.querySelector('#inv-w2-stock-ticker')?.value || '').trim().toUpperCase();
       INV.storageAdapter.savePrefs({ promptMode: uiState.w2Mode, userGoal: gVal, fieldNotes: nVal });
+      if (!INV.stateManager.evaluationReport?.items?.length && INV.researchEvaluator?.runEvaluation) {
+        NS.utils?.showToast?.('🔍 Đang cập nhật dữ liệu & tin tức mới nhất hôm nay trước khi tạo Prompt...', 'info', 2600);
+        await INV.researchEvaluator.runEvaluation({ depth: 'quick', force: false }).catch(() => null);
+      }
       if (uiState.w2Focus === 'stock' && tickerVal && INV.stockEngine?.lookupStockSnapshot) {
         uiState.stockInput = tickerVal;
         const st = await INV.stockEngine.lookupStockSnapshot(tickerVal).catch(() => null);
@@ -2267,39 +2348,7 @@
         promptText,
         applyBtnLabel: '✅ Đồng bộ 6 Biểu đồ & Xuất thẳng PDF ngay',
         onApplyPasted: async (pasted) => {
-          const parsed = INV.deterministicExtractor?.parseGeminiStructuredReply
-            ? INV.deterministicExtractor.parseGeminiStructuredReply(pasted)
-            : { ok: false };
-          const prevRep = INV.stateManager.evaluationReport || { items: [], triggered_breakers: [], live_headlines: [] };
-          if (parsed.ok && parsed.data) {
-            const synced = parsed.data;
-            INV.stateManager.unifiedAnalytics = synced;
-            const mkChannel = (key, name, fb) => {
-              const dm = (synced.decision_matrix || []).find((d) => String(d?.channel || '').toLowerCase().includes(fb)) || {};
-              const sc = synced.channel_scores?.[key] ?? 60;
-              return { name, score: sc, signal: dm.signal || (sc >= 72 ? 'positive' : sc <= 48 ? 'danger' : 'caution'), badge: dm.decision || (sc >= 72 ? 'Thuận lợi' : sc <= 48 ? 'Thận trọng cao' : 'Theo dõi'), reason: dm.reason || prevRep.channel_scores?.[key]?.reason || '' };
-            };
-            INV.stateManager.evaluationReport = {
-              ...prevRep,
-              as_of_date: synced.as_of_date || prevRep.as_of_date,
-              cycle_phase: synced.cycle_phase || prevRep.cycle_phase,
-              channel_scores: {
-                cash: mkChannel('cash', 'Tiền mặt / Tiết kiệm', 'tiền'),
-                gold: mkChannel('gold', 'Vàng', 'vàng'),
-                stock: mkChannel('stock', 'Chứng khoán', 'chứng'),
-                real_estate: mkChannel('real_estate', 'Nhà đất', 'đất'),
-              },
-              narrative_summary: {
-                opportunities: synced.verdict_summary?.opportunities?.length ? synced.verdict_summary.opportunities : prevRep.narrative_summary?.opportunities || [],
-                risks: synced.verdict_summary?.risks?.length ? synced.verdict_summary.risks : prevRep.narrative_summary?.risks || [],
-                current_outlook: synced.verdict_summary?.current_outlook || prevRep.narrative_summary?.current_outlook || '',
-                upcoming_outlook: synced.verdict_summary?.upcoming_outlook || prevRep.narrative_summary?.upcoming_outlook || '',
-              },
-            };
-          }
-          if (INV.stateManager.evaluationReport) {
-            INV.stateManager.evaluationReport.gemini_raw_note = String(pasted || '').slice(0, 8000);
-          }
+          commitGeminiReplyToInvestState(pasted, []);
           const focusToPdfMode = uiState.w2Focus === 'gold' ? 'gold' : uiState.w2Focus === 'real_estate' ? 'real_estate' : (uiState.w2Focus === 'stock' && INV.stateManager.stockData?.symbol ? 'stock' : 'overview');
           INV.storageAdapter.setSession('wizard_stage', 'dashboard');
           uiState.wizardStage = 'dashboard';
@@ -2307,7 +2356,7 @@
           uiState.highlightExportPdfCta = true;
           render();
           const pdfRes = await INV.pdfExporter.exportInvestPdf(focusToPdfMode, loadInvReaderPrefs());
-          NS.utils?.showToast?.(`✅ Đã đồng bộ & xuất thẳng Báo cáo PDF (${pdfRes.pages} trang)!`, 'success', 4800);
+          NS.utils?.showToast?.(`✅ Đã đồng bộ & xuất thẳng Báo cáo PDF (${pdfRes.pages} trang — đủ 100% bài phân tích AI, biểu đồ & link bấm được)!`, 'success', 4800);
         },
       });
     });
@@ -2331,55 +2380,7 @@
         );
         let builtPromptText = '';
         const applyInvestReplyAndExport = async (replyText, groundingUrls = []) => {
-          const parsed = INV.deterministicExtractor?.parseGeminiStructuredReply
-            ? INV.deterministicExtractor.parseGeminiStructuredReply(replyText)
-            : { ok: false };
-          const prevRep = INV.stateManager.evaluationReport || { items: [], triggered_breakers: [], live_headlines: [] };
-          if (parsed.ok && parsed.data) {
-            const synced = parsed.data;
-            INV.stateManager.unifiedAnalytics = synced;
-            const mkChannel = (key, name, fb) => {
-              const dm = (synced.decision_matrix || []).find((d) => String(d?.channel || '').toLowerCase().includes(fb)) || {};
-              const sc = synced.channel_scores?.[key] ?? 60;
-              return {
-                name,
-                score: sc,
-                signal: dm.signal || (sc >= 72 ? 'positive' : sc <= 48 ? 'danger' : 'caution'),
-                badge: dm.decision || (sc >= 72 ? 'Thuận lợi' : sc <= 48 ? 'Thận trọng cao' : 'Theo dõi'),
-                reason: dm.reason || prevRep.channel_scores?.[key]?.reason || '',
-              };
-            };
-            INV.stateManager.evaluationReport = {
-              ...prevRep,
-              as_of_date: synced.as_of_date || prevRep.as_of_date,
-              cycle_phase: synced.cycle_phase || prevRep.cycle_phase,
-              channel_scores: {
-                cash: mkChannel('cash', 'Tiền mặt / Tiết kiệm', 'tiền'),
-                gold: mkChannel('gold', 'Vàng', 'vàng'),
-                stock: mkChannel('stock', 'Chứng khoán', 'chứng'),
-                real_estate: mkChannel('real_estate', 'Nhà đất', 'đất'),
-              },
-              narrative_summary: {
-                opportunities: synced.verdict_summary?.opportunities?.length ? synced.verdict_summary.opportunities : prevRep.narrative_summary?.opportunities || [],
-                risks: synced.verdict_summary?.risks?.length ? synced.verdict_summary.risks : prevRep.narrative_summary?.risks || [],
-                current_outlook: synced.verdict_summary?.current_outlook || prevRep.narrative_summary?.current_outlook || '',
-                upcoming_outlook: synced.verdict_summary?.upcoming_outlook || prevRep.narrative_summary?.upcoming_outlook || '',
-              },
-            };
-          }
-          if (INV.stateManager.evaluationReport) {
-            INV.stateManager.evaluationReport.gemini_raw_note = String(replyText || '').slice(0, 8000);
-            if (Array.isArray(groundingUrls) && groundingUrls.length) {
-              const existing = INV.stateManager.evaluationReport.live_headlines || [];
-              const extraLinks = groundingUrls.map((g) => ({
-                title: g.title || g.url,
-                source: 'Google Search Grounding',
-                url: g.url,
-                selected_for_prompt: true,
-              }));
-              INV.stateManager.evaluationReport.live_headlines = [...existing, ...extraLinks];
-            }
-          }
+          commitGeminiReplyToInvestState(replyText, groundingUrls);
           const focusToPdfMode = uiState.w2Focus === 'gold'
             ? 'gold'
             : uiState.w2Focus === 'real_estate'
@@ -2391,7 +2392,7 @@
           uiState.highlightExportPdfCta = true;
           render();
           const pdfRes = await INV.pdfExporter.exportInvestPdf(focusToPdfMode, loadInvReaderPrefs());
-          NS.utils?.showToast?.(`✅ Đã hoàn tất AI & xuất thẳng Báo cáo PDF (${pdfRes.pages} trang — đủ 100% trích dẫn & biểu đồ)!`, 'success', 5000);
+          NS.utils?.showToast?.(`✅ Đã hoàn tất AI & xuất thẳng Báo cáo PDF (${pdfRes.pages} trang — đủ 100% trích dẫn, phân tích & biểu đồ)!`, 'success', 5000);
           return pdfRes;
         };
 
@@ -2543,7 +2544,7 @@
     host.querySelector('#inv-w2-btn-enter-now')?.addEventListener('click', () => enterDashboardNow(true));
     host.querySelector('#inv-w2-btn-skip-to-dashboard')?.addEventListener('click', () => enterDashboardNow(false));
 
-    // Bước 2: Dán câu trả lời Gemini & Bấm Đồng bộ -> Thông báo xong + Đếm ngược 3 giây tự chuyển qua Phân tích & Báo chí!
+    // Bước 2: Dán câu trả lời Gemini & Bấm Đồng bộ -> Lưu trọn toàn văn vào PDF + Đếm ngược 3 giây tự chuyển qua Phân tích & Báo chí!
     host.querySelector('#inv-w2-btn-sync')?.addEventListener('click', () => {
       const raw = (host.querySelector('#inv-w2-gemini-paste')?.value || '').trim();
       if (!raw) {
@@ -2551,50 +2552,10 @@
         host.querySelector('#inv-w2-gemini-paste')?.focus();
         return;
       }
-      const parsed = INV.deterministicExtractor?.parseGeminiStructuredReply
-        ? INV.deterministicExtractor.parseGeminiStructuredReply(raw)
-        : { ok: false };
-
-      let successMsg = 'Đã tổng hợp thông tin & cập nhật toàn bộ 6 biểu đồ từ Gemini thành công!';
-      if (parsed.ok && parsed.data) {
-        const synced = parsed.data;
-        INV.stateManager.unifiedAnalytics = synced;
-        const prevRep = INV.stateManager.evaluationReport || { items: [], triggered_breakers: [], live_headlines: [], as_of_date: synced.as_of_date };
-        const mkChannel = (key, name, fb) => {
-          const dm = (synced.decision_matrix || []).find((d) => d.channel.toLowerCase().includes(fb)) || {};
-          const sc = synced.channel_scores?.[key] ?? 60;
-          return {
-            name,
-            score: sc,
-            signal: dm.signal || (sc >= 72 ? 'positive' : sc <= 48 ? 'danger' : 'caution'),
-            badge: dm.decision || (sc >= 72 ? 'Thuận lợi' : sc <= 48 ? 'Thận trọng cao' : 'Theo dõi'),
-            reason: dm.reason || prevRep.channel_scores?.[key]?.reason || '',
-          };
-        };
-        INV.stateManager.evaluationReport = {
-          ...prevRep,
-          as_of_date: synced.as_of_date || prevRep.as_of_date,
-          cycle_phase: synced.cycle_phase || prevRep.cycle_phase,
-          channel_scores: {
-            cash: mkChannel('cash', 'Tiền mặt / Tiết kiệm', 'tiền'),
-            gold: mkChannel('gold', 'Vàng', 'vàng'),
-            stock: mkChannel('stock', 'Chứng khoán', 'chứng'),
-            real_estate: mkChannel('real_estate', 'Nhà đất', 'đất'),
-          },
-          narrative_summary: {
-            opportunities: synced.verdict_summary?.opportunities?.length ? synced.verdict_summary.opportunities : prevRep.narrative_summary?.opportunities || [],
-            risks: synced.verdict_summary?.risks?.length ? synced.verdict_summary.risks : prevRep.narrative_summary?.risks || [],
-            current_outlook: synced.verdict_summary?.current_outlook || prevRep.narrative_summary?.current_outlook || '',
-            upcoming_outlook: synced.verdict_summary?.upcoming_outlook || prevRep.narrative_summary?.upcoming_outlook || '',
-          },
-        };
-      } else {
-        // Fallback an toàn: vẫn lưu tóm tắt văn bản Gemini & dùng dữ liệu API sống để dựng trọn bộ biểu đồ
-        successMsg = 'Đã tổng hợp xong thông tin (ghi nhận câu trả lời Gemini & kết hợp toàn bộ số liệu API sống để dựng 6 biểu đồ)!';
-        if (INV.stateManager.evaluationReport) {
-          INV.stateManager.evaluationReport.gemini_raw_note = raw.slice(0, 4000);
-        }
-      }
+      const parsed = commitGeminiReplyToInvestState(raw, []);
+      const successMsg = parsed.ok
+        ? 'Đã tổng hợp toàn văn phân tích & cập nhật trọn bộ 6 biểu đồ + trích dẫn từ Gemini thành công!'
+        : 'Đã ghi nhận trọn bộ bài phân tích Gemini & kết hợp số liệu API sống để dựng 6 biểu đồ + PDF!';
 
       NS.utils?.showToast?.(`✅ ${successMsg}`, 'success', 3800);
       if (uiState.w2CountdownTimerId) clearInterval(uiState.w2CountdownTimerId);

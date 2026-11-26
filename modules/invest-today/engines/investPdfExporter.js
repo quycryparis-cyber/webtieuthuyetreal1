@@ -40,6 +40,14 @@
     });
   }
 
+  async function ensurePdfLib() {
+    if (globalScope.PDFLib) return globalScope.PDFLib;
+    try {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js');
+    } catch (_ePl) {}
+    return globalScope.PDFLib || null;
+  }
+
   async function ensureJsPdf() {
     if (globalScope.jspdf?.jsPDF) return globalScope.jspdf.jsPDF;
     await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
@@ -96,10 +104,28 @@
     ctx.fillStyle = '#14b8a6';
     ctx.fillRect(0, 92, 1240, 4);
     ctx.fillStyle = '#ffffff';
-    ctx.font = `700 6px ${ff}`;
+    ctx.font = `700 24px ${ff}`;
     ctx.textBaseline = 'middle';
-    ctx.fillText(cleanStr(title).slice(0, 74), 72, 48);
+    ctx.fillText(cleanStr(title).slice(0, 68), 72, 48);
     ctx.textBaseline = 'top';
+  }
+
+  function paintFooter(ctx, pageNo, totalPages, darkPaper, ff) {
+    ctx.save();
+    ctx.strokeStyle = darkPaper ? '#334155' : '#cbd5e1';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(72, 1682);
+    ctx.lineTo(1168, 1682);
+    ctx.stroke();
+    ctx.fillStyle = darkPaper ? '#94a3b8' : '#64748b';
+    ctx.font = `600 18px ${ff}`;
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Sổ Tay Tiểu Thuyết Của Bi — Đầu Tư Hôm Nay (${new Date().toLocaleDateString('vi-VN')})`, 72, 1696);
+    ctx.textAlign = 'right';
+    ctx.fillText(`Trang ${pageNo} / ${totalPages}`, 1168, 1696);
+    ctx.restore();
   }
 
   function drawCoverPage(modeMeta, subtitle, metrics, opts) {
@@ -118,18 +144,18 @@
     ctx.fillStyle = '#14b8a6';
     ctx.fillRect(0, 0, 18, H);
 
-    rr(ctx, 84, 108, 490, 48, 24);
+    rr(ctx, 84, 108, 560, 52, 26);
     ctx.fillStyle = 'rgba(20,184,166,0.22)';
     ctx.fill();
     ctx.strokeStyle = '#2dd4bf';
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.fillStyle = '#5eead4';
-    ctx.font = `700 0px ${ff}`;
-    ctx.fillText('BÁO CÁO PHÂN TÍCH ĐẦU TƯ CHUYÊN GIA', 110, 121);
+    ctx.font = `700 20px ${ff}`;
+    ctx.fillText('BÁO CÁO PHÂN TÍCH ĐẦU TƯ CHUYÊN GIA', 114, 122);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = `700 2px ${ff}`;
+    ctx.font = `700 50px ${ff}`;
     let ty = 205;
     wrapText(ctx, modeMeta.title, W - 180).forEach((ln) => {
       ctx.fillText(ln, 84, ty);
@@ -140,7 +166,7 @@
     ctx.font = `600 25px ${ff}`;
     wrapText(ctx, subtitle, W - 180).slice(0, 3).forEach((ln) => {
       ctx.fillText(ln, 84, ty + 14);
-      ty += 36;
+      ty += 38;
     });
 
     const cardTop = Math.max(520, ty + 54);
@@ -149,27 +175,27 @@
       const col = idx % 2;
       const row = Math.floor(idx / 2);
       const x = 84 + col * (colW + 40);
-      const y = cardTop + row * 172;
-      rr(ctx, x, y, colW, 146, 18);
-      ctx.fillStyle = 'rgba(15,23,42,0.62)';
+      const y = cardTop + row * 176;
+      rr(ctx, x, y, colW, 152, 18);
+      ctx.fillStyle = 'rgba(15,23,42,0.68)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(45,212,191,0.48)';
+      ctx.strokeStyle = 'rgba(45,212,191,0.52)';
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.fillStyle = '#94a3b8';
-      ctx.font = `700 18px ${ff}`;
-      ctx.fillText(cleanStr(m.label), x + 24, y + 22);
+      ctx.font = `700 19px ${ff}`;
+      ctx.fillText(cleanStr(m.label), x + 24, y + 20);
       ctx.fillStyle = '#ffffff';
-      ctx.font = `700 0px ${ff}`;
-      wrapText(ctx, cleanStr(m.value || '—'), colW - 48).slice(0, 1).forEach((vln) => ctx.fillText(vln, x + 24, y + 58));
+      ctx.font = `700 34px ${ff}`;
+      wrapText(ctx, cleanStr(m.value || '—'), colW - 48).slice(0, 1).forEach((vln) => ctx.fillText(vln, x + 24, y + 56));
       ctx.fillStyle = '#5eead4';
-      ctx.font = `600 16.5px ${ff}`;
-      wrapText(ctx, cleanStr(m.note || ''), colW - 48).slice(0, 1).forEach((nln) => ctx.fillText(nln, x + 24, y + 104));
+      ctx.font = `600 18px ${ff}`;
+      wrapText(ctx, cleanStr(m.note || ''), colW - 48).slice(0, 1).forEach((nln) => ctx.fillText(nln, x + 24, y + 108));
     });
 
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillStyle = 'rgba(255,255,255,0.82)';
     ctx.font = `600 20px ${ff}`;
-    ctx.fillText(`Ngày xuất: ${new Date().toLocaleDateString('vi-VN')} · Sổ Tay Tiểu Thuyết Của Bi — Đầu Tư Hôm Nay (v135)`, 84, H - 94);
+    ctx.fillText(`Ngày xuất: ${new Date().toLocaleDateString('vi-VN')} · Sổ Tay Tiểu Thuyết Của Bi — Đầu Tư Hôm Nay (v153)`, 84, H - 94);
     return canvas;
   }
 
@@ -188,10 +214,10 @@
     const muted = dark ? '#94a3b8' : '#475569';
 
     // 1. DONUT PHÂN BỔ VỐN (Trái trên)
-    rr(ctx, 64, 126, 540, 490, 18);
+    rr(ctx, 64, 124, 540, 492, 18);
     ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#0ea5e9'; ctx.font = `700 2px ${ff}`;
-    ctx.fillText('1. Gợi Ý Phân Bổ Vốn An Toàn (%)', 88, 150);
+    ctx.fillStyle = '#0284c7'; ctx.font = `700 23px ${ff}`;
+    ctx.fillText('1. Gợi Ý Phân Bổ Vốn An Toàn (%)', 88, 148);
 
     const alloc = unified?.allocation_pct || { cash: 35, gold: 25, stock: 25, real_estate: 15 };
     const slices = [
@@ -202,7 +228,7 @@
     ];
     const totalA = slices.reduce((s, x) => s + x.val, 0) || 100;
     let ang = -Math.PI / 2;
-    const dcx = 230; const dcy = 345; const dr = 112;
+    const dcx = 222; const dcy = 360; const dr = 108;
     slices.forEach((s) => {
       const sw = (s.val / totalA) * Math.PI * 2;
       ctx.beginPath();
@@ -212,26 +238,26 @@
       ctx.stroke();
       ang += sw;
     });
-    ctx.fillStyle = ink; ctx.font = `700 0px ${ff}`; ctx.textAlign = 'center';
-    ctx.fillText('100%', dcx, dcy - 18);
-    ctx.fillStyle = muted; ctx.font = `700 15px ${ff}`;
+    ctx.fillStyle = ink; ctx.font = `700 34px ${ff}`; ctx.textAlign = 'center';
+    ctx.fillText('100%', dcx, dcy - 22);
+    ctx.fillStyle = muted; ctx.font = `700 17px ${ff}`;
     ctx.fillText('TỶ TRỌNG', dcx, dcy + 18);
     ctx.textAlign = 'left';
 
     slices.forEach((s, i) => {
-      const ly = 240 + i * 54;
-      ctx.fillStyle = s.color; ctx.fillRect(382, ly + 4, 18, 18);
-      ctx.fillStyle = ink; ctx.font = `700 7px ${ff}`;
-      ctx.fillText(`${Math.round((s.val / totalA) * 100)}%`, 410, ly);
-      ctx.fillStyle = muted; ctx.font = `600 15px ${ff}`;
-      ctx.fillText(s.label, 410, ly + 22);
+      const ly = 236 + i * 64;
+      ctx.fillStyle = s.color; ctx.fillRect(368, ly + 4, 20, 20);
+      ctx.fillStyle = ink; ctx.font = `700 22px ${ff}`;
+      ctx.fillText(`${Math.round((s.val / totalA) * 100)}%`, 398, ly);
+      ctx.fillStyle = muted; ctx.font = `600 17px ${ff}`;
+      ctx.fillText(s.label, 398, ly + 26);
     });
 
     // 2. RADAR 6 TRỤC RỦI RO (Phải trên)
-    rr(ctx, 636, 126, 540, 490, 18);
+    rr(ctx, 636, 124, 540, 492, 18);
     ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#f43f5e'; ctx.font = `700 2px ${ff}`;
-    ctx.fillText('2. Biểu Đồ Radar 6 Mức Độ Rủi Ro', 660, 150);
+    ctx.fillStyle = '#e11d48'; ctx.font = `700 23px ${ff}`;
+    ctx.fillText('2. Biểu Đồ Radar 6 Mức Độ Rủi Ro', 660, 148);
 
     const radarAxes = (Array.isArray(unified?.risk_radar) && unified.risk_radar.length >= 3)
       ? unified.risk_radar.slice(0, 6)
@@ -243,7 +269,7 @@
           { label: 'Lãi vay BĐS', level: 78 },
           { label: 'Thanh khoản', level: 52 },
         ];
-    const rcx = 906; const rcy = 384; const rMax = 122; const rn = radarAxes.length;
+    const rcx = 906; const rcy = 392; const rMax = 104; const rn = radarAxes.length;
     const rPt = (i, ratio) => {
       const a = -Math.PI / 2 + (2 * Math.PI * i) / rn;
       return [rcx + Math.cos(a) * rMax * ratio, rcy + Math.sin(a) * rMax * ratio];
@@ -255,7 +281,7 @@
         if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       });
       ctx.closePath();
-      ctx.strokeStyle = dark ? 'rgba(148,163,184,0.28)' : 'rgba(100,116,139,0.28)';
+      ctx.strokeStyle = dark ? 'rgba(148,163,184,0.32)' : 'rgba(100,116,139,0.32)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
     });
@@ -269,20 +295,20 @@
     ctx.strokeStyle = '#f43f5e'; ctx.lineWidth = 3; ctx.stroke();
     radarAxes.forEach((ax, i) => {
       const [dx, dy] = rPt(i, Math.max(0.12, Math.min(1, (Number(ax.level) || 50) / 100)));
-      ctx.beginPath(); ctx.arc(dx, dy, 6, 0, Math.PI * 2);
+      ctx.beginPath(); ctx.arc(dx, dy, 6.5, 0, Math.PI * 2);
       ctx.fillStyle = Number(ax.level) >= 75 ? '#f43f5e' : '#f59e0b'; ctx.fill();
-      const [lx, ly] = rPt(i, 1.28);
-      ctx.fillStyle = ink; ctx.font = `700 5px ${ff}`;
+      const [lx, ly] = rPt(i, 1.32);
+      ctx.fillStyle = ink; ctx.font = `700 17px ${ff}`;
       ctx.textAlign = lx < rcx - 20 ? 'right' : lx > rcx + 20 ? 'left' : 'center';
-      ctx.fillText(`${cleanStr(ax.label).slice(0, 18)} (${Math.round(Number(ax.level) || 0)})`, lx, ly - 8);
+      ctx.fillText(`${cleanStr(ax.label).slice(0, 15)} (${Math.round(Number(ax.level) || 0)})`, lx, ly - 10);
     });
     ctx.textAlign = 'left';
 
     // 3. BIỂU ĐỒ CỘT 4 KÊNH ĐẦU TƯ (Giữa)
-    rr(ctx, 64, 646, 1112, 360, 18);
+    rr(ctx, 64, 640, 1112, 366, 18);
     ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#10b981'; ctx.font = `700 2px ${ff}`;
-    ctx.fillText('3. Biểu Đồ Điểm Hấp Dẫn 4 Kênh Đầu Tư (Thang 100)', 88, 670);
+    ctx.fillStyle = '#059669'; ctx.font = `700 23px ${ff}`;
+    ctx.fillText('3. Biểu Đồ Điểm Hấp Dẫn 4 Kênh Đầu Tư (Thang 100)', 88, 664);
 
     const ch = report?.channel_scores || {};
     const bars = [
@@ -292,39 +318,41 @@
       { label: 'Nhà đất / BĐS', score: ch.real_estate?.score ?? unified?.channel_scores?.real_estate ?? 55, color: '#10b981', badge: ch.real_estate?.badge || 'Thận trọng' },
     ];
     bars.forEach((b, i) => {
-      const by = 720 + i * 68;
-      ctx.fillStyle = ink; ctx.font = `700 9px ${ff}`;
+      const by = 716 + i * 70;
+      ctx.fillStyle = ink; ctx.font = `700 20px ${ff}`;
       ctx.fillText(`${b.label} — ${b.badge}`, 92, by);
-      ctx.fillStyle = b.color; ctx.font = `700 0px ${ff}`;
-      ctx.fillText(`${b.score}/100`, 1065, by);
-      rr(ctx, 92, by + 28, 955, 22, 11);
+      ctx.fillStyle = b.color; ctx.font = `700 22px ${ff}`;
+      ctx.textAlign = 'right';
+      ctx.fillText(`${b.score}/100`, 1148, by);
+      ctx.textAlign = 'left';
+      rr(ctx, 92, by + 30, 1056, 22, 11);
       ctx.fillStyle = dark ? '#0f172a' : '#e2e8f0'; ctx.fill();
-      rr(ctx, 92, by + 28, Math.max(24, Math.round((Math.min(100, b.score) / 100) * 955)), 22, 11);
+      rr(ctx, 92, by + 30, Math.max(24, Math.round((Math.min(100, b.score) / 100) * 1056)), 22, 11);
       ctx.fillStyle = b.color; ctx.fill();
     });
 
     // 4. MA TRẬN QUYẾT ĐỊNH 4 KÊNH (Đáy)
-    rr(ctx, 64, 1036, 1112, 620, 18);
+    rr(ctx, 64, 1030, 1112, 626, 18);
     ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#0d9488'; ctx.font = `700 2px ${ff}`;
-    ctx.fillText('4. Ma Trận Quyết Định Hành Động & Khuyến Nghị Chu Kỳ', 88, 1060);
+    ctx.fillStyle = '#0d9488'; ctx.font = `700 23px ${ff}`;
+    ctx.fillText('4. Ma Trận Quyết Định Hành Động & Khuyến Nghị Chu Kỳ', 88, 1054);
 
     const dmList = Array.isArray(unified?.decision_matrix) && unified.decision_matrix.length
       ? unified.decision_matrix.slice(0, 4)
       : bars.map((b) => ({ channel: b.label, decision: b.badge, reason: ch[b.label.includes('Vàng') ? 'gold' : b.label.includes('Chứng') ? 'stock' : b.label.includes('Nhà') ? 'real_estate' : 'cash']?.reason || 'Theo dõi sát diễn biến lãi suất & vĩ mô.' }));
-    let my = 1108;
+    let my = 1102;
     dmList.forEach((dm) => {
-      rr(ctx, 88, my, 1064, 118, 12);
+      rr(ctx, 88, my, 1064, 122, 12);
       ctx.fillStyle = dark ? '#0f172a' : '#ffffff'; ctx.fill();
       ctx.strokeStyle = cardBd; ctx.lineWidth = 1.5; ctx.stroke();
-      ctx.fillStyle = '#0d9488'; ctx.fillRect(88, my, 8, 118);
-      ctx.fillStyle = ink; ctx.font = `700 9px ${ff}`;
+      ctx.fillStyle = '#0d9488'; ctx.fillRect(88, my, 8, 122);
+      ctx.fillStyle = ink; ctx.font = `700 20px ${ff}`;
       ctx.fillText(`${cleanStr(dm.channel)}  •  ${cleanStr(dm.decision)}`, 112, my + 14);
-      ctx.fillStyle = muted; ctx.font = `600 17px ${ff}`;
+      ctx.fillStyle = muted; ctx.font = `600 17.5px ${ff}`;
       wrapText(ctx, dm.reason || '', 1016).slice(0, 3).forEach((ln, li) => {
-        ctx.fillText(ln, 112, my + 46 + li * 23);
+        ctx.fillText(ln, 112, my + 46 + li * 24);
       });
-      my += 132;
+      my += 134;
     });
 
     return canvas;
@@ -347,19 +375,19 @@
       const pts = dataObj.goldHist?.points || [];
       rr(ctx, 64, 126, 1112, 620, 18);
       ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#f59e0b'; ctx.font = `700 4px ${ff}`;
+      ctx.fillStyle = '#d97706'; ctx.font = `700 24px ${ff}`;
       ctx.fillText('📈 Xu Hướng Giá Vàng Thế Giới 30 Ngày (PAXG / XAU-USD)', 92, 154);
 
       if (pts.length >= 2) {
         const vals = pts.map((p) => Number(p.close || p.value) || 0);
         const minV = Math.min(...vals); const maxV = Math.max(...vals); const span = Math.max(1, maxV - minV);
-        const px0 = 140; const py0 = 230; const pw = 980; const ph = 420;
+        const px0 = 156; const py0 = 230; const pw = 964; const ph = 420;
         ctx.strokeStyle = cardBd; ctx.lineWidth = 1.5;
         for (let g = 0; g <= 4; g++) {
           const gy = py0 + (ph * g) / 4;
           ctx.beginPath(); ctx.moveTo(px0, gy); ctx.lineTo(px0 + pw, gy); ctx.stroke();
-          ctx.fillStyle = muted; ctx.font = `700 16px ${ff}`;
-          ctx.fillText(`$${Math.round(maxV - (span * g) / 4)}`, 76, gy - 8);
+          ctx.fillStyle = muted; ctx.font = `700 18px ${ff}`;
+          ctx.fillText(`$${Math.round(maxV - (span * g) / 4)}`, 76, gy - 10);
         }
         ctx.beginPath();
         pts.forEach((p, idx) => {
@@ -380,7 +408,7 @@
       paintHeader(ctx, `PHẦN 1 — BIỂU ĐỒ CHẤT LƯỢNG 5 TRỤ CỘT & ĐỊNH GIÁ ${st.symbol}`, ff);
       rr(ctx, 64, 126, 1112, 560, 18);
       ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#0ea5e9'; ctx.font = `700 4px ${ff}`;
+      ctx.fillStyle = '#0284c7'; ctx.font = `700 24px ${ff}`;
       ctx.fillText(`📊 Điểm Chất Lượng 5 Trụ Cột Doanh Nghiệp — ${st.symbol} (${st.companyName})`, 92, 154);
 
       const sc = st.simplizeScores || { valuation: 3, growth: 3, performance: 3, health: 3, dividend: 3 };
@@ -393,13 +421,15 @@
       ];
       rows.forEach((r, idx) => {
         const ry = 225 + idx * 84;
-        ctx.fillStyle = ink; ctx.font = `700 0px ${ff}`;
+        ctx.fillStyle = ink; ctx.font = `700 20px ${ff}`;
         ctx.fillText(r.label, 96, ry);
-        ctx.fillStyle = r.color; ctx.font = `700 1px ${ff}`;
-        ctx.fillText(`${(r.val / 20).toFixed(1)} / 5.0`, 1040, ry);
-        rr(ctx, 96, ry + 32, 930, 24, 12);
+        ctx.fillStyle = r.color; ctx.font = `700 22px ${ff}`;
+        ctx.textAlign = 'right';
+        ctx.fillText(`${(r.val / 20).toFixed(1)} / 5.0`, 1144, ry);
+        ctx.textAlign = 'left';
+        rr(ctx, 96, ry + 34, 1048, 24, 12);
         ctx.fillStyle = dark ? '#0f172a' : '#e2e8f0'; ctx.fill();
-        rr(ctx, 96, ry + 32, Math.max(30, Math.round((r.val / 100) * 930)), 24, 12);
+        rr(ctx, 96, ry + 34, Math.max(30, Math.round((r.val / 100) * 1048)), 24, 12);
         ctx.fillStyle = r.color; ctx.fill();
       });
       return canvas;
@@ -409,7 +439,7 @@
     paintHeader(ctx, 'PHẦN 1 — BIỂU ĐỒ STRESS TEST LÃI SUẤT VAY NHÀ ĐẤT (10% – 15%)', ff);
     rr(ctx, 64, 126, 1112, 600, 18);
     ctx.fillStyle = cardBg; ctx.fill(); ctx.strokeStyle = cardBd; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#10b981'; ctx.font = `700 4px ${ff}`;
+    ctx.fillStyle = '#059669'; ctx.font = `700 24px ${ff}`;
     ctx.fillText(`🏠 Áp Lực Trả Góp Hàng Tháng Theo Kịch Bản Lãi Suất (${dataObj.area})`, 92, 154);
 
     const rates = [9, 10.5, 12, 13.5, 15];
@@ -421,13 +451,15 @@
       const tr = pmt / 1e6;
       const ry = 230 + idx * 88;
       const col = rPct >= 13.5 ? '#f43f5e' : rPct >= 12 ? '#f59e0b' : '#10b981';
-      ctx.fillStyle = ink; ctx.font = `700 0px ${ff}`;
+      ctx.fillStyle = ink; ctx.font = `700 20px ${ff}`;
       ctx.fillText(`Lãi thả nổi ${rPct}%/năm (Vay mẫu 2,1 tỷ / 20 năm)`, 96, ry);
-      ctx.fillStyle = col; ctx.font = `700 1px ${ff}`;
-      ctx.fillText(`${tr.toFixed(1)} tr/tháng`, 1000, ry);
-      rr(ctx, 96, ry + 34, 880, 24, 12);
+      ctx.fillStyle = col; ctx.font = `700 22px ${ff}`;
+      ctx.textAlign = 'right';
+      ctx.fillText(`${tr.toFixed(1)} tr/tháng`, 1144, ry);
+      ctx.textAlign = 'left';
+      rr(ctx, 96, ry + 34, 1048, 24, 12);
       ctx.fillStyle = dark ? '#0f172a' : '#e2e8f0'; ctx.fill();
-      rr(ctx, 96, ry + 34, Math.min(880, Math.round((tr / 35) * 880)), 24, 12);
+      rr(ctx, 96, ry + 34, Math.min(1048, Math.round((tr / 35) * 1048)), 24, 12);
       ctx.fillStyle = col; ctx.fill();
     });
     return canvas;
@@ -545,21 +577,26 @@
       if (!rows.length) return;
       const cols = headers.length;
       const colW = Math.floor(maxW / cols);
+      const cellFontPx = Math.round(17.5 * sc);
+      const cellLineH = Math.round(23 * sc);
+      const linkFontPx = Math.round(16 * sc);
       const drawHead = () => {
-        ensure(48);
+        ensure(52);
         cur.ctx.fillStyle = '#1b365d';
-        cur.ctx.fillRect(72, y, maxW, 44);
+        cur.ctx.fillRect(72, y, maxW, 48);
+        cur.ctx.fillStyle = '#14b8a6';
+        cur.ctx.fillRect(72, y + 45, maxW, 3);
         cur.ctx.fillStyle = '#ffffff';
-        cur.ctx.font = `700 {Math.round(17.5 * sc)}px ${ff}`;
-        headers.forEach((h, ci) => cur.ctx.fillText(cleanStr(h).slice(0, 34), 84 + ci * colW, y + 11));
-        y += 44;
+        cur.ctx.font = `700 ${Math.round(18.5 * sc)}px ${ff}`;
+        headers.forEach((h, ci) => cur.ctx.fillText(cleanStr(h).slice(0, 34), 84 + ci * colW, y + 13));
+        y += 48;
       };
       drawHead();
       rows.forEach((row, ri) => {
         const linkUrl = Array.isArray(rowUrls) ? rowUrls[ri] : '';
-        cur.ctx.font = `500 ${Math.round(17 * sc)}px ${ff}`;
+        cur.ctx.font = `500 ${cellFontPx}px ${ff}`;
         const cellLines = headers.map((_, ci) => wrapText(cur.ctx, String(row[ci] ?? '—'), colW - 22));
-        const rowH = Math.max(40, Math.max(...cellLines.map((a) => a.length)) * Math.round(22 * sc) + (linkUrl ? 34 : 16));
+        const rowH = Math.max(44, Math.max(...cellLines.map((a) => a.length)) * cellLineH + (linkUrl ? 40 : 18));
         if (y + rowH > maxY) {
           pages.push(cur.canvas);
           cur = createA4(dark);
@@ -570,15 +607,21 @@
         cur.ctx.fillStyle = ri % 2 === 0 ? (dark ? '#1e293b' : '#f8fafc') : (dark ? '#0f172a' : '#ffffff');
         cur.ctx.fillRect(72, y, maxW, rowH);
         cur.ctx.strokeStyle = dark ? '#334155' : '#cbd5e1';
+        cur.ctx.lineWidth = 1;
         cur.ctx.strokeRect(72, y, maxW, rowH);
         cur.ctx.fillStyle = dark ? '#e2e8f0' : '#1e293b';
+        cur.ctx.font = `500 ${cellFontPx}px ${ff}`;
         cellLines.forEach((lines, ci) => {
-          lines.forEach((ln, li) => cur.ctx.fillText(ln, 84 + ci * colW, y + 8 + li * Math.round(22 * sc)));
+          lines.forEach((ln, li) => cur.ctx.fillText(ln, 84 + ci * colW, y + 10 + li * cellLineH));
         });
         if (linkUrl && /^https?:\/\//i.test(linkUrl)) {
-          cur.ctx.fillStyle = dark ? '#38bdf8' : '#0369a1';
-          cur.ctx.font = `700 ${Math.round(14.5 * sc)}px ${ff}`;
-          cur.ctx.fillText(`🔗 Bấm mở nguồn gốc: ${linkUrl.slice(0, 78)}`, 84, y + rowH - 24);
+          const linkText = `🔗 Bấm mở nguồn gốc: ${linkUrl.length > 76 ? linkUrl.slice(0, 73) + '...' : linkUrl}`;
+          const linkY = y + rowH - 28;
+          cur.ctx.fillStyle = dark ? '#38bdf8' : '#0284c7';
+          cur.ctx.font = `700 ${linkFontPx}px ${ff}`;
+          cur.ctx.fillText(linkText, 84, linkY);
+          const uw = Math.min(maxW - 28, cur.ctx.measureText(linkText).width);
+          cur.ctx.fillRect(84, linkY + linkFontPx + 3, uw, 1.5);
           if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
           cur.canvas.__pdfLinks.push({ x: 72, y, w: maxW, h: rowH, url: linkUrl });
         }
@@ -591,34 +634,37 @@
       if (sec.isDisclaimerBox) {
         ensure(96);
         y += 10;
-        rr(cur.ctx, 72, y, maxW, 70, 12);
+        rr(cur.ctx, 72, y, maxW, 74, 12);
         cur.ctx.fillStyle = dark ? '#451a03' : '#fffbeb';
         cur.ctx.fill();
         cur.ctx.strokeStyle = '#f59e0b';
         cur.ctx.lineWidth = 2;
         cur.ctx.stroke();
         cur.ctx.fillStyle = dark ? '#fde68a' : '#92400e';
-        cur.ctx.font = `700 {Math.round(19 * sc)}px ${ff}`;
-        cur.ctx.fillText(cleanStr(sec.paragraphs?.[0] || '⚠️ Tất cả thông tin, phân tích chỉ mang tính chất tham khảo.'), 94, y + 22);
-        y += 84;
+        cur.ctx.font = `700 ${Math.round(20 * sc)}px ${ff}`;
+        cur.ctx.fillText(cleanStr(sec.paragraphs?.[0] || '⚠️ Tất cả thông tin, phân tích chỉ mang tính chất tham khảo.'), 94, y + 24);
+        y += 88;
         continue;
       }
-      ensure(76);
+      ensure(80);
       y += 8;
       const g = cur.ctx.createLinearGradient(72, y, 72 + maxW, y);
       g.addColorStop(0, '#0b2239');
       g.addColorStop(0.7, '#163b63');
       g.addColorStop(1, '#0f4c68');
-      rr(cur.ctx, 72, y, maxW, 50, 9);
+      cur.ctx.font = `700 23px ${ff}`;
+      const headLines = wrapText(cur.ctx, cleanStr(sec.heading), maxW - 44).slice(0, 2);
+      const bannerH = headLines.length > 1 ? 78 : 54;
+      rr(cur.ctx, 72, y, maxW, bannerH, 9);
       cur.ctx.fillStyle = g; cur.ctx.fill();
-      cur.ctx.fillStyle = '#14b8a6'; cur.ctx.fillRect(72, y, 10, 50);
-      cur.ctx.fillStyle = '#ffffff'; cur.ctx.font = `700 2px ${ff}`;
-      cur.ctx.fillText(cleanStr(sec.heading).slice(0, 82), 96, y + 13);
+      cur.ctx.fillStyle = '#14b8a6'; cur.ctx.fillRect(72, y, 10, bannerH);
+      cur.ctx.fillStyle = '#ffffff'; cur.ctx.font = `700 23px ${ff}`;
+      headLines.forEach((hln, hi) => cur.ctx.fillText(hln, 96, y + 14 + hi * 30));
       if (sec.headingUrl && /^https?:\/\//i.test(sec.headingUrl)) {
         if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
-        cur.canvas.__pdfLinks.push({ x: 72, y, w: maxW, h: 50, url: sec.headingUrl });
+        cur.canvas.__pdfLinks.push({ x: 72, y, w: maxW, h: bannerH, url: sec.headingUrl });
       }
-      y += 64;
+      y += bannerH + 14;
 
       if (sec.tableRows?.length) {
         drawTableBlock(sec.tableHeaders || ['Chỉ tiêu', 'Giá trị', 'Tác động / Nhận định'], sec.tableRows, sec.tableRowUrls || null);
@@ -634,7 +680,7 @@
           if (!clean) continue;
           cur.ctx.font = `500 ${bodyPx}px ${ff}`;
           const lines = wrapText(cur.ctx, clean, maxW);
-          if (pUrl) ensure(lines.length * lineH + 34);
+          if (pUrl) ensure(lines.length * lineH + 38);
           const paraStartY = y;
           let paraStartPage = cur.canvas;
           for (const ln of lines) {
@@ -648,13 +694,17 @@
             y += lineH;
           }
           if (pUrl) {
-            ensure(26);
-            cur.ctx.fillStyle = dark ? '#38bdf8' : '#0369a1';
-            cur.ctx.font = `700 ${Math.round(14.5 * sc)}px ${ff}`;
-            cur.ctx.fillText(`🔗 Bấm mở nguồn: ${pUrl.slice(0, 82)}`, 72, y);
-            y += 22;
+            ensure(30);
+            const pLinkPx = Math.round(16 * sc);
+            const pLinkTxt = `🔗 Bấm mở nguồn: ${pUrl.length > 78 ? pUrl.slice(0, 75) + '...' : pUrl}`;
+            cur.ctx.fillStyle = dark ? '#38bdf8' : '#0284c7';
+            cur.ctx.font = `700 ${pLinkPx}px ${ff}`;
+            cur.ctx.fillText(pLinkTxt, 72, y);
+            const puw = Math.min(maxW, cur.ctx.measureText(pLinkTxt).width);
+            cur.ctx.fillRect(72, y + pLinkPx + 3, puw, 1.5);
+            y += 28;
             if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
-            cur.canvas.__pdfLinks.push({ x: 72, y: Math.min(paraStartY, y - 24), w: maxW, h: Math.max(30, y - paraStartY), url: pUrl });
+            cur.canvas.__pdfLinks.push({ x: 72, y: Math.min(paraStartY, y - 28), w: maxW, h: Math.max(32, y - paraStartY), url: pUrl });
           }
           y += 8;
         }
@@ -752,41 +802,45 @@
         ctx.arc(x + cardW - 46, y + 48, 70, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#fde68a';
-        ctx.font = `700 5px ${ff}`;
-        ctx.fillText(`📰 ${(h.source || 'BÁO CHÍ CHÍNH THỐNG').toUpperCase().slice(0, 32)}`, x + 22, y + 34);
+        ctx.font = `700 16px ${ff}`;
+        ctx.fillText(`📰 ${(h.source || 'BÁO CHÍ CHÍNH THỐNG').toUpperCase().slice(0, 34)}`, x + 22, y + 28);
         ctx.fillStyle = '#ffffff';
-        ctx.font = `700 2px ${ff}`;
-        wrapText(ctx, cleanStr(h.title || ''), cardW - 48).slice(0, 4).forEach((ln, li) => {
-          ctx.fillText(ln, x + 22, y + 66 + li * 31);
+        ctx.font = `700 22px ${ff}`;
+        wrapText(ctx, cleanStr(h.title || ''), cardW - 44).slice(0, 4).forEach((ln, li) => {
+          ctx.fillText(ln, x + 22, y + 64 + li * 32);
         });
       }
       ctx.restore();
 
       // Nội dung tiêu đề & tóm tắt bên dưới
       ctx.fillStyle = dark ? '#38bdf8' : '#0369a1';
-      ctx.font = `700 4.5px ${ff}`;
-      ctx.fillText(`${cleanStr(h.source || 'Nguồn chính thống').slice(0, 28)}  ·  ${cleanStr(h.date || '')}`, x + 18, y + imgH + 22);
+      ctx.font = `700 16px ${ff}`;
+      ctx.fillText(`${cleanStr(h.source || 'Nguồn chính thống').slice(0, 28)}  ·  ${cleanStr(h.date || '')}`, x + 18, y + imgH + 18);
 
       ctx.fillStyle = dark ? '#f8fafc' : '#0f172a';
-      ctx.font = `700 9px ${ff}`;
+      ctx.font = `700 20px ${ff}`;
       const titleLines = wrapText(ctx, cleanStr(h.title || ''), cardW - 36).slice(0, 3);
-      titleLines.forEach((ln, li) => ctx.fillText(ln, x + 18, y + imgH + 50 + li * 26));
+      titleLines.forEach((ln, li) => ctx.fillText(ln, x + 18, y + imgH + 46 + li * 28));
 
-      const snipY = y + imgH + 56 + titleLines.length * 26;
+      const snipY = y + imgH + 52 + titleLines.length * 28;
       if (h.snippet) {
         ctx.fillStyle = dark ? '#cbd5e1' : '#475569';
-        ctx.font = `500 15.5px ${ff}`;
-        wrapText(ctx, cleanStr(h.snippet), cardW - 36).slice(0, 3).forEach((ln, li) => {
-          ctx.fillText(ln, x + 18, snipY + li * 22);
+        ctx.font = `500 16px ${ff}`;
+        wrapText(ctx, cleanStr(h.snippet), cardW - 36).slice(0, 2).forEach((ln, li) => {
+          ctx.fillText(ln, x + 18, snipY + li * 23);
         });
       }
 
-      const rawUrl = String(h.url || h.link || h.official_url || '').trim();
+      const rawUrl = String(h.url || h.link || h.source_url || h.official_url || '').trim();
       const normUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : (/^www\./i.test(rawUrl) ? `https://${rawUrl}` : '');
       if (normUrl) {
-        ctx.fillStyle = dark ? '#34d399' : '#0d9488';
-        ctx.font = `700 4.5px ${ff}`;
-        ctx.fillText(`🔗 Bấm mở bài gốc: ${normUrl.slice(0, 44)}`, x + 18, y + cardH - 26);
+        const cardLinkTxt = `🔗 Bấm mở bài gốc: ${normUrl.length > 42 ? normUrl.slice(0, 39) + '...' : normUrl}`;
+        const cardLinkY = y + cardH - 32;
+        ctx.fillStyle = dark ? '#34d399' : '#0284c7';
+        ctx.font = `700 16px ${ff}`;
+        ctx.fillText(cardLinkTxt, x + 18, cardLinkY);
+        const clw = Math.min(cardW - 36, ctx.measureText(cardLinkTxt).width);
+        ctx.fillRect(x + 18, cardLinkY + 19, clw, 1.5);
         canvas.__pdfLinks.push({ x, y, w: cardW, h: cardH, url: normUrl });
       }
     });
@@ -803,19 +857,19 @@
     const unified = INV.stateManager.unifiedAnalytics;
     const prose = INV.stateManager.geminiReportProse || '';
 
-    // Hợp nhất 100% TẤT CẢ bài báo & trích dẫn mà code đã dò ra (KHÔNG cắt bớt!)
+    // Hợp nhất 100% TẤT CẢ bài báo & trích dẫn mà code đã dò ra (KHÔNG cắt bớt, ưu tiên tin mới nhất hôm nay!)
     const allDiscoveredRaw = [
       ...(report?.live_headlines || []),
       ...(re?.rssNews || []),
       ...(gold?.headlines || []),
       ...(stock?.news || []),
       ...(report?.items || [])
-        .filter((it) => /^https?:\/\//i.test(String(it?.url || it?.official_url || '').trim()))
+        .filter((it) => /^https?:\/\//i.test(String(it?.source_url || it?.url || it?.official_url || '').trim()))
         .map((it) => ({
-          title: it.title || it.plain_label || it.label || it.id,
-          source: it.source || it.provider || 'Nguồn dữ liệu chính thống',
+          title: it.plain_label || it.title || it.label || it.technical_label || it.id,
+          source: it.source_name || it.source || it.provider || 'Nguồn dữ liệu chính thống',
           date: it.as_of_date || report?.as_of_date || '',
-          url: it.url || it.official_url,
+          url: it.source_url || it.url || it.official_url,
           snippet: it.plain_explanation || it.impact || '',
         })),
     ];
@@ -823,12 +877,17 @@
     const headlines = [];
     for (const h of allDiscoveredRaw) {
       if (!h || !h.title) continue;
-      const u = String(h.url || h.link || h.official_url || '').trim();
+      const u = String(h.url || h.link || h.source_url || h.official_url || '').trim();
       const k = u ? u.toLowerCase() : String(h.title).trim().toLowerCase().slice(0, 80);
       if (seenHeadKeys.has(k)) continue;
       seenHeadKeys.add(k);
       headlines.push(h);
     }
+    headlines.sort((a, b) => {
+      const ta = Date.parse(a?.published_at || a?.date || '') || 0;
+      const tb = Date.parse(b?.published_at || b?.date || '') || 0;
+      return tb - ta;
+    });
 
     let modeMeta = { title: 'BÁO CÁO PHÂN TÍCH ĐẦU TƯ TỔNG QUÁT TOÀN DIỆN', slug: 'Tong_Quat' };
     let subtitle = `Khu vực: ${reg?.areaLabel || re?.areaLabel || 'Việt Nam'} · Ngày chốt: ${report?.as_of_date || new Date().toLocaleDateString('vi-VN')}`;
@@ -932,8 +991,11 @@
         sections.push({
           heading: `3. BẢNG KIỂM TOÁN ĐẦY ĐỦ ${allAuditItems.length} ĐỀ MỤC VĨ MÔ – VI MÔ ĐÃ QUÉT`,
           tableHeaders: ['Đề mục kiểm tra', 'Số liệu / Trạng thái', 'Tác động thị trường'],
-          tableRows: allAuditItems.map((it) => [it.title || it.label || it.id, it.display_value || it.value || '—', it.plain_explanation || it.impact || '']),
-          tableRowUrls: allAuditItems.map((it) => /^https?:\/\//i.test(String(it.url || it.official_url || '').trim()) ? String(it.url || it.official_url).trim() : ''),
+          tableRows: allAuditItems.map((it) => [it.plain_label || it.title || it.label || it.technical_label || it.id, it.display_value || it.value || '—', it.plain_explanation || it.impact || '']),
+          tableRowUrls: allAuditItems.map((it) => {
+            const rawU = String(it.source_url || it.url || it.link || it.official_url || '').trim();
+            return /^https?:\/\//i.test(rawU) ? rawU : '';
+          }),
         });
       }
     }
@@ -945,20 +1007,20 @@
       return '';
     };
 
+    // TOÀN VĂN BÀI PHÂN TÍCH CHUYÊN GIA GEMINI (Đưa lên ngay trước danh mục nguồn để bài phân tích nổi bật!)
+    if (prose) {
+      const geminiSecs = parseProseToSections(prose, 'PHÂN TÍCH CHUYÊN SÂU TỪ CHUYÊN GIA GEMINI');
+      geminiSecs.forEach((s) => sections.push(s));
+    }
+
     // TIN TỨC MỚI NHẤT & PHÂN TÍCH TÁC ĐỘNG (BẮT BUỘC CÓ Ở CẢ 4 CHẾ ĐỘ + CHÈN HYPERLINK BẤM TRỰC TIẾP!)
     if (headlines.length) {
       sections.push({
         heading: `TIN NÓNG VĨ MÔ, ĐỊA CHÍNH TRỊ & THỊ TRƯỜNG MỚI NHẤT (${headlines.length} NGUỒN BẤM MỞ TRỰC TIẾP)`,
         tableHeaders: ['Tin sự kiện mới nhất', 'Nguồn chính thống', 'Ngày & Phạm vi tác động'],
-        tableRows: headlines.map((h) => [h.title, h.source || 'Báo chí chính thống', `${h.date || ''} · Tác động tâm lý dòng tiền & khẩu vị rủi ro`]),
-        tableRowUrls: headlines.map((h) => normalizeHttpUrl(h.url || h.link || h.official_url || '')),
+        tableRows: headlines.map((h) => [h.title, h.source || 'Báo chí chính thống', `${h.date || new Date().toISOString().slice(0, 10)} · Tác động tâm lý dòng tiền & khẩu vị rủi ro`]),
+        tableRowUrls: headlines.map((h) => normalizeHttpUrl(h.url || h.link || h.source_url || h.official_url || '')),
       });
-    }
-
-    // TOÀN VĂN BÀI PHÂN TÍCH CHUYÊN GIA GEMINI (Phân rã đầy đủ tiêu đề + bảng + đoạn văn!)
-    if (prose) {
-      const geminiSecs = parseProseToSections(prose, 'PHÂN TÍCH CHUYÊN SÂU TỪ CHUYÊN GIA GEMINI');
-      geminiSecs.forEach((s) => sections.push(s));
     }
 
     // DÒNG LƯU Ý MIỄN TRỪ TRÁCH NHIỆM BẮT BUỘC Ở CUỐI MỌI BÁO CÁO
@@ -971,10 +1033,88 @@
     const coverCanvas = drawCoverPage(modeMeta, subtitle, coverMetrics, readerOpts);
     const visualsPage = await drawArticleVisualsPage(headlines, readerOpts);
     const contentPages = drawSectionsToPages(modeMeta.title, sections, readerOpts);
-    return { modeMeta, allPages: [coverCanvas, ...chartPages, ...(visualsPage ? [visualsPage] : []), ...contentPages] };
+    const allPages = [coverCanvas, ...chartPages, ...(visualsPage ? [visualsPage] : []), ...contentPages];
+    const ffFooter = FONT_MAP[readerOpts?.font] || FONT_MAP.sans;
+    const darkFooter = readerOpts?.paperTheme === 'dark';
+    for (let pi = 1; pi < allPages.length; pi++) {
+      paintFooter(allPages[pi].getContext('2d'), pi + 1, allPages.length, darkFooter, ffFooter);
+    }
+    return { modeMeta, allPages };
+  }
+
+  async function canvasToJpgBytes(canvas, quality = 0.92) {
+    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+    const bin = atob(dataUrl.split(',')[1]);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
   }
 
   async function savePagesToPdf(allPages, slug) {
+    const stamp = new Date().toISOString().slice(0, 10);
+    const fileName = `DauTuHomNay_${slug}_${stamp}.pdf`;
+
+    // Ưu tiên xuất chuẩn ISO-32000 qua pdf-lib với /Subtype /Link /A /URI (100% bấm mở link được trên Chrome/Adobe/Edge/Mobile!)
+    const PDFLib = await ensurePdfLib();
+    if (PDFLib?.PDFDocument) {
+      const pdfDoc = await PDFLib.PDFDocument.create();
+      pdfDoc.setTitle(`Đầu Tư Hôm Nay - ${slug} - ${stamp}`);
+      pdfDoc.setAuthor('Sổ Tay Tiểu Thuyết Của Bi - NoirStudio');
+      const pw = 595.28;
+      const ph = 841.89;
+      for (const cv of allPages) {
+        const jpgBytes = await canvasToJpgBytes(cv, 0.92);
+        const jpgImg = await pdfDoc.embedJpg(jpgBytes);
+        const pg = pdfDoc.addPage([pw, ph]);
+        pg.drawImage(jpgImg, { x: 0, y: 0, width: pw, height: ph });
+        if (Array.isArray(cv.__pdfLinks) && cv.__pdfLinks.length && PDFLib.PDFName && PDFLib.PDFString) {
+          try {
+            const annots = [];
+            for (const lk of cv.__pdfLinks) {
+              if (!lk?.url || !/^(https?:\/\/|mailto:)/i.test(String(lk.url))) continue;
+              const x1 = Math.max(0, (lk.x / 1240) * pw);
+              const x2 = Math.min(pw, ((lk.x + lk.w) / 1240) * pw);
+              const y2 = Math.min(ph, ph - (lk.y / 1754) * ph);
+              const y1 = Math.max(0, ph - ((lk.y + lk.h) / 1754) * ph);
+              if (x2 <= x1 + 2 || y2 <= y1 + 2) continue;
+              const linkAnnot = pdfDoc.context.register(
+                pdfDoc.context.obj({
+                  Type: PDFLib.PDFName.of('Annot'),
+                  Subtype: PDFLib.PDFName.of('Link'),
+                  Rect: [x1, y1, x2, y2],
+                  Border: [0, 0, 0],
+                  F: 4,
+                  H: PDFLib.PDFName.of('I'),
+                  A: {
+                    Type: PDFLib.PDFName.of('Action'),
+                    S: PDFLib.PDFName.of('URI'),
+                    URI: PDFLib.PDFString.of(String(lk.url)),
+                  },
+                })
+              );
+              annots.push(linkAnnot);
+              if (typeof pg.node.addAnnot === 'function') pg.node.addAnnot(linkAnnot);
+            }
+            if (annots.length && typeof pg.node.addAnnot !== 'function') {
+              pg.node.set(PDFLib.PDFName.of('Annots'), pdfDoc.context.obj(annots));
+            }
+          } catch (_eLk) {}
+        }
+      }
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      return;
+    }
+
+    // Fallback jsPDF nếu offline không tải được pdf-lib
     const jsPDF = await ensureJsPdf();
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
     const pw = pdf.internal.pageSize.getWidth();
@@ -982,7 +1122,6 @@
     allPages.forEach((cv, idx) => {
       if (idx > 0) pdf.addPage();
       pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
-      // Gắn Hyperlink bấm được thật trên jsPDF cho từng bài báo nguồn!
       if (Array.isArray(cv.__pdfLinks)) {
         cv.__pdfLinks.forEach((lk) => {
           if (!lk?.url || !/^(https?:\/\/|mailto:)/i.test(String(lk.url))) return;
@@ -995,8 +1134,7 @@
         });
       }
     });
-    const stamp = new Date().toISOString().slice(0, 10);
-    pdf.save(`DauTuHomNay_${slug}_${stamp}.pdf`);
+    pdf.save(fileName);
   }
 
   /**

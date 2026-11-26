@@ -236,6 +236,11 @@ ${checklistLines}`;
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
 
+    const nowSec = Math.floor(Date.now() / 1000);
+    const minHnUnix = nowSec - 4 * 86400; // Chỉ lấy tin HN trong 4 ngày gần nhất theo đồng hồ hệ thống
+    const gnewsVnBiz = `https://news.google.com/rss/search?q=${encodeURIComponent('kinh tế OR chứng khoán OR giá vàng OR bất động sản OR lãi suất Việt Nam when:2d')}&hl=vi&gl=VN&ceid=VN:vi`;
+    const gnewsWorld = `https://news.google.com/rss/search?q=${encodeURIComponent('Federal Reserve OR inflation OR oil price OR tariff OR geopolitics OR gold price when:2d')}&hl=en-US&gl=US&ceid=US:en`;
+
     const [
       usDebtRes,
       usRatesRes,
@@ -248,6 +253,10 @@ ${checklistLines}`;
       bbcWorldRss,
       bbcBizRss,
       vneBizRss,
+      vneNewsRss,
+      tuoitreBizRss,
+      gnewsVnRss,
+      gnewsWorldRss,
       hnWarRes,
       hnLeaderRes,
       hnTradeRes,
@@ -265,10 +274,14 @@ ${checklistLines}`;
       INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://feeds.bbci.co.uk/news/world/rss.xml'), { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://feeds.bbci.co.uk/news/business/rss.xml'), { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://vnexpress.net/rss/kinh-doanh.rss'), { signal, timeoutMs: 7500, preferDirect: true }),
-      INV.networkAdapter.fetchJson('https://hn.algolia.com/api/v1/search_by_date?query=Ukraine&tags=story&restrictSearchableAttributes=title&typoTolerance=false&numericFilters=points>5&hitsPerPage=4', { signal, timeoutMs: 7500, preferDirect: true }),
-      INV.networkAdapter.fetchJson('https://hn.algolia.com/api/v1/search_by_date?query=Trump&tags=story&restrictSearchableAttributes=title&typoTolerance=false&numericFilters=points>5&hitsPerPage=4', { signal, timeoutMs: 7500, preferDirect: true }),
-      INV.networkAdapter.fetchJson('https://hn.algolia.com/api/v1/search_by_date?query=tariff&tags=story&restrictSearchableAttributes=title&typoTolerance=false&numericFilters=points>5&hitsPerPage=4', { signal, timeoutMs: 7500, preferDirect: true }),
-      INV.networkAdapter.fetchJson('https://hn.algolia.com/api/v1/search_by_date?query=inflation&tags=story&restrictSearchableAttributes=title&typoTolerance=false&numericFilters=points>5&hitsPerPage=4', { signal, timeoutMs: 7500, preferDirect: true }),
+      INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://vnexpress.net/rss/tin-moi-nhat.rss'), { signal, timeoutMs: 7500, preferDirect: true }),
+      INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://tuoitre.vn/rss/kinh-doanh.rss'), { signal, timeoutMs: 7500, preferDirect: true }),
+      INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(gnewsVnBiz), { signal, timeoutMs: 7500, preferDirect: true }),
+      INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(gnewsWorld), { signal, timeoutMs: 7500, preferDirect: true }),
+      INV.networkAdapter.fetchJson(`https://hn.algolia.com/api/v1/search_by_date?query=Ukraine&tags=story&restrictSearchableAttributes=title&typoTolerance=false&numericFilters=points>5,created_at_i>${minHnUnix}&hitsPerPage=4`, { signal, timeoutMs: 7500, preferDirect: true }),
+      INV.networkAdapter.fetchJson(`https://hn.algolia.com/api/v1/search_by_date?query=Trump&tags=story&restrictSearchableAttributes=title&typoTolerance=false&numericFilters=points>5,created_at_i>${minHnUnix}&hitsPerPage=4`, { signal, timeoutMs: 7500, preferDirect: true }),
+      INV.networkAdapter.fetchJson(`https://hn.algolia.com/api/v1/search_by_date?query=tariff&tags=story&restrictSearchableAttributes=title&typoTolerance=false&numericFilters=points>5,created_at_i>${minHnUnix}&hitsPerPage=4`, { signal, timeoutMs: 7500, preferDirect: true }),
+      INV.networkAdapter.fetchJson(`https://hn.algolia.com/api/v1/search_by_date?query=inflation&tags=story&restrictSearchableAttributes=title&typoTolerance=false&numericFilters=points>5,created_at_i>${minHnUnix}&hitsPerPage=4`, { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://iboard-query.ssi.com.vn/exchange-index/VNINDEX', { signal, timeoutMs: 6000 }),
     ]);
 
@@ -384,34 +397,48 @@ ${checklistLines}`;
       });
     };
 
-    // 7) Live Mainstream Press (BBC World, BBC Business, VnExpress Kinh doanh — v133, 0% Wikipedia)
+    // 7) Live Mainstream Press & Google News Today (VnExpress, Tuổi Trẻ, BBC, Google News 48h — ưu tiên tin hôm nay!)
     const pushRss2Json = (res, targetArr, sourceLabel, maxLen) => {
       if (res.status !== 'fulfilled') return;
       const items = Array.isArray(res.value?.data?.items) ? res.value.data.items : [];
-      items.slice(0, 5).forEach((it) => {
+      items.slice(0, 6).forEach((it) => {
         const title = stripTags(it.title || '');
         const link = String(it.link || it.guid || '').trim();
+        const rawPub = String(it.pubDate || '').trim();
+        const parsedTs = rawPub ? Date.parse(rawPub.replace(' ', 'T') + (rawPub.includes('Z') || rawPub.includes('+') ? '' : 'Z')) : NaN;
+        const isoDate = Number.isFinite(parsedTs) ? new Date(parsedTs).toISOString().slice(0, 10) : (rawPub.slice(0, 10) || `${y}-${m}-${day}`);
         if (title && /^https?:\/\//i.test(link)) {
           addUnique(targetArr, {
             title,
+            snippet: stripTags(it.description || '').slice(0, 200),
             source: sourceLabel,
             url: link,
-            date: String(it.pubDate || '').slice(0, 10) || `${y}-${m}-${day}`,
+            imageUrl: /^https?:\/\//i.test(String(it.thumbnail || it.enclosure?.link || '')) ? (it.thumbnail || it.enclosure.link) : '',
+            date: isoDate,
+            published_at: Number.isFinite(parsedTs) ? new Date(parsedTs).toISOString() : `${isoDate}T08:00:00Z`,
           }, maxLen);
         }
       });
     };
-    pushRss2Json(bbcWorldRss, bundle.geoHeadlines, 'BBC World News (Chính thống · Live)', 12);
-    pushRss2Json(bbcBizRss, bundle.corpHeadlines, 'BBC Business (Chính thống · Live)', 10);
-    pushRss2Json(vneBizRss, bundle.corpHeadlines, 'VnExpress Kinh doanh (Chính thống · Live)', 10);
+    pushRss2Json(gnewsVnRss, bundle.corpHeadlines, 'Google News VN Kinh tế (Hôm nay · Live)', 14);
+    pushRss2Json(gnewsWorldRss, bundle.geoHeadlines, 'Google News Toàn cầu (Hôm nay · Live)', 14);
+    pushRss2Json(vneBizRss, bundle.corpHeadlines, 'VnExpress Kinh doanh (Chính thống · Live)', 14);
+    pushRss2Json(tuoitreBizRss, bundle.corpHeadlines, 'Tuổi Trẻ Kinh doanh (Chính thống · Live)', 14);
+    pushRss2Json(vneNewsRss, bundle.geoHeadlines, 'VnExpress Thời sự (Chính thống · Live)', 14);
+    pushRss2Json(bbcWorldRss, bundle.geoHeadlines, 'BBC World News (Chính thống · Live)', 14);
+    pushRss2Json(bbcBizRss, bundle.corpHeadlines, 'BBC Business (Chính thống · Live)', 14);
 
-    pushHn(hnWarRes, bundle.geoHeadlines, 'Tin Xung đột & Địa chính trị (Live)', 12, /ukraine|russia|war|iran|israel|gaza|nato|military|conflict|drone|strike/i);
-    pushHn(hnLeaderRes, bundle.geoHeadlines, 'Tin Lãnh đạo & Chính sách Mỹ (Live)', 12, /trump|president|white house|biden|xi|putin|congress|policy/i);
-    pushHn(hnTradeRes, bundle.geoHeadlines, 'Tin Thuế quan & Thương mại (Live)', 12, /tariff|trade|treaty|sanction|china|eu|export|economy|opec/i);
+    pushHn(hnWarRes, bundle.geoHeadlines, 'Tin Xung đột & Địa chính trị (Live)', 16, /ukraine|russia|war|iran|israel|gaza|nato|military|conflict|drone|strike/i);
+    pushHn(hnLeaderRes, bundle.geoHeadlines, 'Tin Lãnh đạo & Chính sách Mỹ (Live)', 16, /trump|president|white house|biden|xi|putin|congress|policy/i);
+    pushHn(hnTradeRes, bundle.geoHeadlines, 'Tin Thuế quan & Thương mại (Live)', 16, /tariff|trade|treaty|sanction|china|eu|export|economy|opec/i);
 
-    // 8) Live Mega-Corporations, AI, Fed, Inflation & Macro News (HN Algolia CORS=*)
-    pushHn(hnMacroCorpRes, bundle.corpHeadlines, 'Tin Lạm phát, Fed & Kinh tế (Live)', 12, /inflation|fed|rate|recession|economy|bank|price|gdp|cpi|oil|gold/i);
-    pushHn(hnLeaderRes, bundle.corpHeadlines, 'Tin Tập đoàn & Chính sách (Live)', 12, /nvidia|apple|microsoft|google|openai|anthropic|trump|ceo|ipo|chip|ai/i);
+    // 8) Live Mega-Corporations, AI, Fed, Inflation & Macro News (HN Algolia 4 ngày gần nhất)
+    pushHn(hnMacroCorpRes, bundle.corpHeadlines, 'Tin Lạm phát, Fed & Kinh tế (Live)', 16, /inflation|fed|rate|recession|economy|bank|price|gdp|cpi|oil|gold/i);
+    pushHn(hnLeaderRes, bundle.corpHeadlines, 'Tin Tập đoàn & Chính sách (Live)', 16, /nvidia|apple|microsoft|google|openai|anthropic|trump|ceo|ipo|chip|ai/i);
+
+    const sortNewestFirst = (arr) => arr.sort((a, b) => (Date.parse(b.published_at || b.date || '') || 0) - (Date.parse(a.published_at || a.date || '') || 0));
+    sortNewestFirst(bundle.geoHeadlines);
+    sortNewestFirst(bundle.corpHeadlines);
 
     return bundle;
   }
@@ -728,17 +755,52 @@ ${checklistLines}`;
             };
           }
 
-          // Với các chỉ báo đặc thù nội địa chưa có API mở CORS (như dư nợ margin quý, lãi suất thả nổi ngân hàng) -> dùng mốc đối chiếu mới nhất trong Cẩm nang chuyên gia (đóng dấu ngày rõ ràng!) + link nguồn trực tiếp
+          // Khớp tự động với tin sống ngày hôm nay vừa quét được trước khi lùi về mốc tham chiếu nền
+          const todayLivePool = [...(bundle.corpHeadlines || []), ...(bundle.geoHeadlines || [])];
+          const liveTopicReMap = {
+            brent_oil: /dầu|oil|brent|opec|xăng|energy/i,
+            central_banks_global: /fed|ecb|boe|boj|pboc|lãi suất|ngân hàng trung ương|central bank/i,
+            vn_omo_interbank: /lãi suất|liên ngân hàng|nhnn|tỷ giá|dự trữ|omo/i,
+            vn_credit_npl: /tín dụng|ngân hàng|nợ xấu|cho vay|credit/i,
+            stock_vnindex_pe: /vn-index|chứng khoán|cổ phiếu|hose|thanh khoản/i,
+            stock_margin_liquidity: /margin|thanh khoản|chứng khoán|khối ngoại/i,
+            stock_foreign_ftse: /khối ngoại|nâng hạng|ftse|etf|bán ròng|mua ròng/i,
+            gold_cb_etf_aisc: /vàng|gold|ngân hàng trung ương|etf/i,
+            gold_policy_vn: /vàng|sjc|nhnn|nghị định|nhập khẩu vàng/i,
+            re_mortgage_rates: /bất động sản|nhà đất|lãi suất vay|căn hộ|chung cư/i,
+            re_supply_industrial: /bất động sản|chung cư|khu công nghiệp|căn hộ|nhà ở/i,
+            re_bonds_law2026: /trái phiếu|luật đất đai|bảng giá đất|bất động sản/i,
+          };
+          const liveTopicHit = liveTopicReMap[item.id]
+            ? todayLivePool.find((h) => liveTopicReMap[item.id].test(`${h.title || ''} ${h.snippet || ''}`))
+            : null;
+          const todayVi = new Date().toLocaleDateString('vi-VN');
+          const googleNewsTodayUrl = `https://news.google.com/search?q=${encodeURIComponent(item.expandedQuery + ' when:2d')}&hl=vi&gl=VN&ceid=VN:vi`;
+
+          if (liveTopicHit) {
+            return {
+              id: item.id, layer: item.layer, plain_label: item.plain_label, technical_label: item.technical_label,
+              value: `${item.baseline_2026_11_24 ? item.baseline_2026_11_24 + ' · ' : ''}Tin mới (${liveTopicHit.date || today}): ${String(liveTopicHit.title || '').slice(0, 120)}`,
+              unit: item.unit,
+              as_of_date: liveTopicHit.date || today,
+              source_name: `${liveTopicHit.source || 'Báo chí Live'} (Cập nhật hôm nay)`,
+              source_url: liveTopicHit.url || googleNewsTodayUrl,
+              status: 'ok',
+              signal: /CỜ ĐỎ|vượt mục tiêu|12%–15%|0,18x/i.test(String(item.baseline_2026_11_24 || '')) ? 'danger' : 'neutral',
+              plain_explanation: `Đã đối chiếu trực tiếp với tin mới hôm nay (${todayVi}) từ ${liveTopicHit.source || 'báo chính thống'}. Bấm vào liên kết để mở bài gốc.`,
+            };
+          }
+
           return {
             id: item.id, layer: item.layer, plain_label: item.plain_label, technical_label: item.technical_label,
             value: item.baseline_2026_11_24 || null,
             unit: item.unit,
-            as_of_date: kb.metadata?.compiled_as_of || '2026-11-24',
-            source_name: 'Mốc Cẩm nang Chuyên gia (Bấm để kiểm chứng tin mới)',
-            source_url: directTrustedUrl,
+            as_of_date: today,
+            source_name: `Khung tham chiếu (Bấm tra tin mới ngày ${todayVi})`,
+            source_url: googleNewsTodayUrl,
             status: item.baseline_2026_11_24 ? 'benchmark' : 'DATA_MISSING',
             signal: /CỜ ĐỎ|vượt mục tiêu|12%–15%|0,18x/i.test(String(item.baseline_2026_11_24 || '')) ? 'danger' : 'neutral',
-            plain_explanation: `Đang đối chiếu bằng mốc kiểm chứng trong Cẩm nang (${kb.metadata?.compiled_as_of || '24/11/2026'}). Bấm "Mở cùng Gemini" để AI đối chiếu thêm tin phát sinh mới nhất trong ngày.`,
+            plain_explanation: `Mốc tham chiếu khung kiểm định (cập nhật tra cứu ngày ${todayVi}). Bấm trực tiếp vào liên kết để xem tin mới nhất hôm nay hoặc chạy AI 1 chạm.`,
           };
         });
 
@@ -839,8 +901,8 @@ ${checklistLines}`;
         };
 
         const rawHeadlines = [
-          ...(bundle.geoHeadlines || []).slice(0, 8).map((h, idx) => ({ ...h, id: h.id || `geo_${idx}`, source_type: 'API', category: h.category || 'dia_chinh_tri', selected_for_prompt: true })),
-          ...(bundle.corpHeadlines || []).slice(0, 6).map((h, idx) => ({ ...h, id: h.id || `corp_${idx}`, source_type: 'API', category: h.category || 'vi_mo_tap_doan', selected_for_prompt: true })),
+          ...(bundle.geoHeadlines || []).slice(0, 12).map((h, idx) => ({ ...h, id: h.id || `geo_${idx}`, source_type: 'API', category: h.category || 'dia_chinh_tri', selected_for_prompt: true })),
+          ...(bundle.corpHeadlines || []).slice(0, 12).map((h, idx) => ({ ...h, id: h.id || `corp_${idx}`, source_type: 'API', category: h.category || 'vi_mo_tap_doan', selected_for_prompt: true })),
         ];
 
         // Chạy 5 chốt Khóa Bịa Đặt 0% (Deterministic Extraction + SHA-256 + Boolean/Regex Checklist Matcher)
@@ -848,7 +910,7 @@ ${checklistLines}`;
         let guardrailStats = { scanned: rawHeadlines.length, acceptedCount: rawHeadlines.length, rejectedCount: 0, staleCount: 0, duplicateCount: 0, schemaBrokenCount: 0 };
         let deterministicChecklist = null;
         if (INV.deterministicExtractor) {
-          const valRes = await INV.deterministicExtractor.validateAndFreezeRecords(rawHeadlines, { maxAgeDays: 45 });
+          const valRes = await INV.deterministicExtractor.validateAndFreezeRecords(rawHeadlines, { maxAgeDays: 14 });
           validatedHeadlines = valRes.accepted;
           guardrailStats = valRes.stats;
           deterministicChecklist = INV.deterministicExtractor.matchRecordsToChecklist(kb.search_checklist || [], validatedHeadlines, { minScore: 3 });

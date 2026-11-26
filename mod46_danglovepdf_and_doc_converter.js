@@ -962,19 +962,56 @@
         .split(',')
         .map((x) => x.trim().toLowerCase())
         .filter(Boolean);
+      const IMAGE_EXT_RE = /\.(jpe?g|jfif|png|webp|bmp|gif|heic|heif|tiff?|avif)$/i;
+      const MIME_TO_EXTS = {
+        'image/jpeg': ['.jpg', '.jpeg', '.jfif'],
+        'image/png': ['.png'],
+        'image/webp': ['.webp'],
+        'image/bmp': ['.bmp'],
+        'image/gif': ['.gif'],
+        'image/heic': ['.heic', '.heif'],
+        'image/tiff': ['.tif', '.tiff'],
+        'application/pdf': ['.pdf'],
+      };
+      const isFileAccepted = (f) => {
+        if (!acceptedExts.length) return true;
+        const nameLower = String(f.name || '').toLowerCase();
+        const ext = nameLower.includes('.') ? '.' + nameLower.split('.').pop() : '';
+        const mime = String(f.type || '').toLowerCase();
+        return acceptedExts.some((a) => {
+          if (a === '*/*') return true;
+          if (a === 'image/*') return mime.startsWith('image/') || IMAGE_EXT_RE.test(nameLower);
+          if (a === ext) return true;
+          if ((a === '.jpg' && ext === '.jpeg') || (a === '.jpeg' && ext === '.jpg')) return true;
+          if (a.includes('/')) {
+            if (mime && mime === a) return true;
+            const mapped = MIME_TO_EXTS[a];
+            if (mapped && mapped.includes(ext)) return true;
+          }
+          return false;
+        });
+      };
+
+      const showDropzoneFeedback = (msg) => {
+        const dzErr = document.getElementById('mod46-dropzone-error');
+        if (dzErr) {
+          dzErr.textContent = msg;
+          dzErr.classList.remove('hidden');
+        }
+      };
 
       const validFiles = [];
       for (const f of incoming) {
         if (!f || f.size === 0) {
-          this.toast(`⚠️ Tệp "${f?.name || 'trống'}" bị rỗng (0 KB) nên không thể nạp.`, 'warning', 3000);
+          const msg = `⚠️ Tệp "${f?.name || 'trống'}" bị rỗng (0 KB) nên không thể nạp.`;
+          this.toast(msg, 'warning', 3200);
+          showDropzoneFeedback(msg);
           continue;
         }
-        const ext = '.' + String(f.name || '').split('.').pop().toLowerCase();
-        const typeOk =
-          !acceptedExts.length ||
-          acceptedExts.some((a) => a === ext || (f.type && f.type.toLowerCase().includes(a.replace('image/', ''))));
-        if (!typeOk) {
-          this.toast(`❌ Tệp "${f.name}" không đúng định dạng cho công cụ "${tool.name}".`, 'error', 3200);
+        if (!isFileAccepted(f)) {
+          const msg = `❌ Tệp "${f.name}" không đúng định dạng cho công cụ "${tool.name}" (chấp nhận: ${tool.accept}).`;
+          this.toast(msg, 'error', 3600);
+          showDropzoneFeedback(msg);
           continue;
         }
         validFiles.push(f);
@@ -986,8 +1023,16 @@
       }
 
       for (const f of validFiles) {
-        const buf = await f.arrayBuffer();
-        const bytes = new Uint8Array(buf);
+        let bytes;
+        try {
+          const buf = await f.arrayBuffer();
+          bytes = new Uint8Array(buf);
+        } catch (readErr) {
+          const msg = `⚠️ Không đọc được tệp "${f.name}": ${readErr?.message || readErr}`;
+          this.toast(msg, 'error', 3600);
+          showDropzoneFeedback(msg);
+          continue;
+        }
         const rec = {
           id: `f_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
           file: f,
@@ -997,10 +1042,13 @@
           pageCount: 0,
           thumbUrl: ''
         };
+        const isImgFile = String(f.type || '').toLowerCase().startsWith('image/') || IMAGE_EXT_RE.test(String(f.name || ''));
         if (/\.pdf$/i.test(f.name) || f.type === 'application/pdf') {
           const headStr = String.fromCharCode(...bytes.slice(0, 8));
           if (!headStr.includes('%PDF') && tool.id !== 'repair_pdf') {
-            this.toast(`⚠️ Tệp "${f.name}" không đúng ruột định dạng PDF thật (%PDF) nên đã tự động từ chối an toàn.`, 'warning', 3600);
+            const msg = `⚠️ Tệp "${f.name}" không đúng ruột định dạng PDF thật (%PDF) nên đã tự động từ chối an toàn.`;
+            this.toast(msg, 'warning', 3600);
+            showDropzoneFeedback(msg);
             continue;
           }
           try {
@@ -1012,12 +1060,13 @@
               this.toast(`🔒 Tệp "${f.name}" đang bị khóa mật khẩu! Hãy mở khóa bằng mật khẩu trước khi chỉnh sửa.`, 'warning', 4200);
             }
           }
-        } else if (f.type.startsWith('image/')) {
+        } else if (isImgFile) {
           rec.thumbUrl = this.trackUrl(f);
           rec.pageCount = 1;
         }
         this.files.push(rec);
       }
+      if (!this.files.length) return;
 
       // Nếu là công cụ Sắp xếp / Xoay / Xóa trang -> dựng mảng trạng thái ảo từng trang
       if (tool.id === 'organize' && this.files[0]) {
@@ -1094,6 +1143,7 @@
       backBtn?.classList.remove('hidden');
 
       const tool = this.activeTool;
+      const isTheme10 = tool.id === 'beautify_10_themes' || tool.id === 'theme_report';
 
       const themeHeadingNoticeHtml =
         (tool.id === 'beautify_10_themes' || tool.id === 'auto_toc' || tool.id === 'theme_report')
@@ -1106,7 +1156,6 @@
 
       // MÀN HÌNH 2: CHƯA CÓ FILE -> KHUNG KÉO THẢ LỚN DỄ DÙNG (trừ công cụ Tạo mới không cần nạp file)
       if (!this.files.length && !tool.noFileRequired) {
-        const isTheme10 = tool.id === 'beautify_10_themes' || tool.id === 'theme_report';
         const inputTab = isTheme10 ? (this.theme10InputTab || 'upload') : 'upload';
         const geminiBridge = global.NoirGeminiBridge || NS.geminiBridge;
         const hasGKey = Boolean(geminiBridge?.hasApiKey?.());
@@ -1164,6 +1213,7 @@
                 </button>
               </div>
               <div class="text-[11px] text-zinc-400">Hỗ trợ: <span class="font-bold text-amber-300">${escHtml(tool.badge)}</span></div>
+              <div id="mod46-dropzone-error" class="hidden mx-auto max-w-xl px-3.5 py-2 rounded-xl border border-rose-500/60 bg-rose-950/70 text-rose-200 text-xs font-bold"></div>
             </div>
 
             ${theme10CtaBelowDropzoneHtml}
@@ -1252,7 +1302,11 @@
           picker?.click();
         });
         dz?.addEventListener('click', () => picker?.click());
-        picker?.addEventListener('change', (ev) => this.ingestFiles(ev.target.files));
+        picker?.addEventListener('change', (ev) => {
+          const fl = ev.target.files ? Array.from(ev.target.files) : [];
+          try { ev.target.value = ''; } catch (_eReset) {}
+          if (fl.length) this.ingestFiles(fl);
+        });
         dz?.addEventListener('dragover', (ev) => {
           ev.preventDefault();
           dz.classList.add('border-emerald-400', 'bg-emerald-950/25');
@@ -1896,13 +1950,24 @@
                 outs.push({ name: `${baseN}_AI.xlsx`, blob: new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) });
               }
             } else if (outKind === 'pdf') {
-              outs.push({ name: `${baseN}_AI.pdf`, blob: await renderLinesToVietnamesePdfBlob(`${baseN} (AI)`, cleanOut.split(/\r?\n/), () => {}) });
+              const parsers = global.NoirStructuredParsers || NS.structuredParsers;
+              const astLib = global.NoirDocAst || NS.docAst;
+              const themeEngine = global.NoirDangLovePdfPro || NS.dangLovePdfPro;
+              if (parsers && astLib && typeof themeEngine?.renderTheme10BlocksToPdfBlob === 'function' && /(^|\n)(#{1,4}\s|\|.*\|)/m.test(cleanOut)) {
+                const stitched = gBridge?.stitchContinueTables ? gBridge.stitchContinueTables(cleanOut) : cleanOut;
+                const ast = parsers.parseMarkdownToAst(stitched, { filename: `${baseN}_AI.md` });
+                const blocks = astLib.astToLegacyBlocks(ast);
+                outs.push({ name: `${baseN}_AI.pdf`, blob: await themeEngine.renderTheme10BlocksToPdfBlob(blocks, { title: `${baseN} (AI)`, themeId: 'ocean_teal', ensurePdfLib }) });
+              } else {
+                outs.push({ name: `${baseN}_AI.pdf`, blob: await renderLinesToVietnamesePdfBlob(`${baseN} (AI)`, cleanOut.split(/\r?\n/), () => {}) });
+              }
             } else if (outKind === 'md') {
               outs.push({ name: `${baseN}_AI.md`, blob: new Blob([cleanOut], { type: 'text/markdown;charset=utf-8' }) });
             } else if (outKind === 'txt') {
               outs.push({ name: `${baseN}_AI.txt`, blob: new Blob([cleanOut], { type: 'text/plain;charset=utf-8' }) });
             } else {
-              outs.push({ name: `${baseN}_AI.docx`, blob: await buildDocxBlobFromParagraphs(`${baseN}_AI`, cleanOut.split(/\r?\n/)) });
+              const cleanDocxLines = cleanOut.split(/\r?\n/).map((l) => l.replace(/\*\*/g, '').replace(/^#{1,6}\s+/, '').trim());
+              outs.push({ name: `${baseN}_AI.docx`, blob: await buildDocxBlobFromParagraphs(`${baseN}_AI`, cleanDocxLines) });
             }
             this.resultItems = outs.map((o) => ({ name: o.name, blob: o.blob, size: o.blob.size, url: this.trackUrl(o.blob) }));
             this.resultZipItem = null;
