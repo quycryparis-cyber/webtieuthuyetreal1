@@ -940,10 +940,11 @@
     {
       id: 'ocr_meta',
       icon: '👁️',
-      title: 'Cụm 5: OCR 5 Bước Thông minh, Tiền xử lý Scan & Quản lý Siêu dữ liệu',
+      title: 'Cụm 5: OCR, ICR Đọc Chữ Viết Tay, Tiền xử lý Scan & Quản lý Siêu dữ liệu',
       accent: 'teal',
       tools: [
         { id: 'ocr_pdf', icon: '👁️', name: 'OCR 5 bước thông minh & Tạo PDF 2 lớp (Ctrl+F)', badge: 'Smart Skip · PDF/DOCX/MD/TXT', desc: 'Tự bỏ qua trang đã có chữ, tẩy bóng/làm nét ảnh scan, giữ thứ tự cột & xuất PDF 2 lớp tìm được hoặc Word/MD/TXT.', accept: '.pdf,image/jpeg,image/png,image/webp', multiple: false, minFiles: 1, actionLabel: 'Chạy OCR 5 bước ngay' },
+        { id: 'icr_handwriting_pdf', icon: '✍️', name: 'ICR Thông minh — Đọc Chữ Viết Tay & Biểu Mẫu Scan (AI)', badge: 'Chữ viết tay → DOCX/XLSX/MD/PDF', desc: 'Nhận diện chữ viết tay Tiếng Việt/Anh, đơn thuốc, sổ ghi chép, hóa đơn & phiếu khảo sát viết tay (ô tick ☑/☐) bằng Gemini Flash 1 chạm!', accept: '.pdf,image/jpeg,image/png,image/webp', multiple: false, minFiles: 1, actionLabel: '✨ Quét Chữ Viết Tay (ICR AI) ngay' },
         { id: 'deskew_denoise', icon: '🧹', name: 'Làm thẳng & Khử nhiễu trang Scan', badge: 'Deskew & Denoise', desc: 'Xoay thẳng trang giấy bị nghiêng, tăng độ tương phản & làm trắng nền scan ố vàng.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Làm sạch trang Scan' },
         { id: 'metadata_editor', icon: '🧾', name: 'Xem, Sửa & Xóa sạch Siêu dữ liệu (Metadata)', badge: 'Editor & Scrubber', desc: 'Đọc/sửa Tiêu đề, Tác giả, Từ khóa hoặc bấm 1 chạm xóa trắng toàn bộ dấu vết ẩn của tệp.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Lưu / Xóa Metadata' },
       ],
@@ -1415,7 +1416,8 @@
         </label>
         <label class="block space-y-1"><span class="font-bold">Từ khóa ngắt tệp (khi chọn Tách theo từ khóa):</span>
           <input id="opt-pro-split-kw" type="text" placeholder="VD: HÓA ĐƠN GIÁ TRỊ GIA TĂNG" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
-        </label>`;
+        </label>
+        <button type="button" id="btn-pro-ai-split-kw" class="w-full py-1.5 px-3 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-[11px] font-bold cursor-pointer">🤖 AI Gợi ý từ khóa ngắt hồ sơ (1 chạm)</button>`;
     }
 
     if (toolId === 'svg_eml_to_pdf') {
@@ -1435,7 +1437,8 @@
           <textarea id="opt-pro-form-data" rows="4" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700 text-[11px]">HoTen=Nguyễn Văn An
 Email=an@example.com
 XacNhan=true</textarea>
-        </label>`;
+        </label>
+        <button type="button" id="btn-pro-ai-fill-form" class="w-full py-1.5 px-3 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-[11px] font-bold cursor-pointer">🤖 AI Tự chuyển ghi chú thành dữ liệu Form (1 chạm)</button>`;
     }
 
     if (toolId === 'pdf_mail_merge') {
@@ -1570,9 +1573,36 @@ Chương 3: Tổng kết | 12</textarea>
         <label class="flex items-center gap-2"><input id="opt-pro-denoise-white" type="checkbox" checked class="accent-teal-400" /><span>Tự khử nền xám ố vàng &amp; làm nét chữ scan</span></label>`;
     }
 
+    if (toolId === 'icr_handwriting_pdf') {
+      const hasG = Boolean((global.NoirGeminiBridge || NS.geminiBridge)?.hasApiKey?.());
+      return `
+        <div class="p-2.5 rounded-xl border ${hasG ? 'border-emerald-500/45 bg-emerald-950/30 text-emerald-200' : 'border-amber-500/45 bg-amber-950/30 text-amber-200'} text-[11px] leading-relaxed">
+          ${hasG ? '✅ Đã kết nối Gemini API Key — ICR nhận diện chữ viết tay Tiếng Việt/Anh & ô đánh dấu ☑/☐ siêu chính xác!' : '⚠️ ICR đọc chữ viết tay dùng trí tuệ nhân tạo Gemini Flash. Hãy bấm nút dưới để kết nối API Key miễn phí:'}
+          ${hasG ? '' : '<button type="button" id="btn-pro-icr-connect-ai" class="mt-2 w-full py-1.5 px-3 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold cursor-pointer">🔗 Kết nối AI của bạn</button>'}
+        </div>
+        <label class="block space-y-1"><span class="font-bold">Loại tài liệu viết tay (ICR Mode):</span>
+          <select id="opt-pro-icr-mode" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
+            <option value="handwriting_general">✍️ Sổ tay, bài viết tay, ghi chú học tập/họp (Tiếng Việt &amp; Anh)</option>
+            <option value="table_survey_checkbox">📋 Phiếu khảo sát, biểu mẫu có ô tick (☑/☐) &amp; bảng số liệu viết tay</option>
+            <option value="medical_rx_form">💊 Đơn thuốc, bệnh án, hóa đơn viết tay khó đọc</option>
+            <option value="math_notes_latex">📐 Ghi chép Toán/Tài chính viết tay → Công thức LaTeX chuẩn</option>
+          </select>
+        </label>
+        <label class="block space-y-1"><span class="font-bold">Định dạng xuất kết quả ICR:</span>
+          <select id="opt-pro-icr-out" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
+            <option value="docx">Word (.DOCX — Chỉnh sửa ngay)</option>
+            <option value="xlsx">Excel (.XLSX — Bóc bảng/phiếu viết tay)</option>
+            <option value="md">Markdown (.MD — Kèm công thức &amp; bảng GFM)</option>
+            <option value="pdf">PDF sạch chuẩn Tiếng Việt (.PDF)</option>
+            <option value="txt">Văn bản thuần (.TXT)</option>
+          </select>
+        </label>`;
+    }
+
     if (toolId === 'metadata_editor') {
       return `
         <label class="flex items-center gap-2 p-2 rounded-xl border border-rose-500/40 bg-rose-950/30"><input id="opt-pro-meta-scrub" type="checkbox" class="accent-rose-400" /><span class="font-bold text-rose-200">🧹 Xóa trắng 100% siêu dữ liệu ẩn (Scrubber)</span></label>
+        <button type="button" id="btn-pro-ai-gen-meta" class="w-full py-1.5 px-3 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-[11px] font-bold cursor-pointer">🤖 AI Tự tạo Tiêu đề, Tác giả &amp; Từ khóa (1 chạm)</button>
         <label class="block space-y-1"><span class="font-bold">Tiêu đề mới:</span><input id="opt-pro-meta-title" type="text" placeholder="Giữ nguyên hoặc nhập mới" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
         <label class="block space-y-1"><span class="font-bold">Tác giả:</span><input id="opt-pro-meta-author" type="text" placeholder="Tên tác giả" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
         <label class="block space-y-1"><span class="font-bold">Từ khóa (Keywords):</span><input id="opt-pro-meta-keywords" type="text" placeholder="tiểu thuyết, tài liệu..." class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>`;
@@ -1599,6 +1629,7 @@ Chương 3: Tổng kết | 12</textarea>
         <label class="block space-y-1"><span class="font-bold">Từ khóa nhạy cảm cần che đen vĩnh viễn (cách nhau bằng dấu phẩy):</span>
           <input id="opt-pro-redact-words" type="text" placeholder="Ví dụ: 0912345678, CCCD, bí mật" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
         </label>
+        <button type="button" id="btn-pro-ai-scan-pii" class="w-full py-1.5 px-3 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-[11px] font-bold cursor-pointer">🤖 AI Tự quét toàn bộ thông tin nhạy cảm PII (1 chạm)</button>
         <div class="p-2 rounded-xl bg-zinc-950 border border-zinc-800 space-y-1">
           <div class="text-[11px] font-bold text-amber-300">🤖 Tự động quét &amp; che đen theo mẫu (Regex):</div>
           <label class="flex items-center gap-2 text-[11px]"><input id="opt-pro-redact-phone" type="checkbox" class="accent-rose-500" /><span>Số điện thoại Việt Nam (03/05/07/08/09...)</span></label>
@@ -1616,9 +1647,11 @@ Chương 3: Tổng kết | 12</textarea>
     }
 
     if (toolId === 'compare_pdf') {
+      const hasG = Boolean((global.NoirGeminiBridge || NS.geminiBridge)?.hasApiKey?.());
       return `
         <p class="text-zinc-300">Nạp <strong>2 tệp PDF</strong> (Bản cũ #1 và Bản mới #2) để hệ thống tự động đối chiếu cả <strong>Văn bản từng dòng (Text Diff)</strong> lẫn <strong>Chồng hình từng pixel (Visual Overlay)</strong>.</p>
-        <label class="flex items-center gap-2"><input id="opt-pro-cmp-visual" type="checkbox" checked class="accent-rose-400" /><span>Kèm ảnh chồng lớp soi sai lệch từng pixel</span></label>`;
+        <label class="flex items-center gap-2"><input id="opt-pro-cmp-visual" type="checkbox" checked class="accent-rose-400" /><span>Kèm ảnh chồng lớp soi sai lệch từng pixel</span></label>
+        <label class="flex items-center gap-2"><input id="opt-pro-cmp-ai-summary" type="checkbox" ${hasG ? 'checked' : ''} class="accent-emerald-400" /><span>🤖 AI Phân tích &amp; Tóm tắt khác biệt quan trọng giữa 2 bản (${hasG ? 'Gemini sẵn sàng' : 'Cần API Key'})</span></label>`;
     }
 
     if (toolId === 'preflight_inspect') {
@@ -1735,6 +1768,9 @@ Chương 3: Tổng kết | 12</textarea>
       epubTitle: document.getElementById('opt-pro-epub-title')?.value?.trim() || '',
       p2xOut: document.getElementById('opt-pro-p2x-out')?.value || 'xlsx',
       p2xAiClean: Boolean(document.getElementById('opt-pro-p2x-ai-clean')?.checked),
+      icrMode: document.getElementById('opt-pro-icr-mode')?.value || 'handwriting_general',
+      icrOut: document.getElementById('opt-pro-icr-out')?.value || 'docx',
+      cmpAiSummary: Boolean(document.getElementById('opt-pro-cmp-ai-summary')?.checked),
       deskewDeg: Number(document.getElementById('opt-pro-deskew-deg')?.value || 0),
       denoiseWhite: Boolean(document.getElementById('opt-pro-denoise-white')?.checked),
       metaScrub: Boolean(document.getElementById('opt-pro-meta-scrub')?.checked),
@@ -3900,6 +3936,64 @@ Chương 3: Tổng kết | 12</textarea>
       return outputs;
     }
 
+    // 15B. ICR THÔNG MINH — ĐỌC CHỮ VIẾT TAY & BIỂU MẪU SCAN BẰNG GEMINI FLASH
+    if (tool.id === 'icr_handwriting_pdf') {
+      const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+      if (!gBridge?.hasApiKey?.()) {
+        throw new Error('ICR nhận diện chữ viết tay yêu cầu Gemini API Key. Hãy bấm "Kết nối AI của bạn" và xác minh Key trước.');
+      }
+      const f0 = ctrl.files[0];
+      const rawBytes = f0.bytes instanceof Uint8Array ? f0.bytes : new Uint8Array(f0.bytes || []);
+      const isPdf = /\.pdf$/i.test(f0.name || '');
+      const mimeType = isPdf ? 'application/pdf' : (/\.png$/i.test(f0.name || '') ? 'image/png' : /\.webp$/i.test(f0.name || '') ? 'image/webp' : 'image/jpeg');
+      const modeInstructions = {
+        handwriting_general: 'Đọc chính xác 100% chữ viết tay tiếng Việt & tiếng Anh, giữ nguyên cấu trúc đề mục, gạch đầu dòng, ngày tháng và chú thích.',
+        table_survey_checkbox: 'Nhận diện toàn bộ biểu mẫu/phiếu khảo sát viết tay, đánh dấu rõ ô đã tick là [☑] và ô chưa tick là [☐]. Mọi bảng viết tay phải trình bày thành bảng Markdown GFM chuẩn | Cột 1 | Cột 2 |.',
+        medical_rx_form: 'Đọc thật kỹ đơn thuốc, tên thuốc, liều lượng, ghi chú bác sĩ hoặc hóa đơn viết tay. Nếu có chữ cực kỳ khó đọc, giữ phỏng đoán tốt nhất kèm ghi chú [cần đối chiếu].',
+        math_notes_latex: 'Chuyển toàn bộ công thức toán học, hóa học, tài chính viết tay sang cú pháp LaTeX ($...$ và $$...$$) sắc nét kèm phần giải thích chữ viết tay.',
+      };
+      const icrPrompt =
+        `Bạn là chuyên gia ICR (Intelligent Character Recognition) đọc chữ viết tay tiếng Việt & đa ngôn ngữ độ chính xác cao.\n` +
+        `${modeInstructions[pro.icrMode] || modeInstructions.handwriting_general}\n` +
+        `Tuyệt đối KHÔNG tóm tắt hay bỏ sót bất kỳ chữ viết tay nào. Chỉ trả về nội dung đã số hóa sạch đẹp.`;
+
+      prog(25, '✍️ Đang gửi tệp viết tay trực tiếp tới Gemini Flash ICR...');
+      const b64 = gBridge.uint8ToBase64(rawBytes);
+      const icrText = await gBridge.callGeminiGenerateContent({
+        parts: [
+          { text: icrPrompt },
+          { inlineData: { mimeType, data: b64 } },
+        ],
+        temperature: 0.1,
+        maxOutputTokens: 16384,
+      });
+      prog(85, '📦 Đang đóng gói kết quả ICR...');
+      const cleanOut = String(icrText || '').trim();
+      if (pro.icrOut === 'xlsx') {
+        const XLSX = await ensureXlsx();
+        const rows = cleanOut
+          .split(/\r?\n/)
+          .filter((l) => l.trim() && !/^\|?[\s:|-]+\|?$/.test(l.trim()))
+          .map((l) => (l.includes('|') ? l.replace(/^\||\|$/g, '').split('|').map((c) => c.trim()) : [l.trim()]));
+        const ws = XLSX.utils.aoa_to_sheet(rows.length ? rows : [['(Không có dữ liệu bảng)']]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'ICR_VietTay');
+        const arr = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        outputs.push({ name: `${baseName}_ICR.xlsx`, blob: new Blob([arr], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) });
+      } else if (pro.icrOut === 'md') {
+        outputs.push({ name: `${baseName}_ICR.md`, blob: new Blob([cleanOut], { type: 'text/markdown;charset=utf-8' }) });
+      } else if (pro.icrOut === 'txt') {
+        outputs.push({ name: `${baseName}_ICR.txt`, blob: new Blob([cleanOut], { type: 'text/plain;charset=utf-8' }) });
+      } else if (pro.icrOut === 'pdf') {
+        const pdfBlob = await renderLinesToVietnamesePdfBlob(`${baseName} (ICR)`, cleanOut.split(/\r?\n/), prog);
+        outputs.push({ name: `${baseName}_ICR.pdf`, blob: pdfBlob });
+      } else {
+        const docxBlob = await buildDocxBlobFromParagraphs(`${baseName}_ICR`, cleanOut.split(/\r?\n/));
+        outputs.push({ name: `${baseName}_ICR.docx`, blob: docxBlob });
+      }
+      return outputs;
+    }
+
     // 16. LÀM THẲNG & KHỬ NHIỄU TRANG SCAN (DESKEW & DENOISE)
     if (tool.id === 'deskew_denoise') {
       const pdfjsLib = await ensurePdfJs();
@@ -4166,6 +4260,28 @@ Chương 3: Tổng kết | 12</textarea>
         }
       }
 
+      let aiDiffHtml = '';
+      if (pro.cmpAiSummary && (global.NoirGeminiBridge || NS.geminiBridge)?.hasApiKey?.()) {
+        try {
+          prog(92, '🤖 Gemini AI đang phân tích các khác biệt quan trọng...');
+          const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+          const changedLines = diffRes.diffs
+            .filter((d) => d.type === 'add' || d.type === 'del')
+            .slice(0, 120)
+            .map((d) => `${d.type === 'add' ? '[+THÊM]' : '[-XÓA]'} ${d.text}`)
+            .join('\n');
+          if (changedLines) {
+            const aiSummary = await gBridge.callGeminiText(
+              `Hãy tóm tắt ngắn gọn thành gạch đầu dòng các thay đổi quan trọng nhất (số liệu, điều khoản, ngày tháng, tên riêng, rủi ro pháp lý) giữa Bản cũ (#1) và Bản mới (#2) dựa trên danh sách diff sau:\n\n${changedLines}`,
+              { temperature: 0.15, maxOutputTokens: 2048 }
+            );
+            if (aiSummary) {
+              aiDiffHtml = `<div style="margin:14px 0;padding:14px 16px;border:1.5px solid #10b981;border-radius:14px;background:#052e2b;"><h2 style="margin:0 0 8px;color:#6ee7b7;">🤖 Tóm tắt Khác biệt Quan trọng (Gemini AI)</h2><div style="white-space:pre-wrap;font-size:14px;">${escHtml(aiSummary)}</div></div>`;
+            }
+          }
+        } catch (_eCmpAi) {}
+      }
+
       const reportHtml = `<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><title>So sánh PDF — ĐăngLovePDF</title>
 <style>body{font-family:'Be Vietnam Pro','Noto Sans SC','Noto Sans TC','Noto Sans JP','Noto Sans KR',sans-serif;background:#0f172a;color:#e2e8f0;max-width:980px;margin:20px auto;padding:16px;line-height:1.6}
 .add{background:#064e3b;color:#a7f3d0;padding:3px 8px;border-radius:6px;margin:3px 0}
@@ -4174,6 +4290,7 @@ Chương 3: Tổng kết | 12</textarea>
 <h1>⚖️ Báo Cáo So Sánh 2 Tệp PDF (ĐăngLovePDF)</h1>
 <p><strong>Bản #1:</strong> ${escHtml(ctrl.files[0].name)} (${pdf1.numPages} trang) &nbsp;|&nbsp; <strong>Bản #2:</strong> ${escHtml(ctrl.files[1].name)} (${pdf2.numPages} trang)</p>
 <p>📊 Tổng kết chữ: <strong style="color:#34d399;">+${diffRes.added} đoạn thêm</strong> · <strong style="color:#fb7185;">-${diffRes.removed} đoạn xóa</strong> · ${diffRes.unchanged} đoạn giống nhau</p>
+${aiDiffHtml}
 <h2>1. So sánh văn bản từng dòng (Semantic Text Diff)</h2>
 <div>${diffRes.diffs.slice(0, 600).map((d) => `<div class="${d.type}">${d.type === 'add' ? '+ ' : d.type === 'del' ? '- ' : '  '}${escHtml(d.text)}</div>`).join('')}</div>
 ${visualOverlayHtml ? `<h2>2. Chồng lớp hình ảnh soi từng pixel (Visual Overlay)</h2>${visualOverlayHtml}` : ''}

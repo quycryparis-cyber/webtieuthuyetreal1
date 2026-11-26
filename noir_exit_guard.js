@@ -16,7 +16,7 @@
 
   const NS = (global.NoirStudio = global.NoirStudio || {});
   const MODAL_ID = 'modal-noir-exit-guard';
-  const EXIT_PROMPT_TEXT = 'Bạn muốn thoát khỏi sự kiểm soát của Đăng ( ͡° ͜ʖ ͡°) chứ?';
+  const EXIT_PROMPT_TEXT = 'Bạn muốn thoát khỏi sự kiểm soát của Đăng chứ ( ͡° ͜ʖ ͡°)';
 
   let userInteracted = false;
   let exitConfirmed = false;

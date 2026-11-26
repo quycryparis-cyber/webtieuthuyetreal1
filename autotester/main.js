@@ -50,6 +50,7 @@
     closeAndCleanup() {
       this._aborted = true;
       this.isRunning = false;
+      window.__NOIR_AUTOTESTER_RUNNING__ = false;
       this._open = false;
       try { AT.recorder.cancel(); } catch (_e) {}
       try { AT.errorAuditor.stop(); } catch (_e) {}
@@ -66,6 +67,8 @@
     async _executeTests(testsList, runLabel = 'Khám tổng quát') {
       if (this.isRunning) return;
       this.isRunning = true;
+      window.__NOIR_AUTOTESTER_RUNNING__ = true;
+      try { document.getElementById('noir-welcome-api-upsell-modal')?.remove(); } catch (_eUpRm) {}
       this._aborted = false;
       this.progress = { pct: 4, text: `Đang khởi động: ${runLabel}...` };
       this.shell.activeTab = 'results';
@@ -175,6 +178,7 @@
         };
         this.lastReport = AT.loopEngine.computeReport(results, perfStats, AT.driver.breadcrumbs, kpis);
         this.isRunning = false;
+        window.__NOIR_AUTOTESTER_RUNNING__ = false;
         this.progress = {
           pct: 100,
           text: this._aborted

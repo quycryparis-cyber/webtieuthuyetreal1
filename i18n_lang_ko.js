@@ -5355,6 +5355,23 @@
     "✅ Đã liên kết Gemini API Key — Không cần Copy/Paste thủ công!": "✅ Gemini API 키 연결됨 — 수동 복사/붙여넣기 불필요!",
     "🚀 Tự động hoàn toàn với AI → Xuất PDF ngay": "🚀 AI 완전 자동 → 지금 PDF 내보내기",
     "🔗 Kết nối AI của bạn (Mở khóa nút Tự động hoàn toàn với AI → Xuất PDF ngay)": "🔗 내 AI 연결하기 (원터치 AI 완전 자동 → PDF 내보내기 잠금 해제)",
+
+    "Cụm 5: OCR, ICR Đọc Chữ Viết Tay, Tiền xử lý Scan & Quản lý Siêu dữ liệu": "그룹 5: OCR, ICR 손글씨 인식, 스캔 정리 및 메타데이터 관리",
+    "ICR Thông minh — Đọc Chữ Viết Tay & Biểu Mẫu Scan (AI)": "스마트 ICR — 손글씨 및 스캔 양식 인식 (AI)",
+    "Chữ viết tay → DOCX/XLSX/MD/PDF": "손글씨 → DOCX/XLSX/MD/PDF",
+    "Nhận diện chữ viết tay Tiếng Việt/Anh, đơn thuốc, sổ ghi chép, hóa đơn & phiếu khảo sát viết tay (ô tick ☑/☐) bằng Gemini Flash 1 chạm!": "원터치 Gemini Flash로 베트남어/영어 손글씨, 처방전, 노트, 영수증 및 체크박스(☑/☐) 설문지를 인식하세요!",
+    "✨ Quét Chữ Viết Tay (ICR AI) ngay": "✨ 지금 손글씨 스캔 (AI ICR)",
+    "Loại tài liệu viết tay (ICR Mode):": "손글씨 문서 유형 (ICR 모드):",
+    "Định dạng xuất kết quả ICR:": "ICR 출력 형식:",
+    "🔍 Xác minh & Lưu vĩnh viễn": "🔍 확인 및 영구 저장",
+    "⚡ Đọc Siêu Tốc bằng Gemini Flash (File gốc 1 lượt)": "⚡ Gemini Flash 초고속 읽기 (원본 파일 원샷)",
+    "🤖 AI Gợi ý từ khóa ngắt hồ sơ (1 chạm)": "🤖 AI 분할 키워드 추천 (원터치)",
+    "🤖 AI Tự chuyển ghi chú thành dữ liệu Form (1 chạm)": "🤖 AI 메모를 양식 데이터로 변환 (원터치)",
+    "🤖 AI Tự tạo Tiêu đề, Tác giả & Từ khóa (1 chạm)": "🤖 AI 제목, 작성자 및 키워드 자동 생성 (원터치)",
+    "🤖 AI Tự quét toàn bộ thông tin nhạy cảm PII (1 chạm)": "🤖 AI 민감 개인정보(PII) 전체 자동 스캔 (원터치)",
+    "🤖 Tóm tắt AI": "🤖 AI 요약",
+    "⚡ Chế độ Siêu tốc Gemini Flash Native (Đọc thẳng PDF/Ảnh 1 lượt — nhanh gấp 10× & chính xác 99%)": "⚡ 초고속 Gemini Flash 네이티브 모드 (PDF/이미지 원샷 인식 — 10배 빠름 & 99% 정확도)",
+    "🤖 Hậu kiểm OCR bằng Gemini AI (sửa lỗi dấu tiếng Việt & tách từ)": "🤖 Gemini AI로 OCR 후처리 검수 (성조 및 띄어쓰기 오류 수정)",
   });
 
   const promptExact = Object.freeze({

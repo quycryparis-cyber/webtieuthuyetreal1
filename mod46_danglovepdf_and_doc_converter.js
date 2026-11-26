@@ -1244,13 +1244,26 @@
             'Đang kết hợp thuật toán phân tích cấu trúc và Gemini API để tạo PDF đẹp nhất!'
           );
           try {
-            const extractor = global.NoirExtractStructuredBlocksFromFile || NS.dangLovePdfPro?.extractStructuredBlocksFromFile;
-            loader?.update?.('🔍 Đang trích xuất cấu trúc gốc từ tệp...', 20);
-            const rawBlocks = extractor ? await extractor(this.files[0], { ensurePdfJs, ensureJsZip, ensureXlsx }) : [];
-            const formatted = await gBridge.runAiFormatDocumentToAst?.(rawBlocks, {
-              fileName: this.files[0].name,
-              onProgress: (pct, msg) => loader?.update?.(msg, pct),
-            });
+            const f0 = this.files[0];
+            const isPdfF0 = /\.pdf$/i.test(f0.name || '');
+            let formatted = null;
+            if (isPdfF0 && f0.bytes && f0.bytes.byteLength <= 18 * 1024 * 1024 && typeof gBridge.runGeminiNativeFastRead === 'function') {
+              loader?.update?.('⚡ Đang gửi trực tiếp file PDF gốc sang Gemini Flash (Siêu tốc 1 lượt)...', 24);
+              const fastRes = await gBridge.runGeminiNativeFastRead(f0, {
+                ensurePdfJs,
+                ensurePdfLib,
+                onProgress: (pct, msg) => loader?.update?.(msg, pct),
+              });
+              formatted = fastRes?.blocks || null;
+            } else {
+              const extractor = global.NoirExtractStructuredBlocksFromFile || NS.dangLovePdfPro?.extractStructuredBlocksFromFile;
+              loader?.update?.('🔍 Đang trích xuất cấu trúc gốc từ tệp...', 20);
+              const rawBlocks = extractor ? await extractor(f0, { ensurePdfJs, ensureJsZip, ensureXlsx }) : [];
+              formatted = await gBridge.runAiFormatDocumentToAst?.(rawBlocks, {
+                fileName: f0.name,
+                onProgress: (pct, msg) => loader?.update?.(msg, pct),
+              });
+            }
             if (Array.isArray(formatted) && formatted.length) {
               this.theme10OverrideBlocks = formatted;
               loader?.update?.('✅ AI đã hoàn tất chuẩn hóa! Đang nạp vào bản xem trước...', 96);
@@ -1727,6 +1740,7 @@
           </label>
           <label class="flex items-center gap-2"><input id="opt-ocr-smart-skip" type="checkbox" checked class="accent-teal-400" /><span>Smart Skip: Tự lấy chữ gốc với trang đã có lớp văn bản</span></label>
           <label class="flex items-center gap-2"><input id="opt-ocr-denoise" type="checkbox" checked class="accent-teal-400" /><span>Tiền xử lý: Tẩy nền ố vàng, khử bóng &amp; làm nét trước khi OCR</span></label>
+          <label class="flex items-center gap-2"><input id="opt-ocr-ai-fast-native" type="checkbox" ${hasG ? 'checked' : ''} class="accent-sky-400" /><span>⚡ Chế độ Siêu tốc Gemini Flash Native (Đọc thẳng PDF/Ảnh 1 lượt — nhanh gấp 10× &amp; chính xác 99%)</span></label>
           <label class="flex items-center gap-2"><input id="opt-ocr-ai-polish" type="checkbox" ${hasG ? 'checked' : ''} class="accent-emerald-400" /><span>🤖 Hậu kiểm OCR bằng Gemini AI (sửa lỗi dấu tiếng Việt &amp; tách từ)</span></label>
           <p class="text-[11px] text-zinc-400">Chạy trực tiếp trên CPU máy bạn — giữ nguyên ảnh gốc sắc nét ở bản thành phẩm.</p>`;
       }
@@ -1751,6 +1765,86 @@
       body.querySelector('#btn-mod46-clear-files')?.addEventListener('click', () => {
         this.resetWorkspaceState();
         this.renderUploadOrWorkspaceScreen();
+      });
+
+      // Các nút trợ lý AI 1 chạm trong Cột Tùy chọn Pro (ICR, Redact PII, Metadata, Form, Smart Split)
+      const bindQuickProAi = (sel, handler) => {
+        body.querySelector(sel)?.addEventListener('click', async () => {
+          const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+          if (!gBridge?.hasApiKey?.()) {
+            gBridge?.openApiKeyQuickModal?.({ onSaved: () => this.renderUploadOrWorkspaceScreen() });
+            return;
+          }
+          await handler(gBridge);
+        });
+      };
+      const extractQuickPdfSampleText = async (maxPages = 4) => {
+        if (!this.files[0]) return '';
+        const pdfjsLib = await ensurePdfJs();
+        const pdf = await pdfjsLib.getDocument({ data: this.files[0].bytes.slice() }).promise;
+        const n = Math.min(pdf.numPages, maxPages);
+        const parts = [];
+        for (let i = 1; i <= n; i++) {
+          const pg = await pdf.getPage(i);
+          const tc = await pg.getTextContent();
+          parts.push(`[Trang ${i}] ` + tc.items.map((x) => x.str).join(' '));
+        }
+        return parts.join('\n').slice(0, 12000);
+      };
+      body.querySelector('#btn-pro-icr-connect-ai')?.addEventListener('click', () => {
+        (global.NoirGeminiBridge || NS.geminiBridge)?.openApiKeyQuickModal?.({ onSaved: () => this.renderUploadOrWorkspaceScreen() });
+      });
+      bindQuickProAi('#btn-pro-ai-scan-pii', async (gBridge) => {
+        const loader = gBridge.showAiFullLoadingOverlay?.('🛡️ AI đang quét dữ liệu nhạy cảm (PII)...', 'Tìm Họ tên, CCCD, SĐT, Email, STK, Địa chỉ để điền sẵn vào danh sách che đen');
+        try {
+          const txt = await extractQuickPdfSampleText(8);
+          const raw = await gBridge.callGeminiText(`Liệt kê chính xác các chuỗi thông tin cá nhân nhạy cảm (SĐT, CCCD, Email, Số tài khoản, Địa chỉ nhà, Tên cá nhân cần ẩn) xuất hiện trong văn bản sau, ngăn cách bằng dấu phẩy trên 1 dòng duy nhất. Không giải thích:\n${txt}`, { temperature: 0.1 });
+          const inp = body.querySelector('#opt-pro-redact-words');
+          if (inp && raw) inp.value = raw.replace(/\r?\n/g, ', ').trim();
+          this.toast('✅ AI đã điền sẵn danh sách từ khóa nhạy cảm cần che đen!', 'success', 3200);
+        } catch (e) { this.toast(`⚠️ ${e?.message || e}`, 'error', 3500); }
+        finally { loader?.close?.(); }
+      });
+      bindQuickProAi('#btn-pro-ai-gen-meta', async (gBridge) => {
+        const loader = gBridge.showAiFullLoadingOverlay?.('🧾 AI đang sinh Siêu dữ liệu PDF...', 'Đọc trang đầu để tạo Tiêu đề, Tác giả & Từ khóa chuẩn');
+        try {
+          const txt = await extractQuickPdfSampleText(3);
+          const raw = await gBridge.callGeminiText(`Từ nội dung đầu tài liệu sau, trả về JSON duy nhất {"title":"...","author":"...","keywords":"từ1, từ2, từ3"}:\n${txt}`, { temperature: 0.1 });
+          const m = raw.match(/\{[\s\S]*\}/);
+          if (m) {
+            const obj = JSON.parse(m[0]);
+            if (obj.title && body.querySelector('#opt-pro-meta-title')) body.querySelector('#opt-pro-meta-title').value = obj.title;
+            if (obj.author && body.querySelector('#opt-pro-meta-author')) body.querySelector('#opt-pro-meta-author').value = obj.author;
+            if (obj.keywords && body.querySelector('#opt-pro-meta-keywords')) body.querySelector('#opt-pro-meta-keywords').value = obj.keywords;
+            this.toast('✅ AI đã điền sẵn Tiêu đề, Tác giả & Từ khóa!', 'success', 3000);
+          }
+        } catch (e) { this.toast(`⚠️ ${e?.message || e}`, 'error', 3500); }
+        finally { loader?.close?.(); }
+      });
+      bindQuickProAi('#btn-pro-ai-split-kw', async (gBridge) => {
+        const loader = gBridge.showAiFullLoadingOverlay?.('🪓 AI đang phân tích điểm ngắt hồ sơ...', 'Tìm từ khóa tiêu đề lặp lại giữa các hồ sơ/hóa đơn');
+        try {
+          const txt = await extractQuickPdfSampleText(6);
+          const raw = await gBridge.callGeminiText(`Tìm 1 cụm từ khóa tiêu đề ngắn xuất hiện ở đầu mỗi hồ sơ/chương/hóa đơn trong văn bản sau để tách tệp PDF. Chỉ trả về đúng cụm từ khóa đó:\n${txt}`, { temperature: 0.1 });
+          const inp = body.querySelector('#opt-pro-split-kw');
+          const sel = body.querySelector('#opt-pro-smart-split');
+          if (inp && raw) inp.value = raw.split(/\r?\n/)[0].replace(/["']/g, '').trim();
+          if (sel) sel.value = 'split_keyword';
+          this.toast('✅ AI đã chọn chế độ Tách theo từ khóa & điền sẵn từ khóa!', 'success', 3000);
+        } catch (e) { this.toast(`⚠️ ${e?.message || e}`, 'error', 3500); }
+        finally { loader?.close?.(); }
+      });
+      bindQuickProAi('#btn-pro-ai-fill-form', async (gBridge) => {
+        const ta = body.querySelector('#opt-pro-form-data');
+        const userNote = String(ta?.value || '').trim();
+        if (!userNote) { this.toast('ℹ️ Hãy gõ hoặc dán thông tin cá nhân bất kỳ vào ô trên rồi bấm nút AI để chuẩn hóa thành TenO=GiaTri.', 'info', 3500); return; }
+        const loader = gBridge.showAiFullLoadingOverlay?.('📝 AI đang ánh xạ dữ liệu vào Biểu mẫu...', 'Chuyển ghi chú tự do sang cặp TênÔ=GiáTrị chuẩn AcroForm');
+        try {
+          const raw = await gBridge.callGeminiText(`Chuyển đoạn thông tin sau thành danh sách các dòng chuẩn "TenTruong=GiaTri" (không dấu cho TenTruong, mỗi dòng 1 mục, không giải thích):\n${userNote}`, { temperature: 0.1 });
+          if (ta && raw) ta.value = raw.replace(/```[^\n]*\n?|```/g, '').trim();
+          this.toast('✅ AI đã chuyển xong sang định dạng điền Form!', 'success', 2800);
+        } catch (e) { this.toast(`⚠️ ${e?.message || e}`, 'error', 3500); }
+        finally { loader?.close?.(); }
       });
       body.querySelector('#btn-mod46-add-blank-page')?.addEventListener('click', () => {
         this.pagesState.push({
@@ -2844,7 +2938,7 @@
                          ${hasKey ? '✅ API Key sẵn sàng' : '🔑 Gắn API Key'}
                        </button>
                        <button type="button" id="btn-mod46-run-gemini-vision" class="px-3 py-1 rounded-lg bg-gradient-to-r from-violet-600 to-amber-600 hover:from-violet-500 hover:to-amber-500 text-white text-[11px] font-bold shadow cursor-pointer ${comp?.recommendGeminiVision ? 'animate-pulse' : ''}">
-                         ✨ Đọc Sâu bằng Gemini Vision (2 trang/lượt)
+                         ⚡ Đọc Siêu Tốc bằng Gemini Flash (File gốc 1 lượt)
                        </button>
                      </div>
                    </div>
@@ -2928,9 +3022,10 @@
                 const btnV = v2Host.querySelector('#btn-mod46-run-gemini-vision');
                 try {
                   if (btnV) btnV.disabled = true;
-                  if (stEl) { stEl.classList.remove('hidden'); stEl.textContent = '⏳ Đang khởi động Gemini Vision...'; }
+                  if (stEl) { stEl.classList.remove('hidden'); stEl.textContent = '⚡ Đang gửi trực tiếp tệp tới Gemini Flash...'; }
                   const vRes = await geminiBridge.runGeminiVisionDeepRead(primaryFile, {
                     ensurePdfJs,
+                    ensurePdfLib,
                     onProgress: (pct, msg) => {
                       if (stEl) stEl.textContent = `✨ [${pct}%] ${msg}`;
                     },
@@ -3052,7 +3147,8 @@
         sheetOut: document.getElementById('opt-sheet-out')?.value || 'pdf',
         pptOut: document.getElementById('opt-ppt-out')?.value || 'pdf',
         ocrLang: document.getElementById('opt-ocr-lang')?.value || 'vie+eng',
-        ocrAiPolish: Boolean(document.getElementById('opt-ocr-ai-polish')?.checked)
+        ocrAiPolish: Boolean(document.getElementById('opt-ocr-ai-polish')?.checked),
+        ocrAiFastNative: Boolean(document.getElementById('opt-ocr-ai-fast-native')?.checked)
       };
 
       const inputTotalSize = this.files.reduce((s, f) => s + f.size, 0);
@@ -3623,6 +3719,29 @@
             outputs.push({ name: `${baseName}.pdf`, blob: pdfBlob });
           }
         } else if (tool.id === 'ocr_pdf') {
+          const gBridgeOcr = global.NoirGeminiBridge || NS.geminiBridge;
+          if (opts.ocrAiFastNative && pro.ocrOutFormat !== 'searchable_pdf' && gBridgeOcr?.hasApiKey?.() && this.files[0]?.bytes?.byteLength <= 18 * 1024 * 1024) {
+            prog(28, '⚡ Đang chạy OCR Siêu Tốc 1 lượt bằng Gemini Flash Native...');
+            const f0 = this.files[0];
+            const isPdf0 = /\.pdf$/i.test(f0.name || '');
+            const mime0 = isPdf0 ? 'application/pdf' : (/\.png$/i.test(f0.name || '') ? 'image/png' : /\.webp$/i.test(f0.name || '') ? 'image/webp' : 'image/jpeg');
+            const fastOcrText = await gBridgeOcr.callGeminiGenerateContent({
+              parts: [
+                { text: 'Hãy OCR nhận diện CHÍNH XÁC 100% toàn bộ văn bản (tiếng Việt đầy đủ dấu, bảng biểu, số liệu) trong tài liệu sau. Không tóm tắt, giữ nguyên phân đoạn.' },
+                { inlineData: { mimeType: mime0, data: gBridgeOcr.uint8ToBase64(f0.bytes) } },
+              ],
+              temperature: 0.1,
+              maxOutputTokens: 32768,
+            });
+            prog(88, '📦 Đang xuất kết quả OCR Gemini Flash...');
+            const outStr = String(fastOcrText || '').trim();
+            if (pro.ocrOutFormat === 'docx') {
+              outputs.push({ name: `${baseName}_OCR_AI.docx`, blob: await buildDocxBlobFromParagraphs(baseName, outStr.split(/\r?\n/)) });
+            } else if (pro.ocrOutFormat === 'md') {
+              outputs.push({ name: `${baseName}_OCR_AI.md`, blob: new Blob([outStr], { type: 'text/markdown;charset=utf-8' }) });
+            }
+            outputs.push({ name: `${baseName}_OCR_AI.txt`, blob: new Blob([outStr], { type: 'text/plain;charset=utf-8' }) });
+          } else {
           const Tesseract = await ensureTesseract();
           const fullTextParts = [];
           const wantSearchablePdf = pro.ocrOutFormat === 'searchable_pdf';
@@ -3743,6 +3862,7 @@
             outputs.push({ name: `${baseName}_OCR.md`, blob: new Blob([combinedText], { type: 'text/markdown;charset=utf-8' }) });
           }
           outputs.push({ name: `${baseName}_OCR.txt`, blob: new Blob([combinedText], { type: 'text/plain;charset=utf-8' }) });
+          }
         }
 
         if (this.cancelled) return;

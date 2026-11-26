@@ -479,6 +479,7 @@
             <span id="mod46-pv-search-stat" class="text-[10px] font-bold text-amber-300"></span>
             <button type="button" id="btn-mod46-pv-find-next" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-amber-600 text-[10px] font-bold cursor-pointer">▼</button>
           </div>
+          <button type="button" id="btn-mod46-pv-ai-summary" class="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold cursor-pointer" title="AI tóm tắt nhanh nội dung tài liệu PDF này">🤖 Tóm tắt AI</button>
           <a href="${resItem.url}" download="${escHtml(resItem.name)}" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black">⬇️ Tải</a>
           <button type="button" id="btn-mod46-pv-close" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
         </div>
@@ -535,6 +536,46 @@
     const searchInput = pv.querySelector('#inp-mod46-pv-search');
     const regexChk = pv.querySelector('#chk-mod46-pv-regex');
     const searchStat = pv.querySelector('#mod46-pv-search-stat');
+
+    pv.querySelector('#btn-mod46-pv-ai-summary')?.addEventListener('click', async () => {
+      const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+      if (!gBridge?.hasApiKey?.()) {
+        gBridge?.openApiKeyQuickModal?.({ onSaved: () => pv.querySelector('#btn-mod46-pv-ai-summary')?.click() });
+        return;
+      }
+      if (!pdfDoc) return;
+      const loader = gBridge.showAiFullLoadingOverlay?.('🤖 AI đang đọc & tóm tắt tài liệu PDF...', 'Tổng hợp ý chính, số liệu quan trọng và các điểm cần lưu ý');
+      try {
+        const limit = Math.min(pdfDoc.numPages, 12);
+        const chunks = [];
+        for (let i = 1; i <= limit; i++) {
+          const pg = await pdfDoc.getPage(i);
+          const tc = await pg.getTextContent();
+          chunks.push(`[Trang ${i}] ` + tc.items.map((it) => it.str).join(' '));
+        }
+        const summary = await gBridge.callGeminiText(
+          `Hãy tóm tắt cô đọng, dễ hiểu tài liệu "${resItem?.name || 'PDF'}" thành: (1) Tổng quan 2 câu, (2) 5 điểm/số liệu quan trọng nhất, (3) Kết luận & hành động gợi ý:\n\n${chunks.join('\n').slice(0, 14000)}`,
+          { temperature: 0.2, maxOutputTokens: 2048 }
+        );
+        loader?.close?.();
+        pv.querySelector('#mod46-pv-ai-drawer')?.remove();
+        const drawer = document.createElement('div');
+        drawer.id = 'mod46-pv-ai-drawer';
+        drawer.className = 'fixed right-4 top-16 z-[2147483645] w-[min(92vw,420px)] max-h-[75dvh] rounded-2xl border border-emerald-500/50 bg-zinc-900/98 text-zinc-100 shadow-2xl flex flex-col overflow-hidden';
+        drawer.innerHTML = `
+          <div class="px-3.5 py-2.5 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between gap-2">
+            <span class="text-xs font-bold text-emerald-300">🤖 Tóm tắt nhanh bằng Gemini AI</span>
+            <button type="button" id="btn-pv-ai-drawer-close" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-rose-600 text-xs font-bold cursor-pointer">✕</button>
+          </div>
+          <div class="p-3.5 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap text-zinc-200"></div>
+        `;
+        drawer.querySelector('.overflow-y-auto').textContent = summary;
+        drawer.querySelector('#btn-pv-ai-drawer-close')?.addEventListener('click', () => drawer.remove());
+        pv.appendChild(drawer);
+      } catch (err) {
+        loader?.showError?.('⚠️ Lỗi tóm tắt PDF bằng AI', String(err?.message || err));
+      }
+    });
 
     const cleanupScrollTracking = () => {
       if (scrollObserver) {

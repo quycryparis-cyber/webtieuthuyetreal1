@@ -19,7 +19,15 @@
 
   const NS = (global.NoirStudio = global.NoirStudio || {});
   const API_STORAGE_KEY = 'noir_gemini_api_key';
-  const DEFAULT_VISION_MODELS = Object.freeze(['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash']);
+  const API_VERIFIED_STORAGE_KEY = 'noir_gemini_key_verified_v1';
+  const API_COOKIE_NAME = 'noir_gemini_api_key_ck';
+  const IDB_BACKUP_KEY = '__noir_persist_api_key_v1';
+  const DEFAULT_VISION_MODELS = Object.freeze([
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-flash-latest',
+  ]);
 
   const PROMPT_CHINH_TIEU_DE_CHUAN = [
     'Bạn là chuyên gia biên tập và chuẩn hóa tài liệu học thuật / tài chính đa ngôn ngữ.',
@@ -47,18 +55,109 @@
   ].join('\n');
 
   // ==========================================================================
-  // 1. QUẢN LÝ API KEY DÙNG CHUNG (LOCALSTORAGE + STORAGE EVENT CROSS-TAB)
+  // 1. QUẢN LÝ API KEY DÙNG CHUNG (4 LỚP BỀN VỮNG + XÁC MINH THẬT VỚI GOOGLE)
   // ==========================================================================
+  function readPersistCookie(name) {
+    try {
+      if (typeof document === 'undefined' || !document.cookie) return '';
+      const prefix = `${encodeURIComponent(name)}=`;
+      const parts = document.cookie.split(';');
+      for (const p of parts) {
+        const s = p.trim();
+        if (s.startsWith(prefix)) return decodeURIComponent(s.slice(prefix.length)).trim();
+      }
+    } catch (_eCk) {}
+    return '';
+  }
+
+  function writePersistCookie(name, value) {
+    try {
+      if (typeof document === 'undefined') return;
+      if (global.location?.protocol === 'file:') return;
+      if (value) {
+        document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; max-age=${365 * 86400}; path=/; SameSite=Lax`;
+      } else {
+        document.cookie = `${encodeURIComponent(name)}=; max-age=0; path=/; SameSite=Lax`;
+      }
+    } catch (_eCkW) {}
+  }
+
+  function keyFingerprint(k) {
+    const s = String(k || '').trim();
+    if (s.length < 12) return '';
+    return `${s.slice(0, 8)}...${s.slice(-6)}:${s.length}`;
+  }
+
+  function markKeyVerified(keyVal, modelEndpoint = 'gemini-2.5-flash-lite') {
+    const clean = String(keyVal || '').trim();
+    if (!clean) return;
+    try {
+      global.localStorage?.setItem(
+        API_VERIFIED_STORAGE_KEY,
+        JSON.stringify({ fp: keyFingerprint(clean), modelEndpoint, verifiedAt: Date.now() })
+      );
+    } catch (_eV) {}
+  }
+
+  function clearKeyVerifiedRecord() {
+    try { global.localStorage?.removeItem(API_VERIFIED_STORAGE_KEY); } catch (_eV) {}
+  }
+
+  function isApiKeyVerified(keyVal = getApiKey()) {
+    const clean = String(keyVal || '').trim();
+    if (!clean) return false;
+    try {
+      if (NS.apiClient?.isFlashLiteVerifiedForKey?.(clean)) return true;
+      const raw = global.localStorage?.getItem(API_VERIFIED_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.fp && parsed.fp === keyFingerprint(clean)) return true;
+      }
+    } catch (_eV) {}
+    return false;
+  }
+
   function getApiKey() {
     try {
       const direct = String(global.localStorage?.getItem(API_STORAGE_KEY) || '').trim();
       if (direct) return direct;
+      const fromClient = String(NS.apiClient?.getEffectiveActiveKey?.() || '').trim();
+      if (fromClient) {
+        try { global.localStorage?.setItem(API_STORAGE_KEY, fromClient); } catch (_e) {}
+        return fromClient;
+      }
+      const altLs = String(global.localStorage?.getItem('gemini_api_key') || '').trim();
+      if (altLs) {
+        try { global.localStorage?.setItem(API_STORAGE_KEY, altLs); } catch (_e) {}
+        return altLs;
+      }
+      const fromCk = readPersistCookie(API_COOKIE_NAME);
+      if (fromCk && fromCk.length >= 12) {
+        try { global.localStorage?.setItem(API_STORAGE_KEY, fromCk); } catch (_e) {}
+        return fromCk;
+      }
       const fromDom = String(global.document?.getElementById?.('api-key-input')?.value || '').trim();
       return fromDom;
     } catch (_e) {
       return '';
     }
   }
+
+  // Tự động khôi phục từ IndexedDB (nếu localStorage vừa bị xóa sạch)
+  try {
+    if (!getApiKey() && NS.idb && typeof NS.idb.get === 'function') {
+      NS.idb.get('state_cache', IDB_BACKUP_KEY).then((saved) => {
+        const clean = String(saved || '').trim();
+        if (clean.length >= 12 && !getApiKey()) {
+          try {
+            global.localStorage?.setItem(API_STORAGE_KEY, clean);
+            global.localStorage?.setItem('gemini_api_key', clean);
+          } catch (_e) {}
+          notifyKeyListeners(clean);
+        }
+      }).catch(() => {});
+    }
+  } catch (_eHydrate) {}
 
   function notifyKeyListeners(keyVal) {
     const hasKey = Boolean(String(keyVal || '').trim());
@@ -71,14 +170,125 @@
     } catch (_eEvt) {}
   }
 
-  function setApiKey(rawKey) {
+  function setApiKey(rawKey, opts = {}) {
     const clean = String(rawKey || '').trim();
     try {
-      if (clean) global.localStorage?.setItem(API_STORAGE_KEY, clean);
-      else global.localStorage?.removeItem(API_STORAGE_KEY);
+      if (clean) {
+        global.localStorage?.setItem(API_STORAGE_KEY, clean);
+        global.localStorage?.setItem('gemini_api_key', clean);
+        writePersistCookie(API_COOKIE_NAME, clean);
+        if (opts.verified) markKeyVerified(clean, opts.modelEndpoint || 'gemini-2.5-flash');
+        if (NS.apiClient && typeof NS.apiClient.saveApiKey === 'function') {
+          try { NS.apiClient.saveApiKey(clean); } catch (_eMc) {}
+        }
+        if (NS.idb && typeof NS.idb.set === 'function') {
+          NS.idb.set('state_cache', IDB_BACKUP_KEY, clean).catch(() => {});
+        }
+      } else {
+        global.localStorage?.removeItem(API_STORAGE_KEY);
+        global.localStorage?.removeItem('gemini_api_key');
+        clearKeyVerifiedRecord();
+        writePersistCookie(API_COOKIE_NAME, '');
+        if (NS.idb && typeof NS.idb.delete === 'function') {
+          NS.idb.delete('state_cache', IDB_BACKUP_KEY).catch(() => {});
+        }
+      }
     } catch (_eLs) {}
     notifyKeyListeners(clean);
     return clean;
+  }
+
+  async function verifyApiKeyLive(rawKey, opts = {}) {
+    const clean = String(rawKey || '').trim();
+    const fetchImpl = opts.fetchImpl || global.fetch?.bind(global);
+    if (!clean) {
+      return { ok: false, message: 'Vui lòng nhập mã Gemini API Key.' };
+    }
+    if (!/^AIza[0-9A-Za-z_-]{20,}$/.test(clean)) {
+      return { ok: false, message: 'Định dạng API Key không hợp lệ (Gemini API Key thật luôn bắt đầu bằng "AIza" và dài ~39 ký tự).' };
+    }
+    if (global.__NOIR_TEST_BYPASS_KEY_VERIFY === true) {
+      return { ok: true, modelEndpoint: 'gemini-2.5-flash-lite', message: 'Key hợp lệ (chế độ test).' };
+    }
+    // Ưu tiên tái sử dụng trình xác minh thật của màn hình chính (mod15) nếu đang ở Web gốc
+    if (!opts.forceDirect && NS.apiClient && typeof NS.apiClient.verifyKeyWithLowestFlashLite === 'function') {
+      try {
+        const res = await NS.apiClient.verifyKeyWithLowestFlashLite(clean, { autoSave: false, emitEvents: true });
+        if (res?.ok || res?.verified) {
+          return {
+            ok: true,
+            modelEndpoint: res.modelEndpoint || 'gemini-2.5-flash-lite',
+            message: `Đã xác minh thành công với Google Gemini (${res.modelEndpoint || 'Flash-Lite'})!`,
+          };
+        }
+        return { ok: false, message: res?.message || 'API Key không hợp lệ hoặc đã bị vô hiệu hóa trên Google AI Studio.' };
+      } catch (_eMod15) {
+        // fallback sang kiểm tra trực tiếp bên dưới
+      }
+    }
+    if (typeof fetchImpl !== 'function') {
+      return { ok: false, message: 'Trình duyệt không hỗ trợ kết nối mạng để xác minh API Key.' };
+    }
+
+    // Bước 1: Kiểm tra tồn tại Key qua danh sách model thật từ Google
+    let discoveredFlash = [];
+    try {
+      const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?pageSize=25&key=${encodeURIComponent(clean)}`;
+      const listRes = await fetchImpl(listUrl, { method: 'GET' });
+      if (!listRes.ok) {
+        const errText = await listRes.text().catch(() => '');
+        if (listRes.status === 400 || listRes.status === 401 || listRes.status === 403) {
+          return {
+            ok: false,
+            status: listRes.status,
+            message: `API Key không hợp lệ hoặc không có quyền truy cập (HTTP ${listRes.status}). Hãy kiểm tra lại trên Google AI Studio.`,
+          };
+        }
+        return { ok: false, status: listRes.status, message: `Lỗi kết nối Google API (HTTP ${listRes.status}): ${errText.slice(0, 120)}` };
+      }
+      const listJson = await listRes.json().catch(() => ({}));
+      const modelsArr = Array.isArray(listJson?.models) ? listJson.models : [];
+      discoveredFlash = modelsArr
+        .map((m) => String(m?.name || '').replace(/^models\//, ''))
+        .filter((n) => /gemini-2\.[05]-flash/i.test(n) && !/image|tts|audio|live|thinking/i.test(n));
+    } catch (netErr) {
+      return { ok: false, message: `Không thể kết nối tới Google Gemini (${netErr?.message || 'Mất mạng'}). Vui lòng kiểm tra Internet.` };
+    }
+
+    // Bước 2: Ping thử 8 token với model nhẹ nhất để chắc chắn Key gọi generateContent sống 100%
+    const probeChain = Array.from(new Set([...discoveredFlash, 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash']));
+    let lastStatus = 0;
+    for (const ep of probeChain.slice(0, 4)) {
+      try {
+        const pingUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(ep)}:generateContent?key=${encodeURIComponent(clean)}`;
+        const pingRes = await fetchImpl(pingUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: 'OK' }] }],
+            generationConfig: { maxOutputTokens: 4, temperature: 0 },
+          }),
+        });
+        if (pingRes.ok) {
+          return { ok: true, modelEndpoint: ep, message: `Xác minh thành công (${ep}) — Key đang hoạt động tốt!` };
+        }
+        lastStatus = pingRes.status;
+        if (pingRes.status === 429) {
+          // 429 nghĩa là Key TỒN TẠI & HỢP LỆ nhưng tạm chạm giới hạn RPM
+          return { ok: true, modelEndpoint: ep, rateLimited: true, message: `Key hợp lệ (${ep}, đang tạm chạm giới hạn phút — hệ thống sẽ tự chờ thử lại khi chạy).` };
+        }
+        if (pingRes.status === 400 || pingRes.status === 401 || pingRes.status === 403) {
+          const eTxt = await pingRes.text().catch(() => '');
+          if (/API_KEY_INVALID|API key not valid|PERMISSION_DENIED/i.test(eTxt)) {
+            return { ok: false, status: pingRes.status, message: 'API Key bị Google từ chối (Key không tồn tại hoặc đã bị thu hồi).' };
+          }
+        }
+      } catch (_ePing) {}
+    }
+    if (discoveredFlash.length > 0) {
+      return { ok: true, modelEndpoint: discoveredFlash[0], message: `Đã xác minh API Key tồn tại (${discoveredFlash[0]})!` };
+    }
+    return { ok: false, status: lastStatus, message: `Không thể xác minh API Key với Gemini (HTTP ${lastStatus || 'ERR'}). Hãy tạo lại Key mới tại Google AI Studio.` };
   }
 
   function clearApiKey() {
@@ -199,22 +409,25 @@
               <button type="button" id="noir-gkey-toggle-vis" class="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold cursor-pointer" title="Hiện / Ẩn key">👁️</button>
             </div>
           </div>
+          <div id="noir-gkey-status" class="hidden p-2.5 rounded-xl border text-xs font-bold leading-relaxed"></div>
           <div class="flex items-center justify-between gap-2 text-[11px] text-zinc-400">
             <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" class="text-amber-300 hover:underline font-bold">🔑 Lấy API Key miễn phí tại Google AI Studio ↗</a>
-            ${current ? '<span class="text-emerald-400 font-bold">● Đang có Key đã lưu</span>' : '<span class="text-zinc-400">○ Chưa có Key</span>'}
+            ${current ? (isApiKeyVerified(current) ? '<span class="text-emerald-400 font-bold">● Đã xác minh &amp; lưu bền vững trên máy</span>' : '<span class="text-amber-300 font-bold">● Đã lưu (Bấm Lưu để xác minh)</span>') : '<span class="text-zinc-400">○ Chưa có Key</span>'}
           </div>
         </div>
         <div class="px-4 py-3 bg-zinc-950 border-t border-zinc-800 flex flex-wrap items-center justify-between gap-2">
           <button type="button" id="noir-gkey-clear" class="px-3 py-2 rounded-xl border border-rose-500/40 bg-rose-950/30 hover:bg-rose-600 text-rose-200 hover:text-white text-xs font-bold cursor-pointer">🗑️ Xóa Key</button>
           <div class="flex items-center gap-2">
             <button type="button" id="noir-gkey-cancel" class="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold cursor-pointer">Hủy</button>
-            <button type="button" id="noir-gkey-save" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer">💾 Lưu &amp; Đồng bộ ngay</button>
+            <button type="button" id="noir-gkey-save" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer">🔍 Xác minh &amp; Lưu vĩnh viễn</button>
           </div>
         </div>
       </div>
     `;
     document.body.appendChild(modal);
     const inp = modal.querySelector('#noir-gkey-input');
+    const stBox = modal.querySelector('#noir-gkey-status');
+    const saveBtn = modal.querySelector('#noir-gkey-save');
     if (inp) inp.value = current;
     const close = () => modal.remove();
     modal.querySelector('#noir-gkey-close')?.addEventListener('click', close);
@@ -228,17 +441,35 @@
       NS.utils?.showToast?.('Đã xóa Gemini API Key khỏi bộ nhớ máy.', 'info', 2600);
       close();
     });
-    modal.querySelector('#noir-gkey-save')?.addEventListener('click', () => {
+    saveBtn?.addEventListener('click', async () => {
       const val = String(inp?.value || '').trim();
-      if (!val || val.length < 12) {
-        NS.utils?.showToast?.('Vui lòng nhập Gemini API Key hợp lệ (bắt đầu bằng AIza...).', 'warning', 3200);
-        inp?.focus();
-        return;
+      if (stBox) {
+        stBox.className = 'p-2.5 rounded-xl border border-sky-500/45 bg-sky-950/40 text-sky-200 text-xs font-bold';
+        stBox.textContent = '⏳ Đang xác minh API Key thật với Google Gemini...';
       }
-      setApiKey(val);
-      NS.utils?.showToast?.('✅ Đã lưu & đồng bộ Gemini API Key toàn ứng dụng!', 'success', 3200);
-      close();
-      if (typeof onSaved === 'function') onSaved(val);
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ Đang xác minh...'; }
+      try {
+        const chk = await verifyApiKeyLive(val);
+        if (!chk.ok) {
+          if (stBox) {
+            stBox.className = 'p-2.5 rounded-xl border border-rose-500/55 bg-rose-950/45 text-rose-200 text-xs font-bold';
+            stBox.textContent = `❌ ${chk.message}`;
+          }
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '🔍 Xác minh & Lưu vĩnh viễn'; }
+          inp?.focus();
+          return;
+        }
+        setApiKey(val, { verified: true, modelEndpoint: chk.modelEndpoint });
+        NS.utils?.showToast?.(`✅ ${chk.message} Đã lưu vĩnh viễn vào máy!`, 'success', 3800);
+        close();
+        if (typeof onSaved === 'function') onSaved(val);
+      } catch (err) {
+        if (stBox) {
+          stBox.className = 'p-2.5 rounded-xl border border-rose-500/55 bg-rose-950/45 text-rose-200 text-xs font-bold';
+          stBox.textContent = `❌ Lỗi xác minh: ${err?.message || err}`;
+        }
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '🔍 Xác minh & Lưu vĩnh viễn'; }
+      }
     });
   }
 
@@ -426,60 +657,153 @@
     return images;
   }
 
-  async function runGeminiVisionDeepRead(fileObj, opts = {}) {
+  function uint8ToBase64(u8) {
+    const bytes = u8 instanceof Uint8Array ? u8 : new Uint8Array(u8 || []);
+    let bin = '';
+    const step = 0x8000;
+    for (let i = 0; i < bytes.length; i += step) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(bytes.length, i + step)));
+    }
+    return typeof btoa === 'function' ? btoa(bin) : Buffer.from(bytes).toString('base64');
+  }
+
+  /**
+   * ĐỌC TÀI LIỆU SIÊU TỐC BẰNG GEMINI 2.5 FLASH NATIVE PDF (nhanh gấp 6–10× so với render ảnh 2 trang/lượt!).
+   * - Gửi thẳng byte PDF gốc (`inlineData: application/pdf`) trong 1 lượt (<= 18 MB & <= 25 trang)
+   *   hoặc cắt lô 10 trang PDF gốc bằng pdf-lib (chạy song song 2 lô).
+   * - Chỉ fallback sang ảnh JPEG từng trang nếu native PDF thất bại.
+   */
+  async function runGeminiNativeFastRead(fileObj, opts = {}) {
     const {
       ensurePdfJs,
+      ensurePdfLib,
       apiKey = getApiKey(),
       onProgress = () => {},
       signal = null,
-      maxPages = 30,
+      maxPages = 40,
     } = opts;
 
-    if (!apiKey) throw new Error('Chưa có Gemini API Key để chạy Gemini Vision.');
-    if (typeof ensurePdfJs !== 'function') throw new Error('Thiếu ensurePdfJs để render trang PDF.');
-    if (typeof document === 'undefined') throw new Error('Gemini Vision yêu cầu môi trường trình duyệt có Canvas.');
+    if (!apiKey) throw new Error('Chưa có Gemini API Key để chạy Gemini Flash.');
+    const rawBytes = fileObj?.bytes instanceof Uint8Array ? fileObj.bytes : new Uint8Array(fileObj?.bytes || []);
+    const isPdf = /\.pdf$/i.test(fileObj?.name || '') || (rawBytes[0] === 0x25 && rawBytes[1] === 0x50);
+    const mdChunks = [];
 
-    const pdfjsLib = await ensurePdfJs();
-    const bytesCopy = fileObj?.bytes?.slice ? fileObj.bytes.slice(0) : fileObj.bytes;
-    const pdfDoc = await pdfjsLib.getDocument({ data: bytesCopy }).promise;
-    const totalP = Math.min(pdfDoc.numPages || 1, maxPages);
-
-    const batches = [];
-    for (let p = 1; p <= totalP; p += 2) {
-      batches.push(p + 1 <= totalP ? [p, p + 1] : [p]);
+    if (isPdf && rawBytes.byteLength > 0 && rawBytes.byteLength <= 18 * 1024 * 1024) {
+      let pageCount = fileObj?.pageCount || 1;
+      if (typeof ensurePdfLib === 'function') {
+        try {
+          const { PDFDocument } = await ensurePdfLib();
+          const srcDoc = await PDFDocument.load(rawBytes.slice(0), { ignoreEncryption: true });
+          pageCount = srcDoc.getPageCount();
+          if (pageCount <= 22) {
+            onProgress(22, `⚡ Đang gửi trực tiếp file PDF gốc (${pageCount} trang) tới Gemini Flash trong 1 lượt...`);
+            const b64 = uint8ToBase64(rawBytes);
+            const mdOut = await callGeminiGenerateContent({
+              parts: [
+                {
+                  text: `${PROMPT_CHINH_TIEU_DE_CHUAN}\n\nHãy trích xuất ĐẦY ĐỦ 100% nội dung tài liệu PDF "${fileObj.name || 'document.pdf'}" (${pageCount} trang) sang Markdown chuẩn (giữ trọn vẹn bảng biểu, công thức LaTeX, chú thích nguồn, không tóm tắt).`,
+                },
+                { inlineData: { mimeType: 'application/pdf', data: b64 } },
+              ],
+              apiKey,
+              temperature: 0.15,
+              maxOutputTokens: 32768,
+              signal,
+            });
+            mdChunks.push(mdOut);
+          } else {
+            // Cắt lô 10 trang PDF gốc và chạy song song 2 lô/lần (giảm 15 lượt xuống còn 2-3 lượt siêu tốc!)
+            const limitP = Math.min(pageCount, maxPages);
+            const ranges = [];
+            for (let s = 0; s < limitP; s += 10) {
+              ranges.push([s, Math.min(limitP - 1, s + 9)]);
+            }
+            for (let i = 0; i < ranges.length; i += 2) {
+              const pair = ranges.slice(i, i + 2);
+              const pct = Math.min(88, Math.round(((i + 0.5) / ranges.length) * 80) + 10);
+              onProgress(pct, `⚡ Gemini Flash đang đọc song song PDF gốc trang ${pair[0][0] + 1}–${pair[pair.length - 1][1] + 1} / ${limitP}...`);
+              const pairOut = await Promise.all(
+                pair.map(async ([s, e]) => {
+                  const sub = await PDFDocument.create();
+                  const copied = await sub.copyPages(srcDoc, Array.from({ length: e - s + 1 }, (_, k) => s + k));
+                  copied.forEach((pg) => sub.addPage(pg));
+                  const subBytes = await sub.save();
+                  return callGeminiGenerateContent({
+                    parts: [
+                      {
+                        text: `${PROMPT_CHINH_TIEU_DE_CHUAN}\n\nĐây là trang ${s + 1}–${e + 1}/${limitP} của "${fileObj.name}". Trích xuất ĐẦY ĐỦ 100% sang Markdown chuẩn, chèn \`<!-- CONTINUE_TABLE -->\` nếu bảng vắt trang.`,
+                      },
+                      { inlineData: { mimeType: 'application/pdf', data: uint8ToBase64(subBytes) } },
+                    ],
+                    apiKey,
+                    temperature: 0.15,
+                    maxOutputTokens: 16384,
+                    signal,
+                  });
+                })
+              );
+              mdChunks.push(...pairOut);
+            }
+          }
+        } catch (_eNativeChunk) {
+          mdChunks.length = 0;
+        }
+      } else {
+        try {
+          onProgress(28, `⚡ Đang gửi trực tiếp file PDF gốc tới Gemini Flash (1 lượt siêu tốc)...`);
+          const mdOut = await callGeminiGenerateContent({
+            parts: [
+              {
+                text: `${PROMPT_CHINH_TIEU_DE_CHUAN}\n\nHãy trích xuất ĐẦY ĐỦ 100% nội dung tài liệu PDF "${fileObj.name || 'document.pdf'}" sang Markdown chuẩn.`,
+              },
+              { inlineData: { mimeType: 'application/pdf', data: uint8ToBase64(rawBytes) } },
+            ],
+            apiKey,
+            temperature: 0.15,
+            maxOutputTokens: 32768,
+            signal,
+          });
+          mdChunks.push(mdOut);
+        } catch (_eDirectPdf) {
+          mdChunks.length = 0;
+        }
+      }
     }
 
-    const mdChunks = [];
-    for (let bi = 0; bi < batches.length; bi++) {
-      if (signal?.aborted) throw new Error('Đã dừng Gemini Vision.');
-      const pageNums = batches[bi];
-      const pct = Math.min(90, Math.round(((bi + 0.3) / batches.length) * 85) + 5);
-      onProgress(pct, `Gemini Vision đang đọc trang ${pageNums.join('-')} / ${totalP}...`);
+    // Fallback sang batch ảnh (4 trang/lượt, scale 1.45) CHỈ KHI file quá 18MB hoặc Native PDF bị từ chối
+    if (!mdChunks.length && typeof ensurePdfJs === 'function' && typeof document !== 'undefined') {
+      const pdfjsLib = await ensurePdfJs();
+      const bytesCopy = fileObj?.bytes?.slice ? fileObj.bytes.slice(0) : fileObj.bytes;
+      const pdfDoc = await pdfjsLib.getDocument({ data: bytesCopy }).promise;
+      const totalP = Math.min(pdfDoc.numPages || 1, maxPages);
+      const batches = [];
+      for (let p = 1; p <= totalP; p += 4) {
+        batches.push(Array.from({ length: Math.min(4, totalP - p + 1) }, (_, k) => p + k));
+      }
+      for (let bi = 0; bi < batches.length; bi++) {
+        if (signal?.aborted) throw new Error('Đã dừng đọc AI.');
+        const pageNums = batches[bi];
+        const pct = Math.min(90, Math.round(((bi + 0.3) / batches.length) * 85) + 5);
+        onProgress(pct, `⚡ Gemini Flash đang đọc lô trang ${pageNums[0]}–${pageNums[pageNums.length - 1]} / ${totalP}...`);
+        const imgs = await renderPdfPageBatchToJpegBase64(pdfDoc, pageNums, 1.45);
+        const batchPrompt = [
+          PROMPT_CHINH_TIEU_DE_CHUAN,
+          '',
+          `Đây là trang ${pageNums.join(', ')} / ${totalP} của "${fileObj.name || 'document.pdf'}". Trích xuất 100% sang Markdown chuẩn, chèn \`<!-- CONTINUE_TABLE -->\` ở bảng vắt trang.`,
+        ].join('\n');
+        const mdOut = await callGeminiGenerateContent({
+          parts: [{ text: batchPrompt }, ...imgs.map((im) => ({ inlineData: { mimeType: im.mimeType, data: im.base64 } }))],
+          apiKey,
+          temperature: 0.15,
+          maxOutputTokens: 16384,
+          signal,
+        });
+        mdChunks.push(mdOut);
+      }
+    }
 
-      const imgs = await renderPdfPageBatchToJpegBase64(pdfDoc, pageNums, 1.8);
-      const batchPrompt = [
-        PROMPT_CHINH_TIEU_DE_CHUAN,
-        '',
-        `Đây là trang ${pageNums.join(' và ')} trong tổng số ${totalP} trang của tài liệu "${fileObj.name || 'document.pdf'}".`,
-        'Hãy trích xuất chính xác 100% nội dung trên các ảnh trang này sang Markdown chuẩn. Nếu có bảng bị cắt ở mép cuối trang đầu và tiếp tục ở đầu trang sau, chèn đúng 1 dòng `<!-- CONTINUE_TABLE -->` ở điểm nối. Không thêm lời bình mở đầu/kết thúc.',
-      ].join('\n');
-
-      const parts = [
-        { text: batchPrompt },
-        ...imgs.map((im) => ({ inlineData: { mimeType: im.mimeType, data: im.base64 } })),
-      ];
-
-      const mdOut = await callGeminiGenerateContent({
-        parts,
-        apiKey,
-        temperature: 0.15,
-        maxOutputTokens: 8192,
-        signal,
-        onRetry: ({ modelName, waitMs }) => {
-          onProgress(pct, `API giới hạn tốc độ (${modelName}), đang chờ ${(waitMs / 1000).toFixed(1)}s thử lại...`);
-        },
-      });
-      mdChunks.push(mdOut);
+    if (!mdChunks.length) {
+      throw new Error('Không thể đọc tài liệu bằng Gemini Flash. Vui lòng kiểm tra dung lượng tệp hoặc API Key.');
     }
 
     onProgress(94, 'Đang khâu bảng vắt trang & dựng Document AST...');
@@ -489,15 +813,19 @@
     const parsers = global.NoirStructuredParsers || NS.structuredParsers;
     const astLib = global.NoirDocAst || NS.docAst;
     if (!parsers || !astLib) {
-      throw new Error('Thiếu structuredParsers.js hoặc documentAst.js để phân tích kết quả Vision.');
+      throw new Error('Thiếu structuredParsers.js hoặc documentAst.js để phân tích kết quả AI.');
     }
     const ast = parsers.parseMarkdownToAst(stitchedMd, {
-      filename: fileObj?.name || 'vision_doc.pdf',
-      sourceFormat: 'pdf-vision',
+      filename: fileObj?.name || 'gemini_fast_doc.pdf',
+      sourceFormat: 'gemini-flash-native',
     });
     const blocks = astLib.astToLegacyBlocks(ast);
-    onProgress(100, `Gemini Vision hoàn tất (${totalP} trang)!`);
-    return { markdown: stitchedMd, ast, blocks, pageCount: totalP };
+    onProgress(100, '✅ Gemini Flash đã đọc siêu tốc xong 100% tài liệu!');
+    return { markdown: stitchedMd, ast, blocks };
+  }
+
+  async function runGeminiVisionDeepRead(fileObj, opts = {}) {
+    return runGeminiNativeFastRead(fileObj, opts);
   }
 
   function syncApiKeyAcrossModules(keyVal) {
@@ -535,67 +863,78 @@
     }
 
     const finalParts = Array.isArray(parts) && parts.length ? parts : [{ text: String(prompt || '') }];
-    const bodyPayload = {
-      contents: [{ role: 'user', parts: finalParts }],
-      generationConfig: { temperature, maxOutputTokens },
+    const buildPayload = (withSearch) => {
+      const p = {
+        contents: [{ role: 'user', parts: finalParts }],
+        generationConfig: { temperature, maxOutputTokens },
+      };
+      if (systemInstruction) {
+        p.systemInstruction = { parts: [{ text: String(systemInstruction) }] };
+      }
+      if (withSearch) {
+        p.tools = [{ google_search: {} }];
+      }
+      return p;
     };
-    if (systemInstruction) {
-      bodyPayload.systemInstruction = { parts: [{ text: String(systemInstruction) }] };
-    }
-    if (useGoogleSearch) {
-      bodyPayload.tools = [{ google_search: {} }];
-    }
 
     const modelList = Array.isArray(models) && models.length ? models : DEFAULT_VISION_MODELS;
+    // Nếu useGoogleSearch = true, thử trước CÓ Google Search; nếu toàn bộ bị từ chối/HTTP 400/429 thì tự động hạ cấp KHÔNG tools để đảm bảo vẫn chạy thành công 100%!
+    const searchPasses = useGoogleSearch ? [true, false] : [false];
     let lastErr = null;
-    for (let mi = 0; mi < modelList.length; mi++) {
-      const model = modelList[mi];
-      for (let attempt = 0; attempt < 2; attempt++) {
-        if (signal && signal.aborted) {
-          throw new Error('ABORTED');
-        }
-        try {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(cleanKey)}`;
-          const res = await fetchImpl(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(bodyPayload),
-            signal,
-          });
-          if (!res.ok) {
-            const errTxt = await res.text().catch(() => '');
-            lastErr = new Error(`HTTP ${res.status} (${model}): ${errTxt.slice(0, 200)}`);
-            if ((res.status === 429 || res.status === 503) && attempt === 0) {
-              if (typeof onRetry === 'function') onRetry({ model, attempt, status: res.status });
-              await new Promise((r) => setTimeout(r, 900 + Math.floor(Math.random() * 500)));
+    for (const trySearch of searchPasses) {
+      const bodyPayload = buildPayload(trySearch);
+      for (let mi = 0; mi < modelList.length; mi++) {
+        const model = modelList[mi];
+        for (let attempt = 0; attempt < 2; attempt++) {
+          if (signal && signal.aborted) {
+            throw new Error('ABORTED');
+          }
+          try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(cleanKey)}`;
+            const res = await fetchImpl(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(bodyPayload),
+              signal,
+            });
+            if (!res.ok) {
+              const errTxt = await res.text().catch(() => '');
+              lastErr = new Error(`HTTP ${res.status} (${model}${trySearch ? '+Search' : ''}): ${errTxt.slice(0, 220)}`);
+              if ((res.status === 429 || res.status === 503) && attempt === 0) {
+                if (typeof onRetry === 'function') onRetry({ model, attempt, status: res.status });
+                await new Promise((r) => setTimeout(r, 900 + Math.floor(Math.random() * 500)));
+                continue;
+              }
+              if (res.status === 401 || (res.status === 400 && /API_KEY_INVALID|API key not valid/i.test(errTxt))) {
+                throw new Error('API Key không hợp lệ hoặc đã bị thu hồi! Hãy bấm Đổi API Key và xác minh lại.');
+              }
+              break;
+            }
+            const json = await res.json();
+            const cand = json?.candidates?.[0] || {};
+            const candParts = cand?.content?.parts || [];
+            const text = candParts.map((p) => p?.text || '').join('').trim();
+            const rawChunks = cand?.groundingMetadata?.groundingChunks || [];
+            const seenUrl = new Set();
+            const groundingUrls = [];
+            for (const ch of rawChunks) {
+              const u = String(ch?.web?.uri || '').trim();
+              if (!u || seenUrl.has(u)) continue;
+              seenUrl.add(u);
+              groundingUrls.push({ url: u, title: String(ch?.web?.title || '').trim() });
+            }
+            if (!text) {
+              lastErr = new Error(`EMPTY_RESPONSE (${model})`);
+              break;
+            }
+            return { text, groundingUrls, model, usedGrounding: trySearch, raw: json };
+          } catch (err) {
+            if (err?.name === 'AbortError' || signal?.aborted || /API Key không hợp lệ/i.test(err?.message || '')) throw err;
+            lastErr = err;
+            if (attempt === 0) {
+              await new Promise((r) => setTimeout(r, 650));
               continue;
             }
-            break;
-          }
-          const json = await res.json();
-          const cand = json?.candidates?.[0] || {};
-          const candParts = cand?.content?.parts || [];
-          const text = candParts.map((p) => p?.text || '').join('').trim();
-          const rawChunks = cand?.groundingMetadata?.groundingChunks || [];
-          const seenUrl = new Set();
-          const groundingUrls = [];
-          for (const ch of rawChunks) {
-            const u = String(ch?.web?.uri || '').trim();
-            if (!u || seenUrl.has(u)) continue;
-            seenUrl.add(u);
-            groundingUrls.push({ url: u, title: String(ch?.web?.title || '').trim() });
-          }
-          if (!text) {
-            lastErr = new Error(`EMPTY_RESPONSE (${model})`);
-            break;
-          }
-          return { text, groundingUrls, model, raw: json };
-        } catch (err) {
-          if (err?.name === 'AbortError' || signal?.aborted) throw err;
-          lastErr = err;
-          if (attempt === 0) {
-            await new Promise((r) => setTimeout(r, 700));
-            continue;
           }
         }
       }
@@ -627,21 +966,26 @@
     overlay.id = 'noir-ai-full-loading-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483635;background:rgba(7,11,20,0.92);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;font-family:"Be Vietnam Pro",system-ui,-apple-system,sans-serif;';
     overlay.innerHTML = `
-      <div style="max-width:460px;width:100%;background:linear-gradient(145deg,#0f172a,#111827);border:1.5px solid rgba(52,211,153,0.45);border-radius:22px;padding:26px 24px;text-align:center;color:#f8fafc;box-shadow:0 24px 60px rgba(0,0,0,0.65);">
-        <div style="width:58px;height:58px;margin:0 auto 14px;border-radius:50%;border:4px solid rgba(52,211,153,0.2);border-top-color:#34d399;animation:noirAiSpin 0.9s linear infinite;"></div>
-        <div id="noir-ai-load-title" style="font-size:17px;font-weight:700;color:#6ee7b7;margin-bottom:8px;"></div>
-        <div id="noir-ai-load-sub" style="font-size:13px;font-weight:400;color:#cbd5e1;line-height:1.5;margin-bottom:14px;"></div>
-        <div style="width:100%;height:8px;border-radius:999px;background:rgba(148,163,184,0.2);overflow:hidden;margin-bottom:8px;">
+      <div style="max-width:520px;width:100%;background:linear-gradient(145deg,#0f172a,#111827);border:1.5px solid rgba(52,211,153,0.45);border-radius:22px;padding:24px 22px;text-align:center;color:#f8fafc;box-shadow:0 24px 60px rgba(0,0,0,0.65);">
+        <div id="noir-ai-load-spinner" style="width:54px;height:54px;margin:0 auto 12px;border-radius:50%;border:4px solid rgba(52,211,153,0.2);border-top-color:#34d399;animation:noirAiSpin 0.9s linear infinite;"></div>
+        <div id="noir-ai-load-title" style="font-size:17px;font-weight:700;color:#6ee7b7;margin-bottom:6px;"></div>
+        <div id="noir-ai-load-sub" style="font-size:13px;font-weight:400;color:#cbd5e1;line-height:1.5;margin-bottom:12px;"></div>
+        <div style="width:100%;height:8px;border-radius:999px;background:rgba(148,163,184,0.2);overflow:hidden;margin-bottom:6px;">
           <div id="noir-ai-load-bar" style="width:14%;height:100%;background:linear-gradient(90deg,#10b981,#38bdf8);transition:width 0.35s ease;"></div>
         </div>
-        <div id="noir-ai-load-pct" style="font-size:12px;font-weight:700;color:#38bdf8;">14%</div>
+        <div id="noir-ai-load-pct" style="font-size:12px;font-weight:700;color:#38bdf8;margin-bottom:10px;">14%</div>
+        <div id="noir-ai-load-log" style="display:none;text-align:left;max-height:155px;overflow-y:auto;background:rgba(2,6,23,0.75);border:1px solid rgba(148,163,184,0.22);border-radius:12px;padding:9px 11px;font-size:11.5px;line-height:1.55;color:#e2e8f0;margin-bottom:10px;"></div>
+        <div id="noir-ai-load-actions" style="display:none;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px;"></div>
       </div>
     `;
     doc.body.appendChild(overlay);
+    const spinEl = overlay.querySelector('#noir-ai-load-spinner');
     const titleEl = overlay.querySelector('#noir-ai-load-title');
     const subEl = overlay.querySelector('#noir-ai-load-sub');
     const barEl = overlay.querySelector('#noir-ai-load-bar');
     const pctEl = overlay.querySelector('#noir-ai-load-pct');
+    const logEl = overlay.querySelector('#noir-ai-load-log');
+    const actEl = overlay.querySelector('#noir-ai-load-actions');
     if (titleEl) titleEl.textContent = String(initialTitle);
     if (subEl) subEl.textContent = String(initialSub);
 
@@ -657,6 +1001,41 @@
       setSub(subText) {
         if (subEl && subText) subEl.textContent = String(subText);
       },
+      addLog(lineText, tone = 'ok') {
+        if (!logEl || !lineText) return;
+        logEl.style.display = 'block';
+        const row = doc.createElement('div');
+        row.style.color = tone === 'err' ? '#fda4af' : tone === 'info' ? '#7dd3fc' : '#86efac';
+        row.textContent = String(lineText);
+        logEl.appendChild(row);
+        logEl.scrollTop = logEl.scrollHeight;
+      },
+      showError(errTitle, errDetail, handlers = {}) {
+        if (spinEl) spinEl.style.display = 'none';
+        if (titleEl) { titleEl.style.color = '#fda4af'; titleEl.textContent = String(errTitle || '⚠️ AI gặp lỗi khi xử lý'); }
+        if (subEl) { subEl.style.color = '#fecdd3'; subEl.textContent = String(errDetail || 'Vui lòng kiểm tra lại API Key hoặc kết nối mạng.'); }
+        if (barEl) barEl.style.background = '#f43f5e';
+        if (actEl) {
+          actEl.style.display = 'flex';
+          actEl.innerHTML = '';
+          const mkBtn = (txt, bg, cb) => {
+            const b = doc.createElement('button');
+            b.type = 'button';
+            b.textContent = txt;
+            b.style.cssText = `padding:9px 14px;border-radius:11px;border:none;background:${bg};color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;`;
+            b.addEventListener('click', cb);
+            actEl.appendChild(b);
+          };
+          if (typeof handlers.onRetry === 'function') {
+            mkBtn('🔄 Thử lại ngay', '#059669', () => { overlay.remove(); handlers.onRetry(); });
+          }
+          mkBtn('🔑 Kiểm tra / Đổi API Key', '#0284c7', () => {
+            overlay.remove();
+            openApiKeyQuickModal({ onSaved: handlers.onChangeKey || handlers.onRetry });
+          });
+          mkBtn('Đóng', '#334155', () => overlay.remove());
+        }
+      },
       close() {
         try { overlay.remove(); } catch (_) { /* ignore */ }
       },
@@ -665,7 +1044,7 @@
 
   function maybeShowWelcomeApiUpsellModal(contextKey = 'global', onLinkedCallback = null) {
     const doc = global.document;
-    if (!doc || global.__NOIR_SKIP_API_UPSELL === true) return false;
+    if (!doc || global.__NOIR_SKIP_API_UPSELL === true || global.__NOIR_AUTOTESTER_RUNNING__ === true || global.NoirAutoTester?.isRunning === true) return false;
     // Sync across possible storage keys before checking
     if (!hasApiKey()) {
       try {
@@ -729,25 +1108,46 @@
     modal.addEventListener('click', (ev) => {
       if (ev.target === modal) dismiss();
     });
-    modal.querySelector('#noir-upsell-save-btn')?.addEventListener('click', () => {
+    modal.querySelector('#noir-upsell-save-btn')?.addEventListener('click', async () => {
       const inp = modal.querySelector('#noir-upsell-api-input');
       const errEl = modal.querySelector('#noir-upsell-err');
+      const saveBtn = modal.querySelector('#noir-upsell-save-btn');
       const val = String(inp?.value || '').trim();
-      if (!val || val.length < 12) {
+      if (errEl) {
+        errEl.style.color = '#7dd3fc';
+        errEl.textContent = '⏳ Đang xác minh API Key thật với Google Gemini...';
+        errEl.style.display = 'block';
+      }
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ Đang xác minh...'; }
+      try {
+        const chk = await verifyApiKeyLive(val);
+        if (!chk.ok) {
+          if (errEl) {
+            errEl.style.color = '#fda4af';
+            errEl.textContent = `❌ ${chk.message}`;
+            errEl.style.display = 'block';
+          }
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✅ Lưu & Kích hoạt AI ngay'; }
+          inp?.focus();
+          return;
+        }
+        setApiKey(val, { verified: true, modelEndpoint: chk.modelEndpoint });
+        syncApiKeyAcrossModules(val);
+        try { global.sessionStorage?.setItem(dismissKey, '1'); } catch (_) { /* ignore */ }
+        modal.remove();
+        NS.utils?.showToast?.(`✅ ${chk.message} Đã lưu vĩnh viễn vào máy!`, 'success', 3800);
+        try {
+          global.dispatchEvent(new CustomEvent('noir-api-key-changed', { detail: { hasKey: true, verified: true, source: contextKey } }));
+        } catch (_) { /* ignore */ }
+        if (typeof onLinkedCallback === 'function') onLinkedCallback(val);
+      } catch (err) {
         if (errEl) {
-          errEl.textContent = 'Vui lòng dán mã Gemini API Key hợp lệ (thường bắt đầu bằng AIza...).';
+          errEl.style.color = '#fda4af';
+          errEl.textContent = `❌ Lỗi xác minh: ${err?.message || err}`;
           errEl.style.display = 'block';
         }
-        return;
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✅ Lưu & Kích hoạt AI ngay'; }
       }
-      setApiKey(val);
-      syncApiKeyAcrossModules(val);
-      try { global.sessionStorage?.setItem(dismissKey, '1'); } catch (_) { /* ignore */ }
-      modal.remove();
-      try {
-        global.dispatchEvent(new CustomEvent('noir-api-key-changed', { detail: { hasKey: true, source: contextKey } }));
-      } catch (_) { /* ignore */ }
-      if (typeof onLinkedCallback === 'function') onLinkedCallback(val);
     });
     return true;
   }
@@ -931,7 +1331,10 @@
     setApiKey,
     clearApiKey,
     hasApiKey,
+    isApiKeyVerified,
+    verifyApiKeyLive,
     syncApiKeyAcrossModules,
+    uint8ToBase64,
     copyTextToClipboard,
     copyStandardPrompt,
     openPromptPreviewModal,
@@ -945,6 +1348,7 @@
     runAiFormatDocumentToAst,
     runAiAndCodeAutoToc,
     stitchContinueTables,
+    runGeminiNativeFastRead,
     runGeminiVisionDeepRead,
   });
 

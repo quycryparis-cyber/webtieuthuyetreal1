@@ -979,44 +979,65 @@
     });
     root.querySelector('#wis20-btn-copy-gemini')?.addEventListener('click', () => copyPromptAndOpenGemini());
     root.querySelector('#wis20-btn-full-auto-ai-pdf')?.addEventListener('click', async () => {
-      const bridge = globalScope.NoirGeminiBridge || NS.geminiBridge;
-      if (!bridge?.hasApiKey?.() || !state.scanResult) {
-        bridge?.openApiKeyQuickModal?.({ onSaved: () => render() });
-        return;
-      }
-      const loader = bridge.showAiFullLoadingOverlay?.(
-        '🚀 AI đang tổng hợp 8 trụ cột & xuất Báo cáo PDF...',
-        'Bước 1/3: Gửi dữ liệu thật + Google Search Grounding tới Gemini'
-      );
-      try {
-        const promptText = W20.buildGeminiWisdomPrompt(state.scanResult, {
-          focusMode: state.focusMode,
-          customTopic: state.customTopic,
-        });
-        const aiRes = await bridge.callGeminiWithGrounding({
-          prompt: promptText,
-          temperature: 0.2,
-          maxOutputTokens: 8192,
-          useGoogleSearch: true,
-        });
-        const reply = aiRes?.text || '';
-        loader?.update?.('📊 Bước 2/3: Tổng hợp biểu đồ & phân tích chuyên sâu...', 68);
-        state.geminiReplyRaw = reply;
-        if (typeof W20.parseGeminiWisdomReply === 'function') {
-          state.geminiParsed = W20.parseGeminiWisdomReply(reply);
+      const runFullAutoWisdom = async () => {
+        const bridge = globalScope.NoirGeminiBridge || NS.geminiBridge;
+        if (!bridge?.hasApiKey?.() || !state.scanResult) {
+          bridge?.openApiKeyQuickModal?.({ onSaved: () => render() });
+          return;
         }
-        state.phase = 'dashboard';
-        state.activeTab = 'briefing';
-        state.highlightExportPdfCta = true;
-        loader?.update?.('📄 Bước 3/3: Đang dựng & tải xuống Báo cáo PDF hoàn chỉnh...', 90);
-        const res = await W20.exportWisdomReportPdf(state.scanResult, state.geminiParsed, loadReaderPrefs());
-        loader?.close?.();
-        render();
-        toast(`✅ Đã xuất xong Báo cáo PDF 30 Phút Thông Thái (${res.pages} trang — kèm Trang Bìa, Biểu đồ & Đầy đủ Trích dẫn)!`, 'success', 4800);
-      } catch (err) {
-        loader?.close?.();
-        toast('⚠️ Lỗi AI 1 chạm: ' + (err?.message || err), 'error', 4200);
-      }
+        const totalItems = state.scanResult?.totalItems || 0;
+        const loader = bridge.showAiFullLoadingOverlay?.(
+          '🚀 AI đang tổng hợp 8 trụ cột & xuất thẳng Báo cáo PDF...',
+          'Bước 1/4: Kiểm tra dữ liệu báo chí & đóng gói Prompt chuyên sâu'
+        );
+        try {
+          loader?.addLog?.(`✅ Bước 1: Code đã quét ${totalItems} bài báo/chỉ số khoa học kèm link nguồn gốc.`, 'ok');
+          const promptText = W20.buildGeminiWisdomPrompt(state.scanResult, {
+            focusMode: state.focusMode,
+            customTopic: state.customTopic,
+          });
+          loader?.update?.('🧠 Bước 2/4: Đang gửi Prompt 8 trụ cột tới Gemini AI...', 36);
+          loader?.setSub?.(`Đang gửi ${promptText.length.toLocaleString('vi-VN')} ký tự dữ liệu & cấu trúc phân tích`);
+          loader?.addLog?.(`📤 Bước 2: Đã gửi Prompt (${promptText.length.toLocaleString('vi-VN')} ký tự) tới Gemini API...`, 'info');
+
+          const aiRes = await bridge.callGeminiWithGrounding({
+            prompt: promptText,
+            temperature: 0.2,
+            maxOutputTokens: 8192,
+            useGoogleSearch: true,
+          });
+          const reply = String(aiRes?.text || '').trim();
+          if (!reply) throw new Error('Gemini trả về phản hồi rỗng.');
+          loader?.addLog?.(
+            `✅ Bước 3: Gemini (${aiRes.model}${aiRes.usedGrounding ? ' + Google Search' : ''}) đã trả lời ${reply.length.toLocaleString('vi-VN')} ký tự (${aiRes.groundingUrls?.length || 0} nguồn bổ sung).`,
+            'ok'
+          );
+
+          loader?.update?.('📊 Bước 3/4: Đồng bộ phân tích AI vào 8 trụ cột & biểu đồ...', 72);
+          state.geminiReplyRaw = reply;
+          if (typeof W20.parseGeminiWisdomReply === 'function') {
+            state.geminiParsed = W20.parseGeminiWisdomReply(reply, state.scanResult);
+          }
+          state.phase = 'dashboard';
+          state.activeTab = 'briefing';
+          state.highlightExportPdfCta = true;
+          render();
+
+          loader?.update?.('📄 Bước 4/4: Đang dựng & mở thẳng Báo cáo PDF hoàn chỉnh...', 92);
+          loader?.addLog?.('📄 Bước 4: Đang xuất PDF kèm Trang Bìa, Biểu đồ & Đầy đủ Trích dẫn...', 'info');
+          const res = await W20.exportWisdomReportPdf(state.scanResult, state.geminiParsed, loadReaderPrefs());
+          loader?.close?.();
+          toast(`✅ Đã xuất xong Báo cáo PDF 30 Phút Thông Thái (${res.pages} trang — kèm Trang Bìa, Biểu đồ & Đầy đủ Trích dẫn)!`, 'success', 5000);
+        } catch (err) {
+          loader?.addLog?.(`❌ Lỗi: ${err?.message || err}`, 'err');
+          loader?.showError?.(
+            '⚠️ Không thể hoàn tất luồng 30 Phút Thông Thái AI tự động',
+            String(err?.message || err),
+            { onRetry: () => runFullAutoWisdom(), onChangeKey: () => render() }
+          );
+        }
+      };
+      await runFullAutoWisdom();
     });
     root.querySelector('#wis20-btn-gemini-api-direct')?.addEventListener('click', async () => {
       const bridge = globalScope.NoirGeminiBridge || NS.geminiBridge;

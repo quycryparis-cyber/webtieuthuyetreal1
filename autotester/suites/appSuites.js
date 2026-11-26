@@ -1030,7 +1030,7 @@
             }
 
             // 2. Exit Guard Universal (Desktop X / Mobile Swipe Back / Web Leave Site)
-            const expectedExitPrompt = 'Bạn muốn thoát khỏi sự kiểm soát của Đăng ( ͡° ͜ʖ ͡°) chứ?';
+            const expectedExitPrompt = 'Bạn muốn thoát khỏi sự kiểm soát của Đăng chứ ( ͡° ͜ʖ ͡°)';
             if (!ns.exitGuard || ns.exitGuard.PROMPT_TEXT !== expectedExitPrompt) {
               gaps.push(`Exit Guard sai thông điệp: "${ns.exitGuard?.PROMPT_TEXT || 'missing'}"`);
             } else {
@@ -1042,7 +1042,7 @@
               const yesTxt = exitModal?.querySelector('#btn-noir-exit-yes')?.textContent?.trim() || '';
               const noBtn = exitModal?.querySelector('#btn-noir-exit-no');
               const noTxt = noBtn?.textContent?.trim() || '';
-              if (!exitModal || !exitTitle.includes('( ͡° ͜ʖ ͡°) chứ?') || !yesTxt || !noTxt) {
+              if (!exitModal || !exitTitle.includes('( ͡° ͜ʖ ͡°)') || !yesTxt || !noTxt) {
                 gaps.push('Pop-up Exit Guard không hiển thị đủ câu hỏi & nút Có/Không');
               }
               noBtn?.click?.();

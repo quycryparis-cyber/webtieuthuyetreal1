@@ -5376,6 +5376,23 @@
     "✅ Đã liên kết Gemini API Key — Không cần Copy/Paste thủ công!": "✅ Gemini API Key Linked — No manual Copy/Paste needed!",
     "🚀 Tự động hoàn toàn với AI → Xuất PDF ngay": "🚀 Fully Automatic with AI → Export PDF Now",
     "🔗 Kết nối AI của bạn (Mở khóa nút Tự động hoàn toàn với AI → Xuất PDF ngay)": "🔗 Connect Your AI (Unlock 1-Tap Full AI → Export PDF Now)",
+
+    "Cụm 5: OCR, ICR Đọc Chữ Viết Tay, Tiền xử lý Scan & Quản lý Siêu dữ liệu": "Group 5: OCR, ICR Handwriting Recognition, Scan Cleanup & Metadata",
+    "ICR Thông minh — Đọc Chữ Viết Tay & Biểu Mẫu Scan (AI)": "Smart ICR — Handwriting & Scanned Forms Recognition (AI)",
+    "Chữ viết tay → DOCX/XLSX/MD/PDF": "Handwriting → DOCX/XLSX/MD/PDF",
+    "Nhận diện chữ viết tay Tiếng Việt/Anh, đơn thuốc, sổ ghi chép, hóa đơn & phiếu khảo sát viết tay (ô tick ☑/☐) bằng Gemini Flash 1 chạm!": "Recognize Vietnamese/English handwriting, prescriptions, notebooks, invoices & handwritten surveys (checkboxes ☑/☐) with 1-tap Gemini Flash!",
+    "✨ Quét Chữ Viết Tay (ICR AI) ngay": "✨ Scan Handwriting (AI ICR) Now",
+    "Loại tài liệu viết tay (ICR Mode):": "Handwritten Document Type (ICR Mode):",
+    "Định dạng xuất kết quả ICR:": "ICR Output Format:",
+    "🔍 Xác minh & Lưu vĩnh viễn": "🔍 Verify & Save Permanently",
+    "⚡ Đọc Siêu Tốc bằng Gemini Flash (File gốc 1 lượt)": "⚡ Ultra-Fast Read via Gemini Flash (1-Shot Native File)",
+    "🤖 AI Gợi ý từ khóa ngắt hồ sơ (1 chạm)": "🤖 AI Suggest Split Keyword (1-Tap)",
+    "🤖 AI Tự chuyển ghi chú thành dữ liệu Form (1 chạm)": "🤖 AI Convert Notes to Form Data (1-Tap)",
+    "🤖 AI Tự tạo Tiêu đề, Tác giả & Từ khóa (1 chạm)": "🤖 AI Auto-Generate Title, Author & Keywords (1-Tap)",
+    "🤖 AI Tự quét toàn bộ thông tin nhạy cảm PII (1 chạm)": "🤖 AI Auto-Scan All Sensitive PII (1-Tap)",
+    "🤖 Tóm tắt AI": "🤖 AI Summary",
+    "⚡ Chế độ Siêu tốc Gemini Flash Native (Đọc thẳng PDF/Ảnh 1 lượt — nhanh gấp 10× & chính xác 99%)": "⚡ Ultra-Fast Gemini Flash Native Mode (1-shot PDF/Image read — 10× faster & 99% accurate)",
+    "🤖 Hậu kiểm OCR bằng Gemini AI (sửa lỗi dấu tiếng Việt & tách từ)": "🤖 Post-verify OCR with Gemini AI (fix diacritics & word splits)",
   });
 
   const promptExact = Object.freeze({
