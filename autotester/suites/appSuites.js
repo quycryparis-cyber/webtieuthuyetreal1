@@ -1494,6 +1494,45 @@
             );
           },
         },
+        {
+          id: 'typography_and_font_integrity',
+          label: 'Kiểm tra bộ font Be Vietnam Pro + CJK (SC/TC/JP/KR) & chặn vỡ dấu tiếng Việt (weight <= 700)',
+          run: async () => {
+            const bodyFont = String(globalScope.getComputedStyle?.(document.body)?.fontFamily || '');
+            const hasBeVietnam = /be\s+vietnam\s+pro/i.test(bodyFont);
+            const hasCjk = /noto\s+sans\s+(?:sc|tc|jp|kr)/i.test(bodyFont);
+            const badNodes = [];
+            const candidates = Array.from(document.querySelectorAll('button, h1, h2, h3, [role="button"]'));
+            for (const el of candidates) {
+              if (el.closest?.('[data-autotester-ui="true"], #at-shell-root, .katex')) continue;
+              const rect = el.getBoundingClientRect?.();
+              if (!rect || rect.width <= 0 || rect.height <= 0) continue;
+              const cs = globalScope.getComputedStyle?.(el);
+              if (!cs || cs.display === 'none' || cs.visibility === 'hidden') continue;
+              const fw = parseInt(cs.fontWeight, 10) || 400;
+              if (fw >= 800) {
+                badNodes.push(`${el.id ? '#' + el.id : el.tagName.toLowerCase()} (weight=${fw})`);
+              } else if (/times\s+new\s+roman/i.test(String(cs.fontFamily || '')) && !el.closest('#novel-editor')) {
+                badNodes.push(`${el.id ? '#' + el.id : el.tagName.toLowerCase()} (Times fallback)`);
+              }
+              if (badNodes.length >= 6) break;
+            }
+            if (!hasBeVietnam || !hasCjk || badNodes.length > 0) {
+              return makeIssue('typography_and_font_integrity', 'visual_smooth_i18n', 'ERR_FONT_FALLBACK_VI', {
+                moduleRef: 'index.html',
+                techDetail: `bodyFont="${bodyFont}", hasBeVietnam=${hasBeVietnam}, hasCjk=${hasCjk}, badNodes=[${badNodes.join(', ')}]`,
+              });
+            }
+            return makePass(
+              'typography_and_font_integrity',
+              'visual_smooth_i18n',
+              'Chuẩn hóa 100% font Be Vietnam Pro + 4 bảng chữ Đông Á (CJK) & weight <= 700',
+              'Tất cả nút bấm & tiêu đề đang dùng bộ font chuẩn không vỡ dấu tiếng Việt và hiển thị sắc nét cho EN/VI/SC/TC/JA/KR.',
+              'index.html',
+              'visual'
+            );
+          },
+        },
       ],
     },
 

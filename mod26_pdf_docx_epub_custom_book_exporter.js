@@ -1280,7 +1280,7 @@
           <div style="font-size: 0.68em; letter-spacing: 0.14em; text-transform: uppercase; color: ${paperTheme.mutedHex};">${utils.escapeHtml(
         this.prefs.publisherLabel || 'Web tiểu thuyết của Bi'
       )}</div>
-          <div style="font-weight: 800; font-size: 1.05em; color: ${paperTheme.accentHex}; margin: 2px 0;" data-i18n-ignore="true">${utils.escapeHtml(
+          <div style="font-weight: 700; font-size: 1.05em; color: ${paperTheme.accentHex}; margin: 2px 0;" data-i18n-ignore="true">${utils.escapeHtml(
         this.prefs.bookTitle
       )}</div>
           <div style="font-size: 0.78em; color: ${paperTheme.textHex}; font-weight: 700;"><span data-i18n-ignore="true">${utils.escapeHtml(
@@ -1295,7 +1295,7 @@
         this.prefs.lineHeight
       )} • Số trang: 1, 2, 3...</span>
         </div>
-        <div style="font-weight: 800; color: ${paperTheme.accentHex}; font-size: 1.08em; margin-bottom: 8px; text-align: center;" data-i18n-ignore="true">
+        <div style="font-weight: 700; color: ${paperTheme.accentHex}; font-size: 1.08em; margin-bottom: 8px; text-align: center;" data-i18n-ignore="true">
           ${utils.escapeHtml(sampleTitle)}
         </div>
         <p style="${indentStyle} margin: 0 0 0.45em 0; text-align: justify;" data-i18n-ignore="true">
@@ -1395,14 +1395,14 @@
       const src = String(rawFont || "'Times New Roman', Times, serif").trim();
       const isSans = /sans-serif|Inter|Be Vietnam Pro|Roboto|Arial|Segoe UI/i.test(src) && !/Times|Lora|Merriweather|Literata|Noto Serif|Cambria/i.test(src);
       if (isSans) {
-        return `'Segoe UI', 'Arial', 'Roboto', 'Helvetica Neue', sans-serif`;
+        return `'Be Vietnam Pro', 'Arial', 'Roboto', 'Helvetica Neue', sans-serif`;
       }
       // Loại bỏ hoàn toàn Georgia vì font Georgia trên Windows Chrome Print-to-PDF tách rời dấu kép tiếng Việt (ố -> ô', ồ -> ô`)!
       const cleaned = src.replace(/['"]?Georgia['"]?\s*,?/gi, '').replace(/,\s*,/g, ',').trim();
       if (/Times New Roman/i.test(cleaned)) {
-        return `${cleaned.replace(/,\s*serif\s*$/i, '')}, 'Cambria', 'Segoe UI', serif`;
+        return `${cleaned.replace(/,\s*serif\s*$/i, '')}, 'Cambria', 'Be Vietnam Pro', serif`;
       }
-      return `'Times New Roman', 'Cambria', 'Noto Serif', 'Segoe UI', serif`;
+      return `'Times New Roman', 'Cambria', 'Noto Serif', 'Be Vietnam Pro', serif`;
     }
 
     // ------------------------------------------------------------------------
@@ -1805,7 +1805,7 @@
       border: none;
       padding: 8px 18px;
       border-radius: 10px;
-      font-weight: 800;
+      font-weight: 700;
       font-size: 13px;
       cursor: pointer;
     }
@@ -1882,7 +1882,7 @@
     }
     .book-pubinfo-card-heading {
       text-align: center;
-      font-weight: 800;
+      font-weight: 700;
       letter-spacing: 0.16em;
       color: ${paperTheme.accentHex};
       border-bottom: 1px solid ${paperTheme.borderHex};
@@ -1924,7 +1924,7 @@
     }
     .book-cover-main-title {
       font-size: ${singlePageMetrics.isMobileEnv ? '1.55em' : '1.9em'};
-      font-weight: 800;
+      font-weight: 700;
       color: ${paperTheme.accentHex};
       line-height: 1.2;
       margin: 4px 0 6px 0;
@@ -1969,7 +1969,7 @@
     .book-section-heading {
       text-align: center;
       font-size: 1.55em;
-      font-weight: 800;
+      font-weight: 700;
       color: ${paperTheme.accentHex};
       margin: 0 0 6px 0;
     }
@@ -2030,7 +2030,7 @@
     }
     .book-chapter-title {
       font-size: 1.65em;
-      font-weight: 800;
+      font-weight: 700;
       color: ${paperTheme.accentHex};
       margin: 0 0 8px 0;
       line-height: 1.3;
@@ -2064,7 +2064,7 @@
       padding-top: 4px;
       padding-right: 10px;
       padding-bottom: 2px;
-      font-weight: 800;
+      font-weight: 700;
       color: ${paperTheme.accentHex};
     }
     .book-dialogue-speaker {

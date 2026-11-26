@@ -631,7 +631,7 @@
   <style>
     body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#09090b;color:#f4f4f5;font-family:system-ui,-apple-system,sans-serif;padding:24px;text-align:center}
     .card{max-width:420px;width:100%;background:#18181b;border:1px solid #2dd4bf55;border-radius:20px;padding:24px}
-    a.btn{display:inline-block;margin-top:16px;padding:12px 20px;border-radius:14px;background:#2dd4bf;color:#09090b;font-weight:800;text-decoration:none}
+    a.btn{display:inline-block;margin-top:16px;padding:12px 20px;border-radius:14px;background:#2dd4bf;color:#09090b;font-weight: 700;text-decoration:none}
     p{font-size:14px;line-height:1.5;color:#d4d4d8}
   </style>
 </head>

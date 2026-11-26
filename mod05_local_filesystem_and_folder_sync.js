@@ -695,7 +695,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gói Không Gian 6 Thư Mục — Noir Studio</title>
   <style>
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #09090b; color: #e4e4e7; margin: 0; padding: 1.2rem; line-height: 1.75; }
+    body { font-family: 'Be Vietnam Pro', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR', system-ui, sans-serif; background: #09090b; color: #e4e4e7; margin: 0; padding: 1.2rem; line-height: 1.75; }
     .wrap { max-width: 900px; margin: 0 auto; }
     h1 { color: #34d399; font-size: 1.4rem; }
     .folder { margin: 1.5rem 0; padding: 1rem; border: 1px solid #27272a; border-radius: 14px; background: #18181b; }

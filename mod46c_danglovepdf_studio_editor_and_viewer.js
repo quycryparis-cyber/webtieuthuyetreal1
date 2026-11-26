@@ -134,7 +134,7 @@
       italic: 'https://fonts.gstatic.com/s/carlito/v4/3Jn_SDPw3m-pk039DDKBSQ.ttf',
       boldItalic: 'https://fonts.gstatic.com/s/carlito/v4/3Jn6SDPw3m-pk039DDK59XglVg.ttf',
       label: 'Carlito (Khớp 1:1 Calibri)',
-      cssFallback: 'Calibri, "Segoe UI", Arial, sans-serif',
+      cssFallback: 'Calibri, "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif',
     },
     caladea: {
       regular: 'https://fonts.gstatic.com/s/caladea/v10/kJEzBugZ7AAjhybUjR8.ttf',
@@ -158,7 +158,7 @@
       italic: 'https://fonts.gstatic.com/s/roboto/v51/KFOKCnqEu92Fr1Mu53ZEC9_Vu3r1gIhOszmOClHrs6ljXfMMLoHQiA8.ttf',
       boldItalic: 'https://fonts.gstatic.com/s/roboto/v51/KFOKCnqEu92Fr1Mu53ZEC9_Vu3r1gIhOszmOClHrs6ljXfMMLmbXiA8.ttf',
       label: 'Roboto (Chuẩn tiếng Việt)',
-      cssFallback: 'Roboto, "Segoe UI", Arial, sans-serif',
+      cssFallback: 'Roboto, "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif',
     },
     notosans: {
       regular: 'https://fonts.gstatic.com/s/arimo/v36/P5sfzZCDf9_T_3cV7NCUECyoxNk37cxsBw.ttf',
@@ -166,7 +166,7 @@
       italic: 'https://fonts.gstatic.com/s/arimo/v36/P5sdzZCDf9_T_10c3i9MeUcyat4iJY-ERBrE.ttf',
       boldItalic: 'https://fonts.gstatic.com/s/arimo/v36/P5sdzZCDf9_T_10c3i9MeUcyat4iJY9jQxrE.ttf',
       label: 'Arimo / Sans (Đầy đủ dấu Việt)',
-      cssFallback: '"Segoe UI", Arial, sans-serif',
+      cssFallback: '"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif',
     },
   };
 
@@ -216,7 +216,7 @@
         canonicalKey = 'carlito';
         displayFamily = 'Calibri';
         genericCategory = 'sans';
-        cssFallback = 'Calibri, "Segoe UI", Arial, sans-serif';
+        cssFallback = 'Calibri, "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       } else if (/cambria|caladea/i.test(combo)) {
         canonicalKey = 'caladea';
         displayFamily = 'Cambria';
@@ -236,10 +236,10 @@
         canonicalKey = 'roboto';
         displayFamily = 'Roboto';
         genericCategory = 'sans';
-        cssFallback = 'Roboto, "Segoe UI", Arial, sans-serif';
+        cssFallback = 'Roboto, "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       } else if (/arial|helvetica|arimo|inter|be\s*vietnam|open\s*sans|segoe|tahoma|verdana|sans/i.test(combo)) {
         canonicalKey = 'arimo';
-        displayFamily = /segoe/i.test(combo) ? 'Segoe UI' : /tahoma/i.test(combo) ? 'Tahoma' : /verdana/i.test(combo) ? 'Verdana' : 'Arial';
+        displayFamily = /segoe/i.test(combo) ? 'Be Vietnam Pro' : /tahoma/i.test(combo) ? 'Tahoma' : /verdana/i.test(combo) ? 'Verdana' : 'Arial';
         genericCategory = 'sans';
         cssFallback = 'Arial, Helvetica, sans-serif';
       } else if (styleObj?.fontFamily && /serif/i.test(styleObj.fontFamily) && !/sans/i.test(styleObj.fontFamily)) {
@@ -1250,7 +1250,7 @@
                   <option value="auto" selected>🎯 Tự khớp font gốc (Ưu tiên)</option>
                   <option value='"Times New Roman", Georgia, serif'>Times New Roman</option>
                   <option value='Arial, Helvetica, sans-serif'>Arial / Helvetica</option>
-                  <option value='"Segoe UI", Arial, sans-serif'>Segoe UI / Hiện đại</option>
+                  <option value='"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif'>Segoe UI / Hiện đại</option>
                   <option value='Georgia, "Times New Roman", serif'>Georgia (Sách)</option>
                   <option value='Tahoma, Verdana, sans-serif'>Tahoma / Verdana</option>
                   <option value='"Courier New", Consolas, monospace'>Courier New (Mã số)</option>
@@ -1390,7 +1390,7 @@
               const mx = ((o.x1 + o.x2) / 2) * sc;
               const my = ((o.y1 + o.y2) / 2) * sc - 14;
               ctx.fillStyle = '#0284c7';
-              ctx.font = 'bold 12px "Segoe UI", Arial, sans-serif';
+              ctx.font = 'bold 12px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
               ctx.fillText(o.label, mx, my);
             }
           } else if (o.type === 'ink' && o.points?.length > 1) {
@@ -1410,10 +1410,10 @@
             ctx.lineWidth = 2.5;
             ctx.strokeRect(o.x * sc, o.y * sc, 180 * sc, 42 * sc);
             ctx.fillStyle = o.color || '#dc2626';
-            ctx.font = `900 ${Math.max(10, 12 * sc)}px "Segoe UI", Arial, sans-serif`;
+            ctx.font = `900 ${Math.max(10, 12 * sc)}px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif`;
             ctx.textBaseline = 'top';
             ctx.fillText(o.text, (o.x + 8) * sc, (o.y + 7) * sc);
-            ctx.font = `600 ${Math.max(8, 9 * sc)}px "Segoe UI", Arial, sans-serif`;
+            ctx.font = `600 ${Math.max(8, 9 * sc)}px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif`;
             ctx.fillText(o.subText || '', (o.x + 8) * sc, (o.y + 24) * sc);
             ctx.restore();
           } else if (o.type === 'image' && o._imgEl) {

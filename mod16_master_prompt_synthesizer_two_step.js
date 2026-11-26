@@ -4943,7 +4943,7 @@
 
       const measureCanvas = document.createElement('canvas');
       const mCtx = measureCanvas.getContext('2d');
-      mCtx.font = '21px "Segoe UI", "Roboto", "Arial", sans-serif';
+      mCtx.font = '21px "Be Vietnam Pro", "Roboto", "Arial", sans-serif';
 
       const wrappedLines = [];
       const rawLines = text.split(/\r?\n/);
@@ -4977,7 +4977,7 @@
         ctx.fillRect(0, 0, pageW, pageH);
 
         ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 18px "Segoe UI", "Roboto", "Arial", sans-serif';
+        ctx.font = 'bold 18px "Be Vietnam Pro", "Roboto", "Arial", sans-serif';
         ctx.fillText(`PROMPT TỔNG HỢP (${this.getModeShortLabel(modeKey)}) — Trang ${p + 1}/${totalPages}`, padX, 46);
         ctx.strokeStyle = '#cbd5e1';
         ctx.lineWidth = 2;
@@ -4987,7 +4987,7 @@
         ctx.stroke();
 
         ctx.fillStyle = '#111827';
-        ctx.font = '21px "Segoe UI", "Roboto", "Arial", sans-serif';
+        ctx.font = '21px "Be Vietnam Pro", "Roboto", "Arial", sans-serif';
         const slice = wrappedLines.slice(p * maxLinesPerPage, (p + 1) * maxLinesPerPage);
         slice.forEach((line, idx) => {
           ctx.fillText(line, padX, padY + 24 + idx * lineH);
@@ -5066,7 +5066,7 @@
       const safeTitle = this.escapeHtml(titleText || 'Tài liệu Studio');
       const htmlDoc = `<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8" /><title>${safeTitle}</title><style>
         @page { size: A4; margin: 16mm 14mm; }
-        body { font-family: "Segoe UI", Roboto, Arial, sans-serif; color: #111827; line-height: 1.58; font-size: 13px; margin: 0; padding: 18px; background: #fff; }
+        body { font-family: "Be Vietnam Pro", Roboto, Arial, sans-serif; color: #111827; line-height: 1.58; font-size: 13px; margin: 0; padding: 18px; background: #fff; }
         h1 { font-size: 18px; color: #065f46; border-bottom: 2px solid #10b981; padding-bottom: 6px; margin: 0 0 14px 0; }
         h2 { font-size: 15px; color: #1e3a8a; margin: 18px 0 8px 0; border-left: 4px solid #3b82f6; padding-left: 8px; }
         table { border-collapse: collapse; width: 100%; margin: 10px 0; page-break-inside: auto; font-size: 12px; }

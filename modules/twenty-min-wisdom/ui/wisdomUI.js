@@ -568,6 +568,9 @@
               <button type="button" id="wis20-btn-copy-gemini" class="wis20-btn wis20-btn-gemini flex-1 py-2.5">
                 📋 Tự động sao chép &amp; Mở Gemini
               </button>
+              <button type="button" id="wis20-btn-gemini-api-direct" class="wis20-btn wis20-btn-primary py-2.5">
+                ⚡ Gọi Gemini API Trực Tiếp (1 chạm)
+              </button>
               <button type="button" id="wis20-btn-preview-prompt" class="wis20-btn py-2.5">
                 👁️ Xem trước câu lệnh
               </button>
@@ -925,6 +928,41 @@
       state.customTopic = ev.target.value || '';
     });
     root.querySelector('#wis20-btn-copy-gemini')?.addEventListener('click', () => copyPromptAndOpenGemini());
+    root.querySelector('#wis20-btn-gemini-api-direct')?.addEventListener('click', async () => {
+      const bridge = globalScope.NoirGeminiBridge || NS.geminiBridge;
+      if (!bridge || !state.scanResult) return;
+      const runDirect = async () => {
+        const btn = root.querySelector('#wis20-btn-gemini-api-direct');
+        const origHtml = btn ? btn.innerHTML : '';
+        try {
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = '⏳ Đang gọi Gemini API...';
+          }
+          const promptText = W20.buildGeminiWisdomPrompt(state.scanResult, {
+            focusMode: state.focusMode,
+            customTopic: state.customTopic,
+          });
+          const reply = await bridge.callGeminiText(promptText);
+          state.geminiReplyRaw = reply;
+          const ta = state.hostEl?.querySelector('#wis20-gemini-paste-box');
+          if (ta) ta.value = reply;
+          syncGeminiReplyAndCountdown();
+        } catch (err) {
+          toast('⚠️ ' + (err?.message || err), 'error', 4200);
+        } finally {
+          if (btn && btn.isConnected) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml || '⚡ Gọi Gemini API Trực Tiếp (1 chạm)';
+          }
+        }
+      };
+      if (!bridge.hasApiKey()) {
+        bridge.openApiKeyQuickModal({ onSaved: () => runDirect() });
+        return;
+      }
+      await runDirect();
+    });
     root.querySelector('#wis20-btn-preview-prompt')?.addEventListener('click', () => {
       const box = root.querySelector('#wis20-prompt-preview-box');
       if (!box || !state.scanResult) return;

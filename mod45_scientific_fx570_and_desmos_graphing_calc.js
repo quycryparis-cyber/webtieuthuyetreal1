@@ -2594,7 +2594,7 @@
           box-shadow: 0 18px 42px rgba(0,0,0,0.55), inset 0 2px 3px rgba(255,255,255,0.9), inset 0 -4px 8px rgba(40,48,74,0.28);
           padding: 14px 13px 18px;
           color: #1a202c;
-          font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+          font-family: system-ui, -apple-system, 'Be Vietnam Pro', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR', system-ui, sans-serif;
           user-select: none;
           position: relative;
         }
@@ -2605,21 +2605,21 @@
           padding: 0 4px 2px;
         }
         .fx570-brand-casio {
-          font-weight: 900;
+          font-weight: 700;
           font-size: 16px;
           letter-spacing: 1.5px;
           color: #202534;
         }
         .fx570-brand-model {
           font-style: italic;
-          font-weight: 800;
+          font-weight: 700;
           font-size: 12px;
           color: #3a4566;
         }
         .fx570-vpam {
           text-align: center;
           font-size: 11px;
-          font-weight: 900;
+          font-weight: 700;
           letter-spacing: 1.4px;
           color: #116652;
           margin: 1px 0 7px;
@@ -2651,7 +2651,7 @@
           align-items: center;
           justify-content: space-between;
           font-size: 9px;
-          font-weight: 800;
+          font-weight: 700;
           gap: 4px;
           border-bottom: 1px solid rgba(22,35,25,0.14);
           padding-bottom: 2px;
@@ -2687,7 +2687,7 @@
         @keyframes fx570Blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
         .fx570-lcd-result {
           font-size: 17px;
-          font-weight: 900;
+          font-weight: 700;
           text-align: right;
           color: #0b160e;
           line-height: 1.25;
@@ -2713,7 +2713,7 @@
           justify-content: center;
           gap: 4px;
           font-size: 8.5px;
-          font-weight: 800;
+          font-weight: 700;
           line-height: 10px;
           min-height: 10px;
           white-space: nowrap;
@@ -2738,7 +2738,7 @@
           background: linear-gradient(180deg, #747c99 0%, #505873 100%);
           color: #ffffff;
           font-size: 9.5px;
-          font-weight: 800;
+          font-weight: 700;
           box-shadow: 0 2px 0 #2b3248, inset 0 1px 0 rgba(255,255,255,0.35);
           cursor: pointer;
           transition: transform 0.06s;
@@ -2761,7 +2761,7 @@
           justify-content: center;
           color: #e2e8f0;
           font-size: 8px;
-          font-weight: 900;
+          font-weight: 700;
         }
         .fx570-replay-dir {
           position: absolute;
@@ -2794,7 +2794,7 @@
           background: linear-gradient(180deg, #43495f 0%, #2a2f42 100%);
           color: #f8fafc;
           font-size: 10.5px;
-          font-weight: 800;
+          font-weight: 700;
           box-shadow: 0 2px 0 #181c29, inset 0 1px 0 rgba(255,255,255,0.22);
           cursor: pointer;
           display: flex;
@@ -2819,7 +2819,7 @@
           background: linear-gradient(180deg, #f8fafc 0%, #dce1e9 100%);
           color: #111827;
           font-size: 13.5px;
-          font-weight: 900;
+          font-weight: 700;
           box-shadow: 0 2.5px 0 #646d82, inset 0 1px 0 #ffffff;
           cursor: pointer;
           display: flex;
@@ -2967,7 +2967,7 @@
           border: 1px solid rgba(15,23,42,0.18);
           background: rgba(255,255,255,0.94);
           color: #0f172a;
-          font-weight: 900;
+          font-weight: 700;
           font-size: 15px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.14);
           cursor: pointer;

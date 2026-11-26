@@ -2585,7 +2585,7 @@
   * { box-sizing: border-box; }
   body { margin: 0; padding: 0; font-family: 'Times New Roman', Georgia, serif; font-size: 12.5pt; line-height: 1.65; color: #18181b; background: #fff; }
   .print-bar { position: sticky; top: 0; z-index: 99; background: #18181b; color: #f4f4f5; padding: 10px 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-family: system-ui, sans-serif; font-size: 13px; border-bottom: 2px solid #8b5cf6; }
-  .print-bar button { background: #8b5cf6; color: #fff; border: 0; border-radius: 8px; padding: 7px 14px; font-weight: 800; cursor: pointer; }
+  .print-bar button { background: #8b5cf6; color: #fff; border: 0; border-radius: 8px; padding: 7px 14px; font-weight: 700; cursor: pointer; }
   .doc-wrap { max-width: 820px; margin: 0 auto; padding: 22px 24px 48px; }
   .doc-header { border-bottom: 2px solid #e4e4e7; padding-bottom: 10px; margin-bottom: 18px; }
   .doc-header h1 { margin: 0 0 4px; font-size: 17pt; color: #111827; }
@@ -3883,7 +3883,7 @@
         #v115-word-context-menu .v115-ctx-title {
           padding: 4px 8px 6px;
           font-size: 10px;
-          font-weight: 800;
+          font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
           color: #34d399;

@@ -3409,8 +3409,8 @@
           ? '✅ Đang bật: Luồng phát nền, video mini (Bấm để tắt)'
           : '🎧 Luồng phát nền, video mini';
         toggleBtn.style.cssText = isBgEnabled
-          ? 'width:100%;padding:10px 14px;border-radius:12px;background:linear-gradient(135deg,#059669,#0d9488);color:#ffffff;border:2px solid #6ee7b7;font-weight:900;font-size:12.5px;box-shadow:0 0 14px rgba(16,185,129,0.5);cursor:pointer;'
-          : 'width:100%;padding:10px 14px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#f97316,#e11d48);color:#ffffff;border:2px solid #fde047;font-weight:900;font-size:12.5px;box-shadow:0 0 18px rgba(251,191,36,0.65);cursor:pointer;text-shadow:0 1px 2px rgba(0,0,0,0.45);';
+          ? 'width:100%;padding:10px 14px;border-radius:12px;background:linear-gradient(135deg,#059669,#0d9488);color:#ffffff;border:2px solid #6ee7b7;font-weight: 700;font-size:12.5px;box-shadow:0 0 14px rgba(16,185,129,0.5);cursor:pointer;'
+          : 'width:100%;padding:10px 14px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#f97316,#e11d48);color:#ffffff;border:2px solid #fde047;font-weight: 700;font-size:12.5px;box-shadow:0 0 18px rgba(251,191,36,0.65);cursor:pointer;text-shadow:0 1px 2px rgba(0,0,0,0.45);';
       }
       if (miniLaunchBtn) {
         miniLaunchBtn.disabled = !isStreamReady;
@@ -3418,8 +3418,8 @@
           ? '✅ Bấm vào đây để bật video mini, phát nền đã sẵn sàng'
           : '📺 Xem video mini và phát nền: Tắt';
         miniLaunchBtn.style.cssText = isStreamReady
-          ? 'width:100%;padding:10px 14px;border-radius:12px;background:linear-gradient(135deg,#0284c7,#10b981);color:#ffffff;border:2px solid #6ee7b7;font-weight:900;font-size:12.5px;box-shadow:0 0 18px rgba(14,165,233,0.6);cursor:pointer;'
-          : 'width:100%;padding:9px 14px;border-radius:12px;background:rgba(39,39,42,0.92);color:#a1a1aa;border:1px solid rgba(113,113,122,0.5);font-weight:800;font-size:12px;cursor:not-allowed;';
+          ? 'width:100%;padding:10px 14px;border-radius:12px;background:linear-gradient(135deg,#0284c7,#10b981);color:#ffffff;border:2px solid #6ee7b7;font-weight: 700;font-size:12.5px;box-shadow:0 0 18px rgba(14,165,233,0.6);cursor:pointer;'
+          : 'width:100%;padding:9px 14px;border-radius:12px;background:rgba(39,39,42,0.92);color:#a1a1aa;border:1px solid rgba(113,113,122,0.5);font-weight: 700;font-size:12px;cursor:not-allowed;';
       }
       if (statusTxt) {
         statusTxt.innerHTML = isStreamReady
@@ -3445,11 +3445,11 @@
       box.style.cssText = 'position:fixed;right:8px;bottom:76px;z-index:2147483560;width:min(336px,calc(100vw - 16px));max-width:calc(100vw - 16px);border-radius:16px;overflow:hidden;border:2px solid #38bdf8;background:#09090b;color:#f4f4f5;box-shadow:0 10px 28px rgba(0,0,0,0.68);font-family:system-ui,-apple-system,sans-serif;transform:translate3d(0,0,0);will-change:transform;contain:layout style paint;';
       box.innerHTML = `
         <div id="mod39-mmini-header" style="display:flex;align-items:center;justify-content:space-between;gap:4px;padding:6px 8px;background:#18181b;border-bottom:1px solid #27272a;cursor:grab;touch-action:none;">
-          <span style="font-size:11px;font-weight:900;color:#6ee7b7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🎬 Video Mini</span>
+          <span style="font-size:11px;font-weight: 700;color:#6ee7b7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🎬 Video Mini</span>
           <div style="display:flex;gap:4px;align-items:center;shrink:0;">
-            <button type="button" id="btn-mmini-os-pip" title="Bật cửa sổ nổi hệ thống để thoát ra màn hình chính vẫn xem được" style="padding:3px 7px;border-radius:8px;border:1px solid #38bdf8;background:linear-gradient(135deg,#0284c7,#0d9488);color:#fff;font-size:10px;font-weight:900;cursor:pointer;">📱 Nổi ngoài App</button>
-            <button type="button" id="btn-mmini-goto-tab5" style="padding:3px 6px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#e4e4e7;font-size:10px;font-weight:800;cursor:pointer;">↗️ Tab 5</button>
-            <button type="button" id="btn-mmini-close" style="padding:3px 8px;border-radius:8px;border:0;background:#e11d48;color:#fff;font-size:11px;font-weight:900;cursor:pointer;">✕</button>
+            <button type="button" id="btn-mmini-os-pip" title="Bật cửa sổ nổi hệ thống để thoát ra màn hình chính vẫn xem được" style="padding:3px 7px;border-radius:8px;border:1px solid #38bdf8;background:linear-gradient(135deg,#0284c7,#0d9488);color:#fff;font-size:10px;font-weight: 700;cursor:pointer;">📱 Nổi ngoài App</button>
+            <button type="button" id="btn-mmini-goto-tab5" style="padding:3px 6px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#e4e4e7;font-size:10px;font-weight: 700;cursor:pointer;">↗️ Tab 5</button>
+            <button type="button" id="btn-mmini-close" style="padding:3px 8px;border-radius:8px;border:0;background:#e11d48;color:#fff;font-size:11px;font-weight: 700;cursor:pointer;">✕</button>
           </div>
         </div>
         <div id="mod39-mmini-video-slot" style="width:100%;aspect-ratio:16/9;background:#000;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;"></div>
@@ -3460,24 +3460,24 @@
             <span id="mmini-dur" style="font-family:monospace;font-size:10.5px;color:#a1a1aa;min-width:36px;text-align:right;">00:00</span>
           </div>
           <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px;">
-            <button type="button" id="btn-mmini-rew10" style="padding:5px 8px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#fff;font-size:11px;font-weight:800;cursor:pointer;">⏪ -10s</button>
-            <button type="button" id="btn-mmini-play" style="padding:5px 11px;border-radius:8px;border:0;background:#e11d48;color:#fff;font-size:11px;font-weight:900;cursor:pointer;">⏯️ Phát/Dừng</button>
-            <button type="button" id="btn-mmini-fwd10" style="padding:5px 8px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#fff;font-size:11px;font-weight:800;cursor:pointer;">+10s ⏩</button>
-            <button type="button" id="btn-mmini-loop" style="padding:5px 7px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#e4e4e7;font-size:11px;font-weight:800;cursor:pointer;">🔁 Lặp</button>
-            <button type="button" id="btn-mmini-ab-toggle" style="padding:5px 7px;border-radius:8px;border:1px solid #f59e0b;background:#27272a;color:#fde047;font-size:10.5px;font-weight:900;cursor:pointer;">A–B ▾</button>
+            <button type="button" id="btn-mmini-rew10" style="padding:5px 8px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#fff;font-size:11px;font-weight: 700;cursor:pointer;">⏪ -10s</button>
+            <button type="button" id="btn-mmini-play" style="padding:5px 11px;border-radius:8px;border:0;background:#e11d48;color:#fff;font-size:11px;font-weight: 700;cursor:pointer;">⏯️ Phát/Dừng</button>
+            <button type="button" id="btn-mmini-fwd10" style="padding:5px 8px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#fff;font-size:11px;font-weight: 700;cursor:pointer;">+10s ⏩</button>
+            <button type="button" id="btn-mmini-loop" style="padding:5px 7px;border-radius:8px;border:1px solid #3f3f46;background:#27272a;color:#e4e4e7;font-size:11px;font-weight: 700;cursor:pointer;">🔁 Lặp</button>
+            <button type="button" id="btn-mmini-ab-toggle" style="padding:5px 7px;border-radius:8px;border:1px solid #f59e0b;background:#27272a;color:#fde047;font-size:10.5px;font-weight: 700;cursor:pointer;">A–B ▾</button>
           </div>
           <div id="mmini-ab-row" style="display:none;flex-direction:column;gap:5px;padding-top:6px;border-top:1px dashed #27272a;">
             <div style="display:flex;align-items:center;gap:4px;">
-              <span style="font-size:10px;font-weight:900;color:#fde047;">🅰️</span>
-              <input id="inp-mmini-ab-a" type="text" inputmode="numeric" placeholder="00:00" autocomplete="off" style="flex:1;min-width:0;padding:4px 6px;border-radius:7px;border:1px solid #facc15;background:#18181b;color:#fef08a;font-family:monospace;font-size:12px;font-weight:900;text-align:center;" />
-              <button type="button" id="btn-mmini-ab-a" title="Lấy giây hiện tại làm Mốc A" style="padding:4px 6px;border-radius:7px;border:1px solid #facc15;background:#27272a;color:#fde047;font-size:10px;font-weight:900;cursor:pointer;">📍A</button>
-              <span style="font-size:10px;font-weight:900;color:#38bdf8;">🅱️</span>
-              <input id="inp-mmini-ab-b" type="text" inputmode="numeric" placeholder="00:00" autocomplete="off" style="flex:1;min-width:0;padding:4px 6px;border-radius:7px;border:1px solid #38bdf8;background:#18181b;color:#bae6fd;font-family:monospace;font-size:12px;font-weight:900;text-align:center;" />
-              <button type="button" id="btn-mmini-ab-b" title="Lấy giây hiện tại làm Mốc B" style="padding:4px 6px;border-radius:7px;border:1px solid #38bdf8;background:#27272a;color:#38bdf8;font-size:10px;font-weight:900;cursor:pointer;">📍B</button>
+              <span style="font-size:10px;font-weight: 700;color:#fde047;">🅰️</span>
+              <input id="inp-mmini-ab-a" type="text" inputmode="numeric" placeholder="00:00" autocomplete="off" style="flex:1;min-width:0;padding:4px 6px;border-radius:7px;border:1px solid #facc15;background:#18181b;color:#fef08a;font-family:monospace;font-size:12px;font-weight: 700;text-align:center;" />
+              <button type="button" id="btn-mmini-ab-a" title="Lấy giây hiện tại làm Mốc A" style="padding:4px 6px;border-radius:7px;border:1px solid #facc15;background:#27272a;color:#fde047;font-size:10px;font-weight: 700;cursor:pointer;">📍A</button>
+              <span style="font-size:10px;font-weight: 700;color:#38bdf8;">🅱️</span>
+              <input id="inp-mmini-ab-b" type="text" inputmode="numeric" placeholder="00:00" autocomplete="off" style="flex:1;min-width:0;padding:4px 6px;border-radius:7px;border:1px solid #38bdf8;background:#18181b;color:#bae6fd;font-family:monospace;font-size:12px;font-weight: 700;text-align:center;" />
+              <button type="button" id="btn-mmini-ab-b" title="Lấy giây hiện tại làm Mốc B" style="padding:4px 6px;border-radius:7px;border:1px solid #38bdf8;background:#27272a;color:#38bdf8;font-size:10px;font-weight: 700;cursor:pointer;">📍B</button>
             </div>
             <div style="display:flex;align-items:center;gap:5px;">
-              <button type="button" id="btn-mmini-ab-apply" style="flex:1;padding:5px 8px;border-radius:8px;border:0;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;font-size:10.5px;font-weight:900;cursor:pointer;">✅ Áp dụng &amp; Bật Lặp A–B</button>
-              <button type="button" id="btn-mmini-ab-clr" style="padding:5px 9px;border-radius:8px;border:1px solid #f87171;background:#3f1d24;color:#fecaca;font-size:10.5px;font-weight:900;cursor:pointer;" title="Tắt Lặp A-B">✕ Tắt</button>
+              <button type="button" id="btn-mmini-ab-apply" style="flex:1;padding:5px 8px;border-radius:8px;border:0;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;font-size:10.5px;font-weight: 700;cursor:pointer;">✅ Áp dụng &amp; Bật Lặp A–B</button>
+              <button type="button" id="btn-mmini-ab-clr" style="padding:5px 9px;border-radius:8px;border:1px solid #f87171;background:#3f1d24;color:#fecaca;font-size:10.5px;font-weight: 700;cursor:pointer;" title="Tắt Lặp A-B">✕ Tắt</button>
             </div>
           </div>
         </div>
@@ -3508,13 +3508,13 @@
           const ph = document.createElement('div');
           ph.id = 'mod39-mmini-stage-placeholder';
           ph.style.cssText = 'position:absolute;inset:0;z-index:16;background:rgba(9,9,11,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:14px;text-align:center;';
-          ph.innerHTML = '<div style="font-size:24px;">🎬</div><div style="font-size:12.5px;font-weight:900;color:#6ee7b7;">Video đang phát ở Khung Video Mini nổi</div><button type="button" id="btn-mmini-return-stage" style="padding:6px 12px;border-radius:10px;border:0;background:#e11d48;color:#fff;font-size:11.5px;font-weight:900;cursor:pointer;">↩️ Trả video về khung chính</button>';
+          ph.innerHTML = '<div style="font-size:24px;">🎬</div><div style="font-size:12.5px;font-weight: 700;color:#6ee7b7;">Video đang phát ở Khung Video Mini nổi</div><button type="button" id="btn-mmini-return-stage" style="padding:6px 12px;border-radius:10px;border:0;background:#e11d48;color:#fff;font-size:11.5px;font-weight: 700;cursor:pointer;">↩️ Trả video về khung chính</button>';
           mainStageWrap.appendChild(ph);
           ph.querySelector('#btn-mmini-return-stage')?.addEventListener('click', () => this.closeMobileFloatingMiniPlayer());
         }
       } else if (slot) {
         const thumb = ctrl?.activeVideo?.thumbnailUrl || '';
-        slot.innerHTML = `${thumb ? `<img src="${escapeHtml(thumb)}" style="width:100%;height:100%;object-fit:cover;opacity:0.65;" />` : ''}<div style="position:absolute;font-size:12px;font-weight:900;color:#6ee7b7;background:rgba(0,0,0,0.65);padding:4px 10px;border-radius:999px;">🎧 Đang phát Audio nền</div>`;
+        slot.innerHTML = `${thumb ? `<img src="${escapeHtml(thumb)}" style="width:100%;height:100%;object-fit:cover;opacity:0.65;" />` : ''}<div style="position:absolute;font-size:12px;font-weight: 700;color:#6ee7b7;background:rgba(0,0,0,0.65);padding:4px 10px;border-radius:999px;">🎧 Đang phát Audio nền</div>`;
       }
 
       // Kéo thả khung mini mượt mà bằng cảm ứng trên Mobile
@@ -6074,13 +6074,13 @@
             <span id="${prefix}-ab-badge" style="font-size:10px;color:#34d399;font-weight:700;margin-left:auto;"></span>
           </div>
           <div style="display:flex;align-items:center;gap:4px;margin-top:5px;padding-top:5px;border-top:1px dashed #27272a;">
-            <span style="font-size:10px;font-weight:900;color:#fde047;">🅰️</span>
-            <input id="${prefix}-ab-a-inp" type="text" inputmode="numeric" placeholder="00:00" autocomplete="off" title="Nhập Mốc A (gõ 2 chữ số tự nhảy sang 2 chữ số tiếp theo)" style="width:64px;padding:2px 5px;border-radius:6px;border:1px solid #facc15;background:#18181b;color:#fef08a;font-family:monospace;font-size:11px;font-weight:900;text-align:center;" />
-            <button id="${prefix}-ab-a-btn" type="button" title="Lấy giây hiện tại làm Mốc A" style="background:#27272a;color:#fde047;border:1px solid #facc15;border-radius:6px;padding:2px 5px;font-size:10px;font-weight:800;cursor:pointer;">📍A</button>
-            <span style="font-size:10px;font-weight:900;color:#38bdf8;">🅱️</span>
-            <input id="${prefix}-ab-b-inp" type="text" inputmode="numeric" placeholder="00:00" autocomplete="off" title="Nhập Mốc B (gõ 2 chữ số tự nhảy sang 2 chữ số tiếp theo)" style="width:64px;padding:2px 5px;border-radius:6px;border:1px solid #38bdf8;background:#18181b;color:#bae6fd;font-family:monospace;font-size:11px;font-weight:900;text-align:center;" />
-            <button id="${prefix}-ab-b-btn" type="button" title="Lấy giây hiện tại làm Mốc B" style="background:#27272a;color:#38bdf8;border:1px solid #38bdf8;border-radius:6px;padding:2px 5px;font-size:10px;font-weight:800;cursor:pointer;">📍B</button>
-            <button id="${prefix}-ab-apply-btn" type="button" style="background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:0;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:900;cursor:pointer;margin-left:auto;">✅ Áp dụng</button>
+            <span style="font-size:10px;font-weight: 700;color:#fde047;">🅰️</span>
+            <input id="${prefix}-ab-a-inp" type="text" inputmode="numeric" placeholder="00:00" autocomplete="off" title="Nhập Mốc A (gõ 2 chữ số tự nhảy sang 2 chữ số tiếp theo)" style="width:64px;padding:2px 5px;border-radius:6px;border:1px solid #facc15;background:#18181b;color:#fef08a;font-family:monospace;font-size:11px;font-weight: 700;text-align:center;" />
+            <button id="${prefix}-ab-a-btn" type="button" title="Lấy giây hiện tại làm Mốc A" style="background:#27272a;color:#fde047;border:1px solid #facc15;border-radius:6px;padding:2px 5px;font-size:10px;font-weight: 700;cursor:pointer;">📍A</button>
+            <span style="font-size:10px;font-weight: 700;color:#38bdf8;">🅱️</span>
+            <input id="${prefix}-ab-b-inp" type="text" inputmode="numeric" placeholder="00:00" autocomplete="off" title="Nhập Mốc B (gõ 2 chữ số tự nhảy sang 2 chữ số tiếp theo)" style="width:64px;padding:2px 5px;border-radius:6px;border:1px solid #38bdf8;background:#18181b;color:#bae6fd;font-family:monospace;font-size:11px;font-weight: 700;text-align:center;" />
+            <button id="${prefix}-ab-b-btn" type="button" title="Lấy giây hiện tại làm Mốc B" style="background:#27272a;color:#38bdf8;border:1px solid #38bdf8;border-radius:6px;padding:2px 5px;font-size:10px;font-weight: 700;cursor:pointer;">📍B</button>
+            <button id="${prefix}-ab-apply-btn" type="button" style="background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:0;border-radius:6px;padding:2px 8px;font-size:10px;font-weight: 700;cursor:pointer;margin-left:auto;">✅ Áp dụng</button>
           </div>
         </div>
       `;
@@ -10368,13 +10368,13 @@
                 <button
                   type="button"
                   id="btn-mod39-reenable-auto-probe"
-                  style="width:100%;padding:10px 14px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#f97316,#e11d48);color:#ffffff;border:2px solid #fde047;font-weight:900;font-size:12.5px;box-shadow:0 0 18px rgba(251,191,36,0.65);cursor:pointer;text-shadow:0 1px 2px rgba(0,0,0,0.45);"
+                  style="width:100%;padding:10px 14px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#f97316,#e11d48);color:#ffffff;border:2px solid #fde047;font-weight: 700;font-size:12.5px;box-shadow:0 0 18px rgba(251,191,36,0.65);cursor:pointer;text-shadow:0 1px 2px rgba(0,0,0,0.45);"
                 >🎧 Luồng phát nền, video mini</button>
                 <button
                   type="button"
                   id="btn-mod39-mobile-mini-launch"
                   disabled
-                  style="width:100%;padding:9px 14px;border-radius:12px;background:rgba(39,39,42,0.92);color:#a1a1aa;border:1px solid rgba(113,113,122,0.5);font-weight:800;font-size:12px;cursor:not-allowed;"
+                  style="width:100%;padding:9px 14px;border-radius:12px;background:rgba(39,39,42,0.92);color:#a1a1aa;border:1px solid rgba(113,113,122,0.5);font-weight: 700;font-size:12px;cursor:not-allowed;"
                 >📺 Xem video mini và phát nền: Tắt</button>
                 <span id="mod39-mobile-bg-mode-hint" class="text-[11px] text-zinc-300 leading-snug">📺 Đang xem <strong>YouTube No-Cookie</strong> mặc định — Bấm nút sáng trên nếu muốn bật luồng phát nền &amp; video mini.</span>
               </div>

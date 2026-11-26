@@ -464,9 +464,14 @@
                 <input type="radio" name="inv-prompt-mode" value="plain" ${prefs.promptMode === 'plain' ? 'checked' : ''} /> 📘 Tóm gọn
               </label>
             </div>
-            <button type="button" id="inv-btn-gemini-split" class="inv-gemini-btn">
-              🪟 Tự động sao chép &amp; Chia đôi màn hình với Gemini
-            </button>
+            <div class="flex flex-wrap items-center justify-center gap-2">
+              <button type="button" id="inv-btn-gemini-split" class="inv-gemini-btn">
+                🪟 Tự động sao chép &amp; Chia đôi màn hình với Gemini
+              </button>
+              <button type="button" id="inv-btn-gemini-api-direct" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white text-xs sm:text-sm font-bold shadow-lg cursor-pointer transition">
+                ⚡ Gọi Gemini API Trực Tiếp (1 chạm)
+              </button>
+            </div>
             <span class="text-[11px] text-zinc-500 dark:text-zinc-400 max-w-xl">
               100% miễn phí — câu lệnh yêu cầu Gemini trả lời dễ hiểu kèm khối cấu trúc chuẩn <code>INVEST_INTEL_SYNC_V2</code> để Web đọc hiểu &amp; vẽ trọn bộ 6 biểu đồ chuyên nghiệp!
             </span>
@@ -2466,6 +2471,42 @@
         mode: prefs.promptMode || 'plain',
         anonymize: uiState.anonymizeGemini,
       });
+    });
+
+    host.querySelector('#inv-btn-gemini-api-direct')?.addEventListener('click', async () => {
+      const bridge = globalScope.NoirGeminiBridge || NS.geminiBridge;
+      if (!bridge) return;
+      const runDirect = async () => {
+        const btn = host.querySelector('#inv-btn-gemini-api-direct');
+        const origHtml = btn ? btn.innerHTML : '';
+        try {
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = '⏳ Đang gọi Gemini API...';
+          }
+          const prefs = INV.storageAdapter.getPrefs();
+          const promptText = INV.promptComposer.buildGeminiPrompt({
+            mode: prefs.promptMode || 'veteran30',
+            anonymize: uiState.anonymizeGemini,
+          });
+          const reply = await bridge.callGeminiText(promptText);
+          const ovTa = host.querySelector('#inv-inp-gemini-paste-ov');
+          if (ovTa) ovTa.value = reply;
+          handleSyncGeminiReply(reply, true);
+        } catch (err) {
+          NS.utils?.showToast?.('⚠️ ' + (err?.message || err), 'error', 4200);
+        } finally {
+          if (btn && btn.isConnected) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml || '⚡ Gọi Gemini API Trực Tiếp (1 chạm)';
+          }
+        }
+      };
+      if (!bridge.hasApiKey()) {
+        bridge.openApiKeyQuickModal({ onSaved: () => runDirect() });
+        return;
+      }
+      await runDirect();
     });
 
     host.querySelector('#inv-btn-save-audit')?.addEventListener('click', async () => {

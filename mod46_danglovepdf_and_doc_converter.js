@@ -252,7 +252,7 @@
   }
 
   const WORD_FONT_OPTIONS = [
-    { label: 'Segoe UI / Hiện đại (Không chân)', value: '"Segoe UI", Arial, sans-serif' },
+    { label: 'Segoe UI / Hiện đại (Không chân)', value: '"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif' },
     { label: 'Times New Roman (Hành chính / Sách)', value: '"Times New Roman", Georgia, serif' },
     { label: 'Arial / Helvetica (Rõ nét)', value: 'Arial, Helvetica, sans-serif' },
     { label: 'Georgia (Văn học / Cổ điển)', value: 'Georgia, "Times New Roman", serif' },
@@ -318,7 +318,7 @@
    * Vẽ chuỗi chữ tiếng Việt (Unicode 100% không vỡ dấu!) thành ảnh PNG trong suốt
    * hỗ trợ đầy đủ định dạng kiểu Word: Font, Cỡ chữ, Màu, Đậm, Nghiêng, Gạch chân, Căn lề, Nền.
    */
-  function renderVietnameseTextToPngBytes(text, { fontSize = 28, color = '#111827', fontFamily = 'Segoe UI, Noto Sans, Arial, sans-serif', bold = false, italic = false, underline = false, align = 'left', bgColor = '', padX = 12, padY = 8 } = {}) {
+  function renderVietnameseTextToPngBytes(text, { fontSize = 28, color = '#111827', fontFamily = '"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", sans-serif', bold = false, italic = false, underline = false, align = 'left', bgColor = '', padX = 12, padY = 8 } = {}) {
     const scale = 2;
     const tmpCanvas = document.createElement('canvas');
     const tmpCtx = tmpCanvas.getContext('2d');
@@ -387,7 +387,7 @@
     const marginTop = 100;
     const marginBottom = 100;
     const maxTextW = pxW - marginX * 2;
-    const fam = styleOpts.fontFamily || '"Segoe UI", "Noto Sans", Arial, sans-serif';
+    const fam = styleOpts.fontFamily || '"Be Vietnam Pro", "Noto Sans", Arial, sans-serif';
     const bodyPx = Math.round(Math.max(16, Math.min(54, (Number(styleOpts.fontSize) || 14) * 1.9)));
     const headPx = Math.round(bodyPx * 1.28);
     const bodyColor = styleOpts.color || '#18181b';
@@ -465,7 +465,7 @@
         y += item.isHeading ? lineH + 10 : lineH;
       }
       ctx.fillStyle = '#71717a';
-      ctx.font = '400 20px "Segoe UI", Arial, sans-serif';
+      ctx.font = '400 20px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       ctx.fillText(`Trang ${p + 1} / ${totalPages}`, pxW - marginX - 130, pxH - 52);
 
       const jpegUrl = canvas.toDataURL('image/jpeg', 0.9);
@@ -584,6 +584,8 @@
       this.resultItems = [];
       this.resultZipItem = null;
       this.theme10ExtraImages = [];
+      this.theme10OverrideBlocks = null;
+      this._theme10AnalyzedCache = null;
       this.cancelled = false;
       this.revokeAllUrls();
     }
@@ -1098,6 +1100,49 @@
 
       // MÀN HÌNH 2: CHƯA CÓ FILE -> KHUNG KÉO THẢ LỚN DỄ DÙNG (trừ công cụ Tạo mới không cần nạp file)
       if (!this.files.length && !tool.noFileRequired) {
+        const isTheme10 = tool.id === 'beautify_10_themes' || tool.id === 'theme_report';
+        const inputTab = isTheme10 ? (this.theme10InputTab || 'upload') : 'upload';
+        const geminiBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        const hasGKey = Boolean(geminiBridge?.hasApiKey?.());
+
+        const aiHelperBarHtml = isTheme10
+          ? `<div id="mod46-ai-helper-bar" class="rounded-2xl border border-cyan-500/35 bg-zinc-900/85 p-3 flex flex-wrap items-center justify-between gap-2">
+               <div class="flex flex-wrap items-center gap-2">
+                 <button type="button" id="btn-mod46-copy-std-prompt" class="px-3 py-1.5 rounded-xl bg-amber-600/25 hover:bg-amber-600/40 border border-amber-400/50 text-amber-200 text-xs font-bold cursor-pointer transition">📋 Prompt chỉnh tiêu đề chuẩn</button>
+                 <button type="button" id="btn-mod46-view-std-prompt" class="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-bold cursor-pointer transition">👁️ Xem Prompt</button>
+               </div>
+               <button type="button" id="btn-mod46-gemini-key-pill" class="px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition ${hasGKey ? 'border-emerald-500/50 bg-emerald-950/40 text-emerald-300' : 'border-cyan-500/45 bg-cyan-950/35 text-cyan-200'}">
+                 ${hasGKey ? '✅ Gemini API Key (Đã đồng bộ)' : '🔑 Gắn API Key (Tùy chọn)'}
+               </button>
+             </div>
+             <div class="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-zinc-900 border border-zinc-800">
+               <button type="button" id="btn-mod46-tab-upload" class="py-2 px-3 rounded-xl text-xs sm:text-sm font-bold cursor-pointer transition ${inputTab === 'upload' ? 'bg-rose-600 text-white shadow' : 'text-zinc-300 hover:bg-zinc-800'}">📂 Tải File (DOCX / XLSX / PDF)</button>
+               <button type="button" id="btn-mod46-tab-paste-ai" class="py-2 px-3 rounded-xl text-xs sm:text-sm font-bold cursor-pointer transition ${inputTab === 'paste_ai' ? 'bg-emerald-600 text-white shadow' : 'text-zinc-300 hover:bg-zinc-800'}">📋 Dán Văn Bản Từ AI (Markdown / LaTeX)</button>
+             </div>`
+          : '';
+
+        const pasteAiPanelHtml = isTheme10 && inputTab === 'paste_ai'
+          ? `<div id="mod46-ai-paste-panel" class="rounded-3xl border-2 border-emerald-500/45 bg-zinc-900/80 p-4 sm:p-6 space-y-3">
+               <div class="flex flex-wrap items-center justify-between gap-2">
+                 <div class="text-sm font-bold text-emerald-300">✨ Dán trực tiếp kết quả Markdown / LaTeX từ Gemini Web hoặc ChatGPT</div>
+                 <div class="flex flex-wrap items-center gap-1.5">
+                   <button type="button" id="btn-mod46-ai-paste-clip" class="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold cursor-pointer">📋 Dán từ Clipboard</button>
+                   <a id="btn-mod46-open-gemini-web" href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold">🚀 Mở Gemini</a>
+                 </div>
+               </div>
+               <div id="mod46-ai-focus-return-banner" class="hidden px-3 py-2 rounded-xl border border-amber-400/60 bg-amber-950/35 text-xs text-amber-200 flex items-center justify-between gap-2">
+                 <span>✨ Bạn vừa quay lại từ Gemini! Bấm vào đây để dán nhanh kết quả từ Clipboard:</span>
+                 <button type="button" id="btn-mod46-focus-quick-paste" class="px-2.5 py-1 rounded-lg bg-amber-500 text-zinc-950 font-bold cursor-pointer">Dán nhanh ngay</button>
+               </div>
+               <input id="input-mod46-ai-doc-title" type="text" value="${escHtml(this.theme10AiDocTitle || 'Bao_Cao_Tu_AI')}" placeholder="Tên tài liệu (ví dụ: Bao_Cao_Tai_Chinh_2026)" class="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-700 text-zinc-100 text-xs font-bold" />
+               <textarea id="textarea-mod46-ai-markdown" rows="9" placeholder="# CHƯƠNG 1. MỞ ĐẦU&#10;&#10;Giá cổ phiếu $28.40 đạt mục tiêu $70tr...&#10;&#10;$$V_{op} = \\sum \\frac{FCF_t}{(1+WACC)^t}$$&#10;&#10;**Bảng 1: Tổng hợp**&#10;| Chỉ tiêu | Giá trị |&#10;| :--- | ---: |&#10;| Doanh thu | 1.250 tỷ |" class="w-full p-3 rounded-2xl bg-zinc-950 border border-zinc-700 text-zinc-100 text-xs font-mono leading-relaxed">${escHtml(this.theme10AiDraftMd || '')}</textarea>
+               <div class="flex flex-wrap items-center justify-between gap-2">
+                 <span class="text-[11px] text-zinc-400">Hỗ trợ giữ nguyên tiền tệ ($28.40, $70tr), công thức LaTeX ($...$, $$...$$) và bảng GFM có Nguồn.</span>
+                 <button type="button" id="btn-mod46-ingest-ai-markdown" class="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold shadow-lg cursor-pointer">✨ Nạp văn bản &amp; Chuyển sang Cấu hình Báo Cáo</button>
+               </div>
+             </div>`
+          : '';
+
         body.innerHTML = `
           <div class="max-w-3xl mx-auto py-4 space-y-4">
             <div class="text-center space-y-1.5">
@@ -1107,8 +1152,10 @@
             </div>
 
             ${themeHeadingNoticeHtml}
+            ${aiHelperBarHtml}
+            ${pasteAiPanelHtml}
 
-            <div id="mod46-dropzone" class="rounded-3xl border-2 border-dashed border-rose-400/60 hover:border-rose-300 bg-zinc-900/70 p-8 sm:p-12 text-center space-y-4 transition cursor-pointer">
+            <div id="mod46-dropzone" class="${inputTab === 'paste_ai' ? 'hidden ' : ''}rounded-3xl border-2 border-dashed border-rose-400/60 hover:border-rose-300 bg-zinc-900/70 p-8 sm:p-12 text-center space-y-4 transition cursor-pointer">
               <div class="text-5xl">📂</div>
               <div class="text-sm sm:text-base font-extrabold text-zinc-200">Kéo thả tệp vào đây hoặc bấm nút bên dưới</div>
               <div>
@@ -1121,6 +1168,72 @@
             </div>
           </div>
         `;
+        if (isTheme10) {
+          body.querySelector('#btn-mod46-copy-std-prompt')?.addEventListener('click', () => geminiBridge?.copyStandardPrompt?.());
+          body.querySelector('#btn-mod46-view-std-prompt')?.addEventListener('click', () => geminiBridge?.openPromptPreviewModal?.());
+          body.querySelector('#btn-mod46-gemini-key-pill')?.addEventListener('click', () => {
+            geminiBridge?.openApiKeyQuickModal?.({ onSaved: () => this.renderUploadOrWorkspaceScreen() });
+          });
+          body.querySelector('#btn-mod46-tab-upload')?.addEventListener('click', () => {
+            this.theme10InputTab = 'upload';
+            this.renderUploadOrWorkspaceScreen();
+          });
+          body.querySelector('#btn-mod46-tab-paste-ai')?.addEventListener('click', () => {
+            this.theme10InputTab = 'paste_ai';
+            this.renderUploadOrWorkspaceScreen();
+          });
+          const mdTa = body.querySelector('#textarea-mod46-ai-markdown');
+          const titleInp = body.querySelector('#input-mod46-ai-doc-title');
+          mdTa?.addEventListener('input', () => { this.theme10AiDraftMd = mdTa.value; });
+          titleInp?.addEventListener('input', () => { this.theme10AiDocTitle = titleInp.value; });
+          const doPasteFromClip = async () => {
+            try {
+              const clip = await global.navigator?.clipboard?.readText?.();
+              if (clip && mdTa) {
+                mdTa.value = clip;
+                this.theme10AiDraftMd = clip;
+                this.toast('✅ Đã dán văn bản từ Clipboard!', 'success', 2400);
+              } else {
+                this.toast('ℹ️ Trình duyệt không cho đọc tự động — hãy bấm Ctrl+V hoặc chạm giữ -> Dán vào khung.', 'info', 2800);
+                mdTa?.focus();
+              }
+            } catch (_eClip) {
+              this.toast('ℹ️ Hãy bấm Ctrl+V hoặc chạm giữ -> Dán trực tiếp vào khung văn bản.', 'info', 2800);
+              mdTa?.focus();
+            }
+          };
+          body.querySelector('#btn-mod46-ai-paste-clip')?.addEventListener('click', doPasteFromClip);
+          body.querySelector('#btn-mod46-focus-quick-paste')?.addEventListener('click', doPasteFromClip);
+          body.querySelector('#btn-mod46-open-gemini-web')?.addEventListener('click', () => {
+            const unwatch = geminiBridge?.watchClipboardReturn?.(() => {
+              const bnr = document.getElementById('mod46-ai-focus-return-banner');
+              if (bnr) bnr.classList.remove('hidden');
+              unwatch?.();
+            });
+          });
+          body.querySelector('#btn-mod46-ingest-ai-markdown')?.addEventListener('click', () => {
+            const rawMd = String(mdTa?.value || '').trim();
+            if (!rawMd || rawMd.length < 10) {
+              this.toast('⚠️ Vui lòng dán nội dung Markdown / văn bản từ AI trước khi tiếp tục.', 'warning', 3000);
+              mdTa?.focus();
+              return;
+            }
+            const cleanTitle = String(titleInp?.value || 'Bao_Cao_Tu_AI').trim().replace(/[\\/:*?"<>|]/g, '_') || 'Bao_Cao_Tu_AI';
+            const bytes = new TextEncoder().encode(rawMd);
+            this.resetWorkspaceState();
+            this.files = [{
+              id: `ai_md_${Date.now()}`,
+              name: `${cleanTitle}.md`,
+              size: bytes.byteLength,
+              bytes,
+              text: rawMd,
+              ext: 'md',
+              pageCount: 1,
+              thumbUrl: '',
+            }];
+            this.renderUploadOrWorkspaceScreen();
+          });
+        }
         const picker = body.querySelector('#input-mod46-file-picker');
         const dz = body.querySelector('#mod46-dropzone');
         body.querySelector('#btn-mod46-select-files')?.addEventListener('click', (ev) => {
@@ -1176,6 +1289,7 @@
               </div>
 
               <div id="mod46-preview-area">${this.buildPreviewAreaHtml()}</div>
+              <div id="mod46-v2-toc-and-vision-host" class="hidden pt-2 border-t border-zinc-800 space-y-3"></div>
               <div id="mod46-fullpages-preview-host" class="hidden pt-2 border-t border-zinc-800 space-y-2"></div>
             </div>
 
@@ -1475,7 +1589,7 @@
           <label class="block space-y-1"><span class="font-bold">Hoặc tải Logo ảnh PNG/JPG (ưu tiên nếu có):</span>
             <input id="opt-wm-logo-file" type="file" accept="image/png,image/jpeg,image/webp" class="w-full text-[11px] text-zinc-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:bg-zinc-800 file:text-zinc-100" />
           </label>
-          ${buildWordStyleBarHtml('wm', { fontSize: 38, color: '#e11d48', fontFamily: '"Segoe UI", Arial, sans-serif', bold: true, showAngle: true, angle: 35 })}
+          ${buildWordStyleBarHtml('wm', { fontSize: 38, color: '#e11d48', fontFamily: '"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif', bold: true, showAngle: true, angle: 35 })}
           <div class="grid grid-cols-2 gap-2">
             <label class="space-y-1"><span>Độ mờ (0.1 - 1):</span><input id="opt-wm-opacity" type="number" step="0.05" min="0.1" max="1" value="0.28" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
             <label class="flex items-center gap-2 pt-4"><input id="opt-wm-tile" type="checkbox" class="accent-rose-500" /><span>Lặp phủ toàn trang</span></label>
@@ -1994,7 +2108,7 @@
             c.fillStyle = '#0d9488';
             c.fillRect(28, 31, 5, 26);
             c.fillStyle = '#ffffff';
-            c.font = '800 12px "Segoe UI", Arial, sans-serif';
+            c.font = '700 12px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
             c.fillText(tocTitle.toUpperCase().slice(0, 48), 42, 49);
 
             const secRows = [];
@@ -2017,11 +2131,11 @@
             let y = 78;
             secRows.slice(0, 14).forEach((s) => {
               c.fillStyle = s.isSub ? '#334155' : '#0f2438';
-              c.font = `${s.isSub ? '500 10.5px' : '700 11.5px'} "Segoe UI", Arial, sans-serif`;
+              c.font = `${s.isSub ? '500 10.5px' : '700 11.5px'} "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif`;
               const indent = s.isSub ? 12 : 0;
               c.fillText(s.label.slice(0, 46), 30 + indent, y);
               c.fillStyle = '#0d9488';
-              c.font = '800 11px "Segoe UI", Arial, sans-serif';
+              c.font = '700 11px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
               c.textAlign = 'right';
               c.fillText(s.pg, simCanvas.width - 30, y);
               c.textAlign = 'left';
@@ -2039,14 +2153,14 @@
                 c.strokeStyle = '#cbd5e1';
                 c.strokeRect(cx, cardY, cardW, 175);
                 c.fillStyle = '#0f2438';
-                c.font = '800 9.5px "Segoe UI", Arial, sans-serif';
+                c.font = '700 9.5px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
                 c.fillText(titleCard, cx + 10, cardY + 18);
                 c.fillStyle = '#0d9488';
                 c.fillRect(cx + 10, cardY + 24, cardW - 20, 1.5);
                 rows.slice(0, 6).forEach((it, i) => {
                   const ry = cardY + 42 + i * 20;
                   c.fillStyle = '#1e293b';
-                  c.font = '500 9px "Segoe UI", Arial, sans-serif';
+                  c.font = '500 9px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
                   c.fillText(it.label.slice(0, 24), cx + 10, ry);
                   c.fillStyle = '#0f2438';
                   c.textAlign = 'right';
@@ -2489,9 +2603,9 @@
           const hasSysCover = Boolean(coverChk?.checked);
           const isDangLayout = Boolean(dangLayoutChk?.checked);
           const fontMap = {
-            sans: '"Segoe UI", Arial, sans-serif',
-            serif: 'Georgia, "Times New Roman", serif',
-            classic: '"Palatino Linotype", Georgia, serif',
+            sans: '"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif',
+            serif: 'Georgia, "Noto Serif SC", "Noto Serif TC", "Noto Serif JP", "Times New Roman", serif',
+            classic: '"Palatino Linotype", Georgia, "Noto Serif SC", serif',
           };
           const pvFont = fontMap[fontEl?.value] || fontMap.sans;
           const hMode = hdrModeEl?.value || 'none';
@@ -2504,9 +2618,9 @@
           const cssAlign = (a) => (a === 'justify' ? 'justify' : a);
           const hdrPreviewHtml =
             hMode === 'band'
-              ? `<div style="background:${th.primary};border-bottom:3px solid ${th.accent};padding:8px 16px;color:#fff;font-size:11.5px;font-weight:800;text-align:${cssAlign(hAlign)};">${expTok(hdrTextEl?.value || '{filename}')}</div>`
+              ? `<div style="background:${th.primary};border-bottom:3px solid ${th.accent};padding:8px 16px;color:#fff;font-size:11.5px;font-weight: 700;text-align:${cssAlign(hAlign)};">${expTok(hdrTextEl?.value || '{filename}')}</div>`
               : hMode === 'minimal'
-              ? `<div style="padding:8px 16px 6px;border-bottom:1.5px solid ${th.accent};color:${th.primary};font-size:11px;font-weight:800;text-align:${cssAlign(hAlign)};">${expTok(hdrTextEl?.value || '{filename}')}</div>`
+              ? `<div style="padding:8px 16px 6px;border-bottom:1.5px solid ${th.accent};color:${th.primary};font-size:11px;font-weight: 700;text-align:${cssAlign(hAlign)};">${expTok(hdrTextEl?.value || '{filename}')}</div>`
               : '';
           const ftrPreviewHtml =
             fMode !== 'none'
@@ -2517,8 +2631,8 @@
             ? `<div style="background:linear-gradient(135deg,${th.primary},${th.secondary});border-bottom:4px solid ${th.accent};padding:12px 16px;color:#fff;display:flex;align-items:center;gap:12px;">
                  <img src="assets/app-icon-192.png" alt="Icon Đăng" style="width:48px;height:48px;border-radius:10px;border:2px solid #f59e0b;object-fit:cover;background:#fff;flex-shrink:0;" onerror="this.style.display='none'" />
                  <div style="min-width:0;">
-                   <div style="font-size:9px;font-weight:900;color:#5eead4;letter-spacing:0.06em;">TRANG BÌA GHI CÔNG TÁC GIẢ · ĐĂNGLOVEPDF STUDIO</div>
-                   <div style="font-size:13.5px;font-weight:900;margin-top:2px;">File được tạo bởi Mai Hải Đăng vip pro</div>
+                   <div style="font-size:9px;font-weight: 700;color:#5eead4;letter-spacing:0.06em;">TRANG BÌA GHI CÔNG TÁC GIẢ · ĐĂNGLOVEPDF STUDIO</div>
+                   <div style="font-size:13.5px;font-weight: 700;margin-top:2px;">File được tạo bởi Mai Hải Đăng vip pro</div>
                    <div style="font-size:10px;color:rgba(255,255,255,0.85);">Tài liệu: <strong>${fname}</strong> · Web Viết Tiểu Thuyết Của Bi</div>
                  </div>
                </div>`
@@ -2526,14 +2640,14 @@
 
           const sysCoverPreviewHtml = hasSysCover && !hasAuthorCover
             ? `<div style="background:linear-gradient(135deg,${th.primary},${th.secondary});border-left:8px solid ${th.accent};padding:12px 18px;color:#fff;border-bottom:2px dashed rgba(255,255,255,0.25);">
-                 <div style="font-size:9.5px;font-weight:800;letter-spacing:0.08em;color:${th.accent};">TRANG BÌA HỆ THỐNG (ĐÃ BẬT) · ĐĂNGLOVEPDF</div>
-                 <div style="font-size:14px;font-weight:900;margin-top:2px;">${fname.toUpperCase()}</div>
+                 <div style="font-size:9.5px;font-weight: 700;letter-spacing:0.08em;color:${th.accent};">TRANG BÌA HỆ THỐNG (ĐÃ BẬT) · ĐĂNGLOVEPDF</div>
+                 <div style="font-size:14px;font-weight: 700;margin-top:2px;">${fname.toUpperCase()}</div>
                </div>`
             : '';
 
           const dangTocPreviewHtml = isDangLayout
             ? `<div style="padding:8px 10px;margin-bottom:8px;border-radius:8px;border:1px solid #cbd5e1;background:#f8fafc;">
-                 <div style="background:${th.primary};border-left:4px solid ${th.accent};color:#fff;padding:4px 8px;border-radius:4px;font-size:10.5px;font-weight:900;margin-bottom:6px;">MỤC LỤC BÁO CÁO &amp; HỆ THỐNG BẢNG – BIỂU ĐỒ</div>
+                 <div style="background:${th.primary};border-left:4px solid ${th.accent};color:#fff;padding:4px 8px;border-radius:4px;font-size:10.5px;font-weight: 700;margin-bottom:6px;">MỤC LỤC BÁO CÁO &amp; HỆ THỐNG BẢNG – BIỂU ĐỒ</div>
                  <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:${th.primary};border-bottom:1px solid #cbd5e1;padding-bottom:2px;margin-bottom:3px;"><span>PHẦN 1. TỔNG QUAN &amp; PHÂN TÍCH</span><span>3</span></div>
                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:5px;">
                    <div style="background:#fff;border:1px solid #cbd5e1;border-radius:5px;padding:4px 6px;font-size:9.5px;"><strong style="color:${th.primary};">DANH MỤC BẢNG</strong><div style="color:#334155;">Bảng 1.1: Số liệu... (4)</div></div>
@@ -2558,9 +2672,9 @@
               ${hdrPreviewHtml}
               <div style="padding:12px 18px;font-size:12px;line-height:1.55;">
                 ${dangTocPreviewHtml}
-                <div style="background:${th.primary};border-left:5px solid ${th.accent};color:#fff;padding:7px 12px;border-radius:5px;font-weight:800;margin-bottom:8px;">1. TIÊU ĐỀ PHẦN CHÍNH (TỰ NHẬN DIỆN TỪ FILE)</div>
+                <div style="background:${th.primary};border-left:5px solid ${th.accent};color:#fff;padding:7px 12px;border-radius:5px;font-weight: 700;margin-bottom:8px;">1. TIÊU ĐỀ PHẦN CHÍNH (TỰ NHẬN DIỆN TỪ FILE)</div>
                 <p style="text-align:justify;margin:0 0 8px 0;">Văn bản căn đều hai bên trái–phải, lọc bỏ dòng giả (như “phần SX...”, “USD.”); bảng &amp; hình tự động vào Danh mục có link nhảy trang.</p>
-                <div style="border-left:4px solid ${th.accent};padding-left:8px;font-weight:800;font-size:11.5px;color:${th.primary};margin-bottom:4px;">Bảng 1.1: Tổng hợp dữ liệu chính</div>
+                <div style="border-left:4px solid ${th.accent};padding-left:8px;font-weight: 700;font-size:11.5px;color:${th.primary};margin-bottom:4px;">Bảng 1.1: Tổng hợp dữ liệu chính</div>
                 <table style="width:94%;margin:0 auto;border-collapse:collapse;font-size:11px;">
                   <thead><tr style="background:${th.primary};color:#fff;"><th style="padding:5px 8px;text-align:left;">Chỉ tiêu</th><th style="padding:5px 8px;text-align:left;">Giá trị</th></tr></thead>
                   <tbody>
@@ -2660,6 +2774,167 @@
         );
         [hdrTextEl, ftrTextEl].forEach((el) => el?.addEventListener('input', renderLiveThemeSample));
         renderLiveThemeSample();
+
+        // ĐĂNGLOVEPDF 2.0 (Nhịp 4): Trình phân tích Cấu trúc, Đề xuất Gemini Vision & Trình chỉnh sửa Mục lục Tương tác
+        const v2Host = body.querySelector('#mod46-v2-toc-and-vision-host');
+        const primaryFile = this.files[0];
+        if (v2Host && primaryFile) {
+          v2Host.classList.remove('hidden');
+          const geminiBridge = global.NoirGeminiBridge || NS.geminiBridge;
+          const isPdfInput = /\.pdf$/i.test(primaryFile.name || '') || primaryFile.ext === 'pdf';
+
+          const renderV2TocAndVision = (blocks, meta = {}) => {
+            if (!v2Host.isConnected) return;
+            this.theme10OverrideBlocks = blocks;
+            const headingIndices = [];
+            blocks.forEach((b, idx) => {
+              if (b.type === 'heading' || b.type === 'subheading') headingIndices.push({ b, idx });
+            });
+            const comp = meta.complexity || blocks.__ast?.meta?.complexity || null;
+            const suggestLandscape = Boolean(meta.suggestLandscape || blocks.__ast?.meta?.suggestLandscape);
+            const curDepth = this.theme10TocDepth || 'standard';
+            const curOrient = this.theme10Orient || (suggestLandscape ? 'landscape' : 'portrait');
+            this.theme10Orient = curOrient;
+            this.theme10TocDepth = curDepth;
+            const hasKey = Boolean(geminiBridge?.hasApiKey?.());
+
+            const visionCardHtml = isPdfInput
+              ? `<div class="rounded-2xl border ${comp?.recommendGeminiVision ? 'border-amber-400/70 bg-amber-950/25' : 'border-cyan-500/35 bg-zinc-950/80'} p-3 space-y-2">
+                   <div class="flex flex-wrap items-center justify-between gap-2">
+                     <div class="text-xs font-bold text-amber-200">
+                       🔬 Đánh giá PDF: ${comp?.level === 'hard' ? '⚠️ Tài liệu khó (nhiều bảng/công thức/scan)' : comp?.level === 'medium' ? '🟡 Trung bình' : '✅ Chuẩn'}
+                       ${comp?.reasons?.length ? ` · <span class="font-normal text-zinc-300">${escHtml(comp.reasons.slice(0, 2).join('; '))}</span>` : ''}
+                     </div>
+                     <div class="flex flex-wrap items-center gap-1.5">
+                       <button type="button" id="btn-mod46-vision-key-pill" class="px-2.5 py-1 rounded-lg border text-[11px] font-bold cursor-pointer ${hasKey ? 'border-emerald-500/50 bg-emerald-950/40 text-emerald-300' : 'border-zinc-700 bg-zinc-800 text-zinc-200'}">
+                         ${hasKey ? '✅ API Key sẵn sàng' : '🔑 Gắn API Key'}
+                       </button>
+                       <button type="button" id="btn-mod46-run-gemini-vision" class="px-3 py-1 rounded-lg bg-gradient-to-r from-violet-600 to-amber-600 hover:from-violet-500 hover:to-amber-500 text-white text-[11px] font-bold shadow cursor-pointer ${comp?.recommendGeminiVision ? 'animate-pulse' : ''}">
+                         ✨ Đọc Sâu bằng Gemini Vision (2 trang/lượt)
+                       </button>
+                     </div>
+                   </div>
+                   <div id="mod46-vision-status" class="text-[11px] text-cyan-300 hidden"></div>
+                 </div>`
+              : '';
+
+            const tocRowsHtml = headingIndices.length
+              ? headingIndices.map(({ b, idx }) => `
+                  <div class="flex items-center gap-1.5 py-1 border-b border-zinc-800/70 last:border-b-0">
+                    <input type="checkbox" data-toc-edit-chk="${idx}" ${b.includeInToc !== false ? 'checked' : ''} class="accent-emerald-500 cursor-pointer shrink-0" title="Hiện trong Mục lục" />
+                    <select data-toc-edit-lvl="${idx}" class="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-700 text-[11px] text-amber-300 font-bold shrink-0">
+                      ${[1, 2, 3, 4].map((lv) => `<option value="${lv}" ${(b.level || (b.type === 'subheading' ? 3 : 1)) === lv ? 'selected' : ''}>Cấp ${lv}</option>`).join('')}
+                    </select>
+                    <input type="text" data-toc-edit-txt="${idx}" value="${escHtml(b.text || '')}" class="flex-1 min-w-0 px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-[11.5px] text-zinc-100" />
+                  </div>`).join('')
+              : '<div class="text-[11px] text-zinc-400">Chưa phát hiện tiêu đề mục lục tự động (bạn có thể chọn tab Dán Văn Bản Từ AI kèm dấu # để chuẩn hóa).</div>';
+
+            v2Host.innerHTML = `
+              ${visionCardHtml}
+              <div id="mod46-interactive-toc-editor" class="rounded-2xl border border-emerald-500/35 bg-zinc-950/75 p-3 space-y-2.5">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="text-xs font-bold text-emerald-300">🧭 Trình Chỉnh Sửa Mục Lục &amp; Khổ Giấy Tự Động (${headingIndices.filter((x) => x.b.includeInToc !== false).length}/${headingIndices.length} mục)</div>
+                  <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+                    <select id="opt-pro-theme10-toc-depth" class="px-2 py-1 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 font-bold">
+                      <option value="compact" ${curDepth === 'compact' ? 'selected' : ''}>Mục lục: Gọn (Cấp 1–2)</option>
+                      <option value="standard" ${curDepth === 'standard' ? 'selected' : ''}>Mục lục: Chuẩn (Cấp 1–3)</option>
+                      <option value="exam" ${curDepth === 'exam' ? 'selected' : ''}>Mục lục: Đầy đủ / Đề thi (Cấp 1–4)</option>
+                    </select>
+                    <select id="opt-pro-theme10-orient" class="px-2 py-1 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 font-bold">
+                      <option value="portrait" ${curOrient === 'portrait' ? 'selected' : ''}>📄 A4 Dọc (Portrait)</option>
+                      <option value="landscape" ${curOrient === 'landscape' ? 'selected' : ''}>📐 A4 Ngang (Landscape)</option>
+                    </select>
+                  </div>
+                </div>
+                ${suggestLandscape ? '<div class="px-2.5 py-1 rounded-lg bg-amber-950/40 border border-amber-400/50 text-[11px] text-amber-200 font-bold">📐 Phát hiện bảng rộng (&gt; 8 cột) — hệ thống tự gợi ý khổ giấy A4 Ngang để không bị bóp cột!</div>' : ''}
+                <div class="max-h-48 overflow-y-auto pr-1 space-y-0.5">${tocRowsHtml}</div>
+              </div>
+            `;
+
+            v2Host.querySelector('#opt-pro-theme10-toc-depth')?.addEventListener('change', (ev) => {
+              this.theme10TocDepth = ev.target.value || 'standard';
+            });
+            v2Host.querySelector('#opt-pro-theme10-orient')?.addEventListener('change', (ev) => {
+              this.theme10Orient = ev.target.value || 'portrait';
+            });
+            v2Host.querySelectorAll('[data-toc-edit-chk]').forEach((chk) => {
+              chk.addEventListener('change', () => {
+                const bi = Number(chk.getAttribute('data-toc-edit-chk'));
+                if (this.theme10OverrideBlocks?.[bi]) {
+                  this.theme10OverrideBlocks[bi].includeInToc = Boolean(chk.checked);
+                }
+              });
+            });
+            v2Host.querySelectorAll('[data-toc-edit-lvl]').forEach((sel) => {
+              sel.addEventListener('change', () => {
+                const bi = Number(sel.getAttribute('data-toc-edit-lvl'));
+                const lv = Math.min(4, Math.max(1, Number(sel.value) || 1));
+                if (this.theme10OverrideBlocks?.[bi]) {
+                  this.theme10OverrideBlocks[bi].level = lv;
+                  this.theme10OverrideBlocks[bi].kind = lv <= 1 ? 'h1' : (lv === 2 ? 'h2' : 'h3');
+                  this.theme10OverrideBlocks[bi].type = lv <= 2 ? 'heading' : 'subheading';
+                }
+              });
+            });
+            v2Host.querySelectorAll('[data-toc-edit-txt]').forEach((inp) => {
+              inp.addEventListener('input', () => {
+                const bi = Number(inp.getAttribute('data-toc-edit-txt'));
+                if (this.theme10OverrideBlocks?.[bi]) {
+                  this.theme10OverrideBlocks[bi].text = inp.value;
+                }
+              });
+            });
+            v2Host.querySelector('#btn-mod46-vision-key-pill')?.addEventListener('click', () => {
+              geminiBridge?.openApiKeyQuickModal?.({ onSaved: () => renderV2TocAndVision(this.theme10OverrideBlocks, meta) });
+            });
+            v2Host.querySelector('#btn-mod46-run-gemini-vision')?.addEventListener('click', async () => {
+              if (!geminiBridge) return;
+              const execVision = async () => {
+                const stEl = v2Host.querySelector('#mod46-vision-status');
+                const btnV = v2Host.querySelector('#btn-mod46-run-gemini-vision');
+                try {
+                  if (btnV) btnV.disabled = true;
+                  if (stEl) { stEl.classList.remove('hidden'); stEl.textContent = '⏳ Đang khởi động Gemini Vision...'; }
+                  const vRes = await geminiBridge.runGeminiVisionDeepRead(primaryFile, {
+                    ensurePdfJs,
+                    onProgress: (pct, msg) => {
+                      if (stEl) stEl.textContent = `✨ [${pct}%] ${msg}`;
+                    },
+                  });
+                  this._theme10AnalyzedCache = { fileId: primaryFile.id, blocks: vRes.blocks, ast: vRes.ast };
+                  renderV2TocAndVision(vRes.blocks, vRes.ast?.meta || {});
+                  this.toast(`✅ Gemini Vision đã đọc sâu ${vRes.pageCount} trang & dựng lại AST sạch!`, 'success', 3600);
+                } catch (err) {
+                  if (stEl) { stEl.classList.remove('hidden'); stEl.textContent = '⚠️ ' + (err?.message || err); }
+                  this.toast('⚠️ ' + (err?.message || err), 'error', 4000);
+                } finally {
+                  if (btnV && btnV.isConnected) btnV.disabled = false;
+                }
+              };
+              if (!geminiBridge.hasApiKey()) {
+                geminiBridge.openApiKeyQuickModal({ onSaved: () => execVision() });
+                return;
+              }
+              await execVision();
+            });
+          };
+
+          if (this._theme10AnalyzedCache?.fileId === primaryFile.id && this._theme10AnalyzedCache.blocks) {
+            renderV2TocAndVision(this._theme10AnalyzedCache.blocks, this._theme10AnalyzedCache.ast?.meta || {});
+          } else if (typeof NS.dangLovePdfPro?.extractStructuredBlocksFromFile === 'function') {
+            v2Host.innerHTML = '<div class="text-[11px] text-zinc-400 px-2 py-1">⏳ Đang phân tích Mục lục, Bảng biểu &amp; Công thức từ tệp...</div>';
+            NS.dangLovePdfPro
+              .extractStructuredBlocksFromFile(primaryFile, { ensurePdfJs, ensureJsZip, ensureXlsx })
+              .then((parsedBlocks) => {
+                if (!v2Host.isConnected || this.files[0]?.id !== primaryFile.id) return;
+                this._theme10AnalyzedCache = { fileId: primaryFile.id, blocks: parsedBlocks, ast: parsedBlocks?.__ast };
+                renderV2TocAndVision(parsedBlocks, parsedBlocks?.__ast?.meta || {});
+              })
+              .catch(() => {
+                if (v2Host.isConnected) v2Host.classList.add('hidden');
+              });
+          }
+        }
       }
     }
 
@@ -2723,7 +2998,7 @@
         pnStart: Math.max(1, Number(document.getElementById('opt-pn-start')?.value || 1)),
         pnStyle: readWordStyleBar('pn', { fontSize: 13, color: '#1f2937', fontFamily: '"Times New Roman", Georgia, serif', bold: true }),
         wmText: document.getElementById('opt-wm-text')?.value?.trim() || 'BẢN QUYỀN TÁC GIẢ',
-        wmStyle: readWordStyleBar('wm', { fontSize: 38, color: '#e11d48', fontFamily: '"Segoe UI", Arial, sans-serif', bold: true, angle: 35 }),
+        wmStyle: readWordStyleBar('wm', { fontSize: 38, color: '#e11d48', fontFamily: '"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif', bold: true, angle: 35 }),
         wmColor: document.getElementById('opt-wm-color')?.value || '#e11d48',
         wmOpacity: Math.max(0.08, Math.min(1, Number(document.getElementById('opt-wm-opacity')?.value || 0.28))),
         wmTile: Boolean(document.getElementById('opt-wm-tile')?.checked),
@@ -2957,7 +3232,7 @@
             const rendered = renderVietnameseTextToPngBytes(opts.wmText, {
               fontSize: st.fontSize || 38,
               color: st.color || opts.wmColor || '#e11d48',
-              fontFamily: st.fontFamily || '"Segoe UI", Arial, sans-serif',
+              fontFamily: st.fontFamily || '"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif',
               bold: st.bold !== false,
               italic: Boolean(st.italic),
               underline: Boolean(st.underline),
@@ -3181,7 +3456,7 @@
             outputs.push({ name: `${baseName}.txt`, blob: new Blob([res.value || ''], { type: 'text/plain;charset=utf-8' }) });
           } else if (opts.docxOut === 'html') {
             const res = await mammoth.convertToHtml({ arrayBuffer: this.files[0].bytes.buffer });
-            const fullHtml = `<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><title>${escHtml(baseName)}</title></head><body style="font-family:Segoe UI,Arial,sans-serif;max-width:820px;margin:24px auto;line-height:1.7;">${res.value || ''}</body></html>`;
+            const fullHtml = `<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><title>${escHtml(baseName)}</title></head><body style="font-family:'Be Vietnam Pro','Noto Sans SC','Noto Sans TC','Noto Sans JP','Noto Sans KR',sans-serif;max-width:820px;margin:24px auto;line-height:1.7;">${res.value || ''}</body></html>`;
             outputs.push({ name: `${baseName}.html`, blob: new Blob([fullHtml], { type: 'text/html;charset=utf-8' }) });
           } else if (opts.docxOut === 'md') {
             const res = await mammoth.convertToHtml({ arrayBuffer: this.files[0].bytes.buffer });

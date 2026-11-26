@@ -2931,7 +2931,7 @@
   <title>${esc(pdfDocTitle)} — ${esc(bookTitle)}</title>
   <style>
     @page { size: A4; margin: 18mm 16mm; }
-    body { font-family: "Times New Roman", "Segoe UI", Georgia, serif; color: #111827; line-height: 1.65; font-size: 12pt; max-width: 820px; margin: 0 auto; padding: 18px; }
+    body { font-family: "Times New Roman", "Be Vietnam Pro", Georgia, serif; color: #111827; line-height: 1.65; font-size: 12pt; max-width: 820px; margin: 0 auto; padding: 18px; }
     h1 { font-size: 18pt; border-bottom: 2px solid #059669; padding-bottom: 6px; margin-bottom: 14px; }
     table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10.5pt; }
     th, td { border: 1px solid #9ca3af; padding: 6px 8px; text-align: left; vertical-align: top; }

@@ -247,7 +247,7 @@
       return `
         <div class="at-settings-popover">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-            <span style="font-weight:800;">Tốc độ chạy khám:</span>
+            <span style="font-weight: 700;">Tốc độ chạy khám:</span>
             <select id="at-sel-speed" style="background:#18181b;color:#f4f4f5;border:1px solid #52525b;border-radius:8px;padding:4px 8px;font-size:11.5px;">
               <option value="fast" ${this.speedMode === 'fast' ? 'selected' : ''}>Siêu nhanh</option>
               <option value="visual" ${this.speedMode === 'visual' ? 'selected' : ''}>Vừa phải để mắt kịp nhìn</option>
@@ -274,7 +274,7 @@
         return `
           <div class="at-score-card" style="text-align:center;padding:20px 14px;">
             <div style="font-size:32px;">🩺</div>
-            <div style="font-weight:900;font-size:14px;color:#ecfdf5;margin-top:6px;">Bác sĩ App toàn diện đã sẵn sàng!</div>
+            <div style="font-weight: 700;font-size:14px;color:#ecfdf5;margin-top:6px;">Bác sĩ App toàn diện đã sẵn sàng!</div>
             <div style="font-size:12px;color:#a1a1aa;margin-top:4px;">
               Bấm nút xanh <strong>▶ Khám tổng quát</strong> để tự động kiểm tra 5 trụ cột: Đúng chức năng, Đồng bộ nút bấm &amp; YouTube PiP, Độ mượt, Giao diện điện thoại và Độ bền.
             </div>
@@ -341,7 +341,7 @@
               const sevCls = it.severity === 'P0' ? '' : it.severity === 'P1' ? 'at-sev-p1' : 'at-sev-p2';
               return `
                 <div class="at-issue-card ${sevCls}">
-                  <div style="font-size:10.5px;font-weight:900;opacity:0.9;margin-bottom:2px;">${sevTag}</div>
+                  <div style="font-size:10.5px;font-weight: 700;opacity:0.9;margin-bottom:2px;">${sevTag}</div>
                   <div class="at-issue-title">${escHtml(it.plainTitle)}</div>
                   <div class="at-issue-desc">${escHtml(it.plainDesc)}</div>
                   <div class="at-issue-actions">
@@ -357,7 +357,7 @@ Chi tiết: ${escHtml(it.techDetail || '')}
               `;
             })
             .join('')
-        : `<div class="at-score-card" style="border-color:rgba(16,185,129,0.55);color:#a7f3d0;font-weight:800;text-align:center;">🎉 Tuyệt vời! Không phát hiện lỗi hay lệch đồng bộ nào!</div>`;
+        : `<div class="at-score-card" style="border-color:rgba(16,185,129,0.55);color:#a7f3d0;font-weight: 700;text-align:center;">🎉 Tuyệt vời! Không phát hiện lỗi hay lệch đồng bộ nào!</div>`;
 
       const passedCount = report.passed.length;
       const totalCount = report.passed.length + report.issues.length;
@@ -465,9 +465,9 @@ Chi tiết: ${escHtml(it.techDetail || '')}
       return `
         ${groupsHtml}
         <div class="at-score-card">
-          <div style="font-weight:900;font-size:12.5px;color:#fecaca;margin-bottom:6px;">🎬 ${escHtml(AT.PLAIN_VI_MAP.recorder)}</div>
+          <div style="font-weight: 700;font-size:12.5px;color:#fecaca;margin-bottom:6px;">🎬 ${escHtml(AT.PLAIN_VI_MAP.recorder)}</div>
           <div style="font-size:11.5px;color:#a1a1aa;margin-bottom:8px;">Tự bấm các nút trên trang web như bình thường — Bác sĩ App sẽ ghi lại thành kịch bản từ khóa tiếng Việt để chạy lặp lại giúp bạn.</div>
-          <button type="button" id="at-btn-toggle-record" class="at-small-btn" style="width:100%;padding:9px;font-weight:900;background:${recActive ? '#dc2626' : 'rgba(239,68,68,0.2)'};border-color:#ef4444;color:#fff;">
+          <button type="button" id="at-btn-toggle-record" class="at-small-btn" style="width:100%;padding:9px;font-weight: 700;background:${recActive ? '#dc2626' : 'rgba(239,68,68,0.2)'};border-color:#ef4444;color:#fff;">
             ${recActive ? `⏹ Dừng & Lưu kịch bản mẫu (đã ghi ${recCount} bước)` : '🔴 Quay mẫu mới'}
           </button>
           ${savedRecsHtml}
@@ -486,18 +486,18 @@ Chi tiết: ${escHtml(it.techDetail || '')}
       modal.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,0.78);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;';
       modal.innerHTML = `
         <div style="width:100%;max-width:440px;border-radius:22px;border:2px solid rgba(251,191,36,0.75);background:linear-gradient(180deg,#18181b,#09090b);color:#f4f4f5;box-shadow:0 24px 70px rgba(0,0,0,0.85);overflow:hidden;">
-          <div style="padding:14px 18px;border-bottom:1px solid #27272a;background:linear-gradient(90deg,rgba(245,158,11,0.18),rgba(16,185,129,0.14));font-weight:900;font-size:13px;color:#fcd34d;letter-spacing:0.03em;text-transform:uppercase;">
+          <div style="padding:14px 18px;border-bottom:1px solid #27272a;background:linear-gradient(90deg,rgba(245,158,11,0.18),rgba(16,185,129,0.14));font-weight: 700;font-size:13px;color:#fcd34d;letter-spacing:0.03em;text-transform:uppercase;">
             🩺 Xác nhận bắt đầu chẩn đoán
           </div>
           <div style="padding:22px 20px;text-align:center;">
-            <h3 id="at-run-confirm-title" style="margin:0 0 18px;font-size:15.5px;font-weight:800;line-height:1.5;color:#ffffff;">
+            <h3 id="at-run-confirm-title" style="margin:0 0 18px;font-size:15.5px;font-weight: 700;line-height:1.5;color:#ffffff;">
               Một khi bấm thì không thể thoát giữa chừng (Để đảm bảo cái autotester này chẩn đoán chính xác nhất), bạn chắc chắn chứ?
             </h3>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-              <button type="button" id="btn-at-confirm-yes" style="padding:12px 16px;border-radius:14px;border:1.5px solid #34d399;background:#059669;color:#ffffff;font-weight:900;font-size:14px;cursor:pointer;">
+              <button type="button" id="btn-at-confirm-yes" style="padding:12px 16px;border-radius:14px;border:1.5px solid #34d399;background:#059669;color:#ffffff;font-weight: 700;font-size:14px;cursor:pointer;">
                 Có
               </button>
-              <button type="button" id="btn-at-confirm-no" style="padding:12px 16px;border-radius:14px;border:1.5px solid #52525b;background:#27272a;color:#e4e4e7;font-weight:900;font-size:14px;cursor:pointer;">
+              <button type="button" id="btn-at-confirm-no" style="padding:12px 16px;border-radius:14px;border:1.5px solid #52525b;background:#27272a;color:#e4e4e7;font-weight: 700;font-size:14px;cursor:pointer;">
                 Không
               </button>
             </div>

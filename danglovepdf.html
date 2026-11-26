@@ -44,8 +44,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.css" />
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.js"></script>
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    .katex .text, .katex .mord.text { font-family: 'Be Vietnam Pro', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR', sans-serif !important; }
     html, body {
       margin: 0;
       padding: 0;
@@ -72,6 +75,10 @@
   <script src="mod01_core_kernel_and_event_bus.js"></script>
   <script src="mod03_humanized_ui_toast_and_vn_nlp_utils.js"></script>
   <script src="noir_exit_guard.js"></script>
+  <script src="modules/danglovepdf-v2/documentAst.js"></script>
+  <script src="modules/danglovepdf-v2/structuredParsers.js"></script>
+  <script src="modules/danglovepdf-v2/pdfGeometryEngine.js"></script>
+  <script src="modules/danglovepdf-v2/geminiBridgeAndVision.js"></script>
   <script src="mod46c_danglovepdf_studio_editor_and_viewer.js"></script>
   <script src="mod46b_danglovepdf_pro_engines.js"></script>
   <script src="mod46_danglovepdf_and_doc_converter.js"></script>

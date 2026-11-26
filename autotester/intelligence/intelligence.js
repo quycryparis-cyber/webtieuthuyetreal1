@@ -56,6 +56,13 @@
       plainDesc: 'Khi chuyển sang Tiếng Anh / Trung (Giản-Phồn) / Hàn / Nhật và mở các cửa sổ pop-up, vẫn còn dòng chữ tiếng Việt chưa dịch.',
       fixAdvice: 'Bổ sung các cụm chữ bị sót vào từ điển `exact` của cả 5 tệp `i18n_lang_en.js`, `i18n_lang_zh_cn.js`, `i18n_lang_zh_tw.js`, `i18n_lang_ko.js`, `i18n_lang_ja.js` và gọi `NS.i18n.translateElement(modalEl)` sau khi dựng DOM động.',
     },
+    ERR_FONT_FALLBACK_VI: {
+      severity: 'P1',
+      pillar: 'visual',
+      plainTitle: 'Phát hiện font chữ có nguy cơ vỡ dấu tiếng Việt hoặc dùng nét đậm quá mức',
+      plainDesc: 'Trình duyệt không nhận bộ font `Be Vietnam Pro` + `Noto Sans CJK` hoặc vẫn còn phần tử bị ép độ đậm `>= 800` gây lỗi dấu mũ / dấu nặng.',
+      fixAdvice: 'Đảm bảo CSS gốc và mọi Canvas/Modal dùng `Be Vietnam Pro` kèm fallback `Noto Sans SC/TC/JP/KR`, đồng thời giới hạn `font-weight <= 700`.',
+    },
     ERR_ZOMBIE_TOGGLE: {
       severity: 'P0',
       pillar: 'functional',

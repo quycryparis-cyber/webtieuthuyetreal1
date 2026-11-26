@@ -17,6 +17,9 @@
   'use strict';
 
   const W20 = (globalScope.NoirWisdom20 = globalScope.NoirWisdom20 || {});
+  const A4_W = 1240;
+  const A4_H = 1754;
+  const W20_FONT_FAMILY = '"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
 
   async function ensurePdfLib() {
     if (globalScope.PDFLib) return globalScope.PDFLib;
@@ -68,12 +71,32 @@
 
   function createA4Canvas() {
     const c = document.createElement('canvas');
-    c.width = 1240;
-    c.height = 1754;
+    c.width = A4_W;
+    c.height = A4_H;
     const ctx = c.getContext('2d');
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.fillRect(0, 0, A4_W, A4_H);
     return { canvas: c, ctx };
+  }
+
+  function drawPageHeader(ctx, sectionTitle, dateStr) {
+    ctx.save();
+    ctx.fillStyle = '#0f2942';
+    ctx.fillRect(0, 0, A4_W, 88);
+    ctx.fillStyle = '#14b8a6';
+    ctx.fillRect(0, 84, A4_W, 4);
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `700 22px ${W20_FONT_FAMILY}`;
+    ctx.fillText(String(sectionTitle || '30 PHÚT THÔNG THÁI').slice(0, 74), 72, 44);
+    if (dateStr) {
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#99f6e4';
+      ctx.font = `600 16px ${W20_FONT_FAMILY}`;
+      ctx.fillText(String(dateStr), A4_W - 72, 44);
+    }
+    ctx.restore();
   }
 
   async function canvasToJpgBytes(canvas, quality = 0.92) {
@@ -93,7 +116,7 @@
     ctx.lineTo(1168, 1678);
     ctx.stroke();
     ctx.fillStyle = '#64748b';
-    ctx.font = '600 20px "Segoe UI", Arial, sans-serif';
+    ctx.font = '600 20px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.textBaseline = 'top';
     ctx.fillText(`Sổ Tay Tiểu Thuyết Của Bi — 30 Phút Thông Thái Mỗi Ngày (${dateStr})`, 72, 1694);
     const pgTxt = `Trang ${pageNo} / ${totalPages}`;
@@ -141,24 +164,24 @@
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.fillStyle = '#6ee7b7';
-    ctx.font = '800 24px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 24px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.textBaseline = 'middle';
     ctx.fillText('SỔ TAY TIỂU THUYẾT CỦA BI · NOIRSTUDIO', 114, 124);
 
     // Ngày xuất bản tự động
     ctx.fillStyle = '#38bdf8';
-    ctx.font = '800 32px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 32px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.textBaseline = 'top';
     ctx.fillText(`ẤN BẢN NGÀY: ${todayFullStr.toUpperCase()}`, 84, 210);
 
     // Tiêu đề chính khổ lớn
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 84px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 84px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.fillText('30 PHÚT', 84, 290);
     ctx.fillStyle = '#34d399';
     ctx.fillText('THÔNG THÁI', 84, 392);
     ctx.fillStyle = '#e2e8f0';
-    ctx.font = '800 54px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 54px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.fillText('MỖI NGÀY', 84, 502);
 
     // Gạch nhấn màu
@@ -174,17 +197,17 @@
     ctx.stroke();
 
     ctx.fillStyle = '#38bdf8';
-    ctx.font = '800 22px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 22px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.fillText('TIÊU ĐIỂM CHÍNH HÔM NAY', 118, 672);
 
     ctx.fillStyle = '#f8fafc';
-    ctx.font = '800 34px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 34px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     const hlLines = wrapCanvasText(ctx, syncData?.headline || `Báo cáo 8 Trụ cột Tri thức — ${todayFullStr}`, W - 236).slice(0, 3);
     hlLines.forEach((ln, i) => ctx.fillText(ln, 118, 718 + i * 44));
 
     // Vị trí & số mục xác thực
     ctx.fillStyle = '#cbd5e1';
-    ctx.font = '700 25px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 25px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     const locTxt = `Khu vực: ${scanResult.location?.fullAddress || profile.name}   |   8 Trụ cột Khoa học (${scanResult.totalItems || 0} nguồn xác thực)`;
     wrapCanvasText(ctx, locTxt, W - 168).slice(0, 2).forEach((ln, i) => ctx.fillText(ln, 84, 902 + i * 36));
 
@@ -209,16 +232,16 @@
       ctx.fillStyle = g;
       ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,0.86)';
-      ctx.font = '800 20px "Segoe UI", Arial, sans-serif';
+      ctx.font = '700 20px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       ctx.fillText(k.label, x + 28, y + 28);
       ctx.fillStyle = '#ffffff';
-      ctx.font = '900 44px "Segoe UI", Arial, sans-serif';
+      ctx.font = '700 44px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       ctx.fillText(k.val, x + 28, y + 72);
     });
 
     // Dải danh mục 8 trụ cột ở chân bìa
     ctx.fillStyle = '#94a3b8';
-    ctx.font = '700 21px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 21px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.fillText('BAO PHỦ 8 TRỤ CỘT: Thế giới · Công nghệ & AI · Kinh tế · Khu vực · Sức khỏe · Pháp luật · Tư duy · Văn hóa & Lịch sử', 84, 1410);
 
     // Chân trang bìa
@@ -226,10 +249,10 @@
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(84, 1560); ctx.lineTo(W - 84, 1560); ctx.stroke();
     ctx.fillStyle = '#e2e8f0';
-    ctx.font = '700 23px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 23px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.fillText('Xuất bản tự động 100% trên thiết bị từ Sổ Tay Tiểu Thuyết Của Bi', 84, 1592);
     ctx.fillStyle = '#64748b';
-    ctx.font = '600 20px "Segoe UI", Arial, sans-serif';
+    ctx.font = '600 20px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.fillText(`Thời điểm xuất: ${new Date().toLocaleString('vi-VN')}  ·  Dữ liệu xác thực nguồn gốc SHA-256`, 84, 1632);
 
     return canvas;
@@ -246,7 +269,7 @@
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, W, 112);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 34px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 34px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.textBaseline = 'middle';
     ctx.fillText('HỆ THỐNG BIỂU ĐỒ & SƠ ĐỒ NHÂN QUẢ HÔM NAY', 72, 56);
 
@@ -261,7 +284,7 @@
     ctx.stroke();
 
     ctx.fillStyle = '#0f172a';
-    ctx.font = '900 24px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 24px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.fillText('1. Lộ trình 30 Phút Đọc Thông Thái', 100, 174);
 
     const palette = ['#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4', '#a855f7', '#ec4899'];
@@ -287,11 +310,11 @@
       startAng += sweep;
     });
     ctx.fillStyle = '#0f172a';
-    ctx.font = '900 40px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 40px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(`${totalMin}p`, cx, cy - 26);
     ctx.fillStyle = '#64748b';
-    ctx.font = '700 18px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 18px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.fillText('MỖI NGÀY', cx, cy + 20);
     ctx.textAlign = 'left';
 
@@ -302,7 +325,7 @@
       drawRoundedRect(ctx, 378, ly + 4, 16, 16, 4);
       ctx.fill();
       ctx.fillStyle = '#1e293b';
-      ctx.font = '700 17px "Segoe UI", Arial, sans-serif';
+      ctx.font = '700 17px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       const lbl = String(it.label || '').slice(0, 17);
       ctx.fillText(`${lbl} (${it.minutes || 2}p)`, 404, ly);
     });
@@ -316,7 +339,7 @@
     ctx.stroke();
 
     ctx.fillStyle = '#0f172a';
-    ctx.font = '900 24px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 24px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.fillText('2. Mức độ Tác động Sự kiện (Thang 100)', 656, 174);
 
     const impacts = (Array.isArray(syncData?.impact_scores) ? syncData.impact_scores : []).slice(0, 6);
@@ -325,10 +348,10 @@
       const score = Math.max(10, Math.min(100, Number(r.score) || 75));
       const col = palette[idx % palette.length];
       ctx.fillStyle = '#1e293b';
-      ctx.font = '800 18px "Segoe UI", Arial, sans-serif';
+      ctx.font = '700 18px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       ctx.fillText(String(r.topic || `Sự kiện ${idx + 1}`).slice(0, 38), 656, by);
       ctx.fillStyle = col;
-      ctx.font = '900 19px "Segoe UI", Arial, sans-serif';
+      ctx.font = '700 19px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       ctx.textAlign = 'right';
       ctx.fillText(`${score}/100`, 1140, by);
       ctx.textAlign = 'left';
@@ -350,7 +373,7 @@
     ctx.stroke();
 
     ctx.fillStyle = '#0f172a';
-    ctx.font = '900 26px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 26px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.fillText(`3. Sơ đồ Nhân Quả & Tư duy Hệ thống — ${syncData?.causal_mindmap?.center || 'Toàn cảnh hôm nay'}`, 100, 712);
 
     const colW = 310;
@@ -362,7 +385,7 @@
     ];
     colHeaders.forEach((h, i) => {
       ctx.fillStyle = h.c;
-      ctx.font = '900 18px "Segoe UI", Arial, sans-serif';
+      ctx.font = '700 18px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       ctx.fillText(h.t, colX[i], 764);
     });
 
@@ -379,7 +402,7 @@
         ctx.stroke();
 
         ctx.fillStyle = '#0f172a';
-        ctx.font = '700 19px "Segoe UI", Arial, sans-serif';
+        ctx.font = '700 19px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         wrapCanvasText(ctx, txt || '—', colW - 32).slice(0, 4).forEach((ln, li) => {
           ctx.fillText(ln, colX[ci] + 16, ry + 18 + li * 27);
         });
@@ -415,7 +438,7 @@
     ctx.stroke();
 
     ctx.fillStyle = '#5b21b6';
-    ctx.font = '900 23px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 23px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.fillText('4. Mô Hình Tư Duy & Mốc Thời Gian Đáng Nhớ', 100, 1338);
 
     const models = (Array.isArray(syncData?.mental_models) ? syncData.mental_models : []).slice(0, 2);
@@ -428,11 +451,11 @@
       ctx.lineWidth = 1.5;
       ctx.stroke();
       ctx.fillStyle = '#6d28d9';
-      ctx.font = '800 18px "Segoe UI", Arial, sans-serif';
+      ctx.font = '700 18px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       const titleLines = wrapCanvasText(ctx, String(mm.title || '').replace(/\*/g, ''), 468).slice(0, 2);
       titleLines.forEach((ln, li) => ctx.fillText(ln, mx + 18, 1390 + li * 21));
       ctx.fillStyle = '#334155';
-      ctx.font = '600 16px "Segoe UI", Arial, sans-serif';
+      ctx.font = '600 16px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       const lessonTop = 1394 + titleLines.length * 21 + 4;
       wrapCanvasText(ctx, String(mm.lesson || '').replace(/\*/g, ''), 468).slice(0, 3).forEach((ln, li) => {
         ctx.fillText(ln, mx + 18, lessonTop + li * 21);
@@ -444,10 +467,10 @@
     timeline.forEach((t) => {
       if (tyCursor > 1638) return;
       ctx.fillStyle = '#059669';
-      ctx.font = '800 16px "Segoe UI", Arial, sans-serif';
+      ctx.font = '700 16px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       ctx.fillText(`• [${String(t.time || 'Hôm nay')}]`, 100, tyCursor);
       ctx.fillStyle = '#1e293b';
-      ctx.font = '600 15.5px "Segoe UI", Arial, sans-serif';
+      ctx.font = '600 15.5px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       const evLines = wrapCanvasText(ctx, String(t.event || '').replace(/\*/g, ''), 890).slice(0, 2);
       evLines.forEach((ln, li) => {
         ctx.fillText(ln, 232, tyCursor + li * 20);
@@ -474,7 +497,7 @@
       ctx.fillStyle = '#0f172a';
       ctx.fillRect(0, 0, 1240, 96);
       ctx.fillStyle = '#ffffff';
-      ctx.font = '900 30px "Segoe UI", Arial, sans-serif';
+      ctx.font = '700 30px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       ctx.textBaseline = 'middle';
       ctx.fillText(title, 72, 48);
       ctx.textBaseline = 'top';
@@ -541,7 +564,7 @@
             cur.ctx.fillStyle = '#14b8a6';
             cur.ctx.fillRect(72, y + 41, maxW, 3);
             cur.ctx.fillStyle = '#ffffff';
-            cur.ctx.font = '800 18px "Segoe UI", Arial, sans-serif';
+            cur.ctx.font = '700 18px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
             headers.forEach((h, ci) => {
               cur.ctx.fillText(h.slice(0, Math.max(12, Math.floor(colW / 11))), 84 + ci * colW, y + 12);
             });
@@ -552,7 +575,7 @@
           drawTableHead();
           rows.forEach((row, rIdx) => {
             const rUrl = rowUrls[rIdx] || '';
-            cur.ctx.font = '600 17px "Segoe UI", Arial, sans-serif';
+            cur.ctx.font = '600 17px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
             const cellLines = Array.from({ length: colCount }, (_, ci) => wrapCanvasText(cur.ctx, row[ci] || '—', colW - 20).slice(0, 3));
             const rowH = Math.max(36, Math.max(...cellLines.map((cl) => cl.length)) * 24 + (rUrl ? 28 : 14));
             if (y + rowH > maxY) {
@@ -568,13 +591,13 @@
             cur.ctx.lineWidth = 1;
             cur.ctx.strokeRect(72, y, maxW, rowH);
             cur.ctx.fillStyle = '#0f172a';
-            cur.ctx.font = '600 17px "Segoe UI", Arial, sans-serif';
+            cur.ctx.font = '600 17px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
             cellLines.forEach((cl, ci) => {
               cl.forEach((ln, k) => cur.ctx.fillText(ln, 84 + ci * colW, y + 9 + k * 24));
             });
             if (rUrl && /^https?:\/\//i.test(rUrl)) {
               cur.ctx.fillStyle = '#0369a1';
-              cur.ctx.font = '700 14.5px "Segoe UI", Arial, sans-serif';
+              cur.ctx.font = '700 14.5px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
               cur.ctx.fillText(`🔗 Bấm mở nguồn: ${rUrl.slice(0, 76)}`, 84, y + rowH - 22);
               if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
               cur.canvas.__pdfLinks.push({ x: 72, y, w: maxW, h: rowH, url: rUrl });
@@ -629,7 +652,7 @@
             cur.ctx.fillStyle = '#14b8a6';
             cur.ctx.fillRect(72, y, 10, 54);
             cur.ctx.fillStyle = '#ffffff';
-            cur.ctx.font = '900 24px "Segoe UI", Arial, sans-serif';
+            cur.ctx.font = '700 24px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
             cur.ctx.fillText(cleanTitle.slice(0, 82), 96, y + 14);
             if (exLine.url) {
               if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
@@ -642,7 +665,7 @@
             cur.ctx.fillStyle = '#0d9488';
             cur.ctx.fillRect(72, y + 2, 6, 30);
             cur.ctx.fillStyle = exLine.url ? '#0369a1' : '#0f2942';
-            cur.ctx.font = '900 23px "Segoe UI", Arial, sans-serif';
+            cur.ctx.font = '700 23px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
             cur.ctx.fillText(cleanTitle.slice(0, 84), 90, y + 4);
             if (exLine.url) {
               if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
@@ -660,21 +683,21 @@
           .replace(/^[-*•]\s+/, '• ')
           .replace(/\*/g, '')
           .replace(/`/g, '');
-        cur.ctx.font = (sharedCls?.kind === 'toc_item' || isTocDots) ? '700 20px "Segoe UI", Arial, sans-serif' : '500 20px "Segoe UI", Arial, sans-serif';
+        cur.ctx.font = (sharedCls?.kind === 'toc_item' || isTocDots) ? '700 20px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif' : '500 20px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         const indentX = isBullet ? 90 : 72;
         const wrapped = wrapCanvasText(cur.ctx, clean, maxW - (indentX - 72));
         const blockH = wrapped.length * 30 + (exLine.url ? 22 : 0);
         ensureSpace(blockH + 10, 'BẢN TIN 30 PHÚT THÔNG THÁI (TIẾP THEO)');
         const startParaY = y;
         cur.ctx.fillStyle = exLine.url ? '#0369a1' : ((sharedCls?.kind === 'toc_item' || isTocDots) ? '#0f2942' : '#1e293b');
-        cur.ctx.font = (sharedCls?.kind === 'toc_item' || isTocDots) ? '700 20px "Segoe UI", Arial, sans-serif' : '500 20px "Segoe UI", Arial, sans-serif';
+        cur.ctx.font = (sharedCls?.kind === 'toc_item' || isTocDots) ? '700 20px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif' : '500 20px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         for (const ln of wrapped) {
           cur.ctx.fillText(ln, indentX, y);
           y += 30;
         }
         if (exLine.url && /^https?:\/\//i.test(exLine.url)) {
           cur.ctx.fillStyle = '#0369a1';
-          cur.ctx.font = '700 15px "Segoe UI", Arial, sans-serif';
+          cur.ctx.font = '700 15px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
           cur.ctx.fillText(`🔗 Bấm mở nguồn: ${exLine.url.slice(0, 82)}`, indentX, y);
           y += 22;
           if (!cur.canvas.__pdfLinks) cur.canvas.__pdfLinks = [];
@@ -696,7 +719,7 @@
       cur.ctx.fillStyle = cat.color || '#0ea5e9';
       cur.ctx.fill();
       cur.ctx.fillStyle = '#ffffff';
-      cur.ctx.font = '900 24px "Segoe UI", Arial, sans-serif';
+      cur.ctx.font = '700 24px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       cur.ctx.fillText(`${cat.title.toUpperCase()}  (${items.length} mục)`, 94, y + 12);
       y += 66;
 
@@ -704,9 +727,9 @@
         const rawItUrl = String(it?.url || it?.link || it?.official_url || '').trim();
         const itemUrl = /^https?:\/\//i.test(rawItUrl) ? rawItUrl : (/^www\./i.test(rawItUrl) ? `https://${rawItUrl}` : '');
         const hasUrl = Boolean(itemUrl);
-        cur.ctx.font = '800 21px "Segoe UI", Arial, sans-serif';
+        cur.ctx.font = '700 21px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         const tLines = wrapCanvasText(cur.ctx, `• ${it.title}`, maxW - 28).slice(0, 2);
-        cur.ctx.font = '500 19px "Segoe UI", Arial, sans-serif';
+        cur.ctx.font = '500 19px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         const sLines = wrapCanvasText(cur.ctx, it.summary || '', maxW - 36).slice(0, 3);
         const boxH = tLines.length * 29 + sLines.length * 26 + (hasUrl ? 68 : 44);
 
@@ -720,25 +743,25 @@
 
         let iy = y + 12;
         cur.ctx.fillStyle = hasUrl ? '#0369a1' : '#0f172a';
-        cur.ctx.font = '800 21px "Segoe UI", Arial, sans-serif';
+        cur.ctx.font = '700 21px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         for (const ln of tLines) {
           cur.ctx.fillText(ln, 88, iy);
           iy += 29;
         }
         cur.ctx.fillStyle = '#334155';
-        cur.ctx.font = '500 19px "Segoe UI", Arial, sans-serif';
+        cur.ctx.font = '500 19px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         for (const ln of sLines) {
           cur.ctx.fillText(ln, 96, iy);
           iy += 26;
         }
         cur.ctx.fillStyle = '#64748b';
-        cur.ctx.font = '700 16px "Segoe UI", Arial, sans-serif';
+        cur.ctx.font = '700 16px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         cur.ctx.fillText(`Nguồn: ${it.source || 'Web'}  |  Mã SHA-256: #${it.sha256 || 'verified'}`, 96, iy + 4);
         if (hasUrl) {
           const linkY = iy + 28;
           const shortLink = itemUrl.length > 88 ? `${itemUrl.slice(0, 85)}...` : itemUrl;
           cur.ctx.fillStyle = '#0369a1';
-          cur.ctx.font = '700 15.5px "Segoe UI", Arial, sans-serif';
+          cur.ctx.font = '700 15.5px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
           cur.ctx.fillText(`🔗 Bấm mở bài gốc: ${shortLink}`, 96, linkY);
           const linkW = Math.min(maxW - 40, cur.ctx.measureText(`🔗 Bấm mở bài gốc: ${shortLink}`).width);
           cur.ctx.fillRect(96, linkY + 19, linkW, 1.5);
@@ -761,7 +784,7 @@
     cur.ctx.lineWidth = 2;
     cur.ctx.stroke();
     cur.ctx.fillStyle = '#92400e';
-    cur.ctx.font = '800 20px "Segoe UI", Arial, sans-serif';
+    cur.ctx.font = '700 20px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     cur.ctx.fillText('⚠️ Lưu ý: Tất cả thông tin, phân tích chỉ mang tính chất tham khảo.', 96, y + 20);
     y += 76;
 
@@ -788,7 +811,7 @@
     ctx.fillStyle = '#14b8a6';
     ctx.fillRect(0, 92, W, 4);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 28px "Segoe UI", Arial, sans-serif';
+    ctx.font = '700 28px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.textBaseline = 'middle';
     ctx.fillText('PHẦN 2 (TIẾP) — ĐẦY ĐỦ 8 SỰ KIỆN TÁC ĐỘNG, NHÂN QUẢ & DÒNG THỜI GIAN', 72, 48);
     ctx.textBaseline = 'top';
@@ -796,7 +819,7 @@
     let y = 126;
     if (extraImpacts.length) {
       ctx.fillStyle = '#0f2942';
-      ctx.font = '900 23px "Segoe UI", Arial, sans-serif';
+      ctx.font = '700 23px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       ctx.fillText('📊 Các Sự Kiện Tác Động Tiếp Theo (Thang 0–100)', 72, y);
       y += 40;
       const barCols = ['#10b981', '#ec4899', '#14b8a6', '#f97316'];
@@ -804,10 +827,10 @@
         const sc = Math.max(10, Math.min(100, Number(it.score) || 70));
         const col = barCols[i % barCols.length];
         ctx.fillStyle = '#0f172a';
-        ctx.font = '800 18px "Segoe UI", Arial, sans-serif';
+        ctx.font = '700 18px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         ctx.fillText(String(it.topic || '').replace(/\*/g, '').slice(0, 74), 72, y);
         ctx.fillStyle = col;
-        ctx.font = '900 18px "Segoe UI", Arial, sans-serif';
+        ctx.font = '700 18px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         ctx.fillText(`${sc}/100`, 1090, y);
         drawRoundedRect(ctx, 72, y + 26, 995, 16, 8);
         ctx.fillStyle = '#e2e8f0'; ctx.fill();
@@ -820,7 +843,7 @@
 
     if (extraChains.length) {
       ctx.fillStyle = '#0f2942';
-      ctx.font = '900 23px "Segoe UI", Arial, sans-serif';
+      ctx.font = '700 23px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       ctx.fillText(`🕸️ Sơ Đồ Nhân Quả Đầy Đủ (Chuỗi #4 – #${3 + extraChains.length})`, 72, y);
       y += 38;
       const colW = 332;
@@ -830,7 +853,7 @@
       const headers = ['⚡ NGUYÊN NHÂN GỐC', '🔗 CƠ CHẾ LAN TRUYỀN', '🎯 HỆ QUẢ ĐỜI SỐNG'];
       headers.forEach((h, ci) => {
         ctx.fillStyle = strokes[ci];
-        ctx.font = '900 17px "Segoe UI", Arial, sans-serif';
+        ctx.font = '700 17px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         ctx.fillText(h, colX[ci] + 10, y);
       });
       y += 28;
@@ -842,7 +865,7 @@
           ctx.fillStyle = fills[ci]; ctx.fill();
           ctx.strokeStyle = strokes[ci]; ctx.lineWidth = 2; ctx.stroke();
           ctx.fillStyle = '#0f172a';
-          ctx.font = '700 17.5px "Segoe UI", Arial, sans-serif';
+          ctx.font = '700 17.5px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
           wrapCanvasText(ctx, String(txt || '—').replace(/\*/g, ''), colW - 26).slice(0, 4).forEach((ln, li) => {
             ctx.fillText(ln, colX[ci] + 13, y + 14 + li * 25);
           });
@@ -873,16 +896,16 @@
     if (extraTimeline.length && y < 1560) {
       y += 10;
       ctx.fillStyle = '#5b21b6';
-      ctx.font = '900 22px "Segoe UI", Arial, sans-serif';
+      ctx.font = '700 22px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       ctx.fillText('🗓️ Mốc Thời Gian Đáng Chú Ý Tiếp Theo', 72, y);
       y += 36;
       extraTimeline.forEach((t) => {
         if (y > 1630) return;
         ctx.fillStyle = '#059669';
-        ctx.font = '800 17px "Segoe UI", Arial, sans-serif';
+        ctx.font = '700 17px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         ctx.fillText(`• [${String(t.time || 'Sắp tới')}]`, 72, y);
         ctx.fillStyle = '#1e293b';
-        ctx.font = '600 17px "Segoe UI", Arial, sans-serif';
+        ctx.font = '600 17px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         const lns = wrapCanvasText(ctx, String(t.event || '').replace(/\*/g, ''), 920).slice(0, 2);
         lns.forEach((ln, li) => ctx.fillText(ln, 210, y + li * 22));
         y += Math.max(28, lns.length * 22 + 8);
@@ -1009,9 +1032,10 @@
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, A4_W, A4_H);
     drawPageHeader(ctx, 'KHU VỰC HÌNH ẢNH & THẺ XEM TRƯỚC BÀI BÁO CHÍNH THỐNG', todayFullStr);
+    ctx.textBaseline = 'top';
 
     ctx.fillStyle = '#475569';
-    ctx.font = '600 18px "Segoe UI", Arial, sans-serif';
+    ctx.font = '600 18px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
     ctx.fillText(`Trực quan hóa ${featured.length} tiêu điểm báo chí (bấm trực tiếp vào từng thẻ để mở bài gốc · danh mục đầy đủ tất cả nguồn ở các trang cuối)`, 72, 114);
 
     canvas.__pdfLinks = canvas.__pdfLinks || [];
@@ -1061,10 +1085,10 @@
         ctx.arc(x + cardW - 46, y + 48, 70, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#fde68a';
-        ctx.font = '900 15px "Segoe UI", Arial, sans-serif';
+        ctx.font = '700 15px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         ctx.fillText(`📰 ${String(item.source || 'BÁO CHÍ').toUpperCase().slice(0, 32)}`, x + 22, y + 34);
         ctx.fillStyle = '#ffffff';
-        ctx.font = '900 22px "Segoe UI", Arial, sans-serif';
+        ctx.font = '700 22px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         wrapCanvasText(ctx, item.title, cardW - 48).slice(0, 4).forEach((ln, li) => {
           ctx.fillText(ln, x + 22, y + 66 + li * 31);
         });
@@ -1072,18 +1096,18 @@
       ctx.restore();
 
       ctx.fillStyle = '#0369a1';
-      ctx.font = '800 14.5px "Segoe UI", Arial, sans-serif';
+      ctx.font = '700 14.5px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       ctx.fillText(String(item.source || 'Nguồn chính thống').slice(0, 44), x + 18, y + imgH + 22);
 
       ctx.fillStyle = '#0f172a';
-      ctx.font = '900 19px "Segoe UI", Arial, sans-serif';
+      ctx.font = '700 19px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
       const tLines = wrapCanvasText(ctx, item.title, cardW - 36).slice(0, 3);
       tLines.forEach((ln, li) => ctx.fillText(ln, x + 18, y + imgH + 50 + li * 26));
 
       const sy = y + imgH + 56 + tLines.length * 26;
       if (item.summary) {
         ctx.fillStyle = '#475569';
-        ctx.font = '500 15.5px "Segoe UI", Arial, sans-serif';
+        ctx.font = '500 15.5px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         wrapCanvasText(ctx, item.summary, cardW - 36).slice(0, 3).forEach((ln, li) => {
           ctx.fillText(ln, x + 18, sy + li * 22);
         });
@@ -1093,7 +1117,7 @@
       const normUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : (/^www\./i.test(rawUrl) ? `https://${rawUrl}` : '');
       if (normUrl) {
         ctx.fillStyle = '#0d9488';
-        ctx.font = '800 14.5px "Segoe UI", Arial, sans-serif';
+        ctx.font = '700 14.5px "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         ctx.fillText(`🔗 Bấm mở bài gốc: ${normUrl.slice(0, 44)}`, x + 18, y + cardH - 26);
         canvas.__pdfLinks.push({ x, y, w: cardW, h: cardH, url: normUrl });
       }

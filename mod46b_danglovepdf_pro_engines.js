@@ -110,8 +110,41 @@
   async function extractStructuredBlocksFromFile(fileObj, deps = {}) {
     const f = fileObj || {};
     const ext = String(f.name || '').split('.').pop().toLowerCase();
-    const { ensureJsZip, ensureXlsx, ensurePdfJs } = deps;
+    const { ensureJsZip, ensureXlsx, ensurePdfJs, tocMaxDepth } = deps;
     const rawBlocks = [];
+
+    // ĐĂNGLOVEPDF 2.0 (Nhịp 2 & 3): Ưu tiên Native XML / XLSX / Markdown+LaTeX / PDF Geometry 2.0 AST Parsers
+    const parsersV2 = global.NoirStructuredParsers || NS.structuredParsers;
+    const pdfEngineV2 = global.NoirPdfGeometryEngine || NS.pdfGeometryEngine;
+    const docAstV2 = global.NoirDocAst || NS.docAst;
+    if (docAstV2) {
+      try {
+        if (ext === 'docx' && parsersV2 && typeof ensureJsZip === 'function') {
+          const astDoc = await parsersV2.parseDocxNativeToAst(f, { ensureJsZip });
+          if (astDoc?.blocks?.length) return docAstV2.astToLegacyBlocks(astDoc);
+        } else if ((ext === 'xlsx' || ext === 'xls') && parsersV2 && typeof ensureXlsx === 'function') {
+          const astSheet = await parsersV2.parseXlsxNativeToAst(f, { ensureXlsx });
+          if (astSheet?.blocks?.length) return docAstV2.astToLegacyBlocks(astSheet);
+        } else if ((ext === 'md' || ext === 'markdown' || ext === 'txt') && parsersV2) {
+          const rawTxt = typeof f.text === 'string'
+            ? f.text
+            : new TextDecoder('utf-8').decode(f.bytes || new Uint8Array());
+          if (rawTxt && !(ext === 'txt' && /<table[\s>]/i.test(rawTxt))) {
+            const astMd = parsersV2.parseMarkdownToAst(rawTxt, {
+              filename: f.name,
+              sourceFormat: ext === 'txt' ? 'text' : 'markdown',
+              tocMaxDepth,
+            });
+            if (astMd?.blocks?.length) return docAstV2.astToLegacyBlocks(astMd);
+          }
+        } else if (ext === 'pdf' && pdfEngineV2 && typeof ensurePdfJs === 'function') {
+          const astPdf = await pdfEngineV2.parsePdfGeometryToAst(f, { ensurePdfJs });
+          if (astPdf?.blocks?.length) return docAstV2.astToLegacyBlocks(astPdf);
+        }
+      } catch (_eV2Parse) {
+        // Fallback an toàn về parser cũ nếu file đầu vào có cấu trúc bất thường
+      }
+    }
 
     const guessImageMime = (pathStr) => {
       const e = String(pathStr || '').split('.').pop().toLowerCase();
@@ -787,7 +820,11 @@
     return coalesced;
   }
 
-  function buildTocFromBlocks(blocks = []) {
+  function buildTocFromBlocks(blocks = [], opts = {}) {
+    if (blocks && blocks.__ast && (global.NoirDocAst || NS.docAst)?.buildTocFromAst) {
+      return (global.NoirDocAst || NS.docAst).buildTocFromAst(blocks.__ast, opts);
+    }
+    const maxDepth = opts.maxDepth !== undefined ? Number(opts.maxDepth) : 3;
     const sections = [];
     const tables = [];
     const figures = [];
@@ -796,15 +833,16 @@
 
     for (const b of blocks) {
       const pNo = b.pageNo || 1;
-      if (b.type === 'heading') {
+      if (b.type === 'heading' || b.type === 'subheading') {
+        if (b.includeInToc === false) continue;
+        const lvl = b.level || (b.type === 'subheading' ? 3 : (b.kind === 'h2' ? 2 : 1));
+        if (lvl > maxDepth) continue;
         if (!/^(MỤC LỤC|DANH MỤC\s+(BẢNG|BIỂU ĐỒ|HÌNH))/i.test(b.text || '')) {
-          sections.push({ level: b.kind === 'h2' ? 2 : 1, text: b.text, pageNo: pNo });
+          sections.push({ level: lvl, text: b.text, pageNo: pNo });
         }
-      } else if (b.type === 'subheading') {
-        sections.push({ level: 3, text: b.text, pageNo: pNo });
       } else if (b.type === 'table' || b.type === 'table_caption') {
         tblCount += 1;
-        tables.push({ label: b.caption || b.text || `Bảng ${tblCount}`, pageNo: pNo });
+        tables.push({ label: b.caption || b.text || `Bảng ${tblCount}: Dữ liệu phân tích`, pageNo: pNo });
       } else if (b.type === 'image' || b.type === 'figure_caption') {
         figCount += 1;
         const lbl = b.caption || b.text || `Hình ${figCount}: Minh họa tài liệu`;
@@ -815,7 +853,7 @@
       }
     }
 
-    const tocTextLines = sections.map((s) => `${s.level >= 2 ? '  ' : ''}${s.text} | ${s.pageNo}`);
+    const tocTextLines = sections.map((s) => `${'  '.repeat(Math.max(0, (s.level || 1) - 1))}${s.text} | ${s.pageNo}`);
     return { sections, tables, figures, tocTextLines };
   }
 
@@ -1141,7 +1179,7 @@
           </label>
           <label class="block space-y-1"><span class="font-bold">🔤 Phông chữ trình bày (Tùy chọn tự do):</span>
             <select id="opt-pro-theme10-font" class="w-full px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-700 font-bold text-zinc-100">
-              <option value="sans">Hiện đại Khoa học (Segoe UI / Arial Sans)</option>
+              <option value="sans">Hiện đại Khoa học (Be Vietnam Pro / CJK Sans)</option>
               <option value="serif">Học thuật &amp; Báo chí (Georgia / Times New Roman)</option>
               <option value="classic">Sách in cổ điển (Palatino Classic)</option>
             </select>
@@ -1627,6 +1665,8 @@ Chương 3: Tổng kết | 12</textarea>
       theme10FtrMode: document.getElementById('opt-pro-theme10-ftr-mode')?.value || 'page_num',
       theme10FtrText: document.getElementById('opt-pro-theme10-ftr-text')?.value ?? 'Trang {page} / {total}',
       theme10FtrAlign: document.getElementById('opt-pro-theme10-ftr-align')?.value || 'center',
+      theme10TocDepth: document.getElementById('opt-pro-theme10-toc-depth')?.value || 'standard',
+      theme10Orient: document.getElementById('opt-pro-theme10-orient')?.value || 'portrait',
       // Mở rộng cho Split / Watermark / Page Numbers / Sign / OCR / PDF->DOCX
       splitEveryN: Math.max(1, Number(document.getElementById('opt-mod46-split-everyn')?.value || 2)),
       splitMaxMb: Math.max(0.2, Number(document.getElementById('opt-mod46-split-maxmb')?.value || 5)),
@@ -1845,7 +1885,7 @@ Chương 3: Tổng kết | 12</textarea>
           cur.c.fillStyle = theme.accent;
           cur.c.fillRect(marginX, y + 6, 8, 44);
           cur.c.fillStyle = '#ffffff';
-          cur.c.font = `900 22px ${ff}`;
+          cur.c.font = `700 22px ${ff}`;
           cur.c.fillText(String(titleStr || 'MỤC LỤC BÁO CÁO & HỆ THỐNG BẢNG – BIỂU ĐỒ – PHỤ LỤC').toUpperCase().slice(0, 76), marginX + 26, y + 16);
           y += 74;
         };
@@ -1869,7 +1909,7 @@ Chương 3: Tổng kết | 12</textarea>
           const destIdx = Math.max(0, (Number(sec.contentPageIdx ?? (sec.pageNo - 1)) || 0) + shiftVal);
           const displayPg = String(destIdx + 1);
 
-          cur.c.font = `${isH1 ? '800 18.5px' : '500 17px'} ${ff}`;
+          cur.c.font = `${isH1 ? '700 18.5px' : '500 17px'} ${ff}`;
           cur.c.fillStyle = isH1 ? theme.primary : '#334155';
           const cleanLbl = String(sec.text || '').replace(/\s+/g, ' ').trim();
           const pgW = cur.c.measureText(displayPg).width;
@@ -1879,7 +1919,7 @@ Chương 3: Tổng kết | 12</textarea>
             drawTxt = `${drawTxt.slice(0, -4)}...`;
           }
           cur.c.fillText(drawTxt, marginX + indent, y + (isH1 ? 4 : 3));
-          cur.c.font = `800 17.5px ${ff}`;
+          cur.c.font = `700 17.5px ${ff}`;
           cur.c.fillStyle = isH1 ? theme.primary : '#0f172a';
           cur.c.fillText(displayPg, marginX + bodyW - cur.c.measureText(displayPg).width - 6, y + 4);
 
@@ -1911,7 +1951,7 @@ Chương 3: Tổng kết | 12</textarea>
             cur.c.stroke();
 
             cur.c.fillStyle = theme.primary;
-            cur.c.font = `900 17px ${ff}`;
+            cur.c.font = `700 17px ${ff}`;
             cur.c.fillText(titleCard, cx + 18, y + 16);
             cur.c.fillStyle = theme.accent;
             cur.c.fillRect(cx + 18, y + 42, cardW - 36, 2);
@@ -1929,7 +1969,7 @@ Chương 3: Tổng kết | 12</textarea>
                 txt = `${txt.slice(0, -4)}...`;
               }
               cur.c.fillText(txt, cx + 18, ry + 2);
-              cur.c.font = `800 15.5px ${ff}`;
+              cur.c.font = `700 15.5px ${ff}`;
               cur.c.fillStyle = theme.primary;
               cur.c.fillText(pgStr, cx + cardW - 18 - pgW, ry + 2);
               cur.c.fillStyle = '#e2e8f0';
@@ -1963,7 +2003,7 @@ Chương 3: Tổng kết | 12</textarea>
         cur.c.fillStyle = theme.accent;
         cur.c.fillRect(marginX, y + 6, 7, 84);
         cur.c.fillStyle = theme.primary;
-        cur.c.font = `800 17.5px ${ff}`;
+        cur.c.font = `700 17.5px ${ff}`;
         cur.c.fillText('Nguyên tắc Định dạng & Liên kết Mục lục Tự động', marginX + 24, y + 16);
         cur.c.fillStyle = '#334155';
         cur.c.font = `500 15.5px ${ff}`;
@@ -1991,17 +2031,22 @@ Chương 3: Tổng kết | 12</textarea>
       const theme = REPORT_THEMES_10.find((t) => t.id === pro.theme10Id) || REPORT_THEMES_10[0];
       const dangLayout = Boolean(pro.theme10DangLayout);
       const outFmt = pro.theme10OutFmt || 'pdf';
+      const tocDepthMode = pro.theme10TocDepth || 'standard';
+      const tocMaxDepth = tocDepthMode === 'compact' ? 2 : tocDepthMode === 'exam' ? 4 : 3;
+      const isLandscape = pro.theme10Orient === 'landscape';
       const fontMap = {
-        sans: '"Segoe UI", Arial, sans-serif',
-        serif: 'Georgia, "Times New Roman", serif',
-        classic: '"Palatino Linotype", Georgia, serif',
+        sans: '"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif',
+        serif: 'Georgia, "Noto Serif SC", "Noto Serif TC", "Noto Serif JP", "Times New Roman", serif',
+        classic: '"Palatino Linotype", Georgia, "Noto Serif SC", serif',
       };
       const ff = fontMap[pro.theme10Font] || fontMap.sans;
       const safeBase = String(typeof baseName === 'string' && baseName ? baseName : f.name || 'BaoCao').replace(/\.[^.]+$/, '');
       const docTitle = safeBase.replace(/[_-]+/g, ' ');
       prog(15, `Đang phân tích cấu trúc, bảng & hình ảnh (${ext.toUpperCase()})...`);
 
-      const blocks = await extractStructuredBlocksFromFile(f, { ensurePdfJs, ensureJsZip, ensureXlsx });
+      const blocks = Array.isArray(ctrl?.theme10OverrideBlocks) && ctrl.theme10OverrideBlocks.length
+        ? ctrl.theme10OverrideBlocks.map((blk) => ({ ...blk }))
+        : await extractStructuredBlocksFromFile(f, { ensurePdfJs, ensureJsZip, ensureXlsx, tocMaxDepth });
 
       // Chèn thêm ảnh do người dùng chọn thủ công ("+ Chèn ảnh") vào đầu nội dung hoặc cuối tài liệu
       const extraImgs = Array.isArray(ctrl?.theme10ExtraImages) ? ctrl.theme10ExtraImages : [];
@@ -2114,7 +2159,7 @@ Chương 3: Tổng kết | 12</textarea>
           }
         }
         if (dangLayout) {
-          const autoToc = buildTocFromBlocks(blocks);
+          const autoToc = buildTocFromBlocks(blocks, { maxDepth: tocMaxDepth });
           if (autoToc.sections.length) {
             bodyXml.push(`<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="${pHex}"/><w:spacing w:before="140" w:after="100"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="24"/></w:rPr><w:t>MỤC LỤC BÁO CÁO &amp; TÀI LIỆU</w:t></w:r></w:p>`);
             autoToc.sections.slice(0, 40).forEach((s) => {
@@ -2191,8 +2236,10 @@ Chương 3: Tổng kết | 12</textarea>
       const PDFLibPkg = await ensurePdfLib();
       const { PDFDocument } = PDFLibPkg;
       const outPdf = await PDFDocument.create();
-      const W = 1240;
-      const H = 1754;
+      const W = isLandscape ? 1754 : 1240;
+      const H = isLandscape ? 1240 : 1754;
+      const pdfPageW = isLandscape ? 841.89 : 595.28;
+      const pdfPageH = isLandscape ? 595.28 : 841.89;
       const makePageCanvas = () => {
         const cv = document.createElement('canvas');
         cv.width = W;
@@ -2268,10 +2315,10 @@ Chương 3: Tổng kết | 12</textarea>
         }
         const textStartX = iconImg ? 278 : 96;
         c.fillStyle = '#5eead4';
-        c.font = `800 18px ${ff}`;
+        c.font = `700 18px ${ff}`;
         c.fillText('TÀI LIỆU ĐƯỢC ĐỊNH DẠNG BẰNG ĐĂNGLOVEPDF STUDIO', textStartX, 98);
         c.fillStyle = '#ffffff';
-        c.font = `900 34px ${ff}`;
+        c.font = `700 34px ${ff}`;
         c.fillText('File được tạo bởi Mai Hải Đăng vip pro', textStartX, 134);
         c.fillStyle = 'rgba(255,255,255,0.88)';
         c.font = `700 20px ${ff}`;
@@ -2284,16 +2331,16 @@ Chương 3: Tổng kết | 12</textarea>
         c.lineWidth = 1.5;
         c.stroke();
         c.fillStyle = '#fde68a';
-        c.font = `800 17px ${ff}`;
+        c.font = `700 17px ${ff}`;
         c.fillText(`Bộ phối màu: ${theme.name.slice(0, 46)}`, textStartX + 18, 250);
 
         // Tiêu đề lớn tài liệu căn giữa trang trắng sang trọng
         c.fillStyle = theme.accent;
-        c.font = `900 22px ${ff}`;
+        c.font = `700 22px ${ff}`;
         c.textAlign = 'center';
         c.fillText('ẤN PHẨM BÁO CÁO & TÀI LIỆU KHOA HỌC CHUẨN MỰC', W / 2, 520);
         c.fillStyle = theme.primary;
-        c.font = `900 46px ${ff}`;
+        c.font = `700 46px ${ff}`;
         let cy = 580;
         wrapCv(c, docTitle.toUpperCase(), W - 200).slice(0, 4).forEach((ln) => {
           c.fillText(ln, W / 2, cy);
@@ -2340,10 +2387,10 @@ Chương 3: Tổng kết | 12</textarea>
           c.fillStyle = ci === 3 ? '#f59e0b' : theme.accent;
           c.fillRect(kx + 12, ky, cw - 24, 4);
           c.fillStyle = '#94a3b8';
-          c.font = `800 15px ${ff}`;
+          c.font = `700 15px ${ff}`;
           c.fillText(kd.k, kx + 18, ky + 22);
           c.fillStyle = '#ffffff';
-          c.font = `900 28px ${ff}`;
+          c.font = `700 28px ${ff}`;
           c.fillText(kd.v, kx + 18, ky + 56);
           c.fillStyle = '#cbd5e1';
           c.font = `500 15px ${ff}`;
@@ -2360,7 +2407,7 @@ Chương 3: Tổng kết | 12</textarea>
         cover.c.fillStyle = theme.accent;
         cover.c.fillRect(0, 0, 22, H);
         cover.c.fillStyle = '#ffffff';
-        cover.c.font = `900 54px ${ff}`;
+        cover.c.font = `700 54px ${ff}`;
         let cy = 320;
         wrapCv(cover.c, docTitle.toUpperCase(), W - 200).forEach((ln) => { cover.c.fillText(ln, 100, cy); cy += 68; });
         cover.c.fillStyle = theme.accent;
@@ -2427,12 +2474,24 @@ Chương 3: Tổng kết | 12</textarea>
           continue;
         }
 
+        if (b.type === 'page_break') {
+          if (y > contentStartY + 24) {
+            curP = makePageCanvas();
+            contentPages.push(curP.cv);
+            y = contentStartY;
+          }
+          continue;
+        }
+
         if (b.type === 'heading') {
-          curP.c.font = `900 22px ${ff}`;
+          curP.c.font = `700 22px ${ff}`;
           const hLines = wrapCv(curP.c, b.text, bodyMaxW - 52);
           const bannerH = Math.max(58, hLines.length * 30 + 28);
           ensureSp(bannerH + 18);
-          recordedTocSections.push({ level: b.kind === 'h2' ? 2 : 1, text: b.text, contentPageIdx: contentPages.length - 1 });
+          const hLvl = b.level || (b.kind === 'h2' ? 2 : 1);
+          if (b.includeInToc !== false && hLvl <= tocMaxDepth) {
+            recordedTocSections.push({ level: hLvl, text: b.text, contentPageIdx: contentPages.length - 1 });
+          }
           y += 10;
           const bgGrad = curP.c.createLinearGradient(marginX, y, marginX + bodyMaxW, y);
           bgGrad.addColorStop(0, theme.primary);
@@ -2447,15 +2506,18 @@ Chương 3: Tổng kết | 12</textarea>
             curP.c.fillRect(marginX + 12, y + bannerH - 3, bodyMaxW - 24, 3);
           }
           curP.c.fillStyle = '#ffffff';
-          curP.c.font = `900 22px ${ff}`;
+          curP.c.font = `700 22px ${ff}`;
           hLines.forEach((ln, li) => curP.c.fillText(ln, marginX + 26, y + 14 + li * 30));
           y += bannerH + 16;
         } else if (b.type === 'subheading') {
-          curP.c.font = `800 21px ${ff}`;
+          curP.c.font = `700 21px ${ff}`;
           const shLines = wrapCv(curP.c, b.text, bodyMaxW - 28);
           const shH = shLines.length * 28 + 10;
           ensureSp(shH + 12);
-          recordedTocSections.push({ level: 3, text: b.text, contentPageIdx: contentPages.length - 1 });
+          const sLvl = b.level || 3;
+          if (b.includeInToc !== false && sLvl <= tocMaxDepth) {
+            recordedTocSections.push({ level: sLvl, text: b.text, contentPageIdx: contentPages.length - 1 });
+          }
           y += 8;
           curP.c.fillStyle = theme.accent;
           curP.c.fillRect(marginX, y + 3, 5, shH - 6);
@@ -2468,7 +2530,7 @@ Chương 3: Tổng kết | 12</textarea>
           curP.c.fillStyle = theme.accent;
           curP.c.fillRect(marginX, y + 3, 5, 22);
           curP.c.fillStyle = theme.primary;
-          curP.c.font = `800 19px ${ff}`;
+          curP.c.font = `700 19px ${ff}`;
           curP.c.fillText(b.text.slice(0, 88), marginX + 16, y + 2);
           y += 32;
         } else if (b.type === 'table') {
@@ -2481,7 +2543,7 @@ Chương 3: Tổng kết | 12</textarea>
             curP.c.fillStyle = theme.accent;
             curP.c.fillRect(marginX, y + 3, 5, 22);
             curP.c.fillStyle = theme.primary;
-            curP.c.font = `800 18.5px ${ff}`;
+            curP.c.font = `700 18.5px ${ff}`;
             curP.c.fillText(b.caption.slice(0, 88), marginX + 16, y + 2);
             y += 32;
           } else {
@@ -2519,7 +2581,7 @@ Chương 3: Tổng kết | 12</textarea>
           const paintTableRow = (rowArr, rowIdx, isHeaderRow, allowBreakCheck = true) => {
             const nonEmpty = rowArr.filter((v) => String(v ?? '').trim() !== '').length;
             const spanFullRow = cols >= 2 && nonEmpty === 1 && String(rowArr[0] || '').trim() !== '' && !isHeaderRow;
-            curP.c.font = `${isHeaderRow || spanFullRow ? '800' : '500'} ${tblFontSz}px ${ff}`;
+            curP.c.font = `${isHeaderRow || spanFullRow ? '700' : '500'} ${tblFontSz}px ${ff}`;
             const cellLines = spanFullRow
               ? [wrapCv(curP.c, rowArr[0] || '', tableW - 22).slice(0, 4)]
               : Array.from({ length: cols }, (_, ci) => wrapCv(curP.c, rowArr[ci] || '', colWidths[ci] - 16).slice(0, 6));
@@ -2532,7 +2594,7 @@ Chương 3: Tổng kết | 12</textarea>
                 paintTableRow(cleanRows[0], 0, true, false);
               }
             }
-            curP.c.font = `${isHeaderRow || spanFullRow ? '800' : '500'} ${tblFontSz}px ${ff}`;
+            curP.c.font = `${isHeaderRow || spanFullRow ? '700' : '500'} ${tblFontSz}px ${ff}`;
             curP.c.fillStyle = isHeaderRow ? theme.primary : (spanFullRow || rowIdx % 2 === 0 ? theme.zebra : '#ffffff');
             curP.c.fillRect(centeredX, y, tableW, rh);
             curP.c.strokeStyle = '#cbd5e1';
@@ -2547,12 +2609,26 @@ Chương 3: Tổng kết | 12</textarea>
               }
             }
             let rowUrl = '';
+            const colAligns = Array.isArray(b.colAligns) ? b.colAligns : [];
             cellLines.forEach((lns, ci) => {
               const rawCell = String(rowArr[ci] || '');
               const um = rawCell.match(/https?:\/\/[^\s<>)\]"']+/i);
               if (um && !rowUrl) rowUrl = um[0].replace(/[.,;:!?]+$/, '');
               curP.c.fillStyle = isHeaderRow ? '#ffffff' : (um ? '#0369a1' : (spanFullRow ? theme.primary : theme.text));
-              lns.forEach((ln, li) => curP.c.fillText(ln, colXStarts[ci] + 8, y + 7 + li * tblLineH));
+              const align = (!isHeaderRow && !spanFullRow && colAligns[ci]) || 'left';
+              lns.forEach((ln, li) => {
+                if (align === 'right') {
+                  curP.c.textAlign = 'right';
+                  curP.c.fillText(ln, colXStarts[ci] + colWidths[ci] - 10, y + 7 + li * tblLineH);
+                } else if (align === 'center') {
+                  curP.c.textAlign = 'center';
+                  curP.c.fillText(ln, colXStarts[ci] + colWidths[ci] / 2, y + 7 + li * tblLineH);
+                } else {
+                  curP.c.textAlign = 'left';
+                  curP.c.fillText(ln, colXStarts[ci] + 8, y + 7 + li * tblLineH);
+                }
+              });
+              curP.c.textAlign = 'left';
             });
             if (rowUrl) {
               if (!curP.cv.__pdfUriLinks) curP.cv.__pdfUriLinks = [];
@@ -2561,13 +2637,76 @@ Chương 3: Tổng kết | 12</textarea>
             y += rh;
           };
 
+          const hdrRowsCount = Math.max(1, Array.isArray(b.headerRows) && b.headerRows.length ? b.headerRows.length : 1);
           for (let ri = 0; ri < cleanRows.length; ri++) {
-            paintTableRow(cleanRows[ri], ri, ri === 0, true);
+            paintTableRow(cleanRows[ri], ri, ri < hdrRowsCount, true);
+          }
+          if (b.sourceNote) {
+            ensureSp(28);
+            curP.c.fillStyle = '#475569';
+            curP.c.font = `italic 500 15px ${ff}`;
+            curP.c.fillText(String(b.sourceNote).slice(0, 110), centeredX + 4, y + 4);
+            y += 22;
           }
           y += 16;
+        } else if (b.type === 'math_block') {
+          const mathDisplay = b.text || (global.NoirDocAst || NS.docAst)?.latexToReadablePlain?.(b.latex) || b.latex || '';
+          curP.c.font = `600 20px "Cambria Math", "Times New Roman", ${ff}`;
+          const mLines = wrapCv(curP.c, mathDisplay, bodyMaxW - 56);
+          const mh = Math.max(54, mLines.length * 30 + 26);
+          ensureSp(mh + 14);
+          rrPath(curP.c, marginX, y, bodyMaxW, mh, 10);
+          curP.c.fillStyle = theme.zebra || '#f8fafc';
+          curP.c.fill();
+          curP.c.strokeStyle = '#cbd5e1';
+          curP.c.lineWidth = 1.2;
+          curP.c.stroke();
+          curP.c.fillStyle = theme.primary;
+          curP.c.fillRect(marginX, y + 6, 6, mh - 12);
+          curP.c.fillStyle = '#0f172a';
+          curP.c.textAlign = 'center';
+          mLines.forEach((ln, li) => curP.c.fillText(ln, marginX + bodyMaxW / 2, y + 14 + li * 30));
+          curP.c.textAlign = 'left';
+          y += mh + 14;
+        } else if (b.type === 'list' && Array.isArray(b.items)) {
+          for (let liIdx = 0; liIdx < b.items.length; liIdx++) {
+            const it = b.items[liIdx];
+            const indentPx = Math.min(3, Number(it?.level || 0)) * 22;
+            const prefix = b.ordered ? (it?.marker || `${liIdx + 1}.`) : '•';
+            curP.c.font = `500 19.5px ${ff}`;
+            const lns = wrapCv(curP.c, `${prefix} ${it?.text || ''}`, bodyMaxW - 22 - indentPx);
+            lns.forEach((ln, subIdx) => {
+              ensureSp(30);
+              curP.c.fillStyle = theme.text;
+              drawJustifiedLine(curP.c, ln, marginX + 16 + indentPx, y, bodyMaxW - 22 - indentPx, subIdx === lns.length - 1);
+              y += 28;
+            });
+          }
+          y += 6;
         } else if (b.type === 'image' && b.dataUrl) {
           const loadedImg = await loadImageSafe(b.dataUrl);
           if (loadedImg) {
+            if (b.isMathImage) {
+              const innerW = bodyMaxW - 56;
+              const aspect = loadedImg.height / Math.max(1, loadedImg.width);
+              const drawW = Math.min(innerW, Math.max(140, (b.width || loadedImg.width) * 1.45));
+              const drawH = Math.min(340, Math.max(36, Math.round(drawW * aspect)));
+              const finalW = Math.min(innerW, Math.round(drawH / Math.max(0.05, aspect)));
+              const cardH = drawH + 26;
+              ensureSp(cardH + 14);
+              rrPath(curP.c, marginX, y, bodyMaxW, cardH, 8);
+              curP.c.fillStyle = theme.zebra || '#f8fafc';
+              curP.c.fill();
+              curP.c.strokeStyle = '#cbd5e1';
+              curP.c.lineWidth = 1.2;
+              curP.c.stroke();
+              curP.c.fillStyle = theme.primary;
+              curP.c.fillRect(marginX, y + 6, 5, cardH - 12);
+              const ix = Math.round(marginX + (bodyMaxW - finalW) / 2);
+              curP.c.drawImage(loadedImg, ix, y + 13, finalW, drawH);
+              y += cardH + 14;
+              continue;
+            }
             autoFigNum += 1;
             const figCap = b.caption || `Hình ${autoFigNum}: Ảnh & Biểu đồ minh họa`;
             const innerW = bodyMaxW - 40;
@@ -2733,10 +2872,10 @@ Chương 3: Tổng kết | 12</textarea>
           c.fillStyle = theme.accent;
           c.fillRect(0, 80, W, 4);
           const hStr = expandTokens(hdrRawTpl || '{filename}', pageNo, totalNumberedPages);
-          drawAlignedBandText(c, hStr, hdrAlign, 42, '#ffffff', `800 22px ${ff}`, bodyMaxW, marginX);
+          drawAlignedBandText(c, hStr, hdrAlign, 42, '#ffffff', `700 22px ${ff}`, bodyMaxW, marginX);
         } else if (hdrMode === 'minimal') {
           const hStr = expandTokens(hdrRawTpl || '{filename}', pageNo, totalNumberedPages);
-          drawAlignedBandText(c, hStr, hdrAlign, 46, theme.primary, `800 20px ${ff}`, bodyMaxW, marginX);
+          drawAlignedBandText(c, hStr, hdrAlign, 46, theme.primary, `700 20px ${ff}`, bodyMaxW, marginX);
           c.fillStyle = theme.accent;
           c.fillRect(marginX, 68, bodyMaxW, 2);
         }
@@ -2755,8 +2894,8 @@ Chương 3: Tổng kết | 12</textarea>
         const jpgUrl = finalCanvases[i].toDataURL('image/jpeg', 0.92);
         const bytes = dataUrlToBytes(jpgUrl);
         const img = await outPdf.embedJpg(bytes);
-        const p = outPdf.addPage([595.28, 841.89]);
-        p.drawImage(img, { x: 0, y: 0, width: 595.28, height: 841.89 });
+        const p = outPdf.addPage([pdfPageW, pdfPageH]);
+        p.drawImage(img, { x: 0, y: 0, width: pdfPageW, height: pdfPageH });
         addedPages.push(p);
       }
       // Pass 3: Gắn link nội bộ /GoTo cho Mục lục & link ngoài /URI cho nguồn tham khảo
@@ -3524,7 +3663,7 @@ Chương 3: Tổng kết | 12</textarea>
 
       if (style === 'dang_report') {
         const dangTheme = REPORT_THEMES_10[0];
-        const ff = '"Segoe UI", Arial, sans-serif';
+        const ff = '"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif';
         const W = 1240;
         const H = 1754;
         const makeTocCanvas = () => {
@@ -3987,14 +4126,14 @@ Chương 3: Tổng kết | 12</textarea>
           }
           oCtx.putImageData(oImg, 0, 0);
           visualOverlayHtml += `<div style="margin:14px 0;padding:12px;border:1px solid #334155;border-radius:12px;">
-            <div style="font-weight:800;margin-bottom:8px;">Trang ${i} — Phát hiện <span style="color:#fb7185;">${diffPx.toLocaleString('vi-VN')} điểm ảnh khác biệt</span> (tô màu đỏ hồng)</div>
+            <div style="font-weight: 700;margin-bottom:8px;">Trang ${i} — Phát hiện <span style="color:#fb7185;">${diffPx.toLocaleString('vi-VN')} điểm ảnh khác biệt</span> (tô màu đỏ hồng)</div>
             <img src="${outC.toDataURL('image/jpeg', 0.85)}" style="max-width:100%;border:1px solid #475569;border-radius:8px;" />
           </div>`;
         }
       }
 
       const reportHtml = `<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><title>So sánh PDF — ĐăngLovePDF</title>
-<style>body{font-family:Segoe UI,Arial,sans-serif;background:#0f172a;color:#e2e8f0;max-width:980px;margin:20px auto;padding:16px;line-height:1.6}
+<style>body{font-family:'Be Vietnam Pro','Noto Sans SC','Noto Sans TC','Noto Sans JP','Noto Sans KR',sans-serif;background:#0f172a;color:#e2e8f0;max-width:980px;margin:20px auto;padding:16px;line-height:1.6}
 .add{background:#064e3b;color:#a7f3d0;padding:3px 8px;border-radius:6px;margin:3px 0}
 .del{background:#7f1d1d;color:#fecaca;padding:3px 8px;border-radius:6px;margin:3px 0;text-decoration:line-through}
 .same{color:#94a3b8;padding:2px 8px}</style></head><body>

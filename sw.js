@@ -6,7 +6,7 @@
  * (Windows / macOS / Linux) ngay cả khi mất kết nối mạng.
  * ============================================================================
  */
-const CACHE_NAME = 'bi-novel-studio-pwa-v145';
+const CACHE_NAME = 'bi-novel-studio-pwa-v148';
 const OFFLINE_CDN_HOSTS = [
   'cdn.tailwindcss.com',
   'cdnjs.cloudflare.com',
@@ -105,6 +105,10 @@ const CORE_ASSETS = [
   './mod44_site_traffic_analytics_box.js',
   './mod45_scientific_fx570_and_desmos_graphing_calc.js',
   './mod46c_danglovepdf_studio_editor_and_viewer.js',
+  './modules/danglovepdf-v2/documentAst.js',
+  './modules/danglovepdf-v2/structuredParsers.js',
+  './modules/danglovepdf-v2/pdfGeometryEngine.js',
+  './modules/danglovepdf-v2/geminiBridgeAndVision.js',
   './mod46b_danglovepdf_pro_engines.js',
   './mod46_danglovepdf_and_doc_converter.js',
   './mod47_performance_ram_and_lifecycle_manager.js',
