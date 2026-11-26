@@ -480,6 +480,7 @@
             <button type="button" id="btn-mod46-pv-find-next" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-amber-600 text-[10px] font-bold cursor-pointer">▼</button>
           </div>
           <button type="button" id="btn-mod46-pv-ai-summary" class="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold cursor-pointer" title="AI tóm tắt nhanh nội dung tài liệu PDF này">🤖 Tóm tắt AI</button>
+          <button type="button" id="btn-mod46-pv-ai-manual" class="px-2.5 py-1.5 rounded-xl border border-sky-500/55 bg-sky-950/45 hover:bg-sky-900/65 text-sky-200 text-xs font-bold cursor-pointer" title="Dùng AI Thủ công 0-Token không cần API Key">📋 AI Thủ công</button>
           <a href="${resItem.url}" download="${escHtml(resItem.name)}" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black">⬇️ Tải</a>
           <button type="button" id="btn-mod46-pv-close" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
         </div>
@@ -536,6 +537,41 @@
     const searchInput = pv.querySelector('#inp-mod46-pv-search');
     const regexChk = pv.querySelector('#chk-mod46-pv-regex');
     const searchStat = pv.querySelector('#mod46-pv-search-stat');
+
+    pv.querySelector('#btn-mod46-pv-ai-manual')?.addEventListener('click', async () => {
+      const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+      if (!pdfDoc || !gBridge) return;
+      const limit = Math.min(pdfDoc.numPages, 12);
+      const chunks = [];
+      for (let i = 1; i <= limit; i++) {
+        const pg = await pdfDoc.getPage(i);
+        const tc = await pg.getTextContent();
+        chunks.push(`[Trang ${i}] ` + tc.items.map((it) => it.str).join(' '));
+      }
+      const promptTxt = gBridge.buildTaskManualPrompt('viewer_summary', { fileName: resItem?.name || 'PDF', text: chunks.join('\n') });
+      gBridge.openManualAiAssistantModal?.({
+        taskTitle: 'Trình Đọc PDF — Tóm tắt AI Thủ công (0-Token)',
+        promptText: promptTxt,
+        attachFileName: resItem?.name || '',
+        applyBtnLabel: '✅ Hiển thị bản Tóm tắt ngay trên Trình Đọc',
+        onApplyPasted: (pasted) => {
+          pv.querySelector('#mod46-pv-ai-drawer')?.remove();
+          const drawer = document.createElement('div');
+          drawer.id = 'mod46-pv-ai-drawer';
+          drawer.className = 'fixed right-4 top-16 z-[2147483645] w-[min(92vw,420px)] max-h-[75dvh] rounded-2xl border border-emerald-500/50 bg-zinc-900/98 text-zinc-100 shadow-2xl flex flex-col overflow-hidden';
+          drawer.innerHTML = `
+            <div class="px-3.5 py-2.5 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between gap-2">
+              <span class="text-xs font-bold text-emerald-300">🤖 Tóm tắt PDF (Gemini Thủ công)</span>
+              <button type="button" id="btn-pv-ai-drawer-close" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-rose-600 text-xs font-bold cursor-pointer">✕</button>
+            </div>
+            <div class="p-3.5 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap text-zinc-200"></div>
+          `;
+          drawer.querySelector('.overflow-y-auto').textContent = pasted;
+          drawer.querySelector('#btn-pv-ai-drawer-close')?.addEventListener('click', () => drawer.remove());
+          pv.appendChild(drawer);
+        },
+      });
+    });
 
     pv.querySelector('#btn-mod46-pv-ai-summary')?.addEventListener('click', async () => {
       const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
@@ -1300,6 +1336,7 @@
             <button type="button" id="btn-mod46-ai-ed-summary" class="px-2.5 py-1.5 rounded-xl bg-amber-700/80 hover:bg-amber-600 text-white font-bold cursor-pointer">📝 Tóm tắt &amp; Dán Note</button>
             <button type="button" id="btn-mod46-ai-ed-table" class="px-2.5 py-1.5 rounded-xl bg-teal-700/80 hover:bg-teal-600 text-white font-bold cursor-pointer">📊 Bóc bảng → Excel</button>
             <button type="button" id="btn-mod46-ai-ed-ocr" class="px-2.5 py-1.5 rounded-xl bg-violet-700/80 hover:bg-violet-600 text-white font-bold cursor-pointer">👁️ OCR AI trang Scan</button>
+            <button type="button" id="btn-mod46-ai-ed-manual" class="px-2.5 py-1.5 rounded-xl border border-sky-400/60 bg-sky-950/60 hover:bg-sky-800 text-sky-100 font-bold cursor-pointer">📋 AI Thủ công (0-Token)</button>
           </div>
 
           <!-- Thanh thuộc tính kiểu Word + Điều hướng trang -->
@@ -2373,6 +2410,163 @@
             },
           });
         }
+      });
+
+      // 7. AI Thủ công 0-Token (chọn 1 trong 6 tác vụ PDF Editor mà không cần API Key!)
+      container.querySelector('#btn-mod46-ai-ed-manual')?.addEventListener('click', () => {
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        if (!gBridge) return;
+        const blocks = this.extractedBlocksByPage[this.currentPage] || [];
+        const oldPick = document.getElementById('mod46-ed-manual-ai-picker');
+        if (oldPick) oldPick.remove();
+        const pop = document.createElement('div');
+        pop.id = 'mod46-ed-manual-ai-picker';
+        pop.style.cssText = 'position:fixed;inset:0;z-index:2147483640;background:rgba(5,9,18,0.84);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;';
+        pop.innerHTML = `
+          <div class="max-w-md w-full rounded-2xl border border-sky-500/50 bg-zinc-900 p-4 space-y-2.5 text-zinc-100 shadow-2xl">
+            <div class="flex items-center justify-between gap-2 pb-2 border-b border-zinc-800">
+              <div class="text-sm font-bold text-sky-300">📋 Chọn tác vụ AI Thủ công (0-Token · Trang ${this.currentPage})</div>
+              <button type="button" id="ed-man-close" class="px-2 py-0.5 rounded bg-zinc-800 text-xs font-bold cursor-pointer">✕</button>
+            </div>
+            <div class="grid grid-cols-1 gap-2 text-xs">
+              <button type="button" data-ed-man="polish" class="text-left p-2.5 rounded-xl bg-zinc-800 hover:bg-emerald-700 font-bold cursor-pointer">✨ 1. Sửa chính tả &amp; dính chữ trên trang này</button>
+              <button type="button" data-ed-man="translate" class="text-left p-2.5 rounded-xl bg-zinc-800 hover:bg-sky-700 font-bold cursor-pointer">🌐 2. Dịch toàn trang (Việt ↔ Anh) giữ nguyên bố cục</button>
+              <button type="button" data-ed-man="redact" class="text-left p-2.5 rounded-xl bg-zinc-800 hover:bg-rose-700 font-bold cursor-pointer">🛡️ 3. Quét &amp; Che đen PII nhạy cảm trên trang</button>
+              <button type="button" data-ed-man="summary" class="text-left p-2.5 rounded-xl bg-zinc-800 hover:bg-amber-700 font-bold cursor-pointer">📝 4. Tóm tắt trang &amp; dán Ghi chú góc trên-phải</button>
+              <button type="button" data-ed-man="table" class="text-left p-2.5 rounded-xl bg-zinc-800 hover:bg-teal-700 font-bold cursor-pointer">📊 5. Bóc bảng trang này xuất ra CSV/Excel</button>
+              <button type="button" data-ed-man="ocr" class="text-left p-2.5 rounded-xl bg-zinc-800 hover:bg-violet-700 font-bold cursor-pointer">👁️ 6. OCR trang Scan thành khối chữ sửa trực tiếp</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(pop);
+        pop.querySelector('#ed-man-close')?.addEventListener('click', () => pop.remove());
+        pop.addEventListener('click', (ev) => { if (ev.target === pop) pop.remove(); });
+        pop.querySelectorAll('[data-ed-man]').forEach((b) => {
+          b.addEventListener('click', async () => {
+            const act = b.getAttribute('data-ed-man');
+            pop.remove();
+            if (act === 'polish') {
+              const payload = blocks.slice(0, 80).map((bl, i) => `[${i}] ${bl.text}`).join('\n');
+              gBridge.openManualAiAssistantModal({
+                taskTitle: 'PDF Editor — Sửa chính tả (AI Thủ công 0-Token)',
+                promptText: gBridge.buildTaskManualPrompt('editor_polish', { text: payload }),
+                applyBtnLabel: '✅ Áp dụng sửa chữ lên trang PDF',
+                onApplyPasted: (raw) => {
+                  const m = String(raw || '').match(/\[[\s\S]*\]/);
+                  const edits = m ? JSON.parse(m[0]) : [];
+                  if (Array.isArray(edits) && edits.length) {
+                    this._pushUndo();
+                    for (const ed of edits) {
+                      const blk = blocks[Number(ed?.i)];
+                      if (!blk || !ed?.t) continue;
+                      this.getPageObjects(this.currentPage).push({ type: 'replace_text', x: blk.x, y: blk.y, w: blk.w, h: blk.h, text: String(ed.t).trim(), fontSize: Math.max(8, Math.round(blk.fontSize || 12)), fontFamily: blk.fontFamily || '"Be Vietnam Pro", Arial, sans-serif', fontMeta: blk.fontMeta || null, bold: Boolean(blk.bold), italic: Boolean(blk.italic), underline: false, color: blk.inkColor || '#0f172a', bgColor: blk.bgColor || '#ffffff' });
+                    }
+                    redrawOverlay();
+                    notifyEditor(`✅ Đã áp dụng ${edits.length} dòng sửa chữ từ Gemini!`);
+                  }
+                },
+              });
+            } else if (act === 'translate') {
+              const slice = blocks.slice(0, 75);
+              const hasVi = /[ăâđêôơưáàảãạ]/i.test(slice.map((x) => x.text).join(' '));
+              const targetLang = hasVi ? 'English' : 'Tiếng Việt';
+              const payload = slice.map((bl, i) => `[${i}] ${bl.text}`).join('\n');
+              gBridge.openManualAiAssistantModal({
+                taskTitle: `PDF Editor — Dịch trang sang ${targetLang} (AI Thủ công)`,
+                promptText: gBridge.buildTaskManualPrompt('editor_translate', { text: payload, targetLang }),
+                applyBtnLabel: '✅ Áp dụng bản dịch lên trang PDF',
+                onApplyPasted: (raw) => {
+                  const m = String(raw || '').match(/\[[\s\S]*\]/);
+                  const edits = m ? JSON.parse(m[0]) : [];
+                  if (Array.isArray(edits) && edits.length) {
+                    this._pushUndo();
+                    for (const ed of edits) {
+                      const blk = slice[Number(ed?.i)];
+                      if (!blk || !ed?.t) continue;
+                      this.getPageObjects(this.currentPage).push({ type: 'replace_text', x: blk.x, y: blk.y, w: blk.w, h: blk.h, text: String(ed.t).trim(), fontSize: Math.max(8, Math.round(blk.fontSize || 11)), fontFamily: blk.fontFamily || '"Be Vietnam Pro", Arial, sans-serif', fontMeta: blk.fontMeta || null, bold: Boolean(blk.bold), italic: Boolean(blk.italic), underline: false, color: blk.inkColor || '#0f172a', bgColor: blk.bgColor || '#ffffff' });
+                    }
+                    redrawOverlay();
+                    notifyEditor(`🌐 Đã dịch trang ${this.currentPage} sang ${targetLang}!`);
+                  }
+                },
+              });
+            } else if (act === 'redact') {
+              const payload = blocks.slice(0, 120).map((bl, i) => `[${i}] ${bl.text}`).join('\n');
+              gBridge.openManualAiAssistantModal({
+                taskTitle: 'PDF Editor — Che đen PII (AI Thủ công)',
+                promptText: gBridge.buildTaskManualPrompt('editor_redact', { text: payload }),
+                applyBtnLabel: '✅ Che đen ngay các vùng nhạy cảm',
+                onApplyPasted: (raw) => {
+                  const m = String(raw || '').match(/\[[\s\S]*\]/);
+                  const idxs = m ? JSON.parse(m[0]) : [];
+                  if (Array.isArray(idxs) && idxs.length) {
+                    this._pushUndo();
+                    idxs.forEach((id) => { const blk = blocks[Number(id)]; if (blk) this.getPageObjects(this.currentPage).push({ type: 'redact', x: blk.x, y: blk.y, w: Math.max(24, blk.w), h: Math.max(12, blk.h) }); });
+                    redrawOverlay();
+                    notifyEditor(`🛡️ Đã che đen ${idxs.length} vùng nhạy cảm!`);
+                  }
+                },
+              });
+            } else if (act === 'summary') {
+              const txt = blocks.map((bl) => bl.text).join('\n').trim();
+              gBridge.openManualAiAssistantModal({
+                taskTitle: 'PDF Editor — Tóm tắt & Dán Sticky Note (AI Thủ công)',
+                promptText: gBridge.buildTaskManualPrompt('editor_summary', { text: txt }),
+                applyBtnLabel: '✅ Dán Sticky Note lên trang PDF',
+                onApplyPasted: (sum) => {
+                  const lines = String(sum || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(0, 3);
+                  if (lines.length) {
+                    this._pushUndo();
+                    const nx = Math.max(20, (this.baseWidth || 595) - 250);
+                    this.getPageObjects(this.currentPage).push({ type: 'rect', x: nx, y: 18, w: 232, h: 24 + lines.length * 16, color: '#d97706' });
+                    lines.forEach((ln, li) => this.getPageObjects(this.currentPage).push({ type: 'add_text', x: nx + 8, y: 24 + li * 16, text: ln.slice(0, 52), fontSize: 10, fontFamily: '"Be Vietnam Pro", Arial, sans-serif', bold: li === 0, italic: false, underline: false, color: '#92400e' }));
+                    redrawOverlay();
+                    notifyEditor('📝 Đã dán Ghi chú Tóm tắt lên góc trang!');
+                  }
+                },
+              });
+            } else if (act === 'table') {
+              const payload = blocks.map((bl) => `[x=${Math.round(bl.x)},y=${Math.round(bl.y)}] ${bl.text}`).join('\n');
+              gBridge.openManualAiAssistantModal({
+                taskTitle: 'PDF Editor — Bóc bảng sang Excel/CSV (AI Thủ công)',
+                promptText: gBridge.buildTaskManualPrompt('editor_table', { text: payload }),
+                applyBtnLabel: '✅ Xuất ngay file CSV mở bằng Excel',
+                onApplyPasted: (raw) => {
+                  const m = String(raw || '').match(/\[[\s\S]*\]/);
+                  const rows = m ? JSON.parse(m[0]) : [];
+                  if (Array.isArray(rows) && rows.length) {
+                    const csv = '\uFEFF' + rows.map((r) => (Array.isArray(r) ? r : [r]).map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+                    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+                    const a = document.createElement('a'); a.href = url; a.download = `${(fileRec?.name || 'Bang').replace(/\.pdf$/i, '')}_Trang${this.currentPage}.csv`; a.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 10000);
+                    notifyEditor(`📊 Đã xuất bảng trang ${this.currentPage} (${rows.length} hàng)!`);
+                  }
+                },
+              });
+            } else if (act === 'ocr') {
+              const dUrl = pdfCanvas.toDataURL('image/jpeg', 0.85);
+              let jpgBlob = null;
+              try { jpgBlob = await (await fetch(dUrl)).blob(); } catch (_eB) {}
+              gBridge.openManualAiAssistantModal({
+                taskTitle: 'PDF Editor — OCR Trang Scan (AI Thủ công)',
+                promptText: gBridge.buildTaskManualPrompt('editor_ocr', { fileName: `Trang_${this.currentPage}_Scan.jpg` }),
+                attachFileName: `Trang_${this.currentPage}_Scan.jpg`,
+                attachFileBlob: jpgBlob,
+                applyBtnLabel: '✅ Nạp khối chữ sửa trực tiếp lên trang',
+                onApplyPasted: (raw) => {
+                  const m = String(raw || '').match(/\[[\s\S]*\]/);
+                  const items = m ? JSON.parse(m[0]) : [];
+                  if (Array.isArray(items) && items.length) {
+                    const bw = this.baseWidth || 595, bh = this.baseHeight || 842;
+                    this.extractedBlocksByPage[this.currentPage] = items.map((it) => ({ x: (Number(it?.xPct || 8) / 100) * bw, y: (Number(it?.yPct || 8) / 100) * bh, w: Math.max(60, (Number(it?.wPct || 65) / 100) * bw), h: 16, text: String(it?.text || '').trim(), fontSize: 12, fontFamily: '"Be Vietnam Pro", Arial, sans-serif', fontMeta: null, bold: false, italic: false, inkColor: '#0f172a', bgColor: '#ffffff' })).filter((x) => x.text);
+                    renderEditableTextBlocks();
+                    notifyEditor(`👁️ Đã nạp ${this.extractedBlocksByPage[this.currentPage].length} dòng OCR sửa trực tiếp!`);
+                  }
+                },
+              });
+            }
+          });
+        });
       });
 
       await renderPage(1);

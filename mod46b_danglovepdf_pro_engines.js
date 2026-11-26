@@ -1417,7 +1417,8 @@
         <label class="block space-y-1"><span class="font-bold">Từ khóa ngắt tệp (khi chọn Tách theo từ khóa):</span>
           <input id="opt-pro-split-kw" type="text" placeholder="VD: HÓA ĐƠN GIÁ TRỊ GIA TĂNG" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
         </label>
-        <button type="button" id="btn-pro-ai-split-kw" class="w-full py-1.5 px-3 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-[11px] font-bold cursor-pointer">🤖 AI Gợi ý từ khóa ngắt hồ sơ (1 chạm)</button>`;
+        <button type="button" id="btn-pro-ai-split-kw" class="w-full py-1.5 px-3 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-[11px] font-bold cursor-pointer">🤖 AI Gợi ý từ khóa ngắt hồ sơ (1 chạm)</button>
+        <button type="button" id="btn-pro-manual-ai-split" class="w-full py-1.5 px-3 rounded-xl border border-sky-500/50 bg-sky-950/35 hover:bg-sky-900/50 text-sky-200 text-[11px] font-bold cursor-pointer">📋 AI Thủ công (0-Token · Copy Prompt &amp; Dán từ khóa)</button>`;
     }
 
     if (toolId === 'svg_eml_to_pdf') {
@@ -1438,7 +1439,8 @@
 Email=an@example.com
 XacNhan=true</textarea>
         </label>
-        <button type="button" id="btn-pro-ai-fill-form" class="w-full py-1.5 px-3 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-[11px] font-bold cursor-pointer">🤖 AI Tự chuyển ghi chú thành dữ liệu Form (1 chạm)</button>`;
+        <button type="button" id="btn-pro-ai-fill-form" class="w-full py-1.5 px-3 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-[11px] font-bold cursor-pointer">🤖 AI Tự chuyển ghi chú thành dữ liệu Form (1 chạm)</button>
+        <button type="button" id="btn-pro-manual-ai-form" class="w-full py-1.5 px-3 rounded-xl border border-sky-500/50 bg-sky-950/35 hover:bg-sky-900/50 text-sky-200 text-[11px] font-bold cursor-pointer">📋 AI Thủ công (0-Token · Copy Prompt &amp; Dán dữ liệu Form)</button>`;
     }
 
     if (toolId === 'pdf_mail_merge') {
@@ -1527,6 +1529,7 @@ XacNhan=true</textarea>
               ? `<button type="button" id="btn-pro-toc-autodetect" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-bold cursor-pointer">🤖 Quét tự động bằng AI và code</button>`
               : `<button type="button" id="btn-pro-toc-autodetect" class="px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-[10.5px] font-bold cursor-pointer">🔍 Quét tự động từ PDF</button>
                  <button type="button" id="btn-pro-toc-connect-ai" class="px-2 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[10.5px] font-bold cursor-pointer">🔗 Kết nối AI</button>`}
+            <button type="button" id="btn-pro-manual-ai-toc" class="px-2 py-1 rounded-lg border border-sky-500/50 bg-sky-950/40 hover:bg-sky-900/60 text-sky-200 text-[10.5px] font-bold cursor-pointer">📋 AI Thủ công</button>
           </div>
         </div>
         <textarea id="opt-pro-toc-lines" rows="6" placeholder="Đang tự quét tiêu đề, Bảng &amp; Hình từ PDF..." class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700 text-[11.5px]">Chương 1: Khởi đầu | 1
@@ -1562,7 +1565,8 @@ Chương 3: Tổng kết | 12</textarea>
             <option value="csv">CSV UTF-8 (Mở Excel tiếng Việt không lỗi dấu)</option>
           </select>
         </label>
-        <label class="flex items-center gap-2 pt-1"><input id="opt-pro-p2x-ai-clean" type="checkbox" ${hasG ? 'checked' : ''} class="accent-emerald-400" /><span>✨ Dùng AI gộp ô bảng bị ngắt dòng &amp; chuẩn hóa cột (${hasG ? 'Gemini đã nối' : 'Cần API Key'})</span></label>`;
+        <label class="flex items-center gap-2 pt-1"><input id="opt-pro-p2x-ai-clean" type="checkbox" ${hasG ? 'checked' : ''} class="accent-emerald-400" /><span>✨ Dùng AI gộp ô bảng bị ngắt dòng &amp; chuẩn hóa cột (${hasG ? 'Gemini đã nối' : 'Cần API Key'})</span></label>
+        <button type="button" id="btn-pro-manual-ai-p2x" class="w-full py-1.5 px-3 rounded-xl border border-sky-500/50 bg-sky-950/35 hover:bg-sky-900/50 text-sky-200 text-[11px] font-bold cursor-pointer">📋 AI Thủ công Bóc bảng → Excel (0-Token)</button>`;
     }
 
     if (toolId === 'deskew_denoise') {
@@ -1596,13 +1600,15 @@ Chương 3: Tổng kết | 12</textarea>
             <option value="pdf">PDF sạch chuẩn Tiếng Việt (.PDF)</option>
             <option value="txt">Văn bản thuần (.TXT)</option>
           </select>
-        </label>`;
+        </label>
+        <button type="button" id="btn-pro-manual-ai-icr" class="w-full py-2 px-3 rounded-xl border border-sky-500/55 bg-sky-950/35 hover:bg-sky-900/55 text-sky-200 text-[11px] font-bold cursor-pointer">📋 Dùng AI Thủ công ICR (0-Token · Copy Prompt theo chế độ + Gửi ảnh/PDF → Xuất file)</button>`;
     }
 
     if (toolId === 'metadata_editor') {
       return `
         <label class="flex items-center gap-2 p-2 rounded-xl border border-rose-500/40 bg-rose-950/30"><input id="opt-pro-meta-scrub" type="checkbox" class="accent-rose-400" /><span class="font-bold text-rose-200">🧹 Xóa trắng 100% siêu dữ liệu ẩn (Scrubber)</span></label>
         <button type="button" id="btn-pro-ai-gen-meta" class="w-full py-1.5 px-3 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-[11px] font-bold cursor-pointer">🤖 AI Tự tạo Tiêu đề, Tác giả &amp; Từ khóa (1 chạm)</button>
+        <button type="button" id="btn-pro-manual-ai-meta" class="w-full py-1.5 px-3 rounded-xl border border-sky-500/50 bg-sky-950/35 hover:bg-sky-900/50 text-sky-200 text-[11px] font-bold cursor-pointer">📋 AI Thủ công (0-Token · Copy Prompt &amp; Dán JSON Metadata)</button>
         <label class="block space-y-1"><span class="font-bold">Tiêu đề mới:</span><input id="opt-pro-meta-title" type="text" placeholder="Giữ nguyên hoặc nhập mới" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
         <label class="block space-y-1"><span class="font-bold">Tác giả:</span><input id="opt-pro-meta-author" type="text" placeholder="Tên tác giả" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
         <label class="block space-y-1"><span class="font-bold">Từ khóa (Keywords):</span><input id="opt-pro-meta-keywords" type="text" placeholder="tiểu thuyết, tài liệu..." class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>`;
@@ -1630,6 +1636,7 @@ Chương 3: Tổng kết | 12</textarea>
           <input id="opt-pro-redact-words" type="text" placeholder="Ví dụ: 0912345678, CCCD, bí mật" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700" />
         </label>
         <button type="button" id="btn-pro-ai-scan-pii" class="w-full py-1.5 px-3 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-[11px] font-bold cursor-pointer">🤖 AI Tự quét toàn bộ thông tin nhạy cảm PII (1 chạm)</button>
+        <button type="button" id="btn-pro-manual-ai-pii" class="w-full py-1.5 px-3 rounded-xl border border-sky-500/50 bg-sky-950/35 hover:bg-sky-900/50 text-sky-200 text-[11px] font-bold cursor-pointer">📋 AI Thủ công Quét PII (0-Token · Copy Prompt &amp; Dán từ khóa)</button>
         <div class="p-2 rounded-xl bg-zinc-950 border border-zinc-800 space-y-1">
           <div class="text-[11px] font-bold text-amber-300">🤖 Tự động quét &amp; che đen theo mẫu (Regex):</div>
           <label class="flex items-center gap-2 text-[11px]"><input id="opt-pro-redact-phone" type="checkbox" class="accent-rose-500" /><span>Số điện thoại Việt Nam (03/05/07/08/09...)</span></label>

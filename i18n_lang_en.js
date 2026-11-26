@@ -5404,6 +5404,27 @@
     "✅ Áp dụng kết quả & Hoàn tất ngay": "✅ Apply Result & Finish Now",
     "✅ Đồng bộ 6 Biểu đồ & Xuất thẳng PDF ngay": "✅ Sync 6 Charts & Export PDF Now",
     "✅ Tổng hợp 8 Trụ cột & Xuất thẳng PDF ngay": "✅ Synthesize 8 Pillars & Export PDF Now",
+
+    "AIzaSy... hoặc AQ...": "AIzaSy... or AQ...",
+    "Dán mã API Key (AIzaSy... hoặc AQ...) vào đây": "Paste API Key (AIzaSy... or AQ...) here",
+    "📋 Dùng AI Thủ công (0-Token · Copy Prompt & Dán kết quả → Xuất PDF)": "📋 Manual AI (0-Token · Copy Prompt & Paste Result → Export PDF)",
+    "📋 Dùng AI Thủ công (Không cần API Key · Copy Prompt & Dán kết quả → Xuất PDF)": "📋 Manual AI (No API Key · Copy Prompt & Paste Result → Export PDF)",
+    "📋 Dùng AI Thủ công (Không cần API Key · Copy Prompt + Gửi file lên Gemini → Dán kết quả)": "📋 Manual AI (No API Key · Copy Prompt + Upload File to Gemini → Paste Result)",
+    "📋 AI Thủ công (0-Token · Copy Prompt + Gửi file → Word/MD)": "📋 Manual AI (0-Token · Copy Prompt + Upload File → Word/MD)",
+    "📋 AI Thủ công OCR (0-Token · Copy Prompt + Gửi file → Dán kết quả)": "📋 Manual AI OCR (0-Token · Copy Prompt + Upload File → Paste Result)",
+    "📋 AI Thủ công (0-Token · Copy Prompt & Dán từ khóa)": "📋 Manual AI (0-Token · Copy Prompt & Paste Keywords)",
+    "📋 AI Thủ công (0-Token · Copy Prompt & Dán dữ liệu Form)": "📋 Manual AI (0-Token · Copy Prompt & Paste Form Data)",
+    "📋 AI Thủ công": "📋 Manual AI",
+    "📋 AI Thủ công Bóc bảng → Excel (0-Token)": "📋 Manual AI Table Extract → Excel (0-Token)",
+    "📋 Dùng AI Thủ công ICR (0-Token · Copy Prompt theo chế độ + Gửi ảnh/PDF → Xuất file)": "📋 Manual AI ICR (0-Token · Copy Mode Prompt + Upload Image/PDF → Export)",
+    "📋 AI Thủ công (0-Token · Copy Prompt & Dán JSON Metadata)": "📋 Manual AI (0-Token · Copy Prompt & Paste Metadata JSON)",
+    "📋 AI Thủ công Quét PII (0-Token · Copy Prompt & Dán từ khóa)": "📋 Manual AI PII Scan (0-Token · Copy Prompt & Paste Keywords)",
+    "📋 AI Thủ công (0-Token)": "📋 Manual AI (0-Token)",
+    "🚀 Copy sẵn câu lệnh & Điều hướng sang Gemini ngay": "🚀 Copy Prompt & Go to Gemini Now",
+    "👁️ Xem khung câu lệnh chuẩn sẽ gửi": "👁️ Preview Structured Prompt",
+    "Bước 1: Copy câu lệnh cấu trúc chuẩn & Mở thẳng sang Gemini (Miễn phí 0-Token)": "Step 1: Copy Structured Prompt & Open Gemini (Free 0-Token)",
+    "Bước 2: Dán câu trả lời từ Gemini vào khung dưới để trang web tự đọc & thực hiện:": "Step 2: Paste Gemini reply below for automatic parsing & execution:",
+    "Dùng AI Thủ công 0-Token không cần API Key": "Use 0-Token Manual AI without API Key",
   });
 
   const promptExact = Object.freeze({

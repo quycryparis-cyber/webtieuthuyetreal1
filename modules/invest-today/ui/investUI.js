@@ -1675,14 +1675,20 @@
                     <button type="button" id="inv-w2-btn-full-auto-ai" class="noir-ai-blink-btn w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 hover:from-emerald-500 hover:to-sky-500 text-white font-bold text-sm sm:text-base shadow-xl cursor-pointer transition">
                       🚀 Tự động hoàn toàn với AI
                     </button>
+                    <button type="button" id="inv-w2-btn-manual-ai-0token" class="w-full py-2.5 px-4 rounded-xl border border-sky-500/55 bg-sky-950/35 hover:bg-sky-900/55 text-sky-200 font-bold text-xs sm:text-sm cursor-pointer transition">
+                      📋 Dùng AI Thủ công (0-Token · Copy Prompt &amp; Dán kết quả → Xuất PDF)
+                    </button>
                     <p class="text-[11px] text-zinc-600 dark:text-zinc-300">1 chạm: Tạo Prompt chuẩn + Chạy Gemini AI &amp; Google Search + Đồng bộ 6 biểu đồ + Mở thẳng Báo cáo PDF!</p>
                   </div>
                 `;
               }
               return `
-                <div class="max-w-2xl mx-auto pb-1">
+                <div class="max-w-2xl mx-auto pb-1 space-y-2">
                   <button type="button" id="inv-w2-btn-connect-ai" class="noir-ai-blink-btn w-full py-3 px-5 rounded-2xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-lg cursor-pointer transition">
                     🔗 Kết nối AI của bạn (Mở khóa nút Tự động hoàn toàn với AI 1 chạm)
+                  </button>
+                  <button type="button" id="inv-w2-btn-manual-ai-0token" class="w-full py-2.5 px-4 rounded-xl border border-emerald-500/55 bg-emerald-950/35 hover:bg-emerald-900/55 text-emerald-200 font-bold text-xs sm:text-sm cursor-pointer transition">
+                    📋 Dùng AI Thủ công (Không cần API Key · Copy Prompt &amp; Dán kết quả → Xuất PDF)
                   </button>
                 </div>
               `;
@@ -2237,6 +2243,73 @@
 
     host.querySelector('#inv-w2-btn-connect-ai')?.addEventListener('click', () => {
       (globalScope.NoirGeminiBridge || NS.geminiBridge)?.openApiKeyQuickModal?.({ onSaved: () => render() });
+    });
+
+    host.querySelector('#inv-w2-btn-manual-ai-0token')?.addEventListener('click', async () => {
+      const gBridge = globalScope.NoirGeminiBridge || NS.geminiBridge;
+      const gVal = (goalEl?.value || '').trim();
+      const nVal = (notesEl?.value || '').trim();
+      const tickerVal = (host.querySelector('#inv-w2-stock-ticker')?.value || '').trim().toUpperCase();
+      INV.storageAdapter.savePrefs({ promptMode: uiState.w2Mode, userGoal: gVal, fieldNotes: nVal });
+      if (uiState.w2Focus === 'stock' && tickerVal && INV.stockEngine?.lookupStockSnapshot) {
+        uiState.stockInput = tickerVal;
+        const st = await INV.stockEngine.lookupStockSnapshot(tickerVal).catch(() => null);
+        if (st) INV.stateManager.stockData = st;
+      }
+      const promptText = INV.promptComposer.buildGeminiPrompt({
+        mode: uiState.w2Mode || 'veteran30',
+        focus: uiState.w2Focus || 'general',
+        userGoal: gVal,
+        fieldNotes: nVal,
+      });
+      gBridge?.openManualAiAssistantModal?.({
+        taskTitle: `Đầu Tư Hôm Nay (${uiState.w2Focus || 'general'}) — AI Thủ công 0-Token`,
+        promptText,
+        applyBtnLabel: '✅ Đồng bộ 6 Biểu đồ & Xuất thẳng PDF ngay',
+        onApplyPasted: async (pasted) => {
+          const parsed = INV.deterministicExtractor?.parseGeminiStructuredReply
+            ? INV.deterministicExtractor.parseGeminiStructuredReply(pasted)
+            : { ok: false };
+          const prevRep = INV.stateManager.evaluationReport || { items: [], triggered_breakers: [], live_headlines: [] };
+          if (parsed.ok && parsed.data) {
+            const synced = parsed.data;
+            INV.stateManager.unifiedAnalytics = synced;
+            const mkChannel = (key, name, fb) => {
+              const dm = (synced.decision_matrix || []).find((d) => String(d?.channel || '').toLowerCase().includes(fb)) || {};
+              const sc = synced.channel_scores?.[key] ?? 60;
+              return { name, score: sc, signal: dm.signal || (sc >= 72 ? 'positive' : sc <= 48 ? 'danger' : 'caution'), badge: dm.decision || (sc >= 72 ? 'Thuận lợi' : sc <= 48 ? 'Thận trọng cao' : 'Theo dõi'), reason: dm.reason || prevRep.channel_scores?.[key]?.reason || '' };
+            };
+            INV.stateManager.evaluationReport = {
+              ...prevRep,
+              as_of_date: synced.as_of_date || prevRep.as_of_date,
+              cycle_phase: synced.cycle_phase || prevRep.cycle_phase,
+              channel_scores: {
+                cash: mkChannel('cash', 'Tiền mặt / Tiết kiệm', 'tiền'),
+                gold: mkChannel('gold', 'Vàng', 'vàng'),
+                stock: mkChannel('stock', 'Chứng khoán', 'chứng'),
+                real_estate: mkChannel('real_estate', 'Nhà đất', 'đất'),
+              },
+              narrative_summary: {
+                opportunities: synced.verdict_summary?.opportunities?.length ? synced.verdict_summary.opportunities : prevRep.narrative_summary?.opportunities || [],
+                risks: synced.verdict_summary?.risks?.length ? synced.verdict_summary.risks : prevRep.narrative_summary?.risks || [],
+                current_outlook: synced.verdict_summary?.current_outlook || prevRep.narrative_summary?.current_outlook || '',
+                upcoming_outlook: synced.verdict_summary?.upcoming_outlook || prevRep.narrative_summary?.upcoming_outlook || '',
+              },
+            };
+          }
+          if (INV.stateManager.evaluationReport) {
+            INV.stateManager.evaluationReport.gemini_raw_note = String(pasted || '').slice(0, 8000);
+          }
+          const focusToPdfMode = uiState.w2Focus === 'gold' ? 'gold' : uiState.w2Focus === 'real_estate' ? 'real_estate' : (uiState.w2Focus === 'stock' && INV.stateManager.stockData?.symbol ? 'stock' : 'overview');
+          INV.storageAdapter.setSession('wizard_stage', 'dashboard');
+          uiState.wizardStage = 'dashboard';
+          INV.stateManager.activeTab = 'overview';
+          uiState.highlightExportPdfCta = true;
+          render();
+          const pdfRes = await INV.pdfExporter.exportInvestPdf(focusToPdfMode, loadInvReaderPrefs());
+          NS.utils?.showToast?.(`✅ Đã đồng bộ & xuất thẳng Báo cáo PDF (${pdfRes.pages} trang)!`, 'success', 4800);
+        },
+      });
     });
 
     host.querySelector('#inv-w2-btn-full-auto-ai')?.addEventListener('click', async () => {

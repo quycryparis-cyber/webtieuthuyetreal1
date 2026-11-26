@@ -586,13 +586,21 @@
                     <button type="button" id="wis20-btn-full-auto-ai-pdf" class="noir-ai-blink-btn wis20-btn w-full py-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 text-white text-sm sm:text-base font-bold shadow-xl">
                       🚀 Tự động hoàn toàn với AI → Xuất PDF ngay
                     </button>
+                    <button type="button" id="wis20-btn-manual-ai-0token" class="wis20-btn w-full py-2.5 border border-sky-500/55 bg-sky-950/35 text-sky-200 text-xs sm:text-sm font-bold">
+                      📋 Dùng AI Thủ công (0-Token · Copy Prompt &amp; Dán kết quả → Xuất PDF)
+                    </button>
                   </div>
                 `;
               }
               return `
-                <button type="button" id="wis20-hub-btn-connect-ai" class="noir-ai-blink-btn wis20-btn w-full py-3 bg-gradient-to-r from-sky-600 to-indigo-600 text-white text-xs sm:text-sm font-bold shadow-lg">
-                  🔗 Kết nối AI của bạn (Mở khóa nút Tự động hoàn toàn với AI → Xuất PDF ngay)
-                </button>
+                <div class="space-y-2">
+                  <button type="button" id="wis20-hub-btn-connect-ai" class="noir-ai-blink-btn wis20-btn w-full py-3 bg-gradient-to-r from-sky-600 to-indigo-600 text-white text-xs sm:text-sm font-bold shadow-lg">
+                    🔗 Kết nối AI của bạn (Mở khóa nút Tự động hoàn toàn với AI → Xuất PDF ngay)
+                  </button>
+                  <button type="button" id="wis20-btn-manual-ai-0token" class="wis20-btn w-full py-2.5 border border-emerald-500/55 bg-emerald-950/35 text-emerald-200 text-xs sm:text-sm font-bold">
+                    📋 Dùng AI Thủ công (Không cần API Key · Copy Prompt &amp; Dán kết quả → Xuất PDF)
+                  </button>
+                </div>
               `;
             })()}
 
@@ -978,6 +986,31 @@
       state.customTopic = ev.target.value || '';
     });
     root.querySelector('#wis20-btn-copy-gemini')?.addEventListener('click', () => copyPromptAndOpenGemini());
+    root.querySelector('#wis20-btn-manual-ai-0token')?.addEventListener('click', () => {
+      const bridge = globalScope.NoirGeminiBridge || NS.geminiBridge;
+      if (!state.scanResult) return;
+      const promptText = W20.buildGeminiWisdomPrompt(state.scanResult, {
+        focusMode: state.focusMode,
+        customTopic: state.customTopic,
+      });
+      bridge?.openManualAiAssistantModal?.({
+        taskTitle: `30 Phút Thông Thái (${state.focusMode || 'balanced_30m'}) — AI Thủ công 0-Token`,
+        promptText,
+        applyBtnLabel: '✅ Tổng hợp 8 Trụ cột & Xuất thẳng PDF ngay',
+        onApplyPasted: async (pasted) => {
+          state.geminiReplyRaw = pasted;
+          if (typeof W20.parseGeminiWisdomReply === 'function') {
+            state.geminiParsed = W20.parseGeminiWisdomReply(pasted, state.scanResult);
+          }
+          state.phase = 'dashboard';
+          state.activeTab = 'briefing';
+          state.highlightExportPdfCta = true;
+          render();
+          const res = await W20.exportWisdomReportPdf(state.scanResult, state.geminiParsed, loadReaderPrefs());
+          toast(`✅ Đã xuất xong Báo cáo PDF 30 Phút Thông Thái (${res.pages} trang)!`, 'success', 4800);
+        },
+      });
+    });
     root.querySelector('#wis20-btn-full-auto-ai-pdf')?.addEventListener('click', async () => {
       const runFullAutoWisdom = async () => {
         const bridge = globalScope.NoirGeminiBridge || NS.geminiBridge;

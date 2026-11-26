@@ -5383,6 +5383,27 @@
     "✅ Áp dụng kết quả & Hoàn tất ngay": "✅ 套用結果並立即完成",
     "✅ Đồng bộ 6 Biểu đồ & Xuất thẳng PDF ngay": "✅ 同步 6 張圖表並立即匯出 PDF",
     "✅ Tổng hợp 8 Trụ cột & Xuất thẳng PDF ngay": "✅ 彙總 8 大支柱並立即匯出 PDF",
+
+    "AIzaSy... hoặc AQ...": "AIzaSy... 或 AQ...",
+    "Dán mã API Key (AIzaSy... hoặc AQ...) vào đây": "在此貼上 API 金鑰 (AIzaSy... 或 AQ...)",
+    "📋 Dùng AI Thủ công (0-Token · Copy Prompt & Dán kết quả → Xuất PDF)": "📋 手動 AI (0-Token · 複製提示詞並貼上結果 → 匯出 PDF)",
+    "📋 Dùng AI Thủ công (Không cần API Key · Copy Prompt & Dán kết quả → Xuất PDF)": "📋 手動 AI (無需 API 金鑰 · 複製提示詞並貼上結果 → 匯出 PDF)",
+    "📋 Dùng AI Thủ công (Không cần API Key · Copy Prompt + Gửi file lên Gemini → Dán kết quả)": "📋 手動 AI (無需 API 金鑰 · 複製提示詞並上傳檔案到 Gemini → 貼上結果)",
+    "📋 AI Thủ công (0-Token · Copy Prompt + Gửi file → Word/MD)": "📋 手動 AI (0-Token · 複製提示詞並上傳檔案 → Word/MD)",
+    "📋 AI Thủ công OCR (0-Token · Copy Prompt + Gửi file → Dán kết quả)": "📋 手動 AI OCR (0-Token · 複製提示詞並上傳檔案 → 貼上結果)",
+    "📋 AI Thủ công (0-Token · Copy Prompt & Dán từ khóa)": "📋 手動 AI (0-Token · 複製提示詞並貼上關鍵字)",
+    "📋 AI Thủ công (0-Token · Copy Prompt & Dán dữ liệu Form)": "📋 手動 AI (0-Token · 複製提示詞並貼上表單資料)",
+    "📋 AI Thủ công": "📋 手動 AI",
+    "📋 AI Thủ công Bóc bảng → Excel (0-Token)": "📋 手動 AI 表格擷取 → Excel (0-Token)",
+    "📋 Dùng AI Thủ công ICR (0-Token · Copy Prompt theo chế độ + Gửi ảnh/PDF → Xuất file)": "📋 手動 AI ICR (0-Token · 依模式複製提示詞 + 上傳圖片/PDF → 匯出檔案)",
+    "📋 AI Thủ công (0-Token · Copy Prompt & Dán JSON Metadata)": "📋 手動 AI (0-Token · 複製提示詞並貼上中繼資料 JSON)",
+    "📋 AI Thủ công Quét PII (0-Token · Copy Prompt & Dán từ khóa)": "📋 手動 AI 掃描敏感資訊 (0-Token · 複製提示詞並貼上關鍵字)",
+    "📋 AI Thủ công (0-Token)": "📋 手動 AI (0-Token)",
+    "🚀 Copy sẵn câu lệnh & Điều hướng sang Gemini ngay": "🚀 複製提示詞並立即前往 Gemini",
+    "👁️ Xem khung câu lệnh chuẩn sẽ gửi": "👁️ 預覽將發送的標準提示詞",
+    "Bước 1: Copy câu lệnh cấu trúc chuẩn & Mở thẳng sang Gemini (Miễn phí 0-Token)": "第 1 步：複製標準結構提示詞並直接開啟 Gemini（免費 0-Token）",
+    "Bước 2: Dán câu trả lời từ Gemini vào khung dưới để trang web tự đọc & thực hiện:": "第 2 步：將 Gemini 的回覆貼到下方輸入框以自動解析並執行：",
+    "Dùng AI Thủ công 0-Token không cần API Key": "使用無需 API 金鑰的 0-Token 手動 AI",
   });
 
   const promptExact = Object.freeze({

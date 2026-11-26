@@ -20,8 +20,91 @@
   const NS = (global.NoirStudio = global.NoirStudio || {});
   const API_STORAGE_KEY = 'noir_gemini_api_key';
   const API_VERIFIED_STORAGE_KEY = 'noir_gemini_key_verified_v1';
+  const API_TRANSPORT_STORAGE_KEY = 'noir_gemini_key_transport_v1';
   const API_COOKIE_NAME = 'noir_gemini_api_key_ck';
   const IDB_BACKUP_KEY = '__noir_persist_api_key_v1';
+
+  const GEMINI_TRANSPORTS = Object.freeze({
+    AI_STUDIO_QUERY: {
+      id: 'AI_STUDIO_QUERY',
+      isVertex: false,
+      buildGenerateUrl: (m, k) => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${encodeURIComponent(k)}`,
+      buildModelsUrl: (k) => `https://generativelanguage.googleapis.com/v1beta/models?pageSize=25&key=${encodeURIComponent(k)}`,
+      buildHeaders: () => ({ 'Content-Type': 'application/json' }),
+      buildGetHeaders: () => ({}),
+    },
+    AI_STUDIO_HEADER: {
+      id: 'AI_STUDIO_HEADER',
+      isVertex: false,
+      buildGenerateUrl: (m) => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`,
+      buildModelsUrl: () => `https://generativelanguage.googleapis.com/v1beta/models?pageSize=25`,
+      buildHeaders: (k) => ({ 'Content-Type': 'application/json', 'x-goog-api-key': k }),
+      buildGetHeaders: (k) => ({ 'x-goog-api-key': k }),
+    },
+    VERTEX_EXPRESS_QUERY: {
+      id: 'VERTEX_EXPRESS_QUERY',
+      isVertex: true,
+      buildGenerateUrl: (m, k) => `https://aiplatform.googleapis.com/v1/publishers/google/models/${encodeURIComponent(m)}:generateContent?key=${encodeURIComponent(k)}`,
+      buildModelsUrl: null,
+      buildHeaders: () => ({ 'Content-Type': 'application/json' }),
+      buildGetHeaders: null,
+    },
+    VERTEX_EXPRESS_HEADER: {
+      id: 'VERTEX_EXPRESS_HEADER',
+      isVertex: true,
+      buildGenerateUrl: (m) => `https://aiplatform.googleapis.com/v1/publishers/google/models/${encodeURIComponent(m)}:generateContent`,
+      buildModelsUrl: null,
+      buildHeaders: (k) => ({ 'Content-Type': 'application/json', 'x-goog-api-key': k }),
+      buildGetHeaders: null,
+    },
+    VERTEX_EXPRESS_BETA_QUERY: {
+      id: 'VERTEX_EXPRESS_BETA_QUERY',
+      isVertex: true,
+      buildGenerateUrl: (m, k) => `https://aiplatform.googleapis.com/v1beta1/publishers/google/models/${encodeURIComponent(m)}:generateContent?key=${encodeURIComponent(k)}`,
+      buildModelsUrl: null,
+      buildHeaders: () => ({ 'Content-Type': 'application/json' }),
+      buildGetHeaders: null,
+    },
+  });
+
+  function sanitizeApiKey(raw) {
+    return String(raw || '')
+      .replace(/[\u200B-\u200D\uFEFF\r\n\t\s]+/g, '')
+      .replace(/^["'`]+|["'`]+$/g, '')
+      .trim();
+  }
+
+  function saveVerifiedTransport(keyVal, transportId) {
+    const clean = sanitizeApiKey(keyVal);
+    if (!clean || !GEMINI_TRANSPORTS[transportId]) return;
+    try {
+      global.localStorage?.setItem(API_TRANSPORT_STORAGE_KEY, JSON.stringify({ fp: keyFingerprint(clean), transportId }));
+    } catch (_eTr) {}
+  }
+
+  function getSavedTransport(keyVal) {
+    const clean = sanitizeApiKey(keyVal);
+    if (!clean) return '';
+    try {
+      const raw = global.localStorage?.getItem(API_TRANSPORT_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.fp === keyFingerprint(clean) && GEMINI_TRANSPORTS[parsed.transportId]) {
+          return parsed.transportId;
+        }
+      }
+    } catch (_eTr) {}
+    return '';
+  }
+
+  function getTransportsForKey(keyVal) {
+    const clean = sanitizeApiKey(keyVal);
+    const saved = getSavedTransport(clean);
+    const base = /^AQ\./i.test(clean)
+      ? ['VERTEX_EXPRESS_QUERY', 'AI_STUDIO_QUERY', 'AI_STUDIO_HEADER', 'VERTEX_EXPRESS_HEADER', 'VERTEX_EXPRESS_BETA_QUERY']
+      : ['AI_STUDIO_QUERY', 'AI_STUDIO_HEADER', 'VERTEX_EXPRESS_QUERY'];
+    return Array.from(new Set([saved, ...base].filter((id) => Boolean(id && GEMINI_TRANSPORTS[id]))));
+  }
   const TASK_MODEL_PROFILES = Object.freeze({
     // Tác vụ nhẹ (Verify, Metadata, Split keyword, Form, PII, Auto-TOC, sửa chính tả) -> Ưu tiên Flash-Lite hạn mức cao nhất & < 1s
     fast_light: Object.freeze(['gemini-2.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash']),
@@ -212,29 +295,31 @@
   }
 
   async function verifyApiKeyLive(rawKey, opts = {}) {
-    const clean = String(rawKey || '').trim();
+    const clean = sanitizeApiKey(rawKey);
     const fetchImpl = opts.fetchImpl || global.fetch?.bind(global);
     if (!clean) {
-      return { ok: false, message: 'Vui lòng nhập mã Gemini API Key.' };
+      return { ok: false, message: 'Vui lòng nhập mã Google / Gemini API Key (bắt đầu bằng AIza... hoặc AQ...).' };
     }
-    if (!/^AIza[0-9A-Za-z_-]{20,}$/.test(clean)) {
-      return { ok: false, message: 'Định dạng API Key không hợp lệ (Gemini API Key thật luôn bắt đầu bằng "AIza" và dài ~39 ký tự).' };
+    if (clean.length < 20 || !/^[0-9A-Za-z._-]{20,}$/.test(clean)) {
+      return { ok: false, message: 'Định dạng API Key không hợp lệ (hỗ trợ cả khóa AIza... và khóa AQ... mới của Google AI Studio / Vertex Express, tối thiểu 20 ký tự).' };
     }
     if (global.__NOIR_TEST_BYPASS_KEY_VERIFY === true) {
-      return { ok: true, modelEndpoint: 'gemini-2.5-flash-lite', message: 'Key hợp lệ (chế độ test).' };
+      return { ok: true, modelEndpoint: 'gemini-2.5-flash-lite', transportId: 'AI_STUDIO_QUERY', message: 'Key hợp lệ (chế độ test).' };
     }
     // Ưu tiên tái sử dụng trình xác minh thật của màn hình chính (mod15) nếu đang ở Web gốc
     if (!opts.forceDirect && NS.apiClient && typeof NS.apiClient.verifyKeyWithLowestFlashLite === 'function') {
       try {
         const res = await NS.apiClient.verifyKeyWithLowestFlashLite(clean, { autoSave: false, emitEvents: true });
         if (res?.ok || res?.verified) {
+          if (res.transportType) saveVerifiedTransport(clean, res.transportType);
           return {
             ok: true,
             modelEndpoint: res.modelEndpoint || 'gemini-2.5-flash-lite',
+            transportId: res.transportType || getTransportsForKey(clean)[0],
             message: `Đã xác minh thành công với Google Gemini (${res.modelEndpoint || 'Flash-Lite'})!`,
           };
         }
-        return { ok: false, message: res?.message || 'API Key không hợp lệ hoặc đã bị vô hiệu hóa trên Google AI Studio.' };
+        // Nếu mod15 chưa hỗ trợ transport của key này, tiếp tục kiểm tra đa cổng trực tiếp bên dưới
       } catch (_eMod15) {
         // fallback sang kiểm tra trực tiếp bên dưới
       }
@@ -243,65 +328,79 @@
       return { ok: false, message: 'Trình duyệt không hỗ trợ kết nối mạng để xác minh API Key.' };
     }
 
-    // Bước 1: Kiểm tra tồn tại Key qua danh sách model thật từ Google
+    const transportOrder = getTransportsForKey(clean);
     let discoveredFlash = [];
-    try {
-      const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?pageSize=25&key=${encodeURIComponent(clean)}`;
-      const listRes = await fetchImpl(listUrl, { method: 'GET' });
-      if (!listRes.ok) {
-        const errText = await listRes.text().catch(() => '');
-        if (listRes.status === 400 || listRes.status === 401 || listRes.status === 403) {
-          return {
-            ok: false,
-            status: listRes.status,
-            message: `API Key không hợp lệ hoặc không có quyền truy cập (HTTP ${listRes.status}). Hãy kiểm tra lại trên Google AI Studio.`,
-          };
+    let bestErrStatus = 0;
+    let bestErrDetail = '';
+
+    // Bước 1: Thử dò danh sách model sống trên AI Studio (nếu là khóa AIza hoặc AQ hỗ trợ AI Studio)
+    for (const tid of ['AI_STUDIO_QUERY', 'AI_STUDIO_HEADER']) {
+      const tr = GEMINI_TRANSPORTS[tid];
+      if (!tr?.buildModelsUrl) continue;
+      try {
+        const listRes = await fetchImpl(tr.buildModelsUrl(clean), {
+          method: 'GET',
+          headers: tr.buildGetHeaders ? tr.buildGetHeaders(clean) : {},
+        });
+        if (listRes.ok) {
+          const listJson = await listRes.json().catch(() => ({}));
+          const modelsArr = Array.isArray(listJson?.models) ? listJson.models : [];
+          discoveredFlash = modelsArr
+            .map((m) => String(m?.name || '').replace(/^models\//, ''))
+            .filter((n) => /gemini-2\.[05]-flash/i.test(n) && !/image|tts|audio|live|thinking/i.test(n));
+          break;
         }
-        return { ok: false, status: listRes.status, message: `Lỗi kết nối Google API (HTTP ${listRes.status}): ${errText.slice(0, 120)}` };
-      }
-      const listJson = await listRes.json().catch(() => ({}));
-      const modelsArr = Array.isArray(listJson?.models) ? listJson.models : [];
-      discoveredFlash = modelsArr
-        .map((m) => String(m?.name || '').replace(/^models\//, ''))
-        .filter((n) => /gemini-2\.[05]-flash/i.test(n) && !/image|tts|audio|live|thinking/i.test(n));
-    } catch (netErr) {
-      return { ok: false, message: `Không thể kết nối tới Google Gemini (${netErr?.message || 'Mất mạng'}). Vui lòng kiểm tra Internet.` };
+        bestErrStatus = listRes.status;
+        bestErrDetail = (await listRes.text().catch(() => '')).slice(0, 140);
+      } catch (_eList) {}
     }
 
-    // Bước 2: Ping thử 8 token với model nhẹ nhất để chắc chắn Key gọi generateContent sống 100%
-    const probeChain = Array.from(new Set([...discoveredFlash, 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash']));
-    let lastStatus = 0;
-    for (const ep of probeChain.slice(0, 4)) {
-      try {
-        const pingUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(ep)}:generateContent?key=${encodeURIComponent(clean)}`;
-        const pingRes = await fetchImpl(pingUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: 'OK' }] }],
-            generationConfig: { maxOutputTokens: 4, temperature: 0 },
-          }),
-        });
-        if (pingRes.ok) {
-          return { ok: true, modelEndpoint: ep, message: `Xác minh thành công (${ep}) — Key đang hoạt động tốt!` };
-        }
-        lastStatus = pingRes.status;
-        if (pingRes.status === 429) {
-          // 429 nghĩa là Key TỒN TẠI & HỢP LỆ nhưng tạm chạm giới hạn RPM
-          return { ok: true, modelEndpoint: ep, rateLimited: true, message: `Key hợp lệ (${ep}, đang tạm chạm giới hạn phút — hệ thống sẽ tự chờ thử lại khi chạy).` };
-        }
-        if (pingRes.status === 400 || pingRes.status === 401 || pingRes.status === 403) {
-          const eTxt = await pingRes.text().catch(() => '');
-          if (/API_KEY_INVALID|API key not valid|PERMISSION_DENIED/i.test(eTxt)) {
-            return { ok: false, status: pingRes.status, message: 'API Key bị Google từ chối (Key không tồn tại hoặc đã bị thu hồi).' };
+    // Bước 2: Real-time ping generateContent qua tất cả transport (AI Studio + Vertex Express cho AQ.*)
+    const probeChain = Array.from(new Set([...discoveredFlash, 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-2.0-flash']));
+    for (const tid of transportOrder) {
+      const tr = GEMINI_TRANSPORTS[tid];
+      if (!tr) continue;
+      for (const ep of probeChain.slice(0, 3)) {
+        try {
+          const pingRes = await fetchImpl(tr.buildGenerateUrl(ep, clean), {
+            method: 'POST',
+            headers: tr.buildHeaders(clean),
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: 'OK' }] }],
+              generationConfig: { maxOutputTokens: 4, temperature: 0 },
+            }),
+          });
+          if (pingRes.ok) {
+            saveVerifiedTransport(clean, tid);
+            return { ok: true, modelEndpoint: ep, transportId: tid, message: `Xác minh thời gian thực thành công (${ep} · ${tr.isVertex ? 'Vertex Express' : 'Google AI Studio'})!` };
           }
+          if (pingRes.status === 429) {
+            // HTTP 429 nghĩa là Google đã xác nhận Key TỒN TẠI & HỢP LỆ nhưng tạm chạm giới hạn phút
+            saveVerifiedTransport(clean, tid);
+            return { ok: true, modelEndpoint: ep, transportId: tid, rateLimited: true, message: `Xác minh Key hợp lệ (${ep}, đang tạm chạm hạn mức phút — vẫn lưu thành công và hỗ trợ chuyển AI thủ công nếu cần).` };
+          }
+          bestErrStatus = pingRes.status;
+          bestErrDetail = (await pingRes.text().catch(() => '')).slice(0, 160);
+          if (pingRes.status === 401 || pingRes.status === 403 || (pingRes.status === 400 && /API_KEY_INVALID|API key not valid/i.test(bestErrDetail))) {
+            // Sai cổng (VD: khóa AQ. thử ở AI Studio bị 400 -> thoát sang thử Vertex Express ngay!)
+            break;
+          }
+        } catch (_ePing) {
+          // Lỗi CORS trên header transport -> thử transport kế tiếp ngay
+          break;
         }
-      } catch (_ePing) {}
+      }
     }
+
     if (discoveredFlash.length > 0) {
-      return { ok: true, modelEndpoint: discoveredFlash[0], message: `Đã xác minh API Key tồn tại (${discoveredFlash[0]})!` };
+      saveVerifiedTransport(clean, 'AI_STUDIO_QUERY');
+      return { ok: true, modelEndpoint: discoveredFlash[0], transportId: 'AI_STUDIO_QUERY', message: `Đã xác minh API Key tồn tại (${discoveredFlash[0]})!` };
     }
-    return { ok: false, status: lastStatus, message: `Không thể xác minh API Key với Gemini (HTTP ${lastStatus || 'ERR'}). Hãy tạo lại Key mới tại Google AI Studio.` };
+    return {
+      ok: false,
+      status: bestErrStatus,
+      message: `Google từ chối xác minh API Key (HTTP ${bestErrStatus || 'ERR'}${bestErrDetail ? `: ${bestErrDetail}` : ''}). Hãy kiểm tra lại xem Key đã bật quyền Gemini/Vertex AI chưa hoặc tạo Key mới tại Google AI Studio.`,
+    };
   }
 
   function clearApiKey() {
@@ -418,7 +517,7 @@
           <div class="space-y-1">
             <label for="noir-gkey-input" class="font-bold text-zinc-200 block">Nhập hoặc dán Google Gemini API Key:</label>
             <div class="flex items-center gap-1.5">
-              <input id="noir-gkey-input" type="password" autocomplete="off" placeholder="AIzaSy..." class="flex-1 px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-700 text-zinc-100 text-xs font-mono" />
+              <input id="noir-gkey-input" type="password" autocomplete="off" placeholder="AIzaSy... hoặc AQ..." class="flex-1 px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-700 text-zinc-100 text-xs font-mono" />
               <button type="button" id="noir-gkey-toggle-vis" class="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold cursor-pointer" title="Hiện / Ẩn key">👁️</button>
             </div>
           </div>
@@ -544,50 +643,58 @@
 
     let lastErr = null;
     const backoffDelays = [1500, 3500, 7000];
+    const transportIds = getTransportsForKey(cleanKey);
 
-    for (const modelName of resolvedModels) {
-      for (let attempt = 0; attempt <= backoffDelays.length; attempt++) {
-        if (signal?.aborted) throw new Error('Đã hủy yêu cầu Gemini API.');
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(cleanKey)}`;
-        try {
-          const res = await fetchImpl(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(bodyPayload),
-            signal,
-          });
-          if (res.status === 429 || res.status === 503) {
-            lastErr = new Error(`Gemini API quá tải/giới hạn tốc độ (HTTP ${res.status} - ${modelName})`);
-            if (attempt < backoffDelays.length) {
-              const waitMs = backoffDelays[attempt];
-              if (typeof onRetry === 'function') onRetry({ modelName, status: res.status, waitMs, attempt: attempt + 1 });
-              await sleepMs(waitMs);
-              continue;
+    for (const tid of transportIds) {
+      const tr = GEMINI_TRANSPORTS[tid];
+      if (!tr) continue;
+      let transportRejectedKey = false;
+      for (const modelName of resolvedModels) {
+        for (let attempt = 0; attempt <= backoffDelays.length; attempt++) {
+          if (signal?.aborted) throw new Error('Đã hủy yêu cầu Gemini API.');
+          const endpoint = tr.buildGenerateUrl(modelName, cleanKey);
+          try {
+            const res = await fetchImpl(endpoint, {
+              method: 'POST',
+              headers: tr.buildHeaders(cleanKey),
+              body: JSON.stringify(bodyPayload),
+              signal,
+            });
+            if (res.status === 429 || res.status === 503) {
+              lastErr = new Error(`Gemini API quá tải/giới hạn tốc độ (HTTP ${res.status} - ${modelName})`);
+              if (attempt < backoffDelays.length) {
+                const waitMs = backoffDelays[attempt];
+                if (typeof onRetry === 'function') onRetry({ modelName, status: res.status, waitMs, attempt: attempt + 1 });
+                await sleepMs(waitMs);
+                continue;
+              }
+              break; // Thử sang model dự phòng tiếp theo
             }
-            break; // Thử sang model dự phòng tiếp theo
-          }
-          if (!res.ok) {
-            const errTxt = await res.text().catch(() => '');
-            lastErr = new Error(`Gemini API lỗi HTTP ${res.status} (${modelName}): ${errTxt.slice(0, 180)}`);
-            if (res.status === 400 || res.status === 401 || res.status === 403) {
-              throw lastErr; // Lỗi key / payload không thử lặp lại vô ích
+            if (!res.ok) {
+              const errTxt = await res.text().catch(() => '');
+              lastErr = new Error(`Gemini API lỗi HTTP ${res.status} (${modelName}): ${errTxt.slice(0, 180)}`);
+              if (res.status === 400 || res.status === 401 || res.status === 403) {
+                transportRejectedKey = true;
+                break; // Thử transport khác (VD: AQ. từ AI Studio -> Vertex Express)
+              }
+              break;
             }
+            const json = await res.json();
+            const candParts = json?.candidates?.[0]?.content?.parts || [];
+            const textOut = candParts.map((p) => p?.text || '').join('').trim();
+            if (!textOut) {
+              const blockReason = json?.promptFeedback?.blockReason || json?.candidates?.[0]?.finishReason || 'EMPTY';
+              throw new Error(`Gemini trả về rỗng (${blockReason}).`);
+            }
+            saveVerifiedTransport(cleanKey, tid);
+            return textOut;
+          } catch (err) {
+            if (signal?.aborted) throw err;
+            lastErr = err;
             break;
           }
-          const json = await res.json();
-          const candParts = json?.candidates?.[0]?.content?.parts || [];
-          const textOut = candParts.map((p) => p?.text || '').join('').trim();
-          if (!textOut) {
-            const blockReason = json?.promptFeedback?.blockReason || json?.candidates?.[0]?.finishReason || 'EMPTY';
-            throw new Error(`Gemini trả về rỗng (${blockReason}).`);
-          }
-          return textOut;
-        } catch (err) {
-          if (signal?.aborted) throw err;
-          lastErr = err;
-          if (/HTTP 40[013]/.test(String(err?.message || ''))) throw err;
-          break;
         }
+        if (transportRejectedKey) break;
       }
     }
     throw lastErr || new Error('Không thể nhận phản hồi từ Gemini API.');
@@ -894,64 +1001,72 @@
     };
 
     const modelList = Array.isArray(models) && models.length ? models : getOptimalModelsForTask(taskType);
-    // Nếu useGoogleSearch = true, thử trước CÓ Google Search; nếu toàn bộ bị từ chối/HTTP 400/429 thì tự động hạ cấp KHÔNG tools để đảm bảo vẫn chạy thành công 100%!
+    const transportIds = getTransportsForKey(cleanKey);
     const searchPasses = useGoogleSearch ? [true, false] : [false];
     let lastErr = null;
     for (const trySearch of searchPasses) {
       const bodyPayload = buildPayload(trySearch);
-      for (let mi = 0; mi < modelList.length; mi++) {
-        const model = modelList[mi];
-        for (let attempt = 0; attempt < 2; attempt++) {
-          if (signal && signal.aborted) {
-            throw new Error('ABORTED');
-          }
-          try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(cleanKey)}`;
-            const res = await fetchImpl(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(bodyPayload),
-              signal,
-            });
-            if (!res.ok) {
-              const errTxt = await res.text().catch(() => '');
-              lastErr = new Error(`HTTP ${res.status} (${model}${trySearch ? '+Search' : ''}): ${errTxt.slice(0, 220)}`);
-              if ((res.status === 429 || res.status === 503) && attempt === 0) {
-                if (typeof onRetry === 'function') onRetry({ model, attempt, status: res.status });
-                await new Promise((r) => setTimeout(r, 900 + Math.floor(Math.random() * 500)));
+      for (const tid of transportIds) {
+        const tr = GEMINI_TRANSPORTS[tid];
+        if (!tr) continue;
+        let transportRejectedKey = false;
+        for (let mi = 0; mi < modelList.length; mi++) {
+          const model = modelList[mi];
+          for (let attempt = 0; attempt < 2; attempt++) {
+            if (signal && signal.aborted) {
+              throw new Error('ABORTED');
+            }
+            try {
+              const url = tr.buildGenerateUrl(model, cleanKey);
+              const res = await fetchImpl(url, {
+                method: 'POST',
+                headers: tr.buildHeaders(cleanKey),
+                body: JSON.stringify(bodyPayload),
+                signal,
+              });
+              if (!res.ok) {
+                const errTxt = await res.text().catch(() => '');
+                lastErr = new Error(`HTTP ${res.status} (${model}${trySearch ? '+Search' : ''}): ${errTxt.slice(0, 220)}`);
+                if ((res.status === 429 || res.status === 503) && attempt === 0) {
+                  if (typeof onRetry === 'function') onRetry({ model, attempt, status: res.status });
+                  await new Promise((r) => setTimeout(r, 900 + Math.floor(Math.random() * 500)));
+                  continue;
+                }
+                if (res.status === 401 || res.status === 403 || (res.status === 400 && /API_KEY_INVALID|API key not valid/i.test(errTxt))) {
+                  transportRejectedKey = true;
+                  break;
+                }
+                break;
+              }
+              const json = await res.json();
+              const cand = json?.candidates?.[0] || {};
+              const candParts = cand?.content?.parts || [];
+              const text = candParts.map((p) => p?.text || '').join('').trim();
+              const rawChunks = cand?.groundingMetadata?.groundingChunks || [];
+              const seenUrl = new Set();
+              const groundingUrls = [];
+              for (const ch of rawChunks) {
+                const u = String(ch?.web?.uri || '').trim();
+                if (!u || seenUrl.has(u)) continue;
+                seenUrl.add(u);
+                groundingUrls.push({ url: u, title: String(ch?.web?.title || '').trim() });
+              }
+              if (!text) {
+                lastErr = new Error(`EMPTY_RESPONSE (${model})`);
+                break;
+              }
+              saveVerifiedTransport(cleanKey, tid);
+              return { text, groundingUrls, model, usedGrounding: trySearch, transportId: tid, raw: json };
+            } catch (err) {
+              if (err?.name === 'AbortError' || signal?.aborted) throw err;
+              lastErr = err;
+              if (attempt === 0) {
+                await new Promise((r) => setTimeout(r, 650));
                 continue;
               }
-              if (res.status === 401 || (res.status === 400 && /API_KEY_INVALID|API key not valid/i.test(errTxt))) {
-                throw new Error('API Key không hợp lệ hoặc đã bị thu hồi! Hãy bấm Đổi API Key và xác minh lại.');
-              }
-              break;
-            }
-            const json = await res.json();
-            const cand = json?.candidates?.[0] || {};
-            const candParts = cand?.content?.parts || [];
-            const text = candParts.map((p) => p?.text || '').join('').trim();
-            const rawChunks = cand?.groundingMetadata?.groundingChunks || [];
-            const seenUrl = new Set();
-            const groundingUrls = [];
-            for (const ch of rawChunks) {
-              const u = String(ch?.web?.uri || '').trim();
-              if (!u || seenUrl.has(u)) continue;
-              seenUrl.add(u);
-              groundingUrls.push({ url: u, title: String(ch?.web?.title || '').trim() });
-            }
-            if (!text) {
-              lastErr = new Error(`EMPTY_RESPONSE (${model})`);
-              break;
-            }
-            return { text, groundingUrls, model, usedGrounding: trySearch, raw: json };
-          } catch (err) {
-            if (err?.name === 'AbortError' || signal?.aborted || /API Key không hợp lệ/i.test(err?.message || '')) throw err;
-            lastErr = err;
-            if (attempt === 0) {
-              await new Promise((r) => setTimeout(r, 650));
-              continue;
             }
           }
+          if (transportRejectedKey) break;
         }
       }
     }
@@ -1137,7 +1252,10 @@
         <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px 14px;margin-bottom:12px;border-radius:12px;background:rgba(56,189,248,0.16);border:1px solid rgba(56,189,248,0.5);color:#7dd3fc;font-size:13px;font-weight:700;text-decoration:none;box-sizing:border-box;">
           🔗 Lấy Gemini API Key miễn phí (Google AI Studio — 1 chạm)
         </a>
-        <input id="noir-upsell-api-input" type="password" autocomplete="off" placeholder="Dán mã API Key (AIzaSy...) vào đây" style="width:100%;padding:11px 13px;margin-bottom:10px;border-radius:12px;border:1px solid rgba(148,163,184,0.35);background:#090d16;color:#f8fafc;font-size:13px;box-sizing:border-box;" />
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+          <input id="noir-upsell-api-input" type="password" autocomplete="off" placeholder="Dán mã API Key (AIzaSy... hoặc AQ...) vào đây" style="flex:1;padding:11px 13px;border-radius:12px;border:1px solid rgba(148,163,184,0.35);background:#090d16;color:#f8fafc;font-size:13px;box-sizing:border-box;font-family:ui-monospace,Consolas,monospace;" />
+          <button type="button" id="noir-upsell-toggle-vis" title="Hiện / Ẩn API Key" aria-label="Hiện hoặc ẩn API Key" style="padding:10px 12px;border-radius:12px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#f8fafc;font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0;">👁️</button>
+        </div>
         <div id="noir-upsell-err" style="display:none;font-size:12px;color:#fda4af;margin-bottom:8px;"></div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <button type="button" id="noir-upsell-save-btn" style="width:100%;padding:11px 14px;border-radius:12px;border:none;background:linear-gradient(90deg,#10b981,#059669);color:#ffffff;font-size:13.5px;font-weight:700;cursor:pointer;">
@@ -1157,6 +1275,14 @@
     };
     modal.querySelector('#noir-upsell-close-x')?.addEventListener('click', dismiss);
     modal.querySelector('#noir-upsell-later-btn')?.addEventListener('click', dismiss);
+    modal.querySelector('#noir-upsell-toggle-vis')?.addEventListener('click', () => {
+      const inp = modal.querySelector('#noir-upsell-api-input');
+      const eyeBtn = modal.querySelector('#noir-upsell-toggle-vis');
+      if (!inp) return;
+      const show = inp.type === 'password';
+      inp.type = show ? 'text' : 'password';
+      if (eyeBtn) eyeBtn.textContent = show ? '🙈' : '👁️';
+    });
     modal.addEventListener('click', (ev) => {
       if (ev.target === modal) dismiss();
     });
@@ -1546,10 +1672,11 @@
     doc.getElementById('noir-manual-paste-result-modal')?.remove();
 
     const {
-      taskTitle = 'Dán kết quả từ Gemini Web (0-Token)',
+      taskTitle = 'Dùng AI Thủ công (0-Token · Không cần API Key)',
       promptText = '',
       attachFileName = '',
       attachFileBlob = null,
+      alreadyCopied = true,
       pastePlaceholder = 'PC: nhấn Ctrl + V | Mobile: CHẠM GIỮ 1–2 giây vào khung này rồi bấm "Dán"...',
       applyBtnLabel = '✅ Áp dụng kết quả & Hoàn tất ngay',
       onApplyPasted = null,
@@ -1566,14 +1693,25 @@
         </div>
 
         <div style="padding:16px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:11px;font-size:12.5px;">
-          <div style="padding:10px 12px;border-radius:12px;background:rgba(16,185,129,0.14);border:1px solid rgba(52,211,153,0.45);color:#a7f3d0;line-height:1.5;">
-            <b>✅ Đã tự động sao chép câu lệnh đầy đủ &amp; mở Gemini!</b><br/>
-            Sang tab Gemini → <b>Dán (Ctrl+V / chạm giữ → Dán)</b> → Gửi → Cuối câu trả lời bấm nút <b>📋 Sao chép phản hồi</b> rồi quay lại đây dán vào ô dưới!
-          </div>
+          ${alreadyCopied ? `
+            <div style="padding:10px 12px;border-radius:12px;background:rgba(16,185,129,0.14);border:1px solid rgba(52,211,153,0.45);color:#a7f3d0;line-height:1.5;">
+              <b>✅ Đã tự động sao chép câu lệnh đầy đủ &amp; mở Gemini!</b><br/>
+              Sang tab Gemini → <b>Dán (Ctrl+V / chạm giữ → Dán)</b> → Gửi → Cuối câu trả lời bấm nút <b>📋 Sao chép phản hồi</b> rồi quay lại đây dán vào ô dưới!
+            </div>
+          ` : `
+            <div style="padding:11px 13px;border-radius:14px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.45);display:flex;flex-direction:column;gap:8px;">
+              <div style="font-weight:700;color:#7dd3fc;">Bước 1: Copy câu lệnh cấu trúc chuẩn &amp; Mở thẳng sang Gemini (Miễn phí 0-Token)</div>
+              <button type="button" id="noir-mp-copy-and-go" class="noir-ai-blink-btn" style="width:100%;padding:12px 16px;border-radius:12px;border:none;background:linear-gradient(90deg,#0284c7,#7c3aed);color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;">
+                🚀 Copy sẵn câu lệnh &amp; Điều hướng sang Gemini ngay
+              </button>
+              <button type="button" id="noir-mp-toggle-prompt-view" style="align-self:flex-start;padding:5px 10px;border-radius:8px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#cbd5e1;font-size:11.5px;font-weight:700;cursor:pointer;">👁️ Xem khung câu lệnh chuẩn sẽ gửi</button>
+              <textarea id="noir-mp-prompt-preview" readonly rows="5" style="display:none;width:100%;padding:9px;border-radius:10px;border:1px solid rgba(148,163,184,0.3);background:#090d16;color:#94a3b8;font-size:11px;font-family:ui-monospace,Consolas,monospace;box-sizing:border-box;"></textarea>
+            </div>
+          `}
 
           ${attachFileName ? `
-            <div style="padding:10px 12px;border-radius:12px;background:rgba(245,158,11,0.15);border:1px solid rgba(251,191,36,0.5);color:#fde68a;line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;">
-              <span>📎 <b>Nhớ gửi kèm tệp trên Gemini:</b> Bấm dấu <b>(+)</b> trên Gemini để tải tệp <b>"${String(attachFileName).replace(/</g, '&lt;')}"</b> lên cùng câu lệnh vừa copy!</span>
+            <div style="padding:10px 12px;border-radius:12px;background:rgba(245,158,11,0.16);border:1.5px solid rgba(251,191,36,0.55);color:#fde68a;line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;">
+              <span>📎 <b>Nhắc nhở quan trọng trên Gemini:</b> Hãy bấm dấu <b>(+)</b> trong khung chat Gemini để <b>tải tệp "${String(attachFileName).replace(/</g, '&lt;')}"</b> của bạn lên kèm câu lệnh vừa copy!</span>
               ${attachFileBlob ? '<button type="button" id="noir-mp-dl-file" style="padding:6px 10px;border-radius:8px;border:none;background:#d97706;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer;">⬇️ Tải bản sao tệp</button>' : ''}
             </div>
           ` : ''}
@@ -1583,13 +1721,14 @@
             <button type="button" id="noir-mp-quick-paste-btn" style="padding:6px 12px;border-radius:8px;border:none;background:#0284c7;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📋 Dán nhanh ngay</button>
           </div>
 
+          <div style="font-weight:700;color:#6ee7b7;margin-top:2px;">Bước 2: Dán câu trả lời từ Gemini vào khung dưới để trang web tự đọc &amp; thực hiện:</div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;">
             <button type="button" id="noir-mp-paste-clip" style="padding:8px 12px;border-radius:10px;border:none;background:#0284c7;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📋 Dán từ Clipboard</button>
             <button type="button" id="noir-mp-recopy" style="padding:8px 12px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e2e8f0;font-size:12px;font-weight:700;cursor:pointer;">🔁 Chép lại Prompt</button>
             <button type="button" id="noir-mp-reopen-gemini" style="padding:8px 12px;border-radius:10px;border:1px solid rgba(167,139,250,0.45);background:#4c1d95;color:#ede9fe;font-size:12px;font-weight:700;cursor:pointer;">🚀 Mở lại Gemini</button>
           </div>
 
-          <textarea id="noir-manual-paste-input" rows="8" placeholder="${String(pastePlaceholder).replace(/"/g, '&quot;')}" style="width:100%;padding:12px;border-radius:14px;border:1.5px solid rgba(56,189,248,0.45);background:#090d16;color:#f8fafc;font-size:12.5px;font-family:ui-monospace,Consolas,monospace;line-height:1.5;box-sizing:border-box;resize:vertical;"></textarea>
+          <textarea id="noir-manual-paste-input" rows="7" placeholder="${String(pastePlaceholder).replace(/"/g, '&quot;')}" style="width:100%;padding:12px;border-radius:14px;border:1.5px solid rgba(56,189,248,0.45);background:#090d16;color:#f8fafc;font-size:12.5px;font-family:ui-monospace,Consolas,monospace;line-height:1.5;box-sizing:border-box;resize:vertical;"></textarea>
           <div id="noir-mp-err" style="display:none;color:#fda4af;font-size:12px;font-weight:700;"></div>
         </div>
 
@@ -1600,6 +1739,22 @@
       </div>
     `;
     doc.body.appendChild(modal);
+
+    const pvTa = modal.querySelector('#noir-mp-prompt-preview');
+    if (pvTa) pvTa.value = String(promptText || '');
+    modal.querySelector('#noir-mp-toggle-prompt-view')?.addEventListener('click', () => {
+      if (!pvTa) return;
+      pvTa.style.display = pvTa.style.display === 'none' ? 'block' : 'none';
+    });
+    modal.querySelector('#noir-mp-copy-and-go')?.addEventListener('click', async () => {
+      await copyTextToClipboard(promptText);
+      NS.utils?.showToast?.('✅ Đã copy sẵn toàn bộ câu lệnh! Đang mở Gemini...', 'success', 3400);
+      if (NS.geminiSplitBridge?.launchExternalSplitWindow) {
+        NS.geminiSplitBridge.launchExternalSplitWindow('GEMINI', false);
+      } else {
+        global.open('https://gemini.google.com/app', '_blank', 'noopener,noreferrer');
+      }
+    });
 
     const ta = modal.querySelector('#noir-manual-paste-input');
     const errEl = modal.querySelector('#noir-mp-err');
@@ -1696,6 +1851,9 @@
     isQuota429Error,
     buildTaskManualPrompt,
     openManualPasteResultModal,
+    openManualAiAssistantModal: (o) => openManualPasteResultModal({ ...o, alreadyCopied: false }),
+    sanitizeApiKey,
+    getTransportsForKey,
     getApiKey,
     setApiKey,
     clearApiKey,

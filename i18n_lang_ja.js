@@ -5383,6 +5383,27 @@
     "✅ Áp dụng kết quả & Hoàn tất ngay": "✅ 結果を適用して今すぐ完了",
     "✅ Đồng bộ 6 Biểu đồ & Xuất thẳng PDF ngay": "✅ 6グラフ同期＆今すぐ PDF 出力",
     "✅ Tổng hợp 8 Trụ cột & Xuất thẳng PDF ngay": "✅ 8つの柱を統合＆今すぐ PDF 出力",
+
+    "AIzaSy... hoặc AQ...": "AIzaSy... または AQ...",
+    "Dán mã API Key (AIzaSy... hoặc AQ...) vào đây": "API キー (AIzaSy... または AQ...) をここに貼り付け",
+    "📋 Dùng AI Thủ công (0-Token · Copy Prompt & Dán kết quả → Xuất PDF)": "📋 手動 AI (0-Token · プロンプトコピー＆結果貼付 → PDF 出力)",
+    "📋 Dùng AI Thủ công (Không cần API Key · Copy Prompt & Dán kết quả → Xuất PDF)": "📋 手動 AI (API キー不要 · プロンプトコピー＆結果貼付 → PDF 出力)",
+    "📋 Dùng AI Thủ công (Không cần API Key · Copy Prompt + Gửi file lên Gemini → Dán kết quả)": "📋 手動 AI (API キー不要 · プロンプトコピー＋Gemini へファイル添付 → 結果貼付)",
+    "📋 AI Thủ công (0-Token · Copy Prompt + Gửi file → Word/MD)": "📋 手動 AI (0-Token · プロンプトコピー＋ファイル添付 → Word/MD)",
+    "📋 AI Thủ công OCR (0-Token · Copy Prompt + Gửi file → Dán kết quả)": "📋 手動 AI OCR (0-Token · プロンプトコピー＋ファイル添付 → 結果貼付)",
+    "📋 AI Thủ công (0-Token · Copy Prompt & Dán từ khóa)": "📋 手動 AI (0-Token · プロンプトコピー＆キーワード貼付)",
+    "📋 AI Thủ công (0-Token · Copy Prompt & Dán dữ liệu Form)": "📋 手動 AI (0-Token · プロンプトコピー＆フォームデータ貼付)",
+    "📋 AI Thủ công": "📋 手動 AI",
+    "📋 AI Thủ công Bóc bảng → Excel (0-Token)": "📋 手動 AI 表抽出 → Excel (0-Token)",
+    "📋 Dùng AI Thủ công ICR (0-Token · Copy Prompt theo chế độ + Gửi ảnh/PDF → Xuất file)": "📋 手動 AI ICR (0-Token · モード別プロンプトコピー＋画像/PDF添付 → 出力)",
+    "📋 AI Thủ công (0-Token · Copy Prompt & Dán JSON Metadata)": "📋 手動 AI (0-Token · プロンプトコピー＆メタデータ JSON 貼付)",
+    "📋 AI Thủ công Quét PII (0-Token · Copy Prompt & Dán từ khóa)": "📋 手動 AI PII スキャン (0-Token · プロンプトコピー＆キーワード貼付)",
+    "📋 AI Thủ công (0-Token)": "📋 手動 AI (0-Token)",
+    "🚀 Copy sẵn câu lệnh & Điều hướng sang Gemini ngay": "🚀 プロンプトをコピーして今すぐ Gemini へ移動",
+    "👁️ Xem khung câu lệnh chuẩn sẽ gửi": "👁️ 送信する標準プロンプトを確認",
+    "Bước 1: Copy câu lệnh cấu trúc chuẩn & Mở thẳng sang Gemini (Miễn phí 0-Token)": "ステップ 1：構造化プロンプトをコピーして Gemini を開く（無料 0-Token）",
+    "Bước 2: Dán câu trả lời từ Gemini vào khung dưới để trang web tự đọc & thực hiện:": "ステップ 2：Gemini の回答を下に貼り付けて自動解析・実行します：",
+    "Dùng AI Thủ công 0-Token không cần API Key": "API キー不要の 0-Token 手動 AI を使用",
   });
 
   const promptExact = Object.freeze({

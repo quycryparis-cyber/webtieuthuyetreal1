@@ -1134,6 +1134,9 @@
                  : `<button type="button" id="btn-mod46-connect-ai" class="noir-ai-blink-btn w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-sm sm:text-base shadow-xl cursor-pointer transition">
                       🔗 Kết nối AI của bạn
                     </button>`}
+               <button type="button" id="btn-mod46-theme10-manual-ai" class="w-full py-2.5 px-4 rounded-xl border border-emerald-500/55 bg-emerald-950/35 hover:bg-emerald-900/55 text-emerald-200 font-bold text-xs sm:text-sm cursor-pointer transition">
+                 📋 Dùng AI Thủ công (Không cần API Key · Copy Prompt + Gửi file lên Gemini → Dán kết quả)
+               </button>
                <button type="button" id="btn-mod46-skip-ai" class="w-full py-2 px-4 rounded-xl border border-zinc-700 bg-zinc-950/80 hover:bg-zinc-800 text-zinc-300 text-xs font-semibold cursor-pointer transition">
                  Tôi không cần AI (Bạn bỏ qua AI, độ chính xác của file sẽ giảm đi đáng kể)
                </button>
@@ -1173,6 +1176,41 @@
           };
           body.querySelector('#btn-mod46-gemini-key-pill')?.addEventListener('click', openKeyModalAndRefresh);
           body.querySelector('#btn-mod46-connect-ai')?.addEventListener('click', openKeyModalAndRefresh);
+          body.querySelector('#btn-mod46-theme10-manual-ai')?.addEventListener('click', () => {
+            const f0 = this.files[0];
+            const promptTxt = geminiBridge?.buildTaskManualPrompt?.('theme10_beautify', { fileName: f0?.name || 'Tai_lieu_cua_ban.pdf' }) || geminiBridge?.PROMPT_CHINH_TIEU_DE_CHUAN || '';
+            geminiBridge?.openManualAiAssistantModal?.({
+              taskTitle: 'Phối Màu 10 Theme — AI Thủ công (0-Token)',
+              promptText: promptTxt,
+              attachFileName: f0?.name || 'Tệp DOCX / XLSX / PDF bạn muốn phối màu',
+              attachFileBlob: f0?.file || (f0?.bytes ? new Blob([f0.bytes]) : null),
+              applyBtnLabel: '✅ Nạp Markdown vào 10 Theme & Xuất PDF đẹp',
+              onApplyPasted: (md) => {
+                const stitched = geminiBridge?.stitchContinueTables ? geminiBridge.stitchContinueTables(md) : md;
+                const bytes = new TextEncoder().encode(stitched);
+                const docTitle = (f0?.name || 'Bao_Cao_AI_Thu_Cong').replace(/\.[^.]+$/, '');
+                this.resetWorkspaceState();
+                this.files = [{
+                  id: `ai_manual_${Date.now()}`,
+                  name: `${docTitle}.md`,
+                  size: bytes.byteLength,
+                  bytes,
+                  text: stitched,
+                  ext: 'md',
+                  pageCount: 1,
+                  thumbUrl: '',
+                }];
+                const parsers = global.NoirStructuredParsers || NS.structuredParsers;
+                const astLib = global.NoirDocAst || NS.docAst;
+                if (parsers && astLib) {
+                  const ast = parsers.parseMarkdownToAst(stitched, { filename: `${docTitle}.md` });
+                  this.theme10OverrideBlocks = astLib.astToLegacyBlocks(ast);
+                }
+                this.renderUploadOrWorkspaceScreen();
+                this.toast('✅ Đã nạp nội dung cấu trúc từ Gemini! Chọn màu Theme và bấm Xuất PDF đẹp ngay.', 'success', 4000);
+              },
+            });
+          });
           body.querySelector('#btn-mod46-skip-ai')?.addEventListener('click', () => {
             this.pendingTheme10AiFormat = false;
             this.toast('ℹ️ Đã chọn chế độ không dùng AI. Hãy chọn tệp để tiếp tục bằng thuật toán Code.', 'info', 2800);
@@ -1713,7 +1751,8 @@
               <option value="json">Dữ liệu JSON (.JSON kèm tọa độ &amp; cỡ chữ)</option>
             </select>
           </label>
-          <label class="flex items-center gap-2 pt-1"><input id="opt-p2d-ai-polish" type="checkbox" ${hasG ? 'checked' : ''} class="accent-emerald-400" /><span>✨ Dùng AI nối câu bị ngắt dòng &amp; chuẩn hóa văn bản (${hasG ? 'Gemini đã kết nối' : 'Cần API Key'})</span></label>`;
+          <label class="flex items-center gap-2 pt-1"><input id="opt-p2d-ai-polish" type="checkbox" ${hasG ? 'checked' : ''} class="accent-emerald-400" /><span>✨ Dùng AI nối câu bị ngắt dòng &amp; chuẩn hóa văn bản (${hasG ? 'Gemini đã kết nối' : 'Cần API Key'})</span></label>
+          <button type="button" id="btn-pro-manual-ai-p2d" class="w-full py-1.5 px-3 rounded-xl border border-sky-500/50 bg-sky-950/35 hover:bg-sky-900/50 text-sky-200 text-[11px] font-bold cursor-pointer">📋 AI Thủ công (0-Token · Copy Prompt + Gửi file → Word/MD)</button>`;
       }
       if (id === 'text_to_pdf_docx') {
         return `
@@ -1769,6 +1808,7 @@
           <label class="flex items-center gap-2"><input id="opt-ocr-denoise" type="checkbox" checked class="accent-teal-400" /><span>Tiền xử lý: Tẩy nền ố vàng, khử bóng &amp; làm nét trước khi OCR</span></label>
           <label class="flex items-center gap-2"><input id="opt-ocr-ai-fast-native" type="checkbox" ${hasG ? 'checked' : ''} class="accent-sky-400" /><span>⚡ Chế độ Siêu tốc Gemini Flash Native (Đọc thẳng PDF/Ảnh 1 lượt — nhanh gấp 10× &amp; chính xác 99%)</span></label>
           <label class="flex items-center gap-2"><input id="opt-ocr-ai-polish" type="checkbox" ${hasG ? 'checked' : ''} class="accent-emerald-400" /><span>🤖 Hậu kiểm OCR bằng Gemini AI (sửa lỗi dấu tiếng Việt &amp; tách từ)</span></label>
+          <button type="button" id="btn-pro-manual-ai-ocr" class="w-full py-1.5 px-3 rounded-xl border border-sky-500/50 bg-sky-950/35 hover:bg-sky-900/50 text-sky-200 text-[11px] font-bold cursor-pointer">📋 AI Thủ công OCR (0-Token · Copy Prompt + Gửi file → Dán kết quả)</button>
           <p class="text-[11px] text-zinc-400">Chạy trực tiếp trên CPU máy bạn — giữ nguyên ảnh gốc sắc nét ở bản thành phẩm.</p>`;
       }
       const proOpt = NS.dangLovePdfPro?.buildProOptionsHtml?.(this, id);
@@ -1820,6 +1860,173 @@
       };
       body.querySelector('#btn-pro-icr-connect-ai')?.addEventListener('click', () => {
         (global.NoirGeminiBridge || NS.geminiBridge)?.openApiKeyQuickModal?.({ onSaved: () => this.renderUploadOrWorkspaceScreen() });
+      });
+
+      // Các nút AI THỦ CÔNG (0-TOKEN — KHÔNG CẦN API KEY) cho mọi công cụ ĐăngLovePDF!
+      const openManualToolPackageOutput = async (toolKey, title, attachFile, promptTxt, outKind) => {
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        const f0 = attachFile || this.files[0];
+        const baseN = String(f0?.name || 'TaiLieu').replace(/\.[^.]+$/, '');
+        const inputBytes = this.files.reduce((s, f) => s + (f.size || 0), 0);
+        gBridge?.openManualAiAssistantModal?.({
+          taskTitle: title,
+          promptText: promptTxt,
+          attachFileName: f0?.name || '',
+          attachFileBlob: f0?.file || (f0?.bytes ? new Blob([f0.bytes]) : null),
+          applyBtnLabel: '✅ Đóng gói kết quả & Xuất file ngay',
+          onApplyPasted: async (pastedText) => {
+            const cleanOut = String(pastedText || '').trim();
+            const outs = [];
+            if (outKind === 'xlsx' || outKind === 'csv') {
+              const XLSX = await ensureXlsx();
+              let rows = [];
+              try {
+                const jm = cleanOut.match(/\[[\s\S]*\]/);
+                if (jm) { const p = JSON.parse(jm[0]); if (Array.isArray(p) && Array.isArray(p[0])) rows = p; }
+              } catch (_eJ) {}
+              if (!rows.length) {
+                rows = cleanOut.split(/\r?\n/).filter((l) => l.trim() && !/^\|?[\s:|-]+\|?$/.test(l.trim())).map((l) => (l.includes('|') ? l.replace(/^\||\|$/g, '').split('|').map((c) => c.trim()) : [l.trim()]));
+              }
+              const ws = XLSX.utils.aoa_to_sheet(rows.length ? rows : [[cleanOut]]);
+              if (outKind === 'csv') {
+                outs.push({ name: `${baseN}_AI.csv`, blob: new Blob(['\uFEFF' + XLSX.utils.sheet_to_csv(ws)], { type: 'text/csv;charset=utf-8' }) });
+              } else {
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'KetQua_AI');
+                outs.push({ name: `${baseN}_AI.xlsx`, blob: new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) });
+              }
+            } else if (outKind === 'pdf') {
+              outs.push({ name: `${baseN}_AI.pdf`, blob: await renderLinesToVietnamesePdfBlob(`${baseN} (AI)`, cleanOut.split(/\r?\n/), () => {}) });
+            } else if (outKind === 'md') {
+              outs.push({ name: `${baseN}_AI.md`, blob: new Blob([cleanOut], { type: 'text/markdown;charset=utf-8' }) });
+            } else if (outKind === 'txt') {
+              outs.push({ name: `${baseN}_AI.txt`, blob: new Blob([cleanOut], { type: 'text/plain;charset=utf-8' }) });
+            } else {
+              outs.push({ name: `${baseN}_AI.docx`, blob: await buildDocxBlobFromParagraphs(`${baseN}_AI`, cleanOut.split(/\r?\n/)) });
+            }
+            this.resultItems = outs.map((o) => ({ name: o.name, blob: o.blob, size: o.blob.size, url: this.trackUrl(o.blob) }));
+            this.resultZipItem = null;
+            this.renderResultScreen(inputBytes);
+          },
+        });
+      };
+
+      body.querySelector('#btn-pro-manual-ai-icr')?.addEventListener('click', () => {
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        const mode = body.querySelector('#opt-pro-icr-mode')?.value || 'handwriting_general';
+        const out = body.querySelector('#opt-pro-icr-out')?.value || 'docx';
+        const f0 = this.files[0];
+        const promptTxt = gBridge?.buildTaskManualPrompt?.('icr_handwriting', { fileName: f0?.name || 'VietTay.jpg', icrMode: mode }) || '';
+        openManualToolPackageOutput('icr_handwriting', `ICR Chữ Viết Tay (${mode}) — AI Thủ công 0-Token`, f0, promptTxt, out);
+      });
+      body.querySelector('#btn-pro-manual-ai-ocr')?.addEventListener('click', () => {
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        const out = body.querySelector('#opt-ocr-out-fmt')?.value === 'md' ? 'md' : (body.querySelector('#opt-ocr-out-fmt')?.value === 'txt' ? 'txt' : 'docx');
+        const f0 = this.files[0];
+        const promptTxt = gBridge?.buildTaskManualPrompt?.('ocr_fast', { fileName: f0?.name || 'Scan.pdf' }) || '';
+        openManualToolPackageOutput('ocr_fast', 'OCR Nhận Diện Chữ — AI Thủ công 0-Token', f0, promptTxt, out);
+      });
+      body.querySelector('#btn-pro-manual-ai-p2d')?.addEventListener('click', () => {
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        const out = body.querySelector('#opt-p2d-out')?.value || 'docx';
+        const f0 = this.files[0];
+        const promptTxt = gBridge?.buildTaskManualPrompt?.('pdf_to_docx', { fileName: f0?.name || 'TaiLieu.pdf' }) || '';
+        openManualToolPackageOutput('pdf_to_docx', 'PDF → Word / Markdown — AI Thủ công 0-Token', f0, promptTxt, out === 'json' ? 'txt' : out);
+      });
+      body.querySelector('#btn-pro-manual-ai-p2x')?.addEventListener('click', () => {
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        const out = body.querySelector('#opt-pro-p2x-out')?.value || 'xlsx';
+        const f0 = this.files[0];
+        const promptTxt = gBridge?.buildTaskManualPrompt?.('pdf_to_excel', { fileName: f0?.name || 'BangDuLieu.pdf' }) || '';
+        openManualToolPackageOutput('pdf_to_excel', 'PDF → Excel / CSV — AI Thủ công 0-Token', f0, promptTxt, out);
+      });
+      body.querySelector('#btn-pro-manual-ai-toc')?.addEventListener('click', async () => {
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        const f0 = this.files[0];
+        const txt = await extractQuickPdfSampleText(10).catch(() => '');
+        const promptTxt = gBridge?.buildTaskManualPrompt?.('auto_toc', { fileName: f0?.name || 'TaiLieu.pdf', text: txt }) || '';
+        gBridge?.openManualAiAssistantModal?.({
+          taskTitle: 'Tạo Mục Lục Tự Động — AI Thủ công 0-Token',
+          promptText: promptTxt,
+          attachFileName: f0?.name || '',
+          attachFileBlob: f0?.file || (f0?.bytes ? new Blob([f0.bytes]) : null),
+          applyBtnLabel: '✅ Nạp danh sách Mục lục vào khung ngay',
+          onApplyPasted: (pasted) => {
+            const ta = body.querySelector('#opt-pro-toc-lines');
+            if (ta) {
+              const cleaned = String(pasted || '').replace(/```[^\n]*\n?|```/g, '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l.includes('|') && !/\.{3,}\s*\d+/.test(l)).join('\n');
+              ta.value = cleaned || String(pasted || '').trim();
+              this.toast('✅ Đã nạp danh sách Mục lục từ Gemini!', 'success', 3000);
+            }
+          },
+        });
+      });
+      body.querySelector('#btn-pro-manual-ai-pii')?.addEventListener('click', async () => {
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        const txt = await extractQuickPdfSampleText(8).catch(() => '');
+        const promptTxt = gBridge?.buildTaskManualPrompt?.('redact_pii', { text: txt }) || '';
+        gBridge?.openManualAiAssistantModal?.({
+          taskTitle: 'Che Đen Bảo Mật PII — AI Thủ công 0-Token',
+          promptText: promptTxt,
+          applyBtnLabel: '✅ Điền ngay vào ô từ khóa Che đen',
+          onApplyPasted: (raw) => {
+            const inp = body.querySelector('#opt-pro-redact-words');
+            if (inp) inp.value = String(raw || '').replace(/```[^\n]*\n?|```/g, '').replace(/\r?\n/g, ', ').trim();
+            this.toast('✅ Đã điền danh sách từ khóa nhạy cảm!', 'success', 3000);
+          },
+        });
+      });
+      body.querySelector('#btn-pro-manual-ai-meta')?.addEventListener('click', async () => {
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        const txt = await extractQuickPdfSampleText(3).catch(() => '');
+        const promptTxt = gBridge?.buildTaskManualPrompt?.('metadata_seo', { text: txt }) || '';
+        gBridge?.openManualAiAssistantModal?.({
+          taskTitle: 'Siêu dữ liệu Metadata — AI Thủ công 0-Token',
+          promptText: promptTxt,
+          applyBtnLabel: '✅ Điền Tiêu đề, Tác giả & Từ khóa ngay',
+          onApplyPasted: (raw) => {
+            const m = String(raw || '').match(/\{[\s\S]*\}/);
+            if (m) {
+              const obj = JSON.parse(m[0]);
+              if (obj.title && body.querySelector('#opt-pro-meta-title')) body.querySelector('#opt-pro-meta-title').value = obj.title;
+              if (obj.author && body.querySelector('#opt-pro-meta-author')) body.querySelector('#opt-pro-meta-author').value = obj.author;
+              if (obj.keywords && body.querySelector('#opt-pro-meta-keywords')) body.querySelector('#opt-pro-meta-keywords').value = obj.keywords;
+              this.toast('✅ Đã điền Tiêu đề, Tác giả & Từ khóa!', 'success', 3000);
+            }
+          },
+        });
+      });
+      body.querySelector('#btn-pro-manual-ai-split')?.addEventListener('click', async () => {
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        const txt = await extractQuickPdfSampleText(6).catch(() => '');
+        const promptTxt = gBridge?.buildTaskManualPrompt?.('split_keyword', { text: txt }) || '';
+        gBridge?.openManualAiAssistantModal?.({
+          taskTitle: 'Tách PDF Theo Từ Khóa — AI Thủ công 0-Token',
+          promptText: promptTxt,
+          applyBtnLabel: '✅ Điền từ khóa ngắt hồ sơ ngay',
+          onApplyPasted: (raw) => {
+            const inp = body.querySelector('#opt-pro-split-kw');
+            const sel = body.querySelector('#opt-pro-smart-split');
+            if (inp) inp.value = String(raw || '').split(/\r?\n/)[0].replace(/["'`]/g, '').trim();
+            if (sel) sel.value = 'split_keyword';
+            this.toast('✅ Đã chọn chế độ Tách theo từ khóa!', 'success', 3000);
+          },
+        });
+      });
+      body.querySelector('#btn-pro-manual-ai-form')?.addEventListener('click', () => {
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        const ta = body.querySelector('#opt-pro-form-data');
+        const userNote = String(ta?.value || '').trim();
+        const promptTxt = gBridge?.buildTaskManualPrompt?.('form_fill', { text: userNote || 'Họ tên: ..., Email: ..., SĐT: ...' }) || '';
+        gBridge?.openManualAiAssistantModal?.({
+          taskTitle: 'Điền Biểu Mẫu AcroForm — AI Thủ công 0-Token',
+          promptText: promptTxt,
+          applyBtnLabel: '✅ Nạp cặp TenTruong=GiaTri vào ô ngay',
+          onApplyPasted: (raw) => {
+            if (ta) ta.value = String(raw || '').replace(/```[^\n]*\n?|```/g, '').trim();
+            this.toast('✅ Đã nạp dữ liệu chuẩn AcroForm!', 'success', 3000);
+          },
+        });
       });
       bindQuickProAi('#btn-pro-ai-scan-pii', async (gBridge) => {
         const loader = gBridge.showAiFullLoadingOverlay?.('🛡️ AI đang quét dữ liệu nhạy cảm (PII)...', 'Tìm Họ tên, CCCD, SĐT, Email, STK, Địa chỉ để điền sẵn vào danh sách che đen');

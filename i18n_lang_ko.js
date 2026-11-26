@@ -5383,6 +5383,27 @@
     "✅ Áp dụng kết quả & Hoàn tất ngay": "✅ 결과 적용 및 지금 완료",
     "✅ Đồng bộ 6 Biểu đồ & Xuất thẳng PDF ngay": "✅ 6개 차트 동기화 및 지금 PDF 내보내기",
     "✅ Tổng hợp 8 Trụ cột & Xuất thẳng PDF ngay": "✅ 8대 핵심 영역 종합 및 지금 PDF 내보내기",
+
+    "AIzaSy... hoặc AQ...": "AIzaSy... 또는 AQ...",
+    "Dán mã API Key (AIzaSy... hoặc AQ...) vào đây": "여기에 API 키(AIzaSy... 또는 AQ...) 붙여넣기",
+    "📋 Dùng AI Thủ công (0-Token · Copy Prompt & Dán kết quả → Xuất PDF)": "📋 수동 AI (0-Token · 프롬프트 복사 및 결과 붙여넣기 → PDF 내보내기)",
+    "📋 Dùng AI Thủ công (Không cần API Key · Copy Prompt & Dán kết quả → Xuất PDF)": "📋 수동 AI (API 키 불필요 · 프롬프트 복사 및 결과 붙여넣기 → PDF 내보내기)",
+    "📋 Dùng AI Thủ công (Không cần API Key · Copy Prompt + Gửi file lên Gemini → Dán kết quả)": "📋 수동 AI (API 키 불필요 · 프롬프트 복사 + Gemini 파일 업로드 → 결과 붙여넣기)",
+    "📋 AI Thủ công (0-Token · Copy Prompt + Gửi file → Word/MD)": "📋 수동 AI (0-Token · 프롬프트 복사 + 파일 업로드 → Word/MD)",
+    "📋 AI Thủ công OCR (0-Token · Copy Prompt + Gửi file → Dán kết quả)": "📋 수동 AI OCR (0-Token · 프롬프트 복사 + 파일 업로드 → 결과 붙여넣기)",
+    "📋 AI Thủ công (0-Token · Copy Prompt & Dán từ khóa)": "📋 수동 AI (0-Token · 프롬프트 복사 및 키워드 붙여넣기)",
+    "📋 AI Thủ công (0-Token · Copy Prompt & Dán dữ liệu Form)": "📋 수동 AI (0-Token · 프롬프트 복사 및 양식 데이터 붙여넣기)",
+    "📋 AI Thủ công": "📋 수동 AI",
+    "📋 AI Thủ công Bóc bảng → Excel (0-Token)": "📋 수동 AI 표 추출 → Excel (0-Token)",
+    "📋 Dùng AI Thủ công ICR (0-Token · Copy Prompt theo chế độ + Gửi ảnh/PDF → Xuất file)": "📋 수동 AI ICR (0-Token · 모드별 프롬프트 복사 + 이미지/PDF 업로드 → 내보내기)",
+    "📋 AI Thủ công (0-Token · Copy Prompt & Dán JSON Metadata)": "📋 수동 AI (0-Token · 프롬프트 복사 및 메타데이터 JSON 붙여넣기)",
+    "📋 AI Thủ công Quét PII (0-Token · Copy Prompt & Dán từ khóa)": "📋 수동 AI PII 스캔 (0-Token · 프롬프트 복사 및 키워드 붙여넣기)",
+    "📋 AI Thủ công (0-Token)": "📋 수동 AI (0-Token)",
+    "🚀 Copy sẵn câu lệnh & Điều hướng sang Gemini ngay": "🚀 프롬프트 복사 후 지금 Gemini로 이동",
+    "👁️ Xem khung câu lệnh chuẩn sẽ gửi": "👁️ 전송할 표준 프롬프트 미리보기",
+    "Bước 1: Copy câu lệnh cấu trúc chuẩn & Mở thẳng sang Gemini (Miễn phí 0-Token)": "1단계: 구조화된 프롬프트 복사 및 Gemini 바로 열기 (무료 0-Token)",
+    "Bước 2: Dán câu trả lời từ Gemini vào khung dưới để trang web tự đọc & thực hiện:": "2단계: 자동 파싱 및 실행을 위해 아래에 Gemini 답변을 붙여넣으세요:",
+    "Dùng AI Thủ công 0-Token không cần API Key": "API 키 없이 0-Token 수동 AI 사용",
   });
 
   const promptExact = Object.freeze({
