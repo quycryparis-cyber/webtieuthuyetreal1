@@ -54,7 +54,7 @@
       placeholder:
         'Các phương án phát triển cốt truyện, gợi ý nút thắt (Plot Twist) và hướng gỡ bí (Chế độ 2) sẽ hiển thị tại đây.\n• Bạn có thể bấm "📚 Lưu vào Bible" để cất giữ các ý tưởng hay vào Hồ sơ Story Bible tại Tab 4.',
       bibleSectionHeader: 'PHƯƠNG ÁN Ý TƯỞNG & NHÁNH CỐT TRUYỆN (TỪ CHẾ ĐỘ 2)',
-      supportsDirectManuscriptTransfer: true
+      supportsDirectManuscriptTransfer: false
     },
     MODE_3_AUDIT: {
       key: 'MODE_3_AUDIT',
@@ -64,7 +64,7 @@
       placeholder:
         'Báo cáo rà soát mâu thuẫn dòng thời gian, kiểm tra Ma trận Ai Biết Gì và phát hiện lỗi tính cách nhân vật (Chế độ 3) sẽ hiển thị tại đây.\n• Giúp bạn đảm bảo toàn bộ các chương khớp nhau 100% trước khi chốt duyệt.',
       bibleSectionHeader: 'GHI CHÚ THANH TRA LOGIC & NHẤT QUÁN (TỪ CHẾ ĐỘ 3)',
-      supportsDirectManuscriptTransfer: true
+      supportsDirectManuscriptTransfer: false
     },
     MODE_4_REVIEW: {
       key: 'MODE_4_REVIEW',
@@ -72,9 +72,9 @@
       fullTitle: '✨ Chế độ 4: Bản Thảo Đã Chuẩn Hóa Hội Thoại & Gọt Văn Chống Sáo Rỗng',
       badgeColor: 'purple',
       placeholder:
-        'Bản thảo sau khi được biên tập chuyên sâu, loại bỏ từ cấm sáo rỗng (Anti-Cliché) và chuẩn hóa hội thoại "- Câu thoại (Tên nhân vật)" (Chế độ 4) sẽ hiển thị tại đây.\n• Bạn có thể bấm "🔄 Thay thế" hoặc "📥 Chèn nối tiếp" để cập nhật sang Tab 1.',
+        'Bản thảo sau khi được biên tập chuyên sâu, loại bỏ từ cấm sáo rỗng (Anti-Cliché) và chuẩn hóa hội thoại "- Câu thoại (Tên nhân vật)" (Chế độ 4) sẽ hiển thị tại đây.\n• Bạn có thể bấm "📋 Sao chép" hoặc "📚 Lưu vào Bible" để đối chiếu.',
       bibleSectionHeader: 'GHI CHÚ BIÊN TẬP & PHONG CÁCH VĂN CHƯƠNG (TỪ CHẾ ĐỘ 4)',
-      supportsDirectManuscriptTransfer: true
+      supportsDirectManuscriptTransfer: false
     },
     MODE_5_DIAGRAM: {
       key: 'MODE_5_DIAGRAM',
@@ -84,7 +84,7 @@
       placeholder:
         'Biểu đồ SVG tương tác và Báo cáo đối chiếu dòng thời gian xuyên chương (Chế độ 5).',
       bibleSectionHeader: 'BIÊN NIÊN SỬ DÒNG THỜI GIAN & SƠ ĐỒ CỐT TRUYỆN (TỪ CHẾ ĐỘ 5)',
-      supportsDirectManuscriptTransfer: true
+      supportsDirectManuscriptTransfer: false
     },
     MODE_6_BOOK_COVER: {
       key: 'MODE_6_BOOK_COVER',
@@ -755,13 +755,15 @@
         document.getElementById('btn-tab3-replace-manuscript')
       ].filter(Boolean);
 
+      const allowTransfer = modeKey === 'MODE_1_DRAFT';
+
       if (modeKey === 'MODE_5_DIAGRAM') {
         stdWrapper?.classList.add('hidden');
         mode6Studio?.classList.add('hidden');
         mode5Studio?.classList.remove('hidden');
         insertBtns.forEach((b) => {
           b.disabled = true;
-          b.classList.add('opacity-40', 'cursor-not-allowed');
+          b.classList.add('hidden', 'opacity-40', 'cursor-not-allowed');
         });
         window.NoirStudio?.mode5Studio?.refreshChapterChecklist?.();
         this.updateOutputWordBadge(this.modeOutputs.MODE_5_DIAGRAM || '');
@@ -771,7 +773,7 @@
         mode6Studio?.classList.remove('hidden');
         insertBtns.forEach((b) => {
           b.disabled = true;
-          b.classList.add('opacity-40', 'cursor-not-allowed');
+          b.classList.add('hidden', 'opacity-40', 'cursor-not-allowed');
         });
         window.NoirStudio?.coverGallery?.renderGalleryUI?.();
         this.updateOutputWordBadge('');
@@ -780,8 +782,10 @@
         mode6Studio?.classList.add('hidden');
         stdWrapper?.classList.remove('hidden');
         insertBtns.forEach((b) => {
-          b.disabled = false;
-          b.classList.remove('opacity-40', 'cursor-not-allowed');
+          b.disabled = !allowTransfer;
+          b.classList.toggle('hidden', !allowTransfer);
+          b.classList.toggle('opacity-40', !allowTransfer);
+          b.classList.toggle('cursor-not-allowed', !allowTransfer);
         });
         if (outTextarea) {
           outTextarea.value = this.modeOutputs[modeKey] || '';

@@ -599,14 +599,36 @@
     return { sections, tables, figures, tocTextLines, maxDepth };
   }
 
+  function assignDeterministicBlockIds(blocks = []) {
+    const perPageCounter = new Map();
+    return (Array.isArray(blocks) ? blocks : []).map((b) => {
+      if (!b || typeof b !== 'object') return b;
+      const pg = Math.max(1, Number(b.pageNo || b.page || 1));
+      const seq = (perPageCounter.get(pg) || 0) + 1;
+      perPageCounter.set(pg, seq);
+      const blockId = b.blockId || `P${String(pg).padStart(2, '0')}_B${String(seq).padStart(2, '0')}`;
+      return { ...b, pageNo: pg, blockId };
+    });
+  }
+
   function astToLegacyBlocks(ast) {
-    const blocks = Array.isArray(ast?.blocks) ? ast.blocks : [];
+    const rawBlocks = Array.isArray(ast?.blocks) ? ast.blocks : [];
+    const blocks = assignDeterministicBlockIds(rawBlocks);
     const legacy = [];
 
     for (const b of blocks) {
+      const commonMeta = {
+        blockId: b.blockId || '',
+        pageNo: b.pageNo || 1,
+        page: b.pageNo || 1,
+        ...(typeof b.fontSize === 'number' ? { fontSize: b.fontSize } : {}),
+        ...(typeof b.isBold === 'boolean' ? { isBold: b.isBold } : {}),
+        ...(typeof b.confidence === 'number' ? { confidence: b.confidence } : {}),
+      };
       if (b.type === 'heading') {
         const kind = b.level <= 1 ? 'h1' : (b.level === 2 ? 'h2' : 'h3');
         legacy.push({
+          ...commonMeta,
           type: b.level <= 2 ? 'heading' : 'subheading',
           kind,
           level: b.level,
@@ -614,11 +636,11 @@
           numberPrefix: b.numberPrefix,
           includeInToc: b.includeInToc !== false,
           source: b.source,
-          pageNo: b.pageNo || 1,
           _astNode: b,
         });
       } else if (b.type === 'table') {
         legacy.push({
+          ...commonMeta,
           type: 'table',
           caption: b.caption || '',
           sourceNote: b.sourceNote || '',
@@ -629,68 +651,67 @@
           colWidths: b.colWidths || [],
           hasMergedCells: Boolean(b.hasMergedCells),
           suggestLandscape: Boolean(b.suggestLandscape),
-          pageNo: b.pageNo || 1,
           _astNode: b,
         });
       } else if (b.type === 'mathBlock') {
         legacy.push({
+          ...commonMeta,
           type: 'math_block',
           latex: b.latex,
           text: b.displayText || latexToReadablePlain(b.latex),
           source: b.source,
-          pageNo: b.pageNo || 1,
           _astNode: b,
         });
       } else if (b.type === 'mathImageBlock') {
         legacy.push({
+          ...commonMeta,
           type: 'image',
           dataUrl: b.dataUrl,
           caption: b.altText || '',
           isMathImage: true,
           width: b.width,
           height: b.height,
-          pageNo: b.pageNo || 1,
           _astNode: b,
         });
       } else if (b.type === 'imageBlock') {
         legacy.push({
+          ...commonMeta,
           type: 'image',
           dataUrl: b.dataUrl,
           caption: b.caption || '',
           width: b.width,
           height: b.height,
-          pageNo: b.pageNo || 1,
           _astNode: b,
         });
       } else if (b.type === 'list') {
         legacy.push({
+          ...commonMeta,
           type: 'list',
           ordered: Boolean(b.ordered),
           items: b.items || [],
           text: (b.items || []).map((it, idx) => `${b.ordered ? `${idx + 1}.` : '•'} ${it.text}`).join('\n'),
-          pageNo: b.pageNo || 1,
           _astNode: b,
         });
       } else if (b.type === 'callout') {
         legacy.push({
+          ...commonMeta,
           type: 'callout',
           variant: b.variant || 'info',
           title: b.title || '',
           text: b.title ? `${b.title}: ${b.text}` : b.text,
           inlineRuns: b.inlineRuns,
-          pageNo: b.pageNo || 1,
           _astNode: b,
         });
       } else if (b.type === 'pageBreak') {
-        legacy.push({ type: 'page_break', _astNode: b });
+        legacy.push({ ...commonMeta, type: 'page_break', _astNode: b });
       } else if (b.type === 'paragraph') {
         legacy.push({
+          ...commonMeta,
           type: 'paragraph',
           kind: 'paragraph',
           text: b.text,
           inlineRuns: b.inlineRuns,
           align: b.align || 'justify',
-          pageNo: b.pageNo || 1,
           _astNode: b,
         });
       }
@@ -712,6 +733,7 @@
     nodes: astNodes,
     classifyHeadingCandidate,
     applyHierarchySanityPass,
+    assignDeterministicBlockIds,
     createDocumentAst,
     buildTocFromAst,
     astToLegacyBlocks,

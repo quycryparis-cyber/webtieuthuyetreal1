@@ -1627,8 +1627,10 @@
             const bodyFont = String(globalScope.getComputedStyle?.(document.body)?.fontFamily || '');
             const hasBeVietnam = /be\s+vietnam\s+pro/i.test(bodyFont);
             const hasCjk = /noto\s+sans\s+(?:sc|tc|jp|kr)/i.test(bodyFont);
+            const hasSegoeBody = /segoe\s+ui/i.test(bodyFont);
             const badNodes = [];
-            const candidates = Array.from(document.querySelectorAll('button, h1, h2, h3, [role="button"]'));
+            if (hasSegoeBody) badNodes.push('body (cấm Segoe UI)');
+            const candidates = Array.from(document.querySelectorAll('button, h1, h2, h3, p, label, a, input, select, [role="button"]')).slice(0, 350);
             for (const el of candidates) {
               if (el.closest?.('[data-autotester-ui="true"], #at-shell-root, .katex')) continue;
               const rect = el.getBoundingClientRect?.();
@@ -1636,9 +1638,12 @@
               const cs = globalScope.getComputedStyle?.(el);
               if (!cs || cs.display === 'none' || cs.visibility === 'hidden') continue;
               const fw = parseInt(cs.fontWeight, 10) || 400;
+              const ff = String(cs.fontFamily || '');
               if (fw >= 800) {
                 badNodes.push(`${el.id ? '#' + el.id : el.tagName.toLowerCase()} (weight=${fw})`);
-              } else if (/times\s+new\s+roman/i.test(String(cs.fontFamily || '')) && !el.closest('#novel-editor')) {
+              } else if (/segoe\s+ui/i.test(ff)) {
+                badNodes.push(`${el.id ? '#' + el.id : el.tagName.toLowerCase()} (Segoe UI cấm dùng)`);
+              } else if (/times\s+new\s+roman/i.test(ff) && !el.closest('#novel-editor')) {
                 badNodes.push(`${el.id ? '#' + el.id : el.tagName.toLowerCase()} (Times fallback)`);
               }
               if (badNodes.length >= 6) break;
@@ -1701,6 +1706,26 @@
               }
             } finally {
               modalAuditHost.remove();
+              vg.restoreViewportWidth();
+            }
+
+            // 2B. Quét trực tiếp các Hộp thoại THẬT (Mod 42 Đầu Tư & ĐăngLovePDF Hub) trên Mobile 375px
+            try {
+              if (isBiNovelApp() && globalScope.NoirStudio?.worldClockStudio?.openModal) {
+                globalScope.NoirStudio.worldClockStudio.openModal('market');
+                vg.applyViewportWidth(375, 812, 'RealMod42-375px');
+                await AT.sleep(80);
+                modalCtrlIssues.push(...vg.auditModalAndToolbarControls(document, 375, 812, 'RealMod42-375px'));
+                globalScope.NoirStudio.worldClockStudio.closeModal?.();
+              }
+              if (isBiNovelApp() && globalScope.NoirStudio?.dangLovePdf?.openDangLovePdfStudio) {
+                globalScope.NoirStudio.dangLovePdf.openDangLovePdfStudio();
+                vg.applyViewportWidth(375, 812, 'RealMod46-375px');
+                await AT.sleep(80);
+                modalCtrlIssues.push(...vg.auditModalAndToolbarControls(document, 375, 812, 'RealMod46-375px'));
+                document.getElementById('btn-mod46-close-studio')?.click?.();
+              }
+            } finally {
               vg.restoreViewportWidth();
             }
 

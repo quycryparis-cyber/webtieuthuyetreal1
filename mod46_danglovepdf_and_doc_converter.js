@@ -684,7 +684,7 @@
         modal.className = isStandalone
           ? 'fixed inset-0 z-[2147483590] bg-zinc-950 flex items-center justify-center p-0 overflow-hidden text-zinc-100'
           : 'fixed inset-0 z-[2147483590] bg-zinc-950/90 backdrop-blur-lg flex items-center justify-center p-1.5 sm:p-4 overflow-hidden text-zinc-100';
-        modal.style.cssText = 'position:fixed;inset:0;width:100vw;height:100dvh;align-items:center;justify-content:center;';
+        modal.style.cssText = 'position:fixed;inset:0;width:100%;max-width:100vw;height:100dvh;align-items:center;justify-content:center;';
         modal.setAttribute('role', 'dialog');
         modal.setAttribute('aria-modal', 'true');
         modal.innerHTML = `
@@ -1150,6 +1150,7 @@
         ocr_pdf: '#btn-pro-manual-ai-ocr',
         pdf_to_docx: '#btn-pro-manual-ai-p2d',
         pdf_to_excel: '#btn-pro-manual-ai-p2x',
+        compare_pdf: '#btn-pro-manual-ai-compare',
         bookmarks_toc: '#btn-pro-manual-ai-toc',
         true_redaction: '#btn-pro-manual-ai-pii',
         metadata_editor: '#btn-pro-manual-ai-meta',
@@ -1160,14 +1161,15 @@
         beautify_10_themes: '#btn-mod46-run-gemini-vision',
         theme_report: '#btn-mod46-run-gemini-vision',
         icr_handwriting_pdf: '#btn-mod46-run-primary',
-        ocr_pdf: '#btn-mod46-run-primary',
-        pdf_to_docx: '#btn-mod46-run-primary',
-        pdf_to_excel: '#btn-mod46-run-primary',
-        bookmarks_toc: '#btn-pro-toc-autodetect',
+        ocr_pdf: '#btn-mod46-ocr-ai-fast',
+        pdf_to_docx: '#btn-mod46-tool-ai-fast',
+        pdf_to_excel: '#btn-mod46-tool-ai-fast',
+        compare_pdf: '#btn-mod46-tool-ai-fast',
+        bookmarks_toc: '#btn-pro-ai-fast-toc',
         true_redaction: '#btn-pro-ai-scan-pii',
         metadata_editor: '#btn-pro-ai-gen-meta',
-        split_smart_books: '#btn-pro-ai-detect-split-kw',
-        form_filler_builder: '#btn-pro-ai-parse-form',
+        split_smart_books: '#btn-pro-ai-split-kw',
+        form_filler_builder: '#btn-pro-ai-fill-form',
       };
 
       modal.querySelector('#btn-mod46-choice-ai-auto')?.addEventListener('click', () => {
@@ -1577,6 +1579,30 @@
                     📋 Nhập AI Thủ công OCR (0-Token · Copy Prompt + Gửi file → Dán kết quả)
                   </button>
                 ` : ''}
+                ${tool.id === 'compare_pdf' ? `
+                  <button type="button" id="btn-mod46-tool-ai-fast" ${canRun ? '' : 'disabled'} data-at-id="mod46-compare-ai-fast" class="w-full py-2.5 px-3 rounded-2xl font-bold text-xs shadow-lg transition ${canRun ? 'bg-gradient-to-r from-violet-600 to-amber-600 hover:from-violet-500 hover:to-amber-500 text-white cursor-pointer' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}">
+                    ⚡ AI Siêu Tốc · So sánh &amp; Tóm tắt khác biệt (Gemini 3.8 Flash)
+                  </button>
+                  <button type="button" id="btn-pro-manual-ai-compare" ${canRun ? '' : 'disabled'} data-at-id="mod46-compare-manual-ai" class="w-full py-2 px-3 rounded-xl border border-sky-500/55 bg-sky-950/40 hover:bg-sky-900/60 text-sky-100 text-[11.5px] font-bold cursor-pointer">
+                    📋 AI Thủ Công · So sánh 2 PDF (0-Token · Copy Diff &amp; Dán tóm tắt)
+                  </button>
+                ` : ''}
+                ${tool.id === 'pdf_to_excel' ? `
+                  <button type="button" id="btn-mod46-tool-ai-fast" ${canRun ? '' : 'disabled'} data-at-id="mod46-p2x-ai-fast" class="w-full py-2.5 px-3 rounded-2xl font-bold text-xs shadow-lg transition ${canRun ? 'bg-gradient-to-r from-violet-600 to-amber-600 hover:from-violet-500 hover:to-amber-500 text-white cursor-pointer' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}">
+                    ⚡ AI Siêu Tốc · Bóc bảng &amp; Chuẩn hóa Excel (Gemini 3.8 Flash)
+                  </button>
+                  <button type="button" id="btn-pro-manual-ai-p2x" ${canRun ? '' : 'disabled'} data-at-id="mod46-p2x-manual-ai" class="w-full py-2 px-3 rounded-xl border border-sky-500/55 bg-sky-950/40 hover:bg-sky-900/60 text-sky-100 text-[11.5px] font-bold cursor-pointer">
+                    📋 AI Thủ Công · Bóc bảng → Excel (0-Token)
+                  </button>
+                ` : ''}
+                ${tool.id === 'pdf_to_docx' ? `
+                  <button type="button" id="btn-mod46-tool-ai-fast" ${canRun ? '' : 'disabled'} data-at-id="mod46-p2d-ai-fast" class="w-full py-2.5 px-3 rounded-2xl font-bold text-xs shadow-lg transition ${canRun ? 'bg-gradient-to-r from-violet-600 to-amber-600 hover:from-violet-500 hover:to-amber-500 text-white cursor-pointer' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}">
+                    ⚡ AI Siêu Tốc · Chuẩn hóa sang Word / MD (Gemini 3.8 Flash)
+                  </button>
+                  <button type="button" id="btn-pro-manual-ai-p2d" ${canRun ? '' : 'disabled'} data-at-id="mod46-p2d-manual-ai" class="w-full py-2 px-3 rounded-xl border border-sky-500/55 bg-sky-950/40 hover:bg-sky-900/60 text-sky-100 text-[11.5px] font-bold cursor-pointer">
+                    📋 AI Thủ Công · PDF → Word / MD (0-Token)
+                  </button>
+                ` : ''}
                 ${!canRun ? `<div class="text-[11px] text-amber-300 text-center">Cần ít nhất ${tool.minFiles} tệp để thực hiện.</div>` : ''}
               </div>
             </div>
@@ -1960,7 +1986,6 @@
           </label>`;
       }
       if (id === 'pdf_to_docx') {
-        const hasG = Boolean((global.NoirGeminiBridge || NS.geminiBridge)?.hasApiKey?.());
         return `
           <label class="block space-y-1"><span class="font-bold">Định dạng xuất ra:</span>
             <select id="opt-p2d-out" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
@@ -1970,8 +1995,7 @@
               <option value="json">Dữ liệu JSON (.JSON kèm tọa độ &amp; cỡ chữ)</option>
             </select>
           </label>
-          <label class="flex items-center gap-2 pt-1"><input id="opt-p2d-ai-polish" type="checkbox" ${hasG ? 'checked' : ''} class="accent-emerald-400" /><span>✨ Dùng AI nối câu bị ngắt dòng &amp; chuẩn hóa văn bản (${hasG ? 'Gemini đã kết nối' : 'Cần API Key'})</span></label>
-          <button type="button" id="btn-pro-manual-ai-p2d" class="w-full py-1.5 px-3 rounded-xl border border-sky-500/50 bg-sky-950/35 hover:bg-sky-900/50 text-sky-200 text-[11px] font-bold cursor-pointer">📋 AI Thủ công (0-Token · Copy Prompt + Gửi file → Word/MD)</button>`;
+          <p class="text-[11px] text-zinc-400">Nút đỏ chạy 100% thuật toán chuyển đổi nội bộ (0-Token). Muốn AI nối câu/chuẩn hóa văn bản hãy bấm 2 nút AI riêng bên dưới.</p>`;
       }
       if (id === 'text_to_pdf_docx') {
         return `
@@ -2378,6 +2402,63 @@
         });
         renderBlankLivePreview();
       }
+      body.querySelector('#btn-mod46-tool-ai-fast')?.addEventListener('click', async () => {
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        if (!gBridge?.hasApiKey?.()) {
+          gBridge?.openApiKeyQuickModal?.({ onSaved: () => this.renderUploadOrWorkspaceScreen() });
+          return;
+        }
+        this._forceAiForRun = true;
+        global.__MOD46_FORCE_AI_RUN__ = true;
+        try {
+          await this.runCurrentTool();
+        } finally {
+          this._forceAiForRun = false;
+          global.__MOD46_FORCE_AI_RUN__ = false;
+        }
+      });
+
+      body.querySelector('#btn-pro-manual-ai-compare')?.addEventListener('click', async () => {
+        if (this.files.length < 2) {
+          this.toast('⚠️ Hãy nạp đủ 2 tệp PDF (#1 và #2) để so sánh bằng AI Thủ công.', 'warning', 3000);
+          return;
+        }
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        try {
+          const pdfjsLib = await ensurePdfJs();
+          const readSnippet = async (f) => {
+            const pdf = await pdfjsLib.getDocument({ data: f.bytes.slice() }).promise;
+            const out = [];
+            for (let i = 1; i <= Math.min(pdf.numPages, 8); i++) {
+              const pg = await pdf.getPage(i);
+              const tc = await pg.getTextContent();
+              out.push(`[Trang ${i}] ` + tc.items.map((x) => x.str).join(' '));
+            }
+            return out.join('\n').slice(0, 5500);
+          };
+          const s1 = await readSnippet(this.files[0]);
+          const s2 = await readSnippet(this.files[1]);
+          const diffText = `=== BẢN CŨ (#1: ${this.files[0].name}) ===\n${s1}\n\n=== BẢN MỚI (#2: ${this.files[1].name}) ===\n${s2}`;
+          const promptTxt = gBridge?.buildTaskManualPrompt?.('compare_diff', { text: diffText }) || '';
+          gBridge?.openManualAiAssistantModal?.({
+            taskTitle: 'So sánh 2 tệp PDF — AI Thủ công 0-Token',
+            promptText: promptTxt,
+            attachFileName: `${this.files[0].name} & ${this.files[1].name}`,
+            applyBtnLabel: '✅ Ghép tóm tắt AI & Xuất báo cáo So sánh',
+            onApplyPasted: (rawSummary) => {
+              const sum = String(rawSummary || '').trim();
+              const html = `<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><title>So sánh PDF + AI — ĐăngLovePDF</title><style>body{font-family:'Be Vietnam Pro',sans-serif;background:#0f172a;color:#e2e8f0;max-width:960px;margin:20px auto;padding:18px;line-height:1.65}</style></head><body><h1>⚖️ Báo Cáo So Sánh 2 Tệp PDF (AI Thủ Công 0-Token)</h1><p><strong>Bản #1:</strong> ${escHtml(this.files[0].name)} | <strong>Bản #2:</strong> ${escHtml(this.files[1].name)}</p><div style="padding:14px 16px;border:1.5px solid #10b981;border-radius:14px;background:#052e2b;white-space:pre-wrap;">${escHtml(sum)}</div></body></html>`;
+              const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+              this.resultItems = [{ name: 'SoSanh_2PDF_AI_ThuCong.html', blob, size: blob.size, url: this.trackUrl(blob) }];
+              this.resultZipItem = null;
+              this.renderResultScreen((this.files[0].size || 0) + (this.files[1].size || 0));
+            },
+          });
+        } catch (err) {
+          this.toast(`❌ Không thể trích xuất nội dung so sánh: ${err?.message || err}`, 'error', 3500);
+        }
+      });
+
       body.querySelector('#btn-pro-manual-ai-p2d')?.addEventListener('click', () => {
         const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
         const out = body.querySelector('#opt-p2d-out')?.value || 'docx';
@@ -2395,21 +2476,53 @@
       body.querySelector('#btn-pro-manual-ai-toc')?.addEventListener('click', async () => {
         const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
         const f0 = this.files[0];
-        const txt = await extractQuickPdfSampleText(10).catch(() => '');
-        const promptTxt = gBridge?.buildTaskManualPrompt?.('auto_toc', { fileName: f0?.name || 'TaiLieu.pdf', text: txt }) || '';
+        let skeletonOrSample = '';
+        try {
+          const extractor = global.NoirExtractStructuredBlocksFromFile || NS.dangLovePdfPro?.extractStructuredBlocksFromFile;
+          if (f0 && extractor && typeof gBridge?.buildCompactSkeletonForAi === 'function') {
+            const blocks = this._tocAnalyzedCache?.fileId === f0.id && this._tocAnalyzedCache.blocks
+              ? this._tocAnalyzedCache.blocks
+              : await extractor(f0, { ensurePdfJs, ensureJsZip, ensureXlsx });
+            this._tocAnalyzedCache = { fileId: f0.id, blocks };
+            skeletonOrSample = gBridge.buildCompactSkeletonForAi(blocks, { maxBlocks: 240, maxChars: 12000 }).skeletonText;
+          }
+        } catch (_eSk) {}
+        if (!skeletonOrSample) skeletonOrSample = await extractQuickPdfSampleText(10).catch(() => '');
+        const promptTxt = gBridge?.buildTaskManualPrompt?.('auto_toc', { fileName: f0?.name || 'TaiLieu.pdf', text: skeletonOrSample }) || '';
         gBridge?.openManualAiAssistantModal?.({
-          taskTitle: 'Tạo Mục Lục Tự Động — AI Thủ công 0-Token',
+          taskTitle: 'Tạo Mục Lục Tự Động (Block-ID Pxx_Byy) — AI Thủ công 0-Token',
           promptText: promptTxt,
           attachFileName: f0?.name || '',
           attachFileBlob: f0?.file || (f0?.bytes ? new Blob([f0.bytes]) : null),
           applyBtnLabel: '✅ Nạp danh sách Mục lục vào khung ngay',
           onApplyPasted: (pasted) => {
             const ta = body.querySelector('#opt-pro-toc-lines');
-            if (ta) {
-              const cleaned = String(pasted || '').replace(/```[^\n]*\n?|```/g, '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l.includes('|') && !/\.{3,}\s*\d+/.test(l)).join('\n');
-              ta.value = cleaned || String(pasted || '').trim();
-              this.toast('✅ Đã nạp danh sách Mục lục từ Gemini!', 'success', 3000);
+            if (!ta) return;
+            const parsed = gBridge?.parseAiStructuralPatchTolerant?.(pasted);
+            const entries = Array.isArray(parsed?.data?.entries)
+              ? parsed.data.entries
+              : (Array.isArray(parsed?.data?.headings) ? parsed.data.headings : null);
+            if (entries && entries.length) {
+              const jsonLines = entries
+                .map((it) => {
+                  const t = String(it?.clean_title || it?.title || it?.text || '').replace(/\s+/g, ' ').trim();
+                  const p = parseInt(it?.page, 10);
+                  const lv = Math.max(1, Math.min(4, Number(it?.level || 1)));
+                  if (!t || !Number.isFinite(p) || /\.{3,}\s*\d+/.test(t)) return '';
+                  return `${lv >= 2 ? '  '.repeat(Math.min(2, lv - 1)) : ''}${t} | ${p}`;
+                })
+                .filter(Boolean);
+              if (jsonLines.length) {
+                ta.value = jsonLines.join('\n');
+                ta.dispatchEvent(new Event('input', { bubbles: true }));
+                this.toast(`✅ Đã khớp ${jsonLines.length} mục từ JSON cấu trúc Gemini!`, 'success', 3200);
+                return;
+              }
             }
+            const cleaned = String(pasted || '').replace(/```[^\n]*\n?|```/g, '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l.includes('|') && !/\.{3,}\s*\d+/.test(l)).join('\n');
+            ta.value = cleaned || String(pasted || '').trim();
+            ta.dispatchEvent(new Event('input', { bubbles: true }));
+            this.toast('✅ Đã nạp danh sách Mục lục từ Gemini!', 'success', 3000);
           },
         });
       });
@@ -3172,15 +3285,24 @@
         });
 
         if (tid === 'bookmarks_toc') {
+          const updateTocConfBadge = (blocks) => {
+            const badgeEl = body.querySelector('#mod46-toc-confidence-badge');
+            const cm = blocks?.__ast?.meta?.confidenceMatrix;
+            if (!badgeEl || !cm) return;
+            badgeEl.classList.remove('hidden');
+            badgeEl.textContent = `🎯 Độ tin cậy mã thuần (XY-Cut): ${cm.overallConfidence}% · ${cm.totalPages || '?'} trang${cm.profileCounts?.multiCol ? ` (${cm.profileCounts.multiCol} trang nhiều cột)` : ''}${cm.ambiguousHeadings?.length ? ` · ${cm.ambiguousHeadings.length} tiêu đề nhập nhằng (bấm ⚡ AI Siêu Tốc hoặc 📋 AI Thủ Công để chốt)` : ' · Xuất thẳng không cần AI!'}`;
+          };
           const runAutoTocDetect = async (silent = false) => {
             const ta = body.querySelector('#opt-pro-toc-lines');
-            if (!ta || !this.files[0]) return;
+            if (!ta || !this.files[0]) return null;
             const extractor = global.NoirExtractStructuredBlocksFromFile || NS.dangLovePdfPro?.extractStructuredBlocksFromFile;
             const tocBuilder = global.NoirBuildTocFromBlocks || NS.dangLovePdfPro?.buildTocFromBlocks;
-            if (!extractor || !tocBuilder) return;
+            if (!extractor || !tocBuilder) return null;
             try {
               const blocks = await extractor(this.files[0], { ensurePdfJs, ensureJsZip, ensureXlsx });
-              if (!ta.isConnected) return;
+              this._tocAnalyzedCache = { fileId: this.files[0].id, blocks };
+              if (!ta.isConnected) return blocks;
+              updateTocConfBadge(blocks);
               const toc = tocBuilder(blocks);
               const lines = [
                 ...(toc.sections || []).map((s) => `${s.level >= 2 ? '  ' : ''}${s.text} | ${s.pageNo}`),
@@ -3191,43 +3313,64 @@
                 ta.value = lines.join('\n');
                 renderTocPreviewSheet();
                 if (!silent) {
-                  this.toast(`🔍 Đã quét được ${toc.sections.length} tiêu đề, ${toc.tables.length} bảng & ${toc.figures.length} hình!`, 'success', 2600);
+                  this.toast(`🔍 Quét mã thuần (0-Token · XY-Cut): ${toc.sections.length} tiêu đề, ${toc.tables.length} bảng & ${toc.figures.length} hình!`, 'success', 2800);
                 }
               } else if (!silent) {
-                this.toast('Chưa phát hiện dòng mục lục tự động trong file PDF — bạn có thể nhập thủ công.', 'info', 2500);
+                this.toast('Chưa phát hiện dòng mục lục tự động trong file PDF — bạn có thể bấm ⚡ AI Siêu Tốc hoặc 📋 AI Thủ Công.', 'info', 2800);
               }
+              return blocks;
             } catch (_eToc) {
               if (!silent) this.toast('Không thể quét cấu trúc tự động từ tệp PDF này.', 'warning', 2500);
+              return null;
             }
           };
+          // Nút 1: Thuần Code (0-Token, không trộn AI!)
           body.querySelector('#btn-pro-toc-autodetect')?.addEventListener('click', async () => {
             const btn = body.querySelector('#btn-pro-toc-autodetect');
             const origTxt = btn?.textContent || '';
-            const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
-            if (btn) btn.textContent = gBridge?.hasApiKey?.() ? '⏳ AI + Code đang quét...' : '⏳ Đang quét...';
+            if (btn) btn.textContent = '⏳ Đang quét mã thuần...';
             try {
               await runAutoTocDetect(false);
-              const taEl = body.querySelector('#opt-pro-toc-lines');
-              const extractor = global.NoirExtractStructuredBlocksFromFile || NS.dangLovePdfPro?.extractStructuredBlocksFromFile;
-              if (gBridge?.hasApiKey?.() && typeof gBridge.runAiAndCodeAutoToc === 'function' && this.files[0] && taEl && extractor) {
-                const blocks = await extractor(this.files[0], { ensurePdfJs, ensureJsZip, ensureXlsx });
-                const aiLines = await gBridge.runAiAndCodeAutoToc(blocks, {
-                  codeTocBuilder: () => String(taEl.value || '').split(/\r?\n/).filter(Boolean),
-                  maxPage: this.files[0].pageCount || 999,
-                });
-                if (Array.isArray(aiLines) && aiLines.length) {
-                  taEl.value = aiLines.join('\n');
-                  this.toast(`🤖 Đã quét mục lục thông minh bằng AI và Code (${aiLines.length} mục)!`, 'success', 2800);
-                }
-              }
             } finally {
               if (btn) btn.textContent = origTxt;
             }
           });
-          body.querySelector('#btn-pro-toc-connect-ai')?.addEventListener('click', () => {
-            (global.NoirGeminiBridge || NS.geminiBridge)?.openApiKeyQuickModal?.({
-              onSaved: () => this.renderUploadOrWorkspaceScreen(),
-            });
+          // Nút 2: AI Siêu Tốc riêng biệt (Block-ID Pxx_Byy + Gemini 3.8 Flash)
+          body.querySelector('#btn-pro-ai-fast-toc')?.addEventListener('click', async () => {
+            const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+            const btn = body.querySelector('#btn-pro-ai-fast-toc');
+            const taEl = body.querySelector('#opt-pro-toc-lines');
+            if (!gBridge || !this.files[0] || !taEl) return;
+            const execFastToc = async () => {
+              const origTxt = btn?.textContent || '';
+              if (btn) { btn.disabled = true; btn.textContent = '⏳ AI đang định vị...'; }
+              try {
+                const blocks = this._tocAnalyzedCache?.fileId === this.files[0].id && this._tocAnalyzedCache.blocks
+                  ? this._tocAnalyzedCache.blocks
+                  : await runAutoTocDetect(true);
+                if (blocks && typeof gBridge.runAiAndCodeAutoToc === 'function') {
+                  const aiLines = await gBridge.runAiAndCodeAutoToc(blocks, {
+                    codeTocBuilder: () => String(taEl.value || '').split(/\r?\n/).filter(Boolean),
+                    maxPage: this.files[0].pageCount || 999,
+                    fileName: this.files[0].name || 'Tai_lieu.pdf',
+                  });
+                  if (Array.isArray(aiLines) && aiLines.length) {
+                    taEl.value = aiLines.join('\n');
+                    renderTocPreviewSheet();
+                    this.toast(`⚡ AI Siêu Tốc (Block-ID) đã chốt ${aiLines.length} đề mục chuẩn xác!`, 'success', 3200);
+                  }
+                }
+              } catch (err) {
+                this.toast(`⚠️ Lỗi AI Siêu Tốc Mục lục: ${err?.message || err}`, 'warning', 3500);
+              } finally {
+                if (btn) { btn.disabled = false; btn.textContent = origTxt; }
+              }
+            };
+            if (!gBridge.hasApiKey?.()) {
+              gBridge.openApiKeyQuickModal?.({ onSaved: () => execFastToc() });
+              return;
+            }
+            await execFastToc();
           });
           const initialTaVal = body.querySelector('#opt-pro-toc-lines')?.value?.trim() || '';
           if (!initialTaVal || /^Chương 1: Khởi đầu \| 1\s+Chương 2: Diễn biến chính \| 5\s+Chương 3: Tổng kết \| 12$/i.test(initialTaVal)) {
@@ -3660,6 +3803,7 @@
               if (b.type === 'heading' || b.type === 'subheading') headingIndices.push({ b, idx });
             });
             const comp = meta.complexity || blocks.__ast?.meta?.complexity || null;
+            const cm = meta.confidenceMatrix || blocks.__ast?.meta?.confidenceMatrix || null;
             const suggestLandscape = Boolean(meta.suggestLandscape || blocks.__ast?.meta?.suggestLandscape);
             const curDepth = this.theme10TocDepth || 'standard';
             const curOrient = this.theme10Orient || (suggestLandscape ? 'landscape' : 'portrait');
@@ -3667,25 +3811,40 @@
             this.theme10TocDepth = curDepth;
             const hasKey = Boolean(geminiBridge?.hasApiKey?.());
 
+            const confScore = cm?.overallConfidence ?? null;
+            const confRec = cm?.recommendation || '';
+            const confBadgeHtml = confScore !== null
+              ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold ${confScore >= 88 ? 'bg-emerald-950/70 border border-emerald-500/50 text-emerald-300' : confScore >= 65 ? 'bg-amber-950/70 border border-amber-500/50 text-amber-200' : 'bg-rose-950/70 border border-rose-500/50 text-rose-200'}">🎯 Độ tin cậy mã thuần: ${confScore}%${confRec === 'CODE_READY' ? ' · Xuất đẹp ngay không cần AI' : confRec === 'AI_OPTIONAL' ? ' · Khuyên dùng AI chốt mục nhập nhằng' : ' · Nên dùng AI định vị'}</span>`
+              : '';
+            const profilePillsHtml = cm?.profileCounts
+              ? `<div class="flex flex-wrap items-center gap-1.5 text-[10.5px] text-zinc-300">
+                  <span class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-700/80">📄 ${cm.totalPages || '?'} trang (Sạch: ${cm.profileCounts.clean || 0}${cm.profileCounts.multiCol ? ` · Nhiều cột XY-Cut: ${cm.profileCounts.multiCol}` : ''}${cm.profileCounts.hybrid ? ` · Ảnh+Chữ: ${cm.profileCounts.hybrid}` : ''}${cm.profileCounts.scanOrCorrupt ? ` · Scan/Lỗi font: ${cm.profileCounts.scanOrCorrupt}` : ''})</span>
+                  ${cm.ambiguousHeadings?.length ? `<span class="px-2 py-0.5 rounded bg-amber-950/50 border border-amber-500/40 text-amber-200">⚠️ ${cm.ambiguousHeadings.length} tiêu đề nhập nhằng</span>` : ''}
+                  ${cm.lowConfidenceTables?.length ? `<span class="px-2 py-0.5 rounded bg-sky-950/50 border border-sky-500/40 text-sky-200">📊 ${cm.lowConfidenceTables.length} bảng cần AI tinh chỉnh</span>` : ''}
+                  <span class="px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/35 text-emerald-200">💾 Đã lưu AST (Đổi 10 Theme tức thì không cần quét lại)</span>
+                </div>`
+              : '';
+
             const visionCardHtml = `
-              <div class="rounded-2xl border ${comp?.recommendGeminiVision ? 'border-amber-400/70 bg-amber-950/25' : 'border-cyan-500/35 bg-zinc-950/80'} p-3 space-y-2">
+              <div class="rounded-2xl border ${(comp?.recommendGeminiVision || confRec === 'AI_RECOMMENDED') ? 'border-amber-400/70 bg-amber-950/25' : 'border-cyan-500/35 bg-zinc-950/80'} p-3 space-y-2">
                 <div class="flex flex-wrap items-center justify-between gap-2">
-                  <div class="text-xs font-bold text-amber-200">
-                    🔬 Đánh giá tài liệu: ${comp?.level === 'hard' ? '⚠️ Tài liệu khó (nhiều bảng/công thức/scan)' : comp?.level === 'medium' ? '🟡 Trung bình' : '✅ Chuẩn'}
-                    ${comp?.reasons?.length ? ` · <span class="font-normal text-zinc-300">${escHtml(comp.reasons.slice(0, 2).join('; '))}</span>` : ' · <span class="font-normal text-zinc-300">AI chỉ định vị Tiêu đề/Bảng/Hình/Công thức — Code dựng 100% nội dung gốc</span>'}
+                  <div class="text-xs font-bold text-amber-200 flex flex-wrap items-center gap-1.5">
+                    <span>🔬 Triage &amp; Đánh giá PDF: ${comp?.level === 'hard' ? '⚠️ Tài liệu khó (nhiều bảng/công thức/scan)' : comp?.level === 'medium' ? '🟡 Trung bình' : '✅ Chuẩn'}</span>
+                    ${confBadgeHtml}
                   </div>
                   <div class="flex flex-wrap items-center gap-1.5">
                     <button type="button" id="btn-mod46-vision-key-pill" class="px-2.5 py-1 rounded-lg border text-[11px] font-bold cursor-pointer ${hasKey ? 'border-emerald-500/50 bg-emerald-950/40 text-emerald-300' : 'border-zinc-700 bg-zinc-800 text-zinc-200'}">
                       ${hasKey ? '✅ API Key sẵn sàng' : '🔑 Gắn API Key'}
                     </button>
-                    <button type="button" id="btn-mod46-run-gemini-vision" data-at-id="mod46-ai-fast-locator" class="px-3 py-1 rounded-lg bg-gradient-to-r from-violet-600 to-amber-600 hover:from-violet-500 hover:to-amber-500 text-white text-[11px] font-bold shadow cursor-pointer ${comp?.recommendGeminiVision ? 'animate-pulse' : ''}">
-                      ⚡ Đọc Siêu Tốc &amp; Định Vị Cấu Trúc (Gemini 3.8 Flash)
+                    <button type="button" id="btn-mod46-run-gemini-vision" data-at-id="mod46-ai-fast-locator" class="px-3 py-1 rounded-lg bg-gradient-to-r from-violet-600 to-amber-600 hover:from-violet-500 hover:to-amber-500 text-white text-[11px] font-bold shadow cursor-pointer ${(comp?.recommendGeminiVision || confRec === 'AI_RECOMMENDED') ? 'animate-pulse' : ''}">
+                      ⚡ AI Siêu Tốc · Định Vị Block-ID (Gemini 3.8 Flash)
                     </button>
                     <button type="button" id="btn-mod46-vision-manual-ai" data-at-id="mod46-vision-manual-ai" class="px-3 py-1 rounded-lg border border-sky-400/65 bg-sky-950/60 hover:bg-sky-800/80 text-sky-100 text-[11px] font-bold shadow cursor-pointer">
-                      📋 Nhập AI Thủ công (0-Token)
+                      📋 AI Thủ công (0-Token · Block-ID)
                     </button>
                   </div>
                 </div>
+                ${profilePillsHtml}
                 <div id="mod46-vision-status" class="text-[11px] text-cyan-300 hidden"></div>
               </div>`;
 
@@ -3759,14 +3918,18 @@
               geminiBridge?.openApiKeyQuickModal?.({ onSaved: () => renderV2TocAndVision(this.theme10OverrideBlocks, meta) });
             });
             const applyPastedBlueprintOrMd = (rawPasted) => {
-              // Ưu tiên khớp JSON Bản Đồ Cấu Trúc (AI-Locator) lên 100% văn bản gốc do Code quét!
-              if (geminiBridge?.applyBlueprintToBlocks && this.theme10OverrideBlocks?.length) {
-                const merged = geminiBridge.applyBlueprintToBlocks(this.theme10OverrideBlocks, rawPasted);
+              // Ưu tiên khớp JSON pdf_magic_v1 / Bản Đồ Cấu Trúc (Hợp nhất 3 tầng) lên 100% văn bản gốc do Code quét!
+              const reconcileFn = geminiBridge?.reconcileAiPatchIntoBlocks || geminiBridge?.applyBlueprintToBlocks;
+              if (reconcileFn && this.theme10OverrideBlocks?.length) {
+                const merged = reconcileFn(this.theme10OverrideBlocks, rawPasted);
                 if (merged.applied) {
                   this._theme10AnalyzedCache = { fileId: primaryFile.id, blocks: merged.blocks, ast: meta ? { meta } : null };
                   renderV2TocAndVision(merged.blocks, meta);
-                  const st = merged.stats;
-                  this.toast(`✅ Đã khớp Bản đồ AI lên 100% văn bản gốc (${st.headingsApplied} tiêu đề, ${st.tablesCaptioned} bảng, ${st.figuresCaptioned} hình, ${st.formulasFixed} công thức, ${st.symbolsFixed} ký tự)!`, 'success', 4500);
+                  const st = merged.stats || {};
+                  const truncNote = merged.parseMeta?.truncated
+                    ? ` ⚠️ (JSON bị cắt cụt sau trang ${merged.parseMeta.lastCompletedPage || '?'} — đã khôi phục phần hoàn chỉnh!)`
+                    : '';
+                  this.toast(`✅ Hợp nhất 3 Tầng xong (${st.headingsApplied || 0} tiêu đề, xóa ${st.orphanTailsRemoved || 0} đuôi mồ côi/${st.droppedBlocks || 0} rác, ${st.tablesCaptioned || 0} bảng, nối ${st.tablesStitched || 0} bảng vắt trang, ${st.formulasFixed || 0} công thức)!${truncNote}`, merged.parseMeta?.truncated ? 'warning' : 'success', 5200);
                   return;
                 }
               }
@@ -3783,14 +3946,16 @@
             };
             v2Host.querySelector('#btn-mod46-vision-manual-ai')?.addEventListener('click', () => {
               if (!geminiBridge) return;
-              const compactIdx = (this.theme10OverrideBlocks || []).slice(0, 140).map((b, i) => `[#${i}|P${b?.page || b?.pageNo || 1}|${b?.type || 'p'}] ${String(b?.caption || b?.text || '').slice(0, 100)}`).join('\n');
-              const promptTxt = geminiBridge.buildTaskManualPrompt('theme10_beautify', { fileName: primaryFile?.name || 'Tai_lieu.pdf', text: compactIdx });
+              const skel = typeof geminiBridge.buildCompactSkeletonForAi === 'function'
+                ? geminiBridge.buildCompactSkeletonForAi(this.theme10OverrideBlocks || [], { confidenceMatrix: cm })
+                : { skeletonText: (this.theme10OverrideBlocks || []).slice(0, 140).map((b, i) => `[#${i}|P${b?.page || b?.pageNo || 1}|${b?.type || 'p'}] ${String(b?.caption || b?.text || '').slice(0, 100)}`).join('\n') };
+              const promptTxt = geminiBridge.buildTaskManualPrompt('theme10_beautify', { fileName: primaryFile?.name || 'Tai_lieu.pdf', text: skel.skeletonText });
               geminiBridge.openManualAiAssistantModal?.({
-                taskTitle: 'Định Vị Cấu Trúc 10 Theme (AI-Locator JSON) — Thủ công 0-Token',
+                taskTitle: 'Định Vị Cấu Trúc PDF Magic v1 (Block-ID Pxx_Byy) — Thủ công 0-Token',
                 promptText: promptTxt,
                 attachFileName: primaryFile?.name || '',
                 attachFileBlob: primaryFile?.file || (primaryFile?.bytes ? new Blob([primaryFile.bytes]) : null),
-                applyBtnLabel: '✅ Khớp Bản Đồ AI vào 100% Văn Bản Gốc',
+                applyBtnLabel: '✅ Hợp Nhất 3 Tầng vào 100% Văn Bản Gốc',
                 onApplyPasted: applyPastedBlueprintOrMd,
               });
             });
@@ -3948,7 +4113,7 @@
         i2pMargin: Number(document.getElementById('opt-i2p-margin')?.value || 24),
         docxOut: document.getElementById('opt-docx-out')?.value || 'pdf',
         p2dOut: document.getElementById('opt-p2d-out')?.value || 'docx',
-        p2dAiPolish: Boolean(document.getElementById('opt-p2d-ai-polish')?.checked),
+        p2dAiPolish: Boolean(this._forceAiForRun),
         t2pOut: document.getElementById('opt-t2p-out')?.value || 'pdf',
         sheetOut: document.getElementById('opt-sheet-out')?.value || 'pdf',
         pptOut: document.getElementById('opt-ppt-out')?.value || 'pdf',
@@ -4780,6 +4945,10 @@
               <h3 class="text-lg font-black text-emerald-300">Xử lý hoàn tất 100% trên máy!</h3>
               <p class="text-xs text-zinc-300 mt-1 font-bold">${escHtml(primary.name)} · ${formatBytes(primary.size)}</p>
               ${savedPct !== null ? `<div class="inline-block mt-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-xs font-black">${savedPct >= 0 ? `Đã giảm ${savedPct}%` : 'Đã tối ưu'} (${formatBytes(inputTotalSize)} → ${formatBytes(primary.size)})</div>` : ''}
+              ${this.lastPreFlightReport && this.activeTool?.id === 'beautify_10_themes' ? `
+                <div id="mod46-preflight-badge" class="mt-2.5 mx-auto max-w-lg px-3 py-2 rounded-xl border ${this.lastPreFlightReport.ok ? 'border-emerald-500/45 bg-emerald-950/35 text-emerald-200' : 'border-amber-500/50 bg-amber-950/35 text-amber-200'} text-[11px] font-bold leading-relaxed">
+                  🛡️ ${escHtml(this.lastPreFlightReport.summaryLine || '')}
+                </div>` : ''}
             </div>
 
             <div class="flex flex-wrap items-center justify-center gap-2.5 pt-1">

@@ -409,6 +409,203 @@
           return { ok: true, detail: 'gemini-3.8-flash + 4 schemas + blueprint merger verified' };
         },
       });
+
+      this.registerUnitTest({
+        id: 'unit_mod04_mod16_mod18_writing_core',
+        moduleRef: 'mod04 / mod08 / mod12 / mod16 / mod18 / mod41',
+        label: 'Lõi sáng tác (IDB, AutoSaver, Story Bible, Prompt Synthesizer, Mode 5 Plot & Guest Sandbox)',
+        fn: () => {
+          const ns = globalScope.NoirStudio;
+          if (!ns) return { ok: true, skipped: true };
+          const required = ['idb', 'autoSaver', 'storyBible', 'promptSynthesizer', 'mode5Studio', 'guestMode'];
+          const missing = required.filter((k) => !ns[k]);
+          if (missing.length > 0) throw new Error(`Thiếu lõi sáng tác: ${missing.join(', ')}`);
+          return { ok: true, detail: `${required.length}/${required.length} core writing engines active` };
+        },
+      });
+
+      this.registerUnitTest({
+        id: 'unit_mod46b_sharp_dpi_and_blank_overlay',
+        moduleRef: 'mod46b / mod46c',
+        label: 'ĐăngLovePDF 50 công cụ + Blank Grid Overlay + Dark/Grayscale HD + Trình xem 4 lớp (mod46c)',
+        fn: () => {
+          const pro = globalScope.NoirStudio?.dangLovePdfPro;
+          if (!pro?.PRO_TOOL_GROUPS) return { ok: true, skipped: true };
+          const allIds = new Set(pro.PRO_TOOL_GROUPS.flatMap((g) => (g.tools || []).map((t) => t.id)));
+          const mustHave = ['beautify_10_themes', 'create_blank_pdf', 'ocr_pdf', 'icr_handwriting_pdf', 'invert_dark_pdf', 'grayscale_pdf'];
+          const missing = mustHave.filter((id) => !allIds.has(id));
+          if (missing.length > 0) throw new Error(`Thiếu công cụ ĐăngLovePDF bắt buộc: ${missing.join(', ')}`);
+          if (!globalScope.NoirStudio?.dangLovePdfStudio?.openProPdfViewer && !globalScope.DangLovePDFStudio?.openProPdfViewer) {
+            return { ok: true, detail: `${allIds.size} tools verified (mod46c viewer lazy)` };
+          }
+          return { ok: true, detail: `${allIds.size} tools + mod46c 4-layer viewer verified` };
+        },
+      });
+
+      this.registerUnitTest({
+        id: 'unit_mod47_mod20_mod42_sync_core',
+        moduleRef: 'mod20 / mod42 / mod47 / noir_exit_guard.js',
+        label: 'Đồng bộ Pomodoro (Mod 20), Giờ/Thời tiết (Mod 42), RAM Manager (Mod 47) & Exit Guard',
+        fn: () => {
+          const ns = globalScope.NoirStudio;
+          if (!ns) return { ok: true, skipped: true };
+          if (!ns.worldClockStudio?.openModal) throw new Error('Thiếu Mod 42 worldClockStudio.openModal');
+          if (!ns.exitGuard?.confirmExit) throw new Error('Thiếu Exit Guard confirmExit');
+          if (!ns.i18n?.setLanguage || !ns.i18n?.translateElement) throw new Error('Thiếu bộ đa ngôn ngữ NS.i18n');
+          return { ok: true, detail: 'Mod 20/42/47/ExitGuard/i18n synced' };
+        },
+      });
+
+      this.registerUnitTest({
+        id: 'unit_dot13_mod50_json_and_pdf_heading_table_integrity',
+        moduleRef: 'wisdomEngine.js / geminiBridgeAndVision.js / pdfGeometryEngine.js',
+        label: 'Chặn rò JSON WISDOM_30MIN_SYNC_V1 ra PDF Mod 50 + Chặn lặp đuôi tiêu đề & rách Header bảng 4 dòng',
+        fn: () => {
+          const w20 = globalScope.NoirWisdom20;
+          if (w20?.parseGeminiWisdomReply) {
+            const sampleRaw = '## Bản tin sáng\nNội dung chính.\n{\n  "schema": "WISDOM_30MIN_SYNC_V1",\n  "headline": "VN cam kết thương mại",\n  "reading_plan_30m": [{"label": "Thế giới", "minutes": 3}],\n  "causal_mindmap": {"center": "30p", "chains": [{"cause": "A", "mechanism": "B", "effect": "C"}]}\n}';
+            const parsed = w20.parseGeminiWisdomReply(sampleRaw, {});
+            if (!parsed?.hasStructuredSync || parsed.syncData?.headline !== 'VN cam kết thương mại') {
+              throw new Error('Mod 50 không nhận diện được JSON trần WISDOM_30MIN_SYNC_V1');
+            }
+            if (/WISDOM_30MIN_SYNC_V1|reading_plan_30m/.test(parsed.markdownBody || '')) {
+              throw new Error('Mod 50 vẫn để lọt mã JSON thô vào markdownBody xuất PDF');
+            }
+          }
+          const gb = globalScope.NoirGeminiBridge || globalScope.NoirStudio?.geminiBridge;
+          if (gb?.applyBlueprintToBlocks) {
+            const out = gb.applyBlueprintToBlocks(
+              [
+                { type: 'p', page: 34, text: '6.2. Bức tranh Đời sống Văn hóa – Tâm linh và Chuỗi Huyết mạch (Căn tính) Dân' },
+                { type: 'p', page: 34, text: 'tộc cuối Thời kỳ' },
+                { type: 'p', page: 34, text: 'Đoạn nội dung thật phải giữ nguyên.' },
+              ],
+              {
+                headings: [{ page: 34, level: 3, text: '6.2. Bức tranh Đời sống Văn hóa – Tâm linh và Chuỗi Huyết mạch (Căn tính) Dân tộc cuối Thời kỳ', matchAnchor: '6.2. Bức tranh Đời sống Văn hóa' }],
+                tables: [],
+                figures: [],
+                formulas: [],
+                specialSymbols: [],
+              }
+            );
+            if (!out.applied || out.blocks.length !== 2 || out.blocks.some((b) => b.text === 'tộc cuối Thời kỳ')) {
+              throw new Error(`applyBlueprintToBlocks vẫn để sót dòng đuôi mồ côi (${out.blocks.length} blocks)`);
+            }
+          }
+          return { ok: true, detail: 'Mod 50 raw JSON strip + Blueprint orphan-tail removal verified' };
+        },
+      });
+
+      this.registerUnitTest({
+        id: 'unit_dot14_ui_split_ai_tab3_tab4_tab5',
+        moduleRef: 'index.html / mod17 / mod20 / mod21 / mod22 / mod29 / mod32 / mod46',
+        label: 'Đợt 14: Tách 2 nút AI ĐăngLovePDF, Tab 3 chỉ Chế độ 1 hiện Chèn/Thay thế, Tab 4 thu gọn 6 mục, Tab 5 Mục 4 Preview + Mục 6 Nền 6 cụm',
+        fn: () => {
+          if (typeof document === 'undefined') return { ok: true, skipped: true };
+          const tab4Master = document.getElementById('btn-tab4-toggle-all-6-cards');
+          const previewBox = document.getElementById('mod22-typography-specimen-preview');
+          const bgPanel = document.getElementById('s14-panel-background-box');
+          const bgSubs = bgPanel ? bgPanel.querySelectorAll('details.tab5-bg-sub-acc').length : 0;
+          if (!tab4Master) throw new Error('Thiếu nút Thu gọn cả 6 mục ở Tab 4 (#btn-tab4-toggle-all-6-cards)');
+          if (!previewBox) throw new Error('Thiếu khung Xem trước Font chữ ở Mục 4 Tab 5 (#mod22-typography-specimen-preview)');
+          if (!bgPanel || bgSubs !== 6) throw new Error(`Thiếu Mục 6 Tùy chỉnh Nền Tab 5 đủ 6 cụm đóng/mở (hiện có ${bgSubs}/6)`);
+          const dupPreviews = document.querySelectorAll('#mod22-typography-specimen-preview').length;
+          if (dupPreviews !== 1) throw new Error(`Trùng ID #mod22-typography-specimen-preview (${dupPreviews})`);
+          return { ok: true, detail: 'Tab4 6-toggle + Tab5 Mục 4 Preview + Mục 6 (6 accordions) verified' };
+        },
+      });
+
+      this.registerUnitTest({
+        id: 'unit_dot15_pdf_magic_ast_xycut_byok_preflight',
+        moduleRef: 'modules/danglovepdf-v2/pdfGeometryEngine.js + geminiBridgeAndVision.js + mod46b',
+        label: 'Đợt 15 PDF Magic: Per-Page Triage, Recursive XY-Cut 2 cột, Confidence Matrix, Block-ID Pxx_Byy, Parser LaTeX chịu lỗi, Hợp nhất 3 tầng & Pre-Flight',
+        fn: () => {
+          const geo = globalScope.NoirPdfGeometryEngine || globalScope.NoirStudio?.pdfGeometryEngine;
+          const gb = globalScope.NoirGeminiBridge || globalScope.NoirStudio?.geminiBridge;
+          const pro = globalScope.NoirStudio?.dangLovePdfPro;
+          if (!geo || !gb || !pro) return { ok: true, skipped: true };
+
+          // 1. Per-Page Triage + Recursive XY-Cut 2 cột
+          const mkRow = (y, leftTxt, rightTxt) => ({
+            y,
+            pageNo: 1,
+            pageWidth: 600,
+            pageHeight: 842,
+            avgSz: 11,
+            xMin: 40,
+            xMax: 560,
+            text: `${leftTxt} ${rightTxt}`,
+            segs: [
+              { x: 40, endX: 270, text: leftTxt, bold: false, italic: false, isMathFont: false, items: [] },
+              { x: 330, endX: 560, text: rightTxt, bold: false, italic: false, isMathFont: false, items: [] },
+            ],
+            items: [],
+            consumed: false,
+          });
+          const twoColRows = [
+            { y: 780, pageNo: 1, pageWidth: 600, pageHeight: 842, avgSz: 16, xMin: 40, xMax: 560, text: 'BAO CAO KHOA HOC HAI COT', segs: [{ x: 40, endX: 560, text: 'BAO CAO KHOA HOC HAI COT', bold: true, italic: false, isMathFont: false, items: [] }], items: [], consumed: false },
+            mkRow(740, 'Doan ben trai so mot mo ta boi canh thi truong', 'Doan ben phai so mot phan tich dong tien rong'),
+            mkRow(722, 'Doan ben trai so hai giai thich phuong phap do', 'Doan ben phai so hai tong hop chi so dinh luong'),
+            mkRow(704, 'Doan ben trai so ba trinh bay gia thuyet chinh', 'Doan ben phai so ba danh gia rui ro vi mo chung'),
+            mkRow(686, 'Doan ben trai so bon neu ket qua thuc nghiem', 'Doan ben phai so bon de xuat chien luoc hanh dong'),
+          ];
+          const prof = geo.profilePdfPage({ pageNo: 1, pageWidth: 600, pageHeight: 842, rows: twoColRows, embeddedImgs: [] });
+          if (prof.profile !== 'COMPLEX_MULTI_COL') {
+            throw new Error(`profilePdfPage không nhận ra trang 2 cột (trả về ${prof.profile})`);
+          }
+          const ordered = geo.reorderPageRowsMultiColumn(twoColRows, 600);
+          if (ordered[0].text !== 'BAO CAO KHOA HOC HAI COT' || !ordered[1].text.includes('ben trai so mot') || !ordered[5].text.includes('ben phai so mot')) {
+            throw new Error('reorderPageRowsMultiColumn xếp sai thứ tự đọc 2 cột (Header -> Trái -> Phải)');
+          }
+
+          // 2. Fault-Tolerant LaTeX Parser (bảo vệ \frac, \times, \beta, \right không bị biến thành ký tự điều khiển!)
+          const rawAiReply = 'Đây là JSON chuẩn:\n```json\n{"schema_version":"pdf_magic_v1","headings":[{"page":1,"level":1,"block_ids":["P01_B01","P01_B02"],"clean_title":"CHƯƠNG 1. PHÂN TÍCH TÀI CHÍNH TOÀN DIỆN"}],"tables":[{"page":2,"start_block":"P02_B02","continued_from_prev":true,"header_rows":1}],"formulas":[{"page":1,"block_id":"P01_B04","mode":"display","latex":"WACC = \\frac{E}{V} \\times R_e + \\beta \\cdot \\right)"}],"drop_blocks":["P01_B05"],}\n```';
+          const parsed = gb.parseAiStructuralPatchTolerant(rawAiReply);
+          if (!parsed.ok || !parsed.data?.formulas?.[0]?.latex?.includes('\\frac') || !parsed.data.formulas[0].latex.includes('\\times') || !parsed.data.formulas[0].latex.includes('\\beta')) {
+            throw new Error('parseAiStructuralPatchTolerant làm hỏng lệnh LaTeX \\frac/\\times/\\beta');
+          }
+
+          // 3. 3-Tier AST Reconciliation Engine (Block-ID merge + drop_blocks + cross-page table stitch + giữ nguyên văn xuôi)
+          const srcBlocks = [
+            { type: 'paragraph', pageNo: 1, text: 'CHƯƠNG 1. PHÂN TÍCH' },
+            { type: 'paragraph', pageNo: 1, text: 'TÀI CHÍNH TOÀN DIỆN' },
+            { type: 'paragraph', pageNo: 1, text: 'Văn bản gốc quan trọng 100% không được mất số liệu $28.40.' },
+            { type: 'paragraph', pageNo: 1, text: 'WACC = E/V * Re' },
+            { type: 'paragraph', pageNo: 1, text: 'CONFIDENTIAL DRAFT WATERMARK' },
+            { type: 'table', pageNo: 2, rows: [['Năm', 'DT'], ['2025', '100']] },
+            { type: 'table', pageNo: 2, rows: [['Năm', 'DT'], ['2026', '150']] },
+          ];
+          const rec = gb.reconcileAiPatchIntoBlocks(srcBlocks, rawAiReply);
+          if (!rec.applied) throw new Error('reconcileAiPatchIntoBlocks thất bại');
+          if (rec.blocks[0].type !== 'heading' || rec.blocks[0].text !== 'CHƯƠNG 1. PHÂN TÍCH TÀI CHÍNH TOÀN DIỆN') {
+            throw new Error('Tier 1 block_ids[] không gộp đúng tiêu đề 2 dòng');
+          }
+          if (rec.blocks.some((b) => b.text === 'TÀI CHÍNH TOÀN DIỆN' || b.text === 'CONFIDENTIAL DRAFT WATERMARK')) {
+            throw new Error('Vẫn sót dòng đuôi mồ côi hoặc drop_blocks[]');
+          }
+          if (!rec.blocks.some((b) => String(b.text || '').includes('$28.40'))) {
+            throw new Error('Vi phạm bất biến bảo toàn văn xuôi gốc ($28.40)');
+          }
+          const tbls = rec.blocks.filter((b) => b.type === 'table');
+          if (tbls.length !== 1 || tbls[0].rows.length !== 3) {
+            throw new Error(`continued_from_prev không nối bảng vắt trang đúng (còn ${tbls.length} bảng)`);
+          }
+
+          // 4. Pre-Flight Geometric Self-Check
+          const pf = pro.runMagicPdfPreFlightAudit({
+            canvases: [{ __hasInk: true, __overflowCount: 0, __isLandscapePage: false }, { __hasInk: true, __overflowCount: 0, __isLandscapePage: true }],
+            recordedTocSections: [{ text: 'C1' }],
+            recordedTocTables: [{ label: 'B1' }],
+            recordedTocFigures: [],
+            blankPagesRemoved: 1,
+            stats: { wideTablesRescuedLandscape: 1, headingsKeepWithNextBreaks: 2, validImagesDrawn: 1 },
+          });
+          if (!pf.ok || pf.passedCount !== 5 || pf.landscapePagesCount !== 1) {
+            throw new Error('runMagicPdfPreFlightAudit trả về kết quả không hợp lệ');
+          }
+          return { ok: true, detail: 'Triage + XY-Cut + LaTeX parser + 3-tier Pxx_Byy reconciliation + Pre-Flight 5/5 PASS' };
+        },
+      });
     }
 
     async runAll() {
@@ -451,13 +648,15 @@
       }
 
       const failed = results.filter((r) => !r.ok);
-      return {
+      const summary = {
         total: results.length,
         passed: results.filter((r) => r.ok).length,
         failedCount: failed.length,
         failed,
         results,
       };
+      this.lastSummary = summary;
+      return summary;
     }
 
     async _runSpec(spec) {

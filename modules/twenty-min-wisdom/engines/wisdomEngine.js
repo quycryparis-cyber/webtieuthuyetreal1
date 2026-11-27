@@ -1044,6 +1044,61 @@
     return lines.join('\n');
   }
 
+  function extractBalancedJsonFromStart(text, startIdx) {
+    if (startIdx < 0 || text[startIdx] !== '{') return null;
+    let depth = 0;
+    let inStr = false;
+    let escaped = false;
+    for (let i = startIdx; i < text.length; i++) {
+      const ch = text[i];
+      if (inStr) {
+        if (escaped) {
+          escaped = false;
+        } else if (ch === '\\') {
+          escaped = true;
+        } else if (ch === '"') {
+          inStr = false;
+        }
+        continue;
+      }
+      if (ch === '"') {
+        inStr = true;
+      } else if (ch === '{') {
+        depth += 1;
+      } else if (ch === '}') {
+        depth -= 1;
+        if (depth === 0) {
+          return { start: startIdx, end: i, raw: text.slice(startIdx, i + 1) };
+        }
+      }
+    }
+    return null;
+  }
+
+  function tryParseWisdomJsonLoose(rawCandidate) {
+    const clean = String(rawCandidate || '')
+      .trim()
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/,\s*([}\]])/g, '$1');
+    try {
+      const parsed = JSON.parse(clean);
+      if (
+        parsed &&
+        typeof parsed === 'object' &&
+        (parsed.schema === 'WISDOM_30MIN_SYNC_V1' ||
+          parsed.schema === 'WISDOM_20MIN_SYNC_V1' ||
+          parsed.reading_plan_30m ||
+          parsed.reading_plan_20m ||
+          parsed.causal_mindmap ||
+          parsed.impact_scores)
+      ) {
+        return parsed;
+      }
+    } catch (_eLoose) {}
+    return null;
+  }
+
   function parseGeminiWisdomReply(rawText, scanResult) {
     const text = String(rawText || '').trim();
     if (!text) return null;
@@ -1051,36 +1106,66 @@
     let syncData = null;
     let markdownBody = text;
 
+    // 1. Ưu tiên khối ```json ... ``` chuẩn
     const jsonBlocks = [...text.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)];
     for (let i = jsonBlocks.length - 1; i >= 0; i--) {
-      const candidate = jsonBlocks[i][1].trim();
-      try {
-        const parsed = JSON.parse(candidate);
-        if (parsed && (parsed.schema === 'WISDOM_30MIN_SYNC_V1' || parsed.schema === 'WISDOM_20MIN_SYNC_V1' || parsed.reading_plan_30m || parsed.reading_plan_20m || parsed.causal_mindmap || parsed.impact_scores)) {
-          syncData = parsed;
-          markdownBody = text.replace(jsonBlocks[i][0], '').trim();
-          break;
-        }
-      } catch (_eParse) {}
-    }
-
-    if (!syncData) {
-      const idx = text.lastIndexOf('"WISDOM_20MIN_SYNC_V1"');
-      if (idx > -1) {
-        const start = text.lastIndexOf('{', idx);
-        const end = text.lastIndexOf('}');
-        if (start > -1 && end > start) {
-          try {
-            syncData = JSON.parse(text.slice(start, end + 1));
-            markdownBody = (text.slice(0, start) + text.slice(end + 1)).trim();
-          } catch (_eRaw) {}
-        }
+      const parsed = tryParseWisdomJsonLoose(jsonBlocks[i][1]);
+      if (parsed) {
+        syncData = parsed;
+        markdownBody = text.replace(jsonBlocks[i][0], '').trim();
+        break;
       }
     }
 
-    // Dọn sạch tiêu đề thừa "PHẦN 2 — KHỐI JSON ĐỒNG BỘ..." hoặc gạch ngang "---" cuối văn bản!
-    markdownBody = markdownBody
+    // 2. Bắt khối JSON trần (không bọc ```json) — hỗ trợ cả WISDOM_30MIN_SYNC_V1, WISDOM_20MIN_SYNC_V1, reading_plan_30m, causal_mindmap!
+    if (!syncData) {
+      const markers = ['"WISDOM_30MIN_SYNC_V1"', '"WISDOM_20MIN_SYNC_V1"', '"reading_plan_30m"', '"reading_plan_20m"', '"causal_mindmap"'];
+      for (const mk of markers) {
+        let searchPos = text.length;
+        while (searchPos > 0 && !syncData) {
+          const idx = text.lastIndexOf(mk, searchPos);
+          if (idx === -1) break;
+          // Lùi tìm dấu '{' mở của object gốc chứa marker này
+          let bracePos = idx;
+          let foundObj = null;
+          while (bracePos >= 0) {
+            bracePos = text.lastIndexOf('{', bracePos - 1);
+            if (bracePos === -1) break;
+            const bal = extractBalancedJsonFromStart(text, bracePos);
+            if (bal && bal.end >= idx) {
+              const parsed = tryParseWisdomJsonLoose(bal.raw);
+              if (parsed) {
+                foundObj = { parsed, start: bal.start, end: bal.end };
+                break;
+              }
+            }
+          }
+          if (foundObj) {
+            syncData = foundObj.parsed;
+            markdownBody = (text.slice(0, foundObj.start) + '\n' + text.slice(foundObj.end + 1)).trim();
+            break;
+          }
+          searchPos = idx - 1;
+        }
+        if (syncData) break;
+      }
+    }
+
+    // 3. Lớp chặn tuyệt đối: xóa sạch mọi đoạn JSON đồng bộ bị lặp hoặc cắt cụt còn sót (không bao giờ in thô ra PDF!)
+    const stripResidualSyncJson = (body) => {
+      let out = String(body || '');
+      const residualRe = /(?:\n|^)\s*(?:```(?:json)?\s*\n)?\s*\{\s*\n?\s*"(?:schema|headline|reading_plan_30m|reading_plan_20m)"\s*:[\s\S]*$/i;
+      const m = out.match(residualRe);
+      if (m && /WISDOM_(?:20|30)MIN_SYNC_V1|reading_plan_(?:20|30)m|causal_mindmap|impact_scores/i.test(m[0])) {
+        out = out.slice(0, m.index).trim();
+      }
+      return out;
+    };
+
+    // Dọn sạch tiêu đề thừa "PHẦN 2 — KHỐI JSON ĐỒNG BỘ...", chữ "json" trơ trọi, hoặc gạch ngang "---" cuối văn bản!
+    markdownBody = stripResidualSyncJson(markdownBody)
       .replace(/(?:^|\n)\s*(?:#{1,6}\s*|===+\s*|\*\*)?\s*PHẦN\s*2\s*[—–\-:]\s*(?:KHỐI\s*JSON|JSON|ĐỒNG BỘ BIỂU ĐỒ)[^\n]*$/gim, '')
+      .replace(/(?:^|\n)\s*(?:```json|```|json)\s*$/gim, '')
       .replace(/(?:^|\n)\s*---+\s*$/g, '')
       .trim();
 

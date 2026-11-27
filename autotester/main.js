@@ -195,7 +195,9 @@
         };
         this.lastReport = AT.loopEngine.computeReport(results, perfStats, AT.driver.breadcrumbs, kpis);
         if (AT.coEvolution?.buildTokenCappedPayload) {
-          this.lastBridgePayload = AT.coEvolution.buildTokenCappedPayload(this.lastReport);
+          this.lastBridgePayload = AT.coEvolution.buildTokenCappedPayload(this.lastReport, {
+            unitSummary: AT.bucket2?.lastSummary || null,
+          });
         }
         this.isRunning = false;
         window.__NOIR_AUTOTESTER_RUNNING__ = false;
@@ -308,7 +310,7 @@
           document.execCommand('copy');
           ta.remove();
         }
-        this.notify('📋 Đã chép đơn thuốc gửi AI sửa lỗi vào bộ nhớ tạm! Bạn chỉ cần dán (Ctrl+V) vào khung chat.', 'success');
+        this.notify('📋 Đã copy lỗi gửi AI sửa vào bộ nhớ tạm! Bạn chỉ cần dán (Ctrl+V) vào khung chat.', 'success');
       } catch (_e) {
         this.notify('⚠️ Trình duyệt chặn tự chép — hãy mở tải báo cáo JSON trong nút Cài đặt ⚙️.', 'warning');
       }

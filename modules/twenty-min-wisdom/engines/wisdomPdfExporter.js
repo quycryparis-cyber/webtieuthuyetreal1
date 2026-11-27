@@ -514,9 +514,15 @@
       }
     };
 
-    // Phần A: Bản tin Gemini — VẼ THEO GIAO DIỆN BÁO CÁO TÀI CHÍNH CHUYÊN NGHIỆP (Banner xanh navy + Bảng thật có tiêu đề navy + 0 dấu #### hay | --- |!)
+    // Phần A: Bản tin Gemini — VẼ THEO GIAO DIỆN BÁO CÁO TÀI CHÍNH CHUYÊN NGHIỆP (Banner xanh navy + Bảng thật có tiêu đề navy + 0 dấu #### hay JSON thô!)
     if (geminiParsed?.markdownBody) {
-      const rawLines = String(geminiParsed.markdownBody).split(/\r?\n/);
+      let safeMarkdownBody = String(geminiParsed.markdownBody || '')
+        .replace(/```(?:json)?[\s\S]*?(?:WISDOM_(?:20|30)MIN_SYNC_V1|reading_plan_(?:20|30)m|causal_mindmap)[\s\S]*?```/gi, '');
+      const rawJsonTail = safeMarkdownBody.match(/(?:\n|^)\s*\{\s*\n?\s*"(?:schema|headline|reading_plan_30m|reading_plan_20m)"\s*:[\s\S]*$/i);
+      if (rawJsonTail && /WISDOM_(?:20|30)MIN_SYNC_V1|reading_plan_(?:20|30)m|causal_mindmap|impact_scores/i.test(rawJsonTail[0])) {
+        safeMarkdownBody = safeMarkdownBody.slice(0, rawJsonTail.index).trim();
+      }
+      const rawLines = safeMarkdownBody.split(/\r?\n/);
       let li = 0;
 
       while (li < rawLines.length) {

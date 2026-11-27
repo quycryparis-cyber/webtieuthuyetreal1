@@ -36,7 +36,7 @@
     sevP2: '🟡 Gợi ý cho mượt hơn',
     breadcrumbsBtn: 'Xem lại 15 bước trước khi hỏng',
     highlightBtn: '🎯 Chỉ thẳng chỗ bị lỗi',
-    copyRxBtn: '📋 Chép đơn thuốc gửi AI sửa lỗi',
+    copyRxBtn: '📋 Copy lỗi gửi AI sửa',
     devDetailsBtn: 'Xem chi tiết cho lập trình viên',
   });
 

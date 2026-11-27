@@ -1312,12 +1312,39 @@
       const extraWrap = document.getElementById('tab5-pomo-extra-enhancer');
       if (!extraWrap) return;
 
+      let shell = document.getElementById('tab5-pomo-wellness-collapsible-shell');
+      if (!shell) {
+        shell = document.createElement('div');
+        shell.id = 'tab5-pomo-wellness-collapsible-shell';
+        shell.className = 'pt-2 border-t border-zinc-800 space-y-2';
+        let startCollapsed = false;
+        try { startCollapsed = localStorage.getItem('noir_tab5_pomo_wellness_collapsed') === '1'; } catch (_e) {}
+        shell.innerHTML = [
+          '<div class="flex flex-wrap items-center justify-between gap-2">',
+          '  <span class="font-bold text-[11px] text-amber-300">🔥 Chuỗi Ngày Tập Trung &amp; Gợi Ý Thư Giãn Sau Phiên</span>',
+          `  <button type="button" id="btn-toggle-tab5-pomo-wellness" aria-expanded="${startCollapsed ? 'false' : 'true'}" class="px-2.5 py-1 rounded-lg border border-amber-500/45 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-bold text-[10.5px] cursor-pointer transition">${startCollapsed ? '▼ Mở rộng' : '▲ Thu gọn'}</button>`,
+          '</div>',
+          `<div id="tab5-pomo-wellness-collapsible-body" class="${startCollapsed ? 'hidden ' : ''}space-y-2"></div>`
+        ].join('\n');
+        extraWrap.appendChild(shell);
+        const toggleBtn = shell.querySelector('#btn-toggle-tab5-pomo-wellness');
+        const bodyDiv = shell.querySelector('#tab5-pomo-wellness-collapsible-body');
+        toggleBtn?.addEventListener('click', () => {
+          const willCollapse = !bodyDiv.classList.contains('hidden');
+          bodyDiv.classList.toggle('hidden', willCollapse);
+          toggleBtn.setAttribute('aria-expanded', willCollapse ? 'false' : 'true');
+          toggleBtn.textContent = willCollapse ? '▼ Mở rộng' : '▲ Thu gọn';
+          try { localStorage.setItem('noir_tab5_pomo_wellness_collapsed', willCollapse ? '1' : '0'); } catch (_e) {}
+        });
+      }
+
+      const wellnessBody = document.getElementById('tab5-pomo-wellness-collapsible-body') || extraWrap;
       let historyBox = document.getElementById('tab5-pomo-sprint-history-box');
       if (!historyBox) {
         historyBox = document.createElement('div');
         historyBox.id = 'tab5-pomo-sprint-history-box';
-        historyBox.className = 'pt-2 border-t border-zinc-800 space-y-2';
-        extraWrap.appendChild(historyBox);
+        historyBox.className = 'space-y-2';
+        wellnessBody.appendChild(historyBox);
       }
 
       const streak = this.computeDailyFocusStreakDays();

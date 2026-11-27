@@ -191,11 +191,20 @@
     const atMode = params.get('autotest');
     if (atMode === '1' || atMode === 'auto') {
       const boot = () => setTimeout(async () => {
+        if (atMode === 'auto') {
+          const gate = document.getElementById('app-entry-connection-gate');
+          const gateVisible = gate && !gate.classList.contains('hidden') && getComputedStyle(gate).display !== 'none';
+          if (gateVisible) {
+            document.getElementById('btn-gate-enter-guest-mode')?.click?.();
+            await new Promise((r) => setTimeout(r, 550));
+            document.getElementById('noir-welcome-api-upsell-modal')?.remove?.();
+          }
+        }
         const engine = await loaderApi.open();
         if (atMode === 'auto' && engine && typeof engine.runAllSelected === 'function') {
           setTimeout(() => {
             if (!engine.isRunning) engine.runAllSelected();
-          }, 350);
+          }, 300);
         }
       }, 650);
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });

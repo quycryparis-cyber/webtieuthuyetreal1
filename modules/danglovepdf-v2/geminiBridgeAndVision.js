@@ -119,8 +119,18 @@
     THEME10_BLUEPRINT: Object.freeze({
       type: 'OBJECT',
       properties: {
+        schema_version: { type: 'STRING' },
         title: { type: 'STRING' },
         subtitle: { type: 'STRING' },
+        document_meta: {
+          type: 'OBJECT',
+          properties: {
+            title: { type: 'STRING' },
+            subtitle: { type: 'STRING' },
+            language: { type: 'STRING' },
+            has_toc_pages: { type: 'ARRAY', items: { type: 'INTEGER' } },
+          },
+        },
         headings: {
           type: 'ARRAY',
           items: {
@@ -128,10 +138,13 @@
             properties: {
               page: { type: 'INTEGER' },
               level: { type: 'INTEGER' },
+              block_ids: { type: 'ARRAY', items: { type: 'STRING' } },
               text: { type: 'STRING' },
+              clean_title: { type: 'STRING' },
               matchAnchor: { type: 'STRING' },
+              anchor_text: { type: 'STRING' },
             },
-            required: ['page', 'level', 'text'],
+            required: ['page', 'level'],
           },
         },
         tables: {
@@ -139,13 +152,20 @@
           items: {
             type: 'OBJECT',
             properties: {
+              table_id: { type: 'STRING' },
               page: { type: 'INTEGER' },
+              caption_block: { type: 'STRING' },
               caption: { type: 'STRING' },
+              start_block: { type: 'STRING' },
+              end_block: { type: 'STRING' },
               startAnchor: { type: 'STRING' },
+              header_rows: { type: 'INTEGER' },
+              continued_from_prev: { type: 'BOOLEAN' },
               headers: { type: 'ARRAY', items: { type: 'STRING' } },
               columnCount: { type: 'INTEGER' },
+              matrix: { type: 'ARRAY', items: { type: 'ARRAY', items: { type: 'STRING' } } },
             },
-            required: ['page', 'caption'],
+            required: ['page'],
           },
         },
         figures: {
@@ -154,6 +174,7 @@
             type: 'OBJECT',
             properties: {
               page: { type: 'INTEGER' },
+              block_id: { type: 'STRING' },
               caption: { type: 'STRING' },
               nearAnchor: { type: 'STRING' },
             },
@@ -166,8 +187,11 @@
             type: 'OBJECT',
             properties: {
               page: { type: 'INTEGER' },
+              block_id: { type: 'STRING' },
+              mode: { type: 'STRING' },
               latex: { type: 'STRING' },
               rawAnchor: { type: 'STRING' },
+              anchor_text: { type: 'STRING' },
             },
             required: ['page', 'latex'],
           },
@@ -184,8 +208,9 @@
             required: ['page', 'rawText', 'normalizedUnicode'],
           },
         },
+        drop_blocks: { type: 'ARRAY', items: { type: 'STRING' } },
       },
-      required: ['headings', 'tables', 'figures', 'formulas', 'specialSymbols'],
+      required: ['headings', 'tables', 'figures', 'formulas'],
     }),
     OCR_STRUCTURED: Object.freeze({
       type: 'OBJECT',
@@ -1550,20 +1575,246 @@
     return true;
   }
 
-  function extractJsonObjectFromText(raw) {
-    const str = String(raw || '').trim();
-    if (!str) return null;
-    const fenced = str.match(/```(?:json)?\s*([\s\S]*?)```/i);
-    const candidate = fenced ? fenced[1].trim() : str;
-    const firstBrace = candidate.indexOf('{');
-    const lastBrace = candidate.lastIndexOf('}');
-    if (firstBrace === -1 || lastBrace <= firstBrace) return null;
-    try {
-      const parsed = JSON.parse(candidate.slice(firstBrace, lastBrace + 1));
-      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
-    } catch (_) {
-      return null;
+  function tagBlocksWithDeterministicIds(sourceBlocks) {
+    const perPage = new Map();
+    return (Array.isArray(sourceBlocks) ? sourceBlocks : []).map((b) => {
+      if (!b || typeof b !== 'object') return b;
+      const pg = Math.max(1, Number(b.pageNo || b.page || 1));
+      const seq = (perPage.get(pg) || 0) + 1;
+      perPage.set(pg, seq);
+      const blockId = b.blockId || `P${String(pg).padStart(2, '0')}_B${String(seq).padStart(2, '0')}`;
+      return { ...b, pageNo: pg, page: pg, blockId };
+    });
+  }
+
+  /**
+   * TẠO KHUNG XƯƠNG TÓM LƯỢC NÉN (COMPACT SKELETON) ĐÍNH KÈM BLOCK ID Pxx_Byy:
+   * Giảm 70–85% token gửi cho AI bằng cách cắt gọn đoạn văn xuôi dài về mẫu neo đầu...cuối,
+   * trong khi giữ trọn vẹn 100% Tiêu đề, ứng viên nhập nhằng, Bảng, Hình & Công thức!
+   */
+  function buildCompactSkeletonForAi(sourceBlocks, opts = {}) {
+    const tagged = tagBlocksWithDeterministicIds(sourceBlocks);
+    const maxBlocks = Math.max(40, Number(opts.maxBlocks || 360));
+    const maxChars = Math.max(4000, Number(opts.maxChars || 18000));
+    const focusPages = Array.isArray(opts.focusPages) && opts.focusPages.length ? new Set(opts.focusPages) : null;
+    const cm = opts.confidenceMatrix || sourceBlocks?.__ast?.meta?.confidenceMatrix || null;
+
+    const lines = [];
+    if (cm) {
+      lines.push(
+        `# META_CODE: pages=${cm.totalPages || '?'} | code_confidence=${cm.overallConfidence}% | scan_pages=[${(cm.scanPages || []).join(',')}] | multi_col=[${(cm.multiColumnPages || []).join(',')}] | old_toc_pages=[${(cm.oldTocPages || []).join(',')}]`
+      );
     }
+
+    let charTotal = lines.join('\n').length;
+    for (let i = 0; i < tagged.length && i < maxBlocks; i++) {
+      const b = tagged[i];
+      if (!b) continue;
+      if (focusPages && !focusPages.has(b.pageNo) && b.type === 'paragraph' && (b.confidence === undefined || b.confidence >= 85)) {
+        continue;
+      }
+      const id = b.blockId;
+      const szTag = b.fontSize ? `sz:${Math.round(b.fontSize)}` : '';
+      const boldTag = b.isBold ? 'bold' : '';
+      const confTag = typeof b.confidence === 'number' ? `conf:${b.confidence}` : '';
+      const roleTag =
+        b.type === 'heading' ? `H${b.level || 1}` :
+        b.type === 'subheading' ? `H${b.level || 3}` :
+        b.type === 'table' ? `TABLE(${b.rows?.length || 0}x${b.rows?.[0]?.length || 0})` :
+        b.type === 'image' ? (b.isMathImage ? 'MATH_IMG' : 'IMAGE') :
+        b.type === 'math_block' ? 'MATH' :
+        b.type === 'toc_item' ? 'OLD_TOC?' :
+        'P';
+      const metaStr = [id, szTag, boldTag, `guess:${roleTag}`, confTag].filter(Boolean).join(' | ');
+
+      let snippet = '';
+      if (b.type === 'table') {
+        const hdr = Array.isArray(b.rows?.[0]) ? b.rows[0].slice(0, 8).join(' | ') : '';
+        snippet = `${b.caption ? `[Cap: ${b.caption}] ` : ''}Headers: ${hdr}`.slice(0, 180);
+      } else if (b.type === 'image') {
+        snippet = b.caption || '(Hình/biểu đồ chưa có chú thích)';
+      } else {
+        const cleanTxt = String(b.text || '').replace(/\s+/g, ' ').trim();
+        if (b.type === 'paragraph' && cleanTxt.length > 130 && (b.confidence === undefined || b.confidence >= 85)) {
+          const words = cleanTxt.split(/\s+/);
+          snippet = words.length > 18
+            ? `${words.slice(0, 10).join(' ')} [...] ${words.slice(-5).join(' ')}`
+            : cleanTxt.slice(0, 130);
+        } else {
+          snippet = cleanTxt.slice(0, 190);
+        }
+      }
+
+      const rowStr = `[${metaStr}] "${snippet.replace(/"/g, "'")}"`;
+      if (charTotal + rowStr.length + 1 > maxChars) {
+        lines.push(`... (đã nén tới khối ${id}, tổng ${tagged.length} khối)`);
+        break;
+      }
+      lines.push(rowStr);
+      charTotal += rowStr.length + 1;
+    }
+
+    return {
+      taggedBlocks: tagged,
+      skeletonText: lines.join('\n'),
+      blockCount: tagged.length,
+    };
+  }
+
+  /**
+   * BỘ PHÂN TÍCH JSON CHỊU LỖI CHUYÊN DỤNG CHO LATEX & AI THỦ CÔNG (FAULT-TOLERANT PARSER):
+   * 1. Gỡ markdown fence, lời dẫn ngoài JSON, dấu ngoặc kép cong (“/”), dấu phẩy thừa cuối mảng/object.
+   * 2. Tự động bảo vệ chuỗi lệnh LaTeX bị AI quên nhân đôi gạch chéo (VD: \frac, \times, \beta, \right, \text, \sum, \sqrt, \cdot, \alpha, \Delta...)
+   *    — cực kỳ quan trọng vì \f, \t, \b, \r trong JSON sẽ biến thành ký tự điều khiển làm hỏng công thức!
+   * 3. Phát hiện JSON bị cắt cụt giữa chừng (truncated: true) & báo trang hoàn tất gần nhất (`lastCompletedPage`) để gợi ý quét tiếp!
+   */
+  const LATEX_CMD_SINGLE_SLASH_RE =
+    /(^|[^\\])\\(frac|forall|beta|bar|binom|big|bmatrix|times|text|theta|tau|to|tilde|triangle|right|rho|neq|nabla|nu|not|left|leq|le\b|lambda|lim|ln|log|cdot|cos|cup|cap|sum|sqrt|sigma|sin|alpha|approx|gamma|delta|Delta|pm|pi|prod|partial|mu|infty|int|in\b|div|geq|ge\b|mathbf|mathrm|mathit|mathbb|mathcal|overline|underline|hat|vec|quad|qquad|Omega|omega|phi|psi|epsilon|varepsilon|eta|zeta|xi|chi|equiv|sim|propto|subset|supset|cup|cap)/g;
+
+  function repairJsonStringForLatexAndChatter(rawStr) {
+    let s = String(rawStr || '').trim();
+    if (!s) return '';
+    // Bóc code fence ```json ... ```
+    const fenced = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenced) s = fenced[1].trim();
+    // Chuyển dấu ngoặc kép thông minh thành chuẩn ASCII chỉ ở ngoài chuỗi hoặc thay đồng loạt an toàn
+    s = s.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'");
+    const firstBrace = s.indexOf('{');
+    if (firstBrace === -1) return '';
+    const lastBrace = s.lastIndexOf('}');
+    s = lastBrace > firstBrace ? s.slice(firstBrace, lastBrace + 1) : s.slice(firstBrace);
+
+    // Xử lý từng string literal bên trong JSON: nhân đôi `\` trước lệnh LaTeX hoặc ký tự escape không hợp lệ
+    let out = '';
+    let inStr = false;
+    let strBuf = '';
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (!inStr) {
+        if (ch === '"') {
+          inStr = true;
+          strBuf = '';
+          out += '"';
+        } else {
+          out += ch;
+        }
+      } else {
+        if (ch === '\\') {
+          const next = s[i + 1];
+          if (next === undefined) {
+            strBuf += '\\\\';
+            continue;
+          }
+          // Nếu là `\"` hoặc `\\` -> giữ nguyên escape chuẩn
+          if (next === '"' || next === '\\') {
+            strBuf += ch + next;
+            i += 1;
+            continue;
+          }
+          // Kiểm tra xem sau `\` có phải lệnh LaTeX bắt đầu bằng f/t/b/r/n hay ký tự khác không
+          const tailSlice = s.slice(i, i + 18);
+          if (/^\\(?:frac|forall|beta|bar|binom|big|bmatrix|times|text|theta|tau|to\b|tilde|triangle|right|rho|neq|nabla|nu\b|not\b|left|leq|le\b|lambda|lim|ln\b|log|cdot|cos|cup|cap|sum|sqrt|sigma|sin|alpha|approx|gamma|delta|Delta|pm|pi|prod|partial|mu|infty|int|in\b|div|geq|ge\b|mathbf|mathrm|mathit|mathbb|mathcal|overline|underline|hat|vec|quad|qquad|Omega|omega|phi|psi|epsilon|varepsilon|eta|zeta|xi|chi|equiv|sim|propto|subset|supset)/i.test(tailSlice)) {
+            strBuf += '\\\\';
+            continue;
+          }
+          if (/[\/bfnrtu]/.test(next)) {
+            strBuf += ch + next;
+            i += 1;
+            continue;
+          }
+          // Ký tự escape bất hợp lệ trong JSON (vd \_, \%, \$, \{, \}) -> nhân đôi `\\`
+          strBuf += '\\\\';
+          continue;
+        }
+        if (ch === '"') {
+          inStr = false;
+          // Bảo vệ xuống dòng thô nằm trong string JSON
+          out += strBuf.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/\t/g, '\\t') + '"';
+        } else {
+          strBuf += ch;
+        }
+      }
+    }
+    if (inStr) out += strBuf + '"';
+    // Xóa dấu phẩy thừa trước `}` hoặc `]`
+    out = out.replace(/,\s*([}\]])/g, '$1');
+    return out;
+  }
+
+  function parseAiStructuralPatchTolerant(raw) {
+    const str = String(raw || '').trim();
+    if (!str) return { ok: false, data: null, truncated: false, lastCompletedPage: 0, error: 'Empty input' };
+
+    const repaired = repairJsonStringForLatexAndChatter(str);
+    if (!repaired) {
+      return { ok: false, data: null, truncated: false, lastCompletedPage: 0, error: 'No JSON object found' };
+    }
+
+    try {
+      const parsed = JSON.parse(repaired);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return { ok: true, data: parsed, truncated: false, lastCompletedPage: 0, repairedLatex: repaired !== str };
+      }
+    } catch (firstErr) {
+      // Thử thêm 1 pass ép double-escape LaTeX còn sót
+      try {
+        const pass2 = repaired.replace(LATEX_CMD_SINGLE_SLASH_RE, '$1\\\\$2');
+        const parsed2 = JSON.parse(pass2);
+        if (parsed2 && typeof parsed2 === 'object' && !Array.isArray(parsed2)) {
+          return { ok: true, data: parsed2, truncated: false, lastCompletedPage: 0, repairedLatex: true };
+        }
+      } catch (_e2) {}
+
+      // Kiểm tra JSON bị cắt cụt giữa chừng (AI hết max_output_tokens)
+      const openBraces = (repaired.match(/\{/g) || []).length;
+      const closeBraces = (repaired.match(/\}/g) || []).length;
+      const openArr = (repaired.match(/\[/g) || []).length;
+      const closeArr = (repaired.match(/\]/g) || []).length;
+      const isTruncated = openBraces > closeBraces || openArr > closeArr;
+      const pageMatches = Array.from(repaired.matchAll(/"page"\s*:\s*(\d+)/g)).map((m) => Number(m[1]));
+      const lastCompletedPage = pageMatches.length ? Math.max(...pageMatches) : 0;
+
+      // Thử khôi phục mềm bằng cách cắt tới dấu `}` hợp lệ cuối cùng rồi đóng ngoặc còn thiếu
+      if (isTruncated) {
+        const lastCompleteObj = repaired.lastIndexOf('}');
+        if (lastCompleteObj > 20) {
+          let candidate = repaired.slice(0, lastCompleteObj + 1).replace(/,\s*$/, '');
+          const ob = (candidate.match(/\{/g) || []).length;
+          const cb = (candidate.match(/\}/g) || []).length;
+          const oa = (candidate.match(/\[/g) || []).length;
+          const ca = (candidate.match(/\]/g) || []).length;
+          if (oa > ca) candidate += ']'.repeat(oa - ca);
+          if (ob > cb) candidate += '}'.repeat(ob - cb);
+          try {
+            const partialObj = JSON.parse(candidate.replace(/,\s*([}\]])/g, '$1'));
+            if (partialObj && typeof partialObj === 'object') {
+              return {
+                ok: true,
+                data: partialObj,
+                truncated: true,
+                lastCompletedPage,
+                warning: `JSON bị cắt cụt sau trang ${lastCompletedPage || '?'} — đã khôi phục phần hoàn chỉnh.`,
+              };
+            }
+          } catch (_eRec) {}
+        }
+      }
+
+      return {
+        ok: false,
+        data: null,
+        truncated: isTruncated,
+        lastCompletedPage,
+        error: String(firstErr?.message || firstErr),
+      };
+    }
+
+    return { ok: false, data: null, truncated: false, lastCompletedPage: 0, error: 'Invalid JSON root' };
+  }
+
+  function extractJsonObjectFromText(raw) {
+    const res = parseAiStructuralPatchTolerant(raw);
+    return res.ok ? res.data : null;
   }
 
   function normalizeAnchorText(s) {
@@ -1575,43 +1826,121 @@
   }
 
   /**
-   * AI-AS-LOCATOR + CODE-AS-BUILDER MERGER:
-   * Giữ 100% văn bản thường do Code quét (0 thất thoát chữ/số), chỉ áp dụng
-   * Bản Đồ Cấu Trúc JSON từ AI (tiêu đề, bảng & tên bảng, hình & tên hình, công thức LaTeX, ký tự đặc biệt).
+   * ĐỘNG CƠ HỢP NHẤT 3 TẦNG (3-TIER AST RECONCILIATION ENGINE — PDF MAGIC V1 + LEGACY BLUEPRINT):
+   * - Tầng 1 (Exact Block ID): Tra trực tiếp `block_id` / `block_ids[]` (`P04_B02`) — gộp tiêu đề vỡ nhiều dòng thành 1 khối duy nhất, triệt tiêu 100% đuôi mồ côi!
+   * - Tầng 2 (Fuzzy Page-Bounded Anchor): Khi không có `block_id` hoặc lệch nhẹ, khớp mờ `anchor_text`/`matchAnchor` trong phạm vi ±1 trang + xóa đuôi mồ côi.
+   * - Tầng 3 (Structural Patch): Xóa `drop_blocks[]`, bỏ trang mục lục cũ `has_toc_pages[]`, nối bảng vắt trang `continued_from_prev: true`, thay `matrix` bảng sửa lỗi, gắn `formulas[]` (display/inline) & `specialSymbols[]`.
+   * - Bất biến bảo toàn văn bản: 100% văn xuôi thường do Code trích xuất được giữ nguyên vẹn không thất thoát!
    */
-  function applyBlueprintToBlocks(sourceBlocks, blueprintOrRawText) {
-    const bp = typeof blueprintOrRawText === 'string'
-      ? extractJsonObjectFromText(blueprintOrRawText)
-      : blueprintOrRawText;
-    const blocks = (Array.isArray(sourceBlocks) ? sourceBlocks : []).map((b) => (b ? { ...b } : b));
-    if (!bp || typeof bp !== 'object') {
-      return { applied: false, blocks, stats: { headingsApplied: 0, tablesCaptioned: 0, figuresCaptioned: 0, formulasFixed: 0, symbolsFixed: 0 } };
+  function reconcileAiPatchIntoBlocks(sourceBlocks, blueprintOrRawText) {
+    let parseMeta = { truncated: false, lastCompletedPage: 0 };
+    let bp = blueprintOrRawText;
+    if (typeof blueprintOrRawText === 'string') {
+      const parsed = parseAiStructuralPatchTolerant(blueprintOrRawText);
+      parseMeta = { truncated: Boolean(parsed.truncated), lastCompletedPage: parsed.lastCompletedPage || 0, warning: parsed.warning || '' };
+      bp = parsed.ok ? parsed.data : null;
     }
 
-    const stats = { headingsApplied: 0, tablesCaptioned: 0, figuresCaptioned: 0, formulasFixed: 0, symbolsFixed: 0 };
+    const blocks = tagBlocksWithDeterministicIds(sourceBlocks);
+    if (!bp || typeof bp !== 'object') {
+      return {
+        applied: false,
+        blocks,
+        parseMeta,
+        stats: { headingsApplied: 0, orphanTailsRemoved: 0, droppedBlocks: 0, tablesCaptioned: 0, tablesStitched: 0, figuresCaptioned: 0, formulasFixed: 0, symbolsFixed: 0 },
+      };
+    }
 
-    // 1. Áp dụng danh sách Tiêu đề chính xác từ AI (xác định cấp bậc + sửa tiêu đề vỡ + chuẩn Mục lục)
+    const stats = {
+      headingsApplied: 0,
+      orphanTailsRemoved: 0,
+      droppedBlocks: 0,
+      tablesCaptioned: 0,
+      tablesStitched: 0,
+      figuresCaptioned: 0,
+      formulasFixed: 0,
+      symbolsFixed: 0,
+    };
+    const consumedIndices = new Set();
+
+    // Index O(1) theo blockId (Pxx_Byy)
+    const idToIdx = new Map();
+    blocks.forEach((b, idx) => {
+      if (b?.blockId) idToIdx.set(String(b.blockId).toUpperCase(), idx);
+    });
+
+    // 0A. Xử lý `drop_blocks[]` (xóa rác lặp/header/watermark do AI đánh dấu đích danh)
+    const dropIds = Array.isArray(bp.drop_blocks) ? bp.drop_blocks : [];
+    for (const rawId of dropIds) {
+      const key = String(rawId || '').trim().toUpperCase();
+      if (!key || !idToIdx.has(key)) continue;
+      const idx = idToIdx.get(key);
+      consumedIndices.add(idx);
+      stats.droppedBlocks += 1;
+    }
+
+    // 0B. Xử lý `document_meta.has_toc_pages[]` (loại bỏ các dòng mục lục chấm cũ trên trang mục lục cũ)
+    const oldTocPages = new Set(
+      (Array.isArray(bp.document_meta?.has_toc_pages) ? bp.document_meta.has_toc_pages : [])
+        .map((p) => Number(p))
+        .filter((p) => Number.isFinite(p) && p > 0)
+    );
+    if (oldTocPages.size > 0) {
+      blocks.forEach((b, idx) => {
+        if (consumedIndices.has(idx) || !b || !oldTocPages.has(Number(b.pageNo || b.page || 0))) return;
+        const txt = String(b.text || '').trim();
+        if (b.type === 'toc_item' || /\.{3,}\s*\d{1,4}\s*$/.test(txt) || /^(?:MỤC\s+LỤC|TABLE\s+OF\s+CONTENTS|DANH\s+MỤC\s+(?:BẢNG|HÌNH))/i.test(txt)) {
+          consumedIndices.add(idx);
+          stats.droppedBlocks += 1;
+        }
+      });
+    }
+
+    // 1. TẦNG 1 & TẦNG 2: Áp dụng danh sách Tiêu đề chính xác từ AI (ưu tiên block_ids[] -> fallback fuzzy anchor)
     const aiHeadings = Array.isArray(bp.headings) ? bp.headings : [];
     for (const h of aiHeadings) {
-      const hText = String(h?.text || '').trim();
+      const hText = String(h?.clean_title || h?.text || '').trim();
       if (!hText) continue;
       const lvl = Math.max(1, Math.min(4, Number(h?.level) || 1));
-      const needle = normalizeAnchorText(h?.matchAnchor || hText);
-      if (!needle) continue;
+      const hNorm = normalizeAnchorText(hText);
       const targetPage = Number(h?.page) || 0;
+
+      // Tầng 1: Khớp chính xác theo mảng `block_ids[]` hoặc `block_id`
+      const idList = Array.isArray(h?.block_ids) && h.block_ids.length
+        ? h.block_ids
+        : (h?.block_id ? [h.block_id] : []);
+      const resolvedIndices = idList
+        .map((id) => idToIdx.get(String(id || '').trim().toUpperCase()))
+        .filter((idx) => idx !== undefined && !consumedIndices.has(idx));
+
       let hitIdx = -1;
-      for (let i = 0; i < blocks.length; i++) {
-        const b = blocks[i];
-        if (!b || b.type === 'table' || b.type === 'image') continue;
-        const bNorm = normalizeAnchorText(b.text || '');
-        if (!bNorm) continue;
-        const pageOk = !targetPage || !b.page || Math.abs(Number(b.page) - targetPage) <= 1;
-        if (pageOk && (bNorm === needle || bNorm.includes(needle) || (needle.length >= 12 && needle.includes(bNorm) && bNorm.length >= 8))) {
-          hitIdx = i;
-          break;
+      if (resolvedIndices.length > 0) {
+        hitIdx = resolvedIndices[0];
+        // Các block_id thứ 2, 3... (phần bị gãy dòng của cùng 1 tiêu đề) bị nuốt sạch!
+        for (let ri = 1; ri < resolvedIndices.length; ri++) {
+          consumedIndices.add(resolvedIndices[ri]);
+          stats.orphanTailsRemoved += 1;
+        }
+      } else {
+        // Tầng 2: Khớp mờ theo `anchor_text` / `matchAnchor` trên đúng trang (±1)
+        const needle = normalizeAnchorText(h?.anchor_text || h?.matchAnchor || hText);
+        if (!needle) continue;
+        for (let i = 0; i < blocks.length; i++) {
+          if (consumedIndices.has(i)) continue;
+          const b = blocks[i];
+          if (!b || b.type === 'table' || b.type === 'image') continue;
+          const bNorm = normalizeAnchorText(b.text || '');
+          if (!bNorm) continue;
+          const pageOk = !targetPage || !b.page || Math.abs(Number(b.page) - targetPage) <= 1;
+          if (pageOk && (bNorm === needle || bNorm.includes(needle) || (needle.length >= 12 && needle.includes(bNorm) && bNorm.length >= 8) || (hNorm.length >= 14 && hNorm.startsWith(bNorm) && bNorm.length >= 8))) {
+            hitIdx = i;
+            break;
+          }
         }
       }
+
       if (hitIdx >= 0) {
+        const origNorm = normalizeAnchorText(blocks[hitIdx].text || '');
         blocks[hitIdx] = {
           ...blocks[hitIdx],
           type: lvl <= 2 ? 'heading' : 'subheading',
@@ -1620,38 +1949,128 @@
           text: hText,
           includeInToc: true,
           aiLocated: true,
+          confidence: 98,
         };
         stats.headingsApplied += 1;
+
+        // Quét sạch thêm 1-2 block đuôi mồ côi liền sau nếu vẫn còn sót mảnh tiêu đề
+        let accNorm = origNorm;
+        for (let k = hitIdx + 1; k <= Math.min(blocks.length - 1, hitIdx + 2); k++) {
+          if (consumedIndices.has(k)) continue;
+          const nb = blocks[k];
+          if (!nb || nb.type === 'table' || nb.type === 'image') break;
+          const nbTxt = String(nb.text || '').trim();
+          const nbNorm = normalizeAnchorText(nbTxt);
+          if (!nbNorm || nbTxt.length > 110) break;
+          const isExactTail = hNorm.endsWith(nbNorm) && nbNorm.length >= 3 && nbNorm.length < hNorm.length;
+          const isJoinedMatch = `${accNorm} ${nbNorm}`.replace(/\s+/g, ' ').trim() === hNorm || hNorm.startsWith(`${accNorm} ${nbNorm}`.replace(/\s+/g, ' ').trim());
+          const isContainedSuffix = nbNorm.length >= 4 && hNorm.indexOf(nbNorm) >= Math.floor(hNorm.length * 0.35);
+          if (isExactTail || isJoinedMatch || isContainedSuffix) {
+            consumedIndices.add(k);
+            accNorm = `${accNorm} ${nbNorm}`.replace(/\s+/g, ' ').trim();
+            stats.orphanTailsRemoved += 1;
+          } else {
+            break;
+          }
+        }
       }
     }
 
-    // 2. Áp dụng vị trí Bảng & Tự gắn tên Bảng (nếu tài liệu gốc chưa có tên bảng)
+    // 2. TẦNG 3A: Áp dụng vị trí Bảng, Caption, Headers, Matrix & Nối bảng vắt trang (`continued_from_prev`)
     const aiTables = Array.isArray(bp.tables) ? bp.tables : [];
     let tableCursor = 0;
+    let lastTableIdx = -1;
     for (let tIdx = 0; tIdx < aiTables.length; tIdx++) {
       const tbl = aiTables[tIdx];
       const cap = String(tbl?.caption || '').trim();
       const targetPage = Number(tbl?.page) || 0;
       let matchedIdx = -1;
-      for (let i = tableCursor; i < blocks.length; i++) {
-        if (blocks[i]?.type !== 'table') continue;
-        const pgOk = !targetPage || !blocks[i].page || Math.abs(Number(blocks[i].page) - targetPage) <= 1;
-        if (pgOk) {
-          matchedIdx = i;
-          tableCursor = i + 1;
-          break;
+
+      // Ưu tiên khớp theo start_block / block_id
+      const startKey = String(tbl?.start_block || tbl?.block_id || '').trim().toUpperCase();
+      if (startKey && idToIdx.has(startKey) && blocks[idToIdx.get(startKey)]?.type === 'table') {
+        matchedIdx = idToIdx.get(startKey);
+      }
+      if (matchedIdx < 0) {
+        for (let i = tableCursor; i < blocks.length; i++) {
+          if (consumedIndices.has(i) || blocks[i]?.type !== 'table') continue;
+          const pgOk = !targetPage || !blocks[i].page || Math.abs(Number(blocks[i].page) - targetPage) <= 1;
+          if (pgOk) {
+            matchedIdx = i;
+            tableCursor = i + 1;
+            break;
+          }
         }
       }
+
+      // Gắn tên bảng từ caption_block (và nuốt block caption rời khỏi luồng để không vẽ lặp 2 lần)
+      const capBlockKey = String(tbl?.caption_block || '').trim().toUpperCase();
+      let resolvedCap = cap;
+      if (capBlockKey && idToIdx.has(capBlockKey)) {
+        const capIdx = idToIdx.get(capBlockKey);
+        if (!resolvedCap && blocks[capIdx]?.text) resolvedCap = String(blocks[capIdx].text).trim();
+        if (matchedIdx >= 0 && capIdx !== matchedIdx) {
+          consumedIndices.add(capIdx);
+        }
+      }
+
       if (matchedIdx >= 0) {
-        if (cap && !blocks[matchedIdx].caption) {
-          blocks[matchedIdx].caption = cap;
+        // Nếu có `matrix` 2D chuẩn từ AI (cứu bảng cực khó)
+        if (Array.isArray(tbl?.matrix) && tbl.matrix.length >= 2 && tbl.matrix.every((r) => Array.isArray(r))) {
+          blocks[matchedIdx].rows = tbl.matrix.map((r) => r.map((c) => String(c ?? '').trim()));
+          if (Number(tbl.header_rows) > 0) {
+            blocks[matchedIdx].headerRows = blocks[matchedIdx].rows.slice(0, Number(tbl.header_rows));
+          }
+        }
+        // Nối bảng vắt trang (`continued_from_prev: true`) vào bảng trước đó!
+        // Nếu AI chỉ trả mảnh bảng nối tiếp mà không liệt kê bảng đầu trong `bp.tables`, tự dò ngược về bảng liền trước trong `blocks`!
+        let prevTableTargetIdx = lastTableIdx;
+        if (tbl?.continued_from_prev === true && (prevTableTargetIdx < 0 || prevTableTargetIdx === matchedIdx || consumedIndices.has(prevTableTargetIdx))) {
+          for (let back = matchedIdx - 1; back >= 0; back--) {
+            if (!consumedIndices.has(back) && blocks[back]?.type === 'table') {
+              prevTableTargetIdx = back;
+              break;
+            }
+          }
+        }
+        if (tbl?.continued_from_prev === true && prevTableTargetIdx >= 0 && prevTableTargetIdx !== matchedIdx && Array.isArray(blocks[prevTableTargetIdx]?.rows) && Array.isArray(blocks[matchedIdx]?.rows)) {
+          const prevRows = blocks[prevTableTargetIdx].rows;
+          const curRows = blocks[matchedIdx].rows;
+          const skipHdr = Math.max(0, Number(tbl.header_rows ?? 1));
+          const prevHdrNorm = normalizeAnchorText((prevRows[0] || []).join(' '));
+          const curHdrNorm = normalizeAnchorText((curRows[0] || []).join(' '));
+          const shouldSkipFirst = skipHdr > 0 && curRows.length > 1 && prevHdrNorm && curHdrNorm && (prevHdrNorm === curHdrNorm || curHdrNorm.includes(prevHdrNorm.slice(0, 18)));
+          const appendSlice = shouldSkipFirst ? curRows.slice(skipHdr) : curRows;
+          blocks[prevTableTargetIdx].rows = [...prevRows, ...appendSlice];
+          consumedIndices.add(matchedIdx);
+          lastTableIdx = prevTableTargetIdx;
+          stats.tablesStitched += 1;
+          continue;
+        }
+
+        if (resolvedCap && !blocks[matchedIdx].caption) {
+          blocks[matchedIdx].caption = resolvedCap;
           stats.tablesCaptioned += 1;
         }
         if (Array.isArray(tbl?.headers) && tbl.headers.length && Array.isArray(blocks[matchedIdx].rows) && blocks[matchedIdx].rows.length) {
           if (blocks[matchedIdx].rows[0].length === tbl.headers.length) {
             blocks[matchedIdx].aiHeaders = tbl.headers;
+            blocks[matchedIdx].rows[0] = tbl.headers.slice();
+            const hdrJoinedNorm = normalizeAnchorText(tbl.headers.join(' '));
+            while (blocks[matchedIdx].rows.length >= 3) {
+              const r1 = blocks[matchedIdx].rows[1];
+              const c0 = String(r1?.[0] || '').trim();
+              const r1Joined = normalizeAnchorText((r1 || []).join(' '));
+              if (!c0 && r1Joined && hdrJoinedNorm.includes(r1Joined.slice(0, Math.min(20, r1Joined.length)))) {
+                blocks[matchedIdx].rows.splice(1, 1);
+                stats.orphanTailsRemoved += 1;
+              } else {
+                break;
+              }
+            }
           }
         }
+        lastTableIdx = matchedIdx;
       }
     }
 
@@ -1664,13 +2083,19 @@
       const targetPage = Number(fig?.page) || 0;
       if (!cap) continue;
       let matchedIdx = -1;
-      for (let i = figCursor; i < blocks.length; i++) {
-        if (blocks[i]?.type !== 'image') continue;
-        const pgOk = !targetPage || !blocks[i].pageNo || Math.abs(Number(blocks[i].pageNo) - targetPage) <= 1;
-        if (pgOk) {
-          matchedIdx = i;
-          figCursor = i + 1;
-          break;
+      const figIdKey = String(fig?.block_id || '').trim().toUpperCase();
+      if (figIdKey && idToIdx.has(figIdKey) && blocks[idToIdx.get(figIdKey)]?.type === 'image') {
+        matchedIdx = idToIdx.get(figIdKey);
+      }
+      if (matchedIdx < 0) {
+        for (let i = figCursor; i < blocks.length; i++) {
+          if (consumedIndices.has(i) || blocks[i]?.type !== 'image') continue;
+          const pgOk = !targetPage || !blocks[i].pageNo || Math.abs(Number(blocks[i].pageNo) - targetPage) <= 1;
+          if (pgOk) {
+            matchedIdx = i;
+            figCursor = i + 1;
+            break;
+          }
         }
       }
       if (matchedIdx >= 0 && !blocks[matchedIdx].caption) {
@@ -1679,18 +2104,51 @@
       }
     }
 
-    // 4. Áp dụng Công thức Toán/Tài chính LaTeX vào đúng vị trí đoạn gốc
+    // 4. TẦNG 3B: Áp dụng Công thức Toán/Tài chính LaTeX theo `block_id` (ưu tiên) hoặc `anchor_text`/`rawAnchor`
     const aiFormulas = Array.isArray(bp.formulas) ? bp.formulas : [];
+    const astLib = global.NoirDocAst || NS.docAst;
     for (const fm of aiFormulas) {
       const latex = String(fm?.latex || '').trim();
-      const rawAnchor = String(fm?.rawAnchor || '').trim();
-      if (!latex || !rawAnchor) continue;
+      if (!latex) continue;
+      const mode = String(fm?.mode || '').toLowerCase();
+      const rawAnchor = String(fm?.anchor_text || fm?.rawAnchor || '').trim();
+      const bidKey = String(fm?.block_id || '').trim().toUpperCase();
+      const readable = astLib?.latexToReadablePlain ? astLib.latexToReadablePlain(latex) : latex;
+
+      if (bidKey && idToIdx.has(bidKey)) {
+        const idx = idToIdx.get(bidKey);
+        if (!consumedIndices.has(idx) && blocks[idx]) {
+          if (mode === 'display' || blocks[idx].type === 'math_block' || (!rawAnchor && String(blocks[idx].text || '').length <= 140)) {
+            blocks[idx] = {
+              ...blocks[idx],
+              type: 'math_block',
+              latex,
+              text: readable,
+              aiLocated: true,
+            };
+          } else if (rawAnchor && typeof blocks[idx].text === 'string' && blocks[idx].text.includes(rawAnchor)) {
+            const wrapped = /^\$/.test(latex) ? latex : `$${latex}$`;
+            blocks[idx].text = blocks[idx].text.replace(rawAnchor, wrapped);
+          } else if (typeof blocks[idx].text === 'string') {
+            blocks[idx].latex = latex;
+          }
+          stats.formulasFixed += 1;
+          continue;
+        }
+      }
+
+      if (!rawAnchor) continue;
       for (let i = 0; i < blocks.length; i++) {
+        if (consumedIndices.has(i)) continue;
         const b = blocks[i];
         if (!b || typeof b.text !== 'string') continue;
         if (b.text.includes(rawAnchor)) {
-          const wrapped = /^\$/.test(latex) ? latex : `$${latex}$`;
-          blocks[i].text = b.text.replace(rawAnchor, wrapped);
+          if (mode === 'display' && b.text.trim() === rawAnchor) {
+            blocks[i] = { ...b, type: 'math_block', latex, text: readable, aiLocated: true };
+          } else {
+            const wrapped = /^\$/.test(latex) ? latex : `$${latex}$`;
+            blocks[i].text = b.text.replace(rawAnchor, wrapped);
+          }
           stats.formulasFixed += 1;
           break;
         }
@@ -1704,6 +2162,7 @@
       const uni = String(sym?.normalizedUnicode || '').trim();
       if (!raw || !uni || raw === uni) continue;
       for (let i = 0; i < blocks.length; i++) {
+        if (consumedIndices.has(i)) continue;
         const b = blocks[i];
         if (!b || typeof b.text !== 'string') continue;
         if (b.text.includes(raw)) {
@@ -1713,7 +2172,13 @@
       }
     }
 
-    return { applied: true, blocks, blueprint: bp, stats };
+    const finalBlocks = blocks.filter((_, idx) => !consumedIndices.has(idx));
+    if (sourceBlocks?.__ast) finalBlocks.__ast = sourceBlocks.__ast;
+    return { applied: true, blocks: finalBlocks, blueprint: bp, parseMeta, stats };
+  }
+
+  function applyBlueprintToBlocks(sourceBlocks, blueprintOrRawText) {
+    return reconcileAiPatchIntoBlocks(sourceBlocks, blueprintOrRawText);
   }
 
   /**
@@ -1989,28 +2454,23 @@
       fileBytes = null,
       mimeType = '',
       fileName = 'Tai_lieu',
+      confidenceMatrix = null,
       onProgress = null,
     } = opts;
     const cleanKey = String(apiKey || '').trim();
     if (!cleanKey) throw new Error('NO_API_KEY');
 
     if (typeof onProgress === 'function') {
-      onProgress(28, '🧠 Gemini 3.8 Flash đang lập Bản đồ Cấu trúc (Tiêu đề, Bảng, Hình, Công thức, Ký tự đặc biệt)...');
+      onProgress(28, '🧠 Gemini 3.8 Flash đang lập Bản đồ Cấu trúc Block-ID (pdf_magic_v1)...');
     }
 
-    const compactIndex = (Array.isArray(sourceBlocks) ? sourceBlocks : [])
-      .slice(0, 260)
-      .map((b, i) => {
-        if (!b) return '';
-        const pg = b.page || b.pageNo || 1;
-        if (b.type === 'table') return `[#${i}|P${pg}|TABLE|rows=${b.rows?.length || 0}] ${(b.caption || b.rows?.[0]?.join(' | ') || '').slice(0, 120)}`;
-        if (b.type === 'image') return `[#${i}|P${pg}|IMAGE] ${b.caption || '(Chưa có tên hình)'}`;
-        return `[#${i}|P${pg}|${b.type || 'p'}] ${String(b.text || '').replace(/\s+/g, ' ').trim().slice(0, 140)}`;
-      })
-      .filter(Boolean)
-      .join('\n');
+    const skel = buildCompactSkeletonForAi(sourceBlocks, {
+      confidenceMatrix: confidenceMatrix || sourceBlocks?.__ast?.meta?.confidenceMatrix || null,
+      maxBlocks: 340,
+      maxChars: 17500,
+    });
 
-    const prompt = buildTaskManualPrompt('theme10_beautify', { fileName, text: compactIndex });
+    const prompt = buildTaskManualPrompt('theme10_beautify', { fileName, text: skel.skeletonText });
     const parts = [{ text: prompt }];
     if (fileBytes && fileBytes.byteLength > 0 && fileBytes.byteLength <= 18 * 1024 * 1024 && mimeType) {
       parts.push({ inlineData: { mimeType, data: uint8ToBase64(fileBytes) } });
@@ -2027,10 +2487,15 @@
     });
 
     if (typeof onProgress === 'function') {
-      onProgress(82, '⚙️ Code đang áp dụng Bản đồ AI lên 100% văn bản gốc...');
+      onProgress(82, '⚙️ Bộ Hợp nhất 3 Tầng đang khớp Block-ID Pxx_Byy lên 100% văn bản gốc...');
     }
-    const merged = applyBlueprintToBlocks(sourceBlocks, rawJson);
-    return merged.applied ? merged.blocks : sourceBlocks;
+    const merged = reconcileAiPatchIntoBlocks(skel.taggedBlocks, rawJson);
+    if (merged.applied && merged.blocks) {
+      merged.blocks.__reconcileStats = merged.stats;
+      merged.blocks.__parseMeta = merged.parseMeta;
+      return merged.blocks;
+    }
+    return skel.taggedBlocks;
   }
 
   function extractJsonArrayFromText(raw) {
@@ -2138,63 +2603,55 @@
       apiKey = getApiKey(),
       codeTocBuilder = null,
       maxPage = 999,
+      fileName = 'Tai_lieu.pdf',
     } = opts;
-    const srcBlocks = Array.isArray(blocks) ? blocks : [];
-    const codeLines = typeof codeTocBuilder === 'function' ? (codeTocBuilder(srcBlocks) || []) : [];
+    const tagged = tagBlocksWithDeterministicIds(Array.isArray(blocks) ? blocks : []);
+    const codeLines = typeof codeTocBuilder === 'function' ? (codeTocBuilder(tagged) || []) : [];
 
     const cleanKey = String(apiKey || '').trim();
     if (!cleanKey) {
       return codeLines;
     }
 
-    // Collect concise heading-like candidates for Gemini verification + restoration of broken titles
-    const candidateLines = [];
-    for (let i = 0; i < srcBlocks.length && candidateLines.length < 180; i++) {
-      const b = srcBlocks[i];
-      const txt = String(b?.text || '').replace(/\s+/g, ' ').trim();
-      if (!txt || txt.length < 2 || txt.length > 150) continue;
-      if (/\.{3,}\s*\d{1,4}\s*$/.test(txt)) continue; // Hard code guard against dotted TOC rows
-      const looksHeading =
-        b?.type === 'h1' ||
-        b?.type === 'h2' ||
-        b?.type === 'h3' ||
-        /^(CHƯƠNG|PHẦN|MỤC|CHAPTER|PART|SECTION|[IVX]+\.|[0-9]+(?:\.[0-9]+){0,3}[\.)]?)\s+/i.test(txt) ||
-        (b?.bold && txt.length <= 90);
-      if (looksHeading) {
-        candidateLines.push(`[P${b?.page || 1}] ${txt}`);
-      }
-    }
-    if (!candidateLines.length && !codeLines.length) return [];
+    const skel = buildCompactSkeletonForAi(tagged, {
+      confidenceMatrix: blocks?.__ast?.meta?.confidenceMatrix || null,
+      maxBlocks: 280,
+      maxChars: 14000,
+    });
+    if (!skel.skeletonText && !codeLines.length) return [];
 
     try {
-      const prompt =
-        'Bạn là bộ trích xuất Mục Lục (Table of Contents) kết hợp Code + AI.\n' +
-        'Dưới đây là kết quả sơ bộ của Code và các ứng viên tiêu đề kèm số trang [P<n>]:\n' +
-        '--- KẾT QUẢ CODE ---\n' + codeLines.slice(0, 80).join('\n') + '\n' +
-        '--- ỨNG VIÊN TRONG VĂN BẢN ---\n' + candidateLines.join('\n') + '\n\n' +
-        'Nhiệm vụ:\n' +
-        '1. Chỉ giữ lại ĐÚNG các đề mục chương/mục thật sự (Chương, Phần, I, II, 1., 1.1, 1.1.1...).\n' +
-        '2. LOẠI BỎ dòng rác (tiêu đề bảng "Bảng 1...", "Hình 2...", dòng mục lục có dấu chấm .....55, đoạn văn thường).\n' +
-        '3. Sửa tiêu đề bị ngắt dòng nếu cần và trả về JSON array duy nhất: [{"title": "Tên mục", "page": 1}]. Không viết giải thích.';
+      const prompt = buildTaskManualPrompt('auto_toc', {
+        fileName,
+        text: `--- KẾT QUẢ MÃ THUẦN (CODE) ---\n${codeLines.slice(0, 80).join('\n')}\n\n--- KHUNG XƯƠNG BLOCK-ID (Pxx_Byy) ---\n${skel.skeletonText}`,
+      });
       const rawOut = await callGeminiGenerateContent({
         parts: [{ text: prompt }],
         apiKey: cleanKey,
+        taskType: 'fast_light',
         temperature: 0.1,
         maxOutputTokens: 4096,
+        responseSchema: RESPONSE_SCHEMAS.AUTO_TOC,
+        responseMimeType: 'application/json',
       });
-      const arr = extractJsonArrayFromText(rawOut);
-      if (arr && arr.length) {
+      const parsed = parseAiStructuralPatchTolerant(rawOut);
+      const list = Array.isArray(parsed.data?.entries)
+        ? parsed.data.entries
+        : (Array.isArray(parsed.data?.headings) ? parsed.data.headings : extractJsonArrayFromText(rawOut));
+      if (Array.isArray(list) && list.length) {
         const finalOut = [];
         const seen = new Set();
-        for (const item of arr) {
-          const title = String(item?.title || '').replace(/\s+/g, ' ').trim();
+        for (const item of list) {
+          const title = String(item?.clean_title || item?.title || item?.text || '').replace(/\s+/g, ' ').trim();
           const pg = parseInt(item?.page, 10);
+          const lvl = Math.max(1, Math.min(4, Number(item?.level || 1)));
           if (!title || /\.{3,}\s*\d{1,4}\s*$/.test(title)) continue;
           if (!Number.isFinite(pg) || pg < 1 || pg > Math.max(1, maxPage)) continue;
           const sig = `${title.toLowerCase()}|${pg}`;
           if (seen.has(sig)) continue;
           seen.add(sig);
-          finalOut.push(`${title} | ${pg}`);
+          const indent = lvl >= 2 ? '  '.repeat(Math.min(2, lvl - 1)) : '';
+          finalOut.push(`${indent}${title} | ${pg}`);
         }
         if (finalOut.length) return finalOut;
       }
@@ -2213,48 +2670,54 @@
     switch (taskId) {
       case 'theme10_beautify':
         return [
-          'BẠN LÀ BỘ ĐỊNH VỊ CẤU TRÚC TÀI LIỆU (AI-LOCATOR) PHỐI HỢP VỚI CODE CỦA ĐĂNGLOVEPDF.',
-          '⚠️ QUY TẮC SỐNG CÒN: TUYỆT ĐỐI KHÔNG viết lại toàn bộ văn bản từ A đến Z! Code của trang web đã đọc nguyên vẹn 100% văn bản thường rồi.',
-          'Bạn CHỈ làm phần khó nhất mà code dễ nhầm: xác định chính xác VỊ TRÍ & CẤU TRÚC rồi trả về ĐÚNG 1 khối JSON chuẩn để khi dán về, Code tự khớp và dàn trang PDF 10 Theme không sai bất kỳ chi tiết nào:',
+          'BẠN LÀ BỘ ĐỊNH VỊ CẤU TRÚC TÀI LIỆU (AI-LOCATOR · PDF MAGIC V1) PHỐI HỢP VỚI CODE CỦA ĐĂNGLOVEPDF.',
+          '⚠️ QUY TẮC SỐNG CÒN: TUYỆT ĐỐI KHÔNG viết lại toàn bộ văn bản từ A đến Z! Code đã trích xuất nguyên vẹn 100% văn xuôi và gắn mã định danh khối `[Pxx_Byy]` cho từng dòng.',
+          'Bạn CHỈ trả về ĐÚNG 1 đối tượng JSON chuẩn (`pdf_magic_v1`) chứa chỉ mục định vị chính xác theo mã khối `Pxx_Byy` để Bộ Hợp Nhất 3 Tầng của Code dựng PDF không vỡ:',
           '',
           `TỆP ĐÍNH KÈM: "${fileName}".`,
-          'HÃY TRẢ VỀ ĐÚNG 1 KHỐI JSON THEO CẤU TRÚC SAU (KHÔNG viết văn giải thích ngoài JSON):',
+          'HÃY TRẢ VỀ ĐÚNG 1 KHỐI JSON THEO SCHEMA SAU (KHÔNG thêm văn bản giải thích ngoài JSON):',
           '```json',
           '{',
-          '  "title": "Tên báo cáo / tài liệu chính",',
-          '  "subtitle": "Phụ đề hoặc tổ chức (nếu có)",',
+          '  "schema_version": "pdf_magic_v1",',
+          '  "document_meta": { "title": "Tên tài liệu chính", "subtitle": "Phụ đề/Tổ chức (nếu có)", "language": "vi", "has_toc_pages": [2] },',
           '  "headings": [',
-          '    { "page": 1, "level": 1, "text": "CHƯƠNG 1. ...", "matchAnchor": "6-10 từ đầu giống y trong tài liệu gốc" },',
-          '    { "page": 2, "level": 2, "text": "1.1. ...", "matchAnchor": "6-10 từ đầu giống y trong tài liệu gốc" }',
+          '    { "page": 1, "level": 1, "block_ids": ["P01_B01"], "anchor_text": "6-10 từ đầu gốc", "clean_title": "CHƯƠNG 1. ..." },',
+          '    { "page": 4, "level": 2, "block_ids": ["P04_B02", "P04_B03"], "anchor_text": "2.1 Phân tích...", "clean_title": "2.1. Phân tích đa chiều (gộp đủ 2 dòng bị gãy thành 1 tiêu đề sạch)" }',
           '  ],',
           '  "tables": [',
-          '    { "page": 3, "caption": "Bảng 1: Tên bảng (nếu tài liệu chưa có tên bảng thì HÃY TỰ ĐẶT TÊN KHOA HỌC PHÙ HỢP)", "startAnchor": "tiêu đề cột hoặc dòng đầu bảng", "headers": ["Cột 1", "Cột 2"], "columnCount": 2 }',
+          '    { "table_id": "T1", "page": 5, "caption_block": "P05_B04", "caption": "Bảng 1: Tên bảng (tự đặt chuẩn khoa học nếu gốc chưa có)", "start_block": "P05_B05", "header_rows": 1, "continued_from_prev": false, "headers": ["Cột 1", "Cột 2"] }',
           '  ],',
           '  "figures": [',
-          '    { "page": 5, "caption": "Hình 1: Tên hình/biểu đồ (nếu chưa có tên hình thì HÃY TỰ ĐẶT TÊN KHOA HỌC PHÙ HỢP)", "nearAnchor": "đoạn văn ngay sát hình" }',
+          '    { "page": 6, "block_id": "P06_B03", "caption": "Hình 1: Tên hình/biểu đồ (tự đặt nếu chưa có)", "nearAnchor": "đoạn ngay sát hình" }',
           '  ],',
           '  "formulas": [',
-          '    { "page": 4, "latex": "WACC = E/V \\\\cdot R_e + D/V \\\\cdot R_d(1 - T_c)", "rawAnchor": "chuỗi công thức thô bị vỡ trong file gốc" }',
+          '    { "page": 4, "block_id": "P04_B08", "mode": "display", "anchor_text": "chuỗi công thức thô bị vỡ", "latex": "WACC = \\\\frac{E}{V} R_e + \\\\frac{D}{V} R_d (1 - T_c)" }',
           '  ],',
           '  "specialSymbols": [',
-          '    { "page": 4, "rawText": "chuỗi ký tự lỗi font trong file gốc", "normalizedUnicode": "≥ / ≤ / × / → / Δ / ±" }',
-          '  ]',
+          '    { "page": 4, "rawText": "chuỗi ký tự vỡ font", "normalizedUnicode": "≥ / ≤ / × / → / Δ / ±" }',
+          '  ],',
+          '  "drop_blocks": ["P02_B01", "P03_B19"]',
           '}',
           '```',
-          '- Lưu ý: Loại bỏ dòng mục lục cũ có dấu chấm `.....55` khỏi `headings[]`; KHÔNG biến các bước tính số (`1. EBIT = 62.500`) thành heading; giữ nguyên tiền tệ `$28.40` (không đưa vào `formulas`).',
-          rawText ? `\n--- CHỈ MỤC ĐOẠN/BẢNG/HÌNH DO CODE ĐÃ QUÉT ---\n${rawText.slice(0, 12000)}` : '',
+          '- Quy tắc bắt buộc:',
+          '  1. Nếu 1 tiêu đề bị gãy thành 2-3 khối liên tiếp (VD `P04_B02` + `P04_B03`), liệt kê TẤT CẢ vào `block_ids[]` và ghi tên đầy đủ vào `clean_title` để Code tự gộp & xóa sạch dòng đuôi mồ côi!',
+          '  2. Nếu 1 bảng kéo dài sang trang sau, đánh `"continued_from_prev": true` ở mảnh trang sau để Code nối liền 1 bảng duy nhất.',
+          '  3. Đưa mã khối rác (số trang cũ, watermark, dòng mục lục chấm `.....55`) vào `drop_blocks[]` và số trang mục lục cũ vào `has_toc_pages[]`.',
+          '  4. KHÔNG biến các bước tính số (`1. EBIT = 62.500`) thành heading; giữ nguyên tiền tệ `$28.40` (không đưa vào `formulas`).',
+          rawText ? `\n--- KHUNG XƯƠNG TÀI LIỆU KÈM MÃ KHỐI Pxx_Byy DO CODE ĐÃ QUÉT ---\n${rawText.slice(0, 17500)}` : '',
         ].filter(Boolean).join('\n');
 
       case 'auto_toc':
         return [
-          'Bạn là bộ tạo Mục Lục tự động (Auto TOC) của hệ thống ĐăngLovePDF.',
+          'Bạn là bộ tạo Mục Lục tự động (Auto TOC · Block-ID Pxx_Byy) của hệ thống ĐăngLovePDF.',
           `Tệp: "${fileName}".`,
-          'YÊU CẦU ĐỊNH DẠNG BẮT BUỘC (để code trang web nhận diện tức thì):',
-          '- Mỗi dòng là đúng 1 đề mục theo cấu trúc: `Tên mục | Số trang` (ví dụ: `CHƯƠNG 1. MỞ ĐẦU | 3`).',
-          '- Giữ đúng phân cấp Chương, Phần, I., II., 1., 1.1., 1.1.1.',
-          '- TUYỆT ĐỐI LOẠI BỎ các dòng mục lục cũ có dấu chấm kéo dài (như `KHẢO........55`), tên Bảng/Hình và đoạn văn thường.',
-          '- Không giải thích thêm, chỉ xuất danh sách `Tên mục | Số trang`.',
-          rawText ? `\n--- CÁC ỨNG VIÊN TIÊU ĐỀ TRONG TỆP ---\n${rawText.slice(0, 12000)}` : '',
+          'YÊU CẦU ĐỊNH DẠNG BẮT BUỘC (chọn 1 trong 2 định dạng chuẩn sau để code đọc tức thì):',
+          '- Ưu tiên 1 (JSON chuẩn): `{"entries": [{"title": "CHƯƠNG 1. MỞ ĐẦU", "level": 1, "page": 3}, {"title": "1.1. Bối cảnh", "level": 2, "page": 4}]}`',
+          '- Hoặc dạng dòng: `Tên mục | Số trang` (ví dụ: `CHƯƠNG 1. MỞ ĐẦU | 3`).',
+          '- Gộp trọn vẹn các tiêu đề bị gãy xuống 2 dòng thành 1 tên mục hoàn chỉnh; giữ đúng phân cấp Chương, Phần, I., II., 1., 1.1., 1.1.1.',
+          '- TUYỆT ĐỐI LOẠI BỎ các dòng mục lục cũ có dấu chấm kéo dài (như `KHẢO........55`), tên Bảng/Hình, số trang và đoạn văn thường.',
+          '- Không viết giải thích ngoài danh sách/JSON.',
+          rawText ? `\n--- KHUNG XƯƠNG ỨNG VIÊN TIÊU ĐỀ (Pxx_Byy) ---\n${rawText.slice(0, 14000)}` : '',
         ].filter(Boolean).join('\n');
 
       case 'icr_handwriting': {
@@ -2605,6 +3068,10 @@
     callGeminiWithGrounding,
     showAiFullLoadingOverlay,
     maybeShowWelcomeApiUpsellModal,
+    tagBlocksWithDeterministicIds,
+    buildCompactSkeletonForAi,
+    parseAiStructuralPatchTolerant,
+    reconcileAiPatchIntoBlocks,
     extractJsonObjectFromText,
     applyBlueprintToBlocks,
     runAiBlueprintLocator,

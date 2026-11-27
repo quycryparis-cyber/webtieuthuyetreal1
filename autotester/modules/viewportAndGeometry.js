@@ -76,30 +76,42 @@
       Object.defineProperty(window, 'innerHeight', { configurable: true, get: () => h });
     } catch (_e) {}
 
-    const stEl = document.getElementById('at-sim-viewport-style');
-    if (stEl) {
-      const borderColor = w < 768 ? '#10b981' : w < 1200 ? '#f59e0b' : '#38bdf8';
-      stEl.textContent = `
-        html[data-at-sim-viewport] {
-          width: ${w}px !important; max-width: ${w}px !important; min-width: ${w}px !important;
-          margin: 0 auto !important; outline: 3px solid ${borderColor} !important; overflow-x: clip !important;
-        }
-        html[data-at-sim-viewport] body {
-          width: ${w}px !important; max-width: ${w}px !important; min-width: ${w}px !important;
-          position: relative !important; contain: layout !important;
-        }
-        html[data-at-sim-viewport] .fixed:not([data-autotester-ui="true"]):not([data-autotester-ui="true"] *),
-        html[data-at-sim-viewport] [role="dialog"]:not([data-autotester-ui="true"]) {
-          max-width: ${w}px !important;
-        }
-      `;
+    let stEl = document.getElementById('at-sim-viewport-style');
+    if (!stEl) {
+      stEl = document.createElement('style');
+      stEl.id = 'at-sim-viewport-style';
+      stEl.setAttribute('data-autotester-ui', 'true');
+      document.head.appendChild(stEl);
     }
+    const borderColor = w < 768 ? '#10b981' : w < 1200 ? '#f59e0b' : '#38bdf8';
+    stEl.textContent = `
+      html[data-at-sim-viewport] {
+        width: ${w}px !important; max-width: ${w}px !important; min-width: ${w}px !important;
+        margin: 0 auto !important; outline: 3px solid ${borderColor} !important; overflow-x: clip !important;
+      }
+      html[data-at-sim-viewport] body {
+        width: ${w}px !important; max-width: ${w}px !important; min-width: ${w}px !important;
+        position: relative !important; contain: layout !important;
+      }
+      html[data-at-sim-viewport] .fixed:not([data-autotester-ui="true"]):not([data-autotester-ui="true"] *),
+      html[data-at-sim-viewport] [role="dialog"]:not([data-autotester-ui="true"]) {
+        width: ${w}px !important;
+        max-width: ${w}px !important;
+        left: 0 !important;
+        right: 0 !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+      }
+    `;
+    document.documentElement.setAttribute('data-at-sim-viewport', String(w));
     try { sim._syncCssMediaRules?.(w); } catch (_e) {}
     try { window.dispatchEvent(new Event('resize')); } catch (_e) {}
     return { width: w, height: h, mode: baseMode, label: sim._customLabel };
   }
 
   function restoreViewportWidth() {
+    document.documentElement.removeAttribute('data-at-sim-viewport');
+    document.getElementById('at-sim-viewport-style')?.remove();
     if (AT.viewportSim) {
       AT.viewportSim._customWidth = null;
       AT.viewportSim._customHeight = null;
@@ -173,8 +185,11 @@
     const rootLeft = doc.body?.getBoundingClientRect?.().left || 0;
     const issues = [];
 
-    // A. Inspect every visible modal/dialog/overlay
-    const modals = Array.from(doc.querySelectorAll('[role="dialog"], [aria-modal="true"], [id*="modal"], [id*="preview-modal"]')).filter((m) => {
+    // A. Inspect every visible top-level modal/dialog/overlay (excluding full-screen onboarding gate & nested sub-bars)
+    const modalSelector = '[role="dialog"], [aria-modal="true"], [id^="modal-"], [id$="-modal"], [id*="preview-modal"]';
+    const modals = Array.from(doc.querySelectorAll(modalSelector)).filter((m) => {
+      if (m.id === 'app-entry-connection-gate') return false;
+      if (m.parentElement?.closest?.(modalSelector)) return false;
       if (!isVisibleEl(m, win)) return false;
       const r = m.getBoundingClientRect();
       return r.width >= 180 && r.height >= 120;

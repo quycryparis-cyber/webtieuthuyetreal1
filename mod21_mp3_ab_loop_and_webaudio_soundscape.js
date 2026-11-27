@@ -3386,7 +3386,7 @@
       if (btnTab5Expand && !btnTab5Expand.dataset.mod21Bound) {
         btnTab5Expand.dataset.mod21Bound = 'true';
         btnTab5Expand.addEventListener('click', () => {
-          ['s14-panel-attendance-box', 's14-panel-pomodoro-box', 's14-panel-music-box', 's14-panel-typography-box', 's14-panel-youtube-box'].forEach((id) => this.tab5OpenPanels.add(id));
+          ['s14-panel-attendance-box', 's14-panel-pomodoro-box', 's14-panel-music-box', 's14-panel-typography-box', 's14-panel-youtube-box', 's14-panel-background-box'].forEach((id) => this.tab5OpenPanels.add(id));
           this.applyTab5AccordionState();
           if (window.NoirStudio?.navigator?.collapsibleToolbars?.setTargetCollapsed) {
             window.NoirStudio.navigator.collapsibleToolbars.setTargetCollapsed('tab5-audio-advanced-grid', false);
@@ -5139,21 +5139,29 @@
           </div>
         </div>
 
-        <!-- Hàng 2: Bộ sưu tập 8 Bối cảnh Âm thanh Văn học chọn lọc (1-Click Literary Scenes) -->
-        <div class="p-3.5 rounded-xl bg-studioLightBg dark:bg-zinc-950 border border-studioLightBorder dark:border-zinc-800 space-y-2.5">
+        <!-- Hàng 2: Danh sách Bối cảnh Âm thanh Văn học có thể Mở rộng / Thu gọn gọn gàng -->
+        <div class="p-3.5 rounded-xl bg-studioLightBg dark:bg-zinc-950 border border-studioLightBorder dark:border-zinc-800 space-y-2">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <span class="font-extrabold text-amber-400">🎬 Kho Bối Cảnh Âm Thanh Theo Phân Cảnh Truyện (1-Click Literary Soundscapes):</span>
-            <span class="text-[10px] text-zinc-400">Tự động phối trộn 6 kênh âm thanh + chọn thang âm Piano phù hợp với tâm trạng chương truyện</span>
+            <div class="space-y-0.5 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-extrabold text-amber-400">🎬 Kho Bối Cảnh Âm Thanh Theo Phân Cảnh Truyện (${CURATED_LITERARY_SOUND_SCENES.length} bối cảnh)</span>
+                <span id="mod21-active-scene-pill" class="px-2 py-0.5 rounded-full border border-emerald-500/35 bg-emerald-500/10 text-emerald-300 font-bold text-[10px]">Chọn bối cảnh</span>
+              </div>
+              <div class="text-[10px] text-zinc-400">Tự động phối trộn 6 kênh âm thanh + chọn thang âm Piano phù hợp với tâm trạng chương truyện</div>
+            </div>
+            <button type="button" id="btn-toggle-mod21-soundscape-list" aria-expanded="false" class="px-3 py-1.5 rounded-xl border border-amber-500/45 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-bold text-[11px] cursor-pointer shrink-0 transition">
+              ▼ Mở rộng danh sách (${CURATED_LITERARY_SOUND_SCENES.length})
+            </button>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          <div id="mod21-soundscape-list-body" class="hidden rounded-xl border border-zinc-800/90 bg-zinc-900/70 divide-y divide-zinc-800/80 max-h-72 overflow-y-auto">
             ${CURATED_LITERARY_SOUND_SCENES.map(
               (scene) => `
-              <button type="button" data-literary-scene="${scene.id}" class="mod21-scene-card p-2.5 rounded-xl border border-zinc-800 hover:border-amber-500/60 bg-zinc-900/80 hover:bg-amber-500/10 text-left transition flex flex-col justify-between gap-1">
-                <div>
-                  <div class="font-extrabold text-[11px] text-emerald-300">${scene.title}</div>
-                  <div class="text-[9px] font-bold uppercase text-amber-400/90 mt-0.5">${scene.genreTag}</div>
+              <button type="button" data-literary-scene="${scene.id}" class="mod21-scene-card w-full px-3 py-2.5 hover:bg-amber-500/10 text-left transition flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                <div class="min-w-0">
+                  <div class="font-extrabold text-[11.5px] text-emerald-300">${scene.title}</div>
+                  <div class="text-[10px] text-zinc-400 leading-snug truncate">${scene.description}</div>
                 </div>
-                <div class="text-[10px] text-zinc-400 line-clamp-2 leading-snug">${scene.description}</div>
+                <span class="px-2 py-0.5 rounded-md bg-zinc-950 border border-amber-500/30 text-[9.5px] font-bold uppercase text-amber-400/90 shrink-0 self-start sm:self-center">${scene.genreTag}</span>
               </button>
             `
             ).join('')}
@@ -5162,6 +5170,25 @@
       `;
 
       musicBox.appendChild(deck);
+
+      const soundListToggleBtn = deck.querySelector('#btn-toggle-mod21-soundscape-list');
+      const soundListBody = deck.querySelector('#mod21-soundscape-list-body');
+      const activeScenePill = deck.querySelector('#mod21-active-scene-pill');
+      soundListToggleBtn?.addEventListener('click', () => {
+        const willOpen = soundListBody.classList.contains('hidden');
+        soundListBody.classList.toggle('hidden', !willOpen);
+        soundListToggleBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        soundListToggleBtn.textContent = willOpen
+          ? '▲ Thu gọn danh sách'
+          : `▼ Mở rộng danh sách (${CURATED_LITERARY_SOUND_SCENES.length})`;
+      });
+      deck.querySelectorAll('.mod21-scene-card').forEach((card) => {
+        card.addEventListener('click', () => {
+          const sid = card.getAttribute('data-literary-scene');
+          const sc = CURATED_LITERARY_SOUND_SCENES.find((x) => x.id === sid);
+          if (sc && activeScenePill) activeScenePill.textContent = sc.title;
+        });
+      });
 
       // Gắn sự kiện cho các nút vừa tạo
       const capABtn = document.getElementById('btn-mod21-capture-point-a');

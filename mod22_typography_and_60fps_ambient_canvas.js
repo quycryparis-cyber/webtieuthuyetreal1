@@ -1121,6 +1121,9 @@
         el.style.fontSize = `${this.fontSizePx}px`;
         el.style.lineHeight = String(this.lineHeight);
         el.style.letterSpacing = this.letterSpacing;
+        if (el.id === 'mod22-typography-specimen-preview') {
+          el.style.maxWidth = this.pageWidth || '100%';
+        }
       });
 
       const mainEditor = document.getElementById('textarea-chapter-content');
@@ -1409,7 +1412,7 @@
         'pt-4 mt-2 border-t border-studioLightBorder dark:border-zinc-800 space-y-4 text-xs';
 
       deck.innerHTML = `
-        <!-- Hàng 1: 5 Mẫu Kiểu Chữ Sách Xuất Bản Chọn Nhanh (1-Click Book Typography Presets) -->
+        <!-- 5 Mẫu Kiểu Chữ Sách Xuất Bản Chọn Nhanh (1-Click Book Typography Presets) -->
         <div class="space-y-2">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <span class="font-extrabold text-indigo-400">📚 Bộ Mẫu Trang Sách Chuẩn Xuất Bản (1-Click Book Typography):</span>
@@ -1431,63 +1434,63 @@
             ).join('')}
           </div>
         </div>
-
-        <!-- Hàng 2: Tinh chỉnh Vật lý Hạt Nền (Mật độ, Sức gió, Độ mờ Kính chắn) & Khung Xem Trước Chữ -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
-          <div class="lg:col-span-6 p-3.5 rounded-xl bg-studioLightBg dark:bg-zinc-950 border border-indigo-500/30 space-y-2.5">
-            <div class="flex items-center justify-between">
-              <span class="font-extrabold text-indigo-300">🎛️ Tinh Chỉnh Vật Lý Hạt Nền & Lớp Kính Mờ:</span>
-              <button type="button" id="btn-mod22-clear-custom-bg" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-rose-600 text-[10px] font-bold text-zinc-300 hover:text-white transition">
-                🗑️ Gỡ Ảnh/Video Nền
-              </button>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <span class="w-32 text-[11px] text-zinc-400">Độ tối lớp kính chắn:</span>
-              <input id="mod22-slider-frost-opacity" type="range" min="5" max="80" value="${Math.round(
-                this.frostShieldOpacity * 100
-              )}" class="flex-1 accent-indigo-500" />
-              <span id="mod22-label-frost-val" class="w-10 text-right font-monoCode text-[11px] text-indigo-300">${Math.round(
-                this.frostShieldOpacity * 100
-              )}%</span>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <span class="w-32 text-[11px] text-zinc-400">Mật độ hạt 60FPS:</span>
-              <input id="mod22-slider-particle-density" type="range" min="40" max="200" value="${Math.round(
-                this.canvasRenderer.densityMultiplier * 100
-              )}" class="flex-1 accent-emerald-500" />
-              <span id="mod22-label-density-val" class="w-10 text-right font-monoCode text-[11px] text-emerald-300">${Math.round(
-                this.canvasRenderer.densityMultiplier * 100
-              )}%</span>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <span class="w-32 text-[11px] text-zinc-400">Sức gió không gian:</span>
-              <input id="mod22-slider-wind-strength" type="range" min="0" max="220" value="${Math.round(
-                this.canvasRenderer.windStrength * 100
-              )}" class="flex-1 accent-amber-500" />
-              <span id="mod22-label-wind-val" class="w-10 text-right font-monoCode text-[11px] text-amber-300">${Math.round(
-                this.canvasRenderer.windStrength * 100
-              )}%</span>
-            </div>
-          </div>
-
-          <!-- Khung Xem Trước Bản Thảo (Live Book Specimen Preview) -->
-          <div class="lg:col-span-6 p-3.5 rounded-xl bg-studioLightBg dark:bg-zinc-950 border border-emerald-500/30 flex flex-col justify-between space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="font-extrabold text-emerald-400">👁️ Xem Trước Trang Sách Thực Tế (Live Typography Preview):</span>
-              <span class="text-[10px] text-zinc-400">Tự động đồng bộ với Bàn viết Tab 1</span>
-            </div>
-            <div id="mod22-typography-specimen-preview" class="p-3 rounded-xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightPanel/80 dark:bg-zinc-900/90 select-text">
-              Mưa đêm gõ nhịp đều đặn lên ô cửa kính mờ hơi sương. Ánh đèn bàn vàng ấm hắt lên trang bản thảo còn thơm mùi mực mới.<br/>
-              - Đêm nay chúng ta sẽ viết tiếp chương cao trào chứ? (Lâm Phong)
-            </div>
-          </div>
-        </div>
       `;
 
       typoBox.appendChild(deck);
+
+      // Gắn Cụm 6.2 (Vật lý hạt nền) & Cụm 6.3 (Lớp kính mờ) vào đúng Mục 6 Tab 5 (Tùy chỉnh nền trang web)
+      const physicsHost = document.getElementById('tab5-bg-acc-physics-host');
+      if (physicsHost && !document.getElementById('mod22-slider-particle-density')) {
+        physicsHost.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-36 text-[11px] text-zinc-400">Mật độ hạt 60FPS:</span>
+            <input id="mod22-slider-particle-density" type="range" min="40" max="200" value="${Math.round(
+              this.canvasRenderer.densityMultiplier * 100
+            )}" class="flex-1 accent-emerald-500" />
+            <span id="mod22-label-density-val" class="w-10 text-right font-monoCode text-[11px] text-emerald-300">${Math.round(
+              this.canvasRenderer.densityMultiplier * 100
+            )}%</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-36 text-[11px] text-zinc-400">Sức gió không gian:</span>
+            <input id="mod22-slider-wind-strength" type="range" min="0" max="220" value="${Math.round(
+              this.canvasRenderer.windStrength * 100
+            )}" class="flex-1 accent-amber-500" />
+            <span id="mod22-label-wind-val" class="w-10 text-right font-monoCode text-[11px] text-amber-300">${Math.round(
+              this.canvasRenderer.windStrength * 100
+            )}%</span>
+          </div>
+        `;
+      }
+
+      const frostHost = document.getElementById('tab5-bg-acc-frost-host');
+      if (frostHost && !document.getElementById('mod22-slider-frost-opacity')) {
+        frostHost.innerHTML = `
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <span class="text-[11px] text-zinc-300">Điều chỉnh độ mờ/tối của lớp kính chắn giúp chữ nổi bật trên mọi nền ảnh hoặc video.</span>
+            <button type="button" id="btn-mod22-clear-custom-bg" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-rose-600 text-[10.5px] font-bold text-zinc-200 hover:text-white transition">
+              🗑️ Gỡ Ảnh/Video Nền
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-36 text-[11px] text-zinc-400">Độ tối lớp kính chắn:</span>
+            <input id="mod22-slider-frost-opacity" type="range" min="5" max="80" value="${Math.round(
+              this.frostShieldOpacity * 100
+            )}" class="flex-1 accent-indigo-500" />
+            <span id="mod22-label-frost-val" class="w-10 text-right font-monoCode text-[11px] text-indigo-300">${Math.round(
+              this.frostShieldOpacity * 100
+            )}%</span>
+          </div>
+        `;
+      }
+
+      // Gắn nút Thu gọn / Mở rộng cả 6 cụm nền trong Mục 6 Tab 5
+      document.getElementById('btn-tab5-bg-collapse-all')?.addEventListener('click', () => {
+        document.querySelectorAll('#s14-panel-background-box details.tab5-bg-sub-acc').forEach((d) => { d.open = false; });
+      });
+      document.getElementById('btn-tab5-bg-expand-all')?.addEventListener('click', () => {
+        document.querySelectorAll('#s14-panel-background-box details.tab5-bg-sub-acc').forEach((d) => { d.open = true; });
+      });
 
       // Gắn sự kiện cho các thẻ Preset Kiểu chữ
       deck.querySelectorAll('.mod22-typo-preset-card').forEach((card) => {
@@ -2050,58 +2053,45 @@
     }
 
     injectWallpaperAndEyeCarePanel() {
-      const deck = document.getElementById('mod22-advanced-typography-deck');
-      if (!deck || document.getElementById('mod22-wallpaper-eyecare-row')) return;
+      const eyeHost = document.getElementById('tab5-bg-acc-eyecare-host');
+      const galleryHost = document.getElementById('tab5-bg-acc-gallery-host');
+      if ((!eyeHost && !galleryHost) || document.getElementById('mod22-select-eyecare-kelvin')) return;
 
-      const extraRow = document.createElement('div');
-      extraRow.id = 'mod22-wallpaper-eyecare-row';
-      extraRow.className =
-        'p-3.5 rounded-xl bg-studioLightBg dark:bg-zinc-950 border border-studioLightBorder dark:border-zinc-800 space-y-3';
-
-      extraRow.innerHTML = `
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
-          <!-- Bộ chọn Nhiệt độ màu Bảo vệ mắt (Kelvin Eye-Care) -->
-          <div class="lg:col-span-5 space-y-1.5">
-            <label class="block text-[10px] font-extrabold uppercase text-amber-400">
-              🕯️ Chế Độ Bảo Vệ Thị Lực Ban Đêm (Circadian Eye-Care):
-            </label>
-            <div class="flex flex-wrap items-center gap-2">
-              <select id="mod22-select-eyecare-kelvin" class="noir-dark-select w-full sm:w-auto sm:flex-1 min-w-0 sm:min-w-[160px] px-2.5 py-1.5 rounded-lg border border-zinc-700 bg-zinc-950 font-semibold text-[11px] text-white">
-                ${Object.values(CIRCADIAN_EYE_CARE_PROFILES)
-                  .map((p) => `<option value="${p.id}">${p.label}</option>`)
-                  .join('')}
-              </select>
-              <button type="button" id="btn-mod22-toggle-indent" class="px-2.5 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 hover:border-emerald-500 font-bold text-[11px] text-zinc-200 shrink-0 whitespace-nowrap" title="Thụt lề dòng đầu tiên kiểu sách in">
-                ⇥ Thụt đầu dòng
-              </button>
-            </div>
+      if (eyeHost) {
+        eyeHost.innerHTML = `
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="mod22-select-eyecare-kelvin" class="noir-dark-select w-full sm:w-auto sm:flex-1 min-w-0 sm:min-w-[180px] px-2.5 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 font-semibold text-[11px] text-white">
+              ${Object.values(CIRCADIAN_EYE_CARE_PROFILES)
+                .map((p) => `<option value="${p.id}">${p.label}</option>`)
+                .join('')}
+            </select>
+            <button type="button" id="btn-mod22-toggle-indent" class="px-2.5 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 hover:border-emerald-500 font-bold text-[11px] text-zinc-200 shrink-0 whitespace-nowrap" title="Thụt lề dòng đầu tiên kiểu sách in">
+              ⇥ Thụt đầu dòng
+            </button>
           </div>
+        `;
+      }
 
-          <!-- 6 Tranh nền SVG Nghệ thuật Tự sinh (0MB) -->
-          <div class="lg:col-span-7 space-y-1.5">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <span class="text-[10px] font-extrabold uppercase text-emerald-400">
-                🎨 Kho Tranh Nền Nghệ Thuật Tự Sinh (0MB — Không Cần Tải File):
-              </span>
-              <button type="button" id="btn-mod22-clear-wallpaper" class="hidden px-2 py-0.5 rounded-lg border border-rose-500/40 bg-rose-500/15 hover:bg-rose-600 text-rose-200 hover:text-white font-bold text-[10px]">
-                ✕ Tắt tranh nền
-              </button>
-            </div>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-              ${PROCEDURAL_ART_WALLPAPERS.map(
-                (wp) => `
-                <button type="button" data-proc-wallpaper="${wp.id}" class="mod22-proc-wp-btn px-2.5 py-1.5 rounded-lg border border-zinc-800 hover:border-emerald-500 bg-zinc-900 text-left transition">
-                  <div class="font-bold text-[10px] text-emerald-300 leading-snug break-words">${wp.title}</div>
-                  <div class="text-[9px] text-zinc-400 leading-snug break-words">${wp.subtitle}</div>
-                </button>
-              `
-              ).join('')}
-            </div>
+      if (galleryHost) {
+        galleryHost.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-[11px] text-zinc-400">Chọn nhanh 1 tranh nền nghệ thuật tự sinh (0 MB — không tốn dung lượng tải).</span>
+            <button type="button" id="btn-mod22-clear-wallpaper" class="hidden px-2.5 py-1 rounded-lg border border-rose-500/40 bg-rose-500/15 hover:bg-rose-600 text-rose-200 hover:text-white font-bold text-[10.5px]">
+              ✕ Tắt tranh nền
+            </button>
           </div>
-        </div>
-      `;
-
-      deck.appendChild(extraRow);
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            ${PROCEDURAL_ART_WALLPAPERS.map(
+              (wp) => `
+              <button type="button" data-proc-wallpaper="${wp.id}" class="mod22-proc-wp-btn px-2.5 py-2 rounded-lg border border-zinc-800 hover:border-emerald-500 bg-zinc-900 text-left transition">
+                <div class="font-bold text-[10.5px] text-emerald-300 leading-snug break-words">${wp.title}</div>
+                <div class="text-[9.5px] text-zinc-400 leading-snug break-words">${wp.subtitle}</div>
+              </button>
+            `
+            ).join('')}
+          </div>
+        `;
+      }
 
       const eyeSelect = document.getElementById('mod22-select-eyecare-kelvin');
       if (eyeSelect) {
@@ -2118,7 +2108,7 @@
         });
       }
 
-      extraRow.querySelectorAll('.mod22-proc-wp-btn').forEach((btn) => {
+      (galleryHost || document).querySelectorAll('.mod22-proc-wp-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           const wpId = btn.getAttribute('data-proc-wallpaper');
           if (this.activeWallpaperId === wpId) {

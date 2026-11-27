@@ -218,14 +218,15 @@
     for (const pd of pageDataList) {
       const kept = [];
       for (const r of pd.rows) {
-        const inTop = r.y >= pd.pageHeight * 0.89;
-        const inBottom = r.y <= pd.pageHeight * 0.11;
+        const inTop = r.y >= pd.pageHeight * 0.87;
+        const inBottom = r.y <= pd.pageHeight * 0.13;
         const normKey = `${inTop ? 'T' : 'B'}:${r.text.replace(/\d+/g, '#').toLowerCase()}`;
         const isFreqRepeat = (inTop || inBottom) && (freqMap.get(normKey) || 0) >= minRepeat;
         const isEdgeBoilerplate = (inTop || inBottom) && WEB_BOILERPLATE_EDGE_RE.test(r.text);
+        const isStandalonePageCounter = /^(?:(?:Trang|Page)\s+\d{1,4}\s*(?:\/\s*\d{1,4}|of\s+\d{1,4})|[-–—]\s*\d{1,4}\s*[-–—])$/i.test(r.text);
         const isInlinePromptLabel = /^(?:User\s+prompt|Prompt\s+người\s+dùng)\s*:?\s*$/i.test(r.text);
 
-        if (isFreqRepeat || isEdgeBoilerplate || isInlinePromptLabel) {
+        if (isFreqRepeat || isEdgeBoilerplate || isStandalonePageCounter || isInlinePromptLabel) {
           strippedCount += 1;
           continue;
         }
@@ -423,8 +424,21 @@
       }
 
       if (matrix.length >= 2 && nCols <= 12) {
-        const hdrRow = matrix[0];
-        const bdyRows = mergeTableContinuationRows(matrix.slice(1), ast);
+        let hdrRow = matrix[0].slice();
+        let bodyIdx = 1;
+        // Gộp các dòng tiêu đề bảng vector bị tách nhiều hàng (cột 0 trống trong khi các cột còn lại còn phần chữ tiêu đề)
+        while (bodyIdx < matrix.length - 1 && bodyIdx < 4) {
+          const cand = matrix[bodyIdx];
+          const c0 = String(cand[0] || '').trim();
+          const hasOthers = cand.slice(1).some((v) => String(v || '').trim() !== '');
+          if (!c0 && hasOthers) {
+            hdrRow = hdrRow.map((h, ci) => [h, cand[ci]].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim());
+            bodyIdx += 1;
+          } else {
+            break;
+          }
+        }
+        const bdyRows = mergeTableContinuationRows(matrix.slice(bodyIdx), ast);
         if (bdyRows.length) {
           tableRegions.push({
             xMin,
@@ -701,26 +715,45 @@
     }
     if (rawGrid.length < 2) return null;
 
-    // 1. Bảo vệ Header 2 dòng: nếu dòng 0 và dòng 1 là 2 mảnh của tiêu đề cột -> gộp thành 1 dòng Header
+    // 1. Bảo vệ Header NHIỀU dòng (2, 3, 4+ dòng — chặn rách Header như Bảng 6.5 thành hàng trống cột 0!)
     const looksNewKeyCell = (txt) =>
-      /^(?:\d{1,2}\.\s+\S|GP\d+\b|STT\b|Nhóm\b|Tiêu\s+chí\b|Chỉ\s+tiêu\b|[A-Z]\.\s+\S)/i.test(String(txt || '').trim());
+      /^(?:[IVXLCDM]{1,5}\.\s+\S|\d{1,3}(?:\.\d+)*[.)]\s+\S|GP\d+\b|STT\b|Bước\s*\d+|Nhóm\b|Tiêu\s+chí\b|Chỉ\s+tiêu\b|[A-Z]\.\s+\S)/i.test(
+        String(txt || '').trim()
+      );
+    const hasDanglingHeaderEnd = (txt) =>
+      /(?:[\/&,(\-–—]|\b(?:và|của|về|trong|theo|cho|tại|từ|với|Nhà|Hiện|Niên|Xuất|Vai|Giá|Cơ|Tác|Phân|Đối|Trò|Khoa|Công|Nghiên))$/.test(
+        String(txt || '').trim()
+      );
+    const hasNumericDataCell = (cells) =>
+      cells.some((c) => /^\s*(?:[$₫€£]?\d[\d.,]*\s*%?|\d{4}\s*[-–]\s*\d{4})\s*$/.test(String(c || '').trim()));
 
     let bodyStartIdx = 1;
     let mergedHeaderCells = rawGrid[0].cells.slice();
-    if (rawGrid.length >= 3) {
-      const r0 = rawGrid[0];
-      const r1 = rawGrid[1];
-      const r1LooksLikeDataKey = looksNewKeyCell(r1.cells[0]);
-      const r1HasHeaderFragments =
-        !r1LooksLikeDataKey &&
-        ((r0.isBold && r1.isBold) ||
-          r1.cells.some((c, ci) => c && /^[a-zà-ỹ]/.test(c) && Boolean(r0.cells[ci])) ||
-          r1.cells.filter(Boolean).length < colsUse.length);
-      if (r1HasHeaderFragments && r0.y - r1.y <= Math.max(28, medianFontSize * 2.4)) {
+    let lastHeaderY = rawGrid[0].y;
+    const r0 = rawGrid[0];
+    while (bodyStartIdx < rawGrid.length - 1 && bodyStartIdx < 5) {
+      const cand = rawGrid[bodyStartIdx];
+      const col0 = String(cand.cells[0] || '').trim();
+      const otherColsNonEmpty = cand.cells.slice(1).some((c) => String(c || '').trim() !== '');
+      const candLooksLikeDataKey = looksNewKeyCell(col0);
+      const dyHdr = lastHeaderY - cand.y;
+      if (candLooksLikeDataKey || dyHdr > Math.max(32, medianFontSize * 2.85)) break;
+
+      const emptyKeyWrap = !col0 && otherColsNonEmpty;
+      const boldHeaderWrap = Boolean(r0.isBold && cand.isBold && !hasNumericDataCell(cand.cells));
+      const lowercaseOrPunctWrap = cand.cells.some(
+        (c, ci) => c && (/^[a-zà-ỹ&\/,(\-]/.test(c) || hasDanglingHeaderEnd(mergedHeaderCells[ci])) && Boolean(mergedHeaderCells[ci])
+      );
+      const sparseHeaderWrap = cand.cells.filter(Boolean).length < colsUse.length && !hasNumericDataCell(cand.cells);
+
+      if (emptyKeyWrap || boldHeaderWrap || lowercaseOrPunctWrap || sparseHeaderWrap) {
         mergedHeaderCells = mergedHeaderCells.map((h, ci) =>
-          [h, r1.cells[ci]].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
+          [h, cand.cells[ci]].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
         );
-        bodyStartIdx = 2;
+        lastHeaderY = cand.y;
+        bodyStartIdx += 1;
+      } else {
+        break;
       }
     }
 
@@ -843,16 +876,38 @@
       const prevEndedColon = /:\s*$/.test(prev.text);
       // Luật 1: Dòng hiện tại là tiêu đề / caption / nguồn
       const r1HeadingStart = isHardHeadingStart(cur.text, cur.fontSize, cur.isBold, ast, medianFontSize, prevEndedColon);
-      // Luật 2: Dòng trước ĐÃ là tiêu đề và dòng hiện tại chuyển sang văn xuôi
+      // Luật 2: Dòng trước ĐÃ là tiêu đề -> chỉ ngắt khi dòng hiện tại thực sự đổi kiểu (hết in đậm / đổi cỡ chữ / văn xuôi dài), KHÔNG cắt đôi tiêu đề 2-3 dòng cùng cỡ & cùng in đậm!
       const prevWasHeading = ast.classifyHeadingCandidate(
         prev.text,
         { fontSize: prev.fontSize, isBold: prev.isBold },
         { bodyFontSize: medianFontSize, prevEndedWithColon: false }
       ).isHeading;
+      const dy = prev.y - cur.y;
+      const hasUnclosedDelims =
+        (prev.text.split('(').length > prev.text.split(')').length) ||
+        ((prev.text.match(/["“]/g) || []).length > (prev.text.match(/["”]/g) || []).length);
+      const isExplicitNewHeadingPrefix =
+        /^(?:MỤC\s+LỤC|DANH\s+MỤC|CHƯƠNG\s+[IVXLCDM\d]+|PHẦN\s+[IVXLCDM\d]+|PHỤ\s+LỤC|Bảng\s+\d|BẢNG\s+\d|Hình\s+\d|HÌNH\s+\d|Nguồn\s*:|Source\s*:|[IVXLCDM]{1,5}\.\s+\S|\d{1,3}(?:\.\d+){0,3}[.)]?\s+\S)/i.test(
+          cur.text
+        );
+      const curContinuesMultiLineHeading =
+        prevWasHeading &&
+        !isExplicitNewHeadingPrefix &&
+        prev.isBold === cur.isBold &&
+        Math.abs(prev.fontSize - cur.fontSize) < medianFontSize * 0.09 &&
+        dy <= Math.max(medianLineGap * 1.5, prev.fontSize * 1.75) &&
+        prev.text.length < 220 &&
+        !/^(?:[-•*▪◦+]|\d{1,2}[).])\s+\S/.test(cur.text) &&
+        (cur.allBold || cur.text.length <= 72 || /^[a-zà-ỹ)\]"”’]/.test(cur.text) || hasUnclosedDelims) &&
+        !/[.!?]$/.test(prev.text);
+
       const r2HeadingEnd =
         prevWasHeading &&
+        !curContinuesMultiLineHeading &&
         (prev.isBold !== cur.isBold ||
           Math.abs(prev.fontSize - cur.fontSize) >= medianFontSize * 0.08 ||
+          cur.text.length > 78 ||
+          /[.!?]$/.test(prev.text) ||
           /^\d+\.\d+/.test(prev.text) ||
           /^(?:CHƯƠNG|PHẦN|Câu|Bài)\b/i.test(prev.text));
       // Luật 3: Đổi kích thước chữ hoặc in đậm -> thường đột ngột
@@ -860,7 +915,6 @@
         Math.abs(prev.fontSize - cur.fontSize) >= medianFontSize * 0.12 ||
         (prev.allBold && !cur.allBold && prev.text.length <= 120);
       // Luật 4: Khoảng cách dòng lớn (ngắt đoạn)
-      const dy = prev.y - cur.y;
       const r4VertGap = dy > Math.max(medianLineGap * 1.48, medianFontSize * 1.75);
       // Luật 5: Thụt đầu dòng đoạn văn mới sau dấu ngắt câu
       const r5Indent =
@@ -874,6 +928,12 @@
         /^(?:Nguồn|Source|Ghi\s+chú)\s*:/i.test(prev.text) ||
         CALC_EQUATION_RE.test(cur.text) ||
         /^[A-Za-z][A-Za-z0-9_]*\s*[=≈]\s*.+/.test(cur.text);
+
+      if (curContinuesMultiLineHeading && !r6ListOrTag) {
+        prev.text = `${prev.text} ${cur.text}`.replace(/\s+/g, ' ').trim();
+        prev.y = cur.y;
+        continue;
+      }
 
       if (r1HeadingStart || r2HeadingEnd || r3FontShift || r4VertGap || r5Indent || r6ListOrTag) {
         outTokens.push({ ...cur });
@@ -1139,14 +1199,319 @@
   }
 
   // ============================================================================
+  // TẦNG 7A: PHÂN LOẠI TRANG ĐỊNH LƯỢNG (PER-PAGE TRIAGE) & RECURSIVE XY-CUT
+  // ============================================================================
+  const CORRUPT_GLYPH_RE = /[\uFFFD\uE000-\uF8FF\u0000-\u0008\u000E-\u001F]/g;
+  const MOJIBAKE_SEQ_RE = /(?:Ã[\x80-\xBF]|Â[\x80-\xBF]|Æ[\x80-\xBF]|Ð[\x80-\xBF]|á»|áº|Ä‘|Ä){2,}/g;
+
+  function detectVerticalColumnGutter(rows, pageWidth) {
+    const pw = Math.max(200, Number(pageWidth || 595.28));
+    const active = (Array.isArray(rows) ? rows : []).filter((r) => r && !r.consumed && String(r.text || '').trim().length >= 3);
+    if (active.length < 4) return { isMultiColumn: false, gutterX: 0, score: 0, leftCount: 0, rightCount: 0 };
+
+    const minGutter = Math.max(14, pw * 0.028);
+    const searchStart = Math.round(pw * 0.30);
+    const searchEnd = Math.round(pw * 0.70);
+    const step = 4;
+
+    let bestX = 0;
+    let bestScore = 0;
+    let bestLeft = 0;
+    let bestRight = 0;
+
+    for (let gx = searchStart; gx <= searchEnd; gx += step) {
+      let leftOnly = 0;
+      let rightOnly = 0;
+      let splitSameRow = 0;
+      let crossing = 0;
+      const gLo = gx - minGutter * 0.5;
+      const gHi = gx + minGutter * 0.5;
+
+      for (const r of active) {
+        const segs = Array.isArray(r.segs) && r.segs.length ? r.segs : [{ x: r.xMin || 0, endX: r.xMax || pw, text: r.text }];
+        const segCrosses = segs.some((sg) => sg.x < gLo && sg.endX > gHi);
+        if (segCrosses) {
+          crossing += 1;
+          continue;
+        }
+        const hasL = segs.some((sg) => sg.endX <= gHi);
+        const hasR = segs.some((sg) => sg.x >= gLo);
+        if (hasL && hasR) splitSameRow += 1;
+        else if (hasL) leftOnly += 1;
+        else if (hasR) rightOnly += 1;
+      }
+
+      const leftTotal = leftOnly + splitSameRow;
+      const rightTotal = rightOnly + splitSameRow;
+      if (leftTotal < 3 || rightTotal < 3) continue;
+      // Tránh nhận nhầm bảng 2 cột ngắn có toàn số liệu ngắn làm trang văn bản 2 cột
+      const ratioCross = crossing / Math.max(1, active.length);
+      const balance = Math.min(leftTotal, rightTotal) / Math.max(1, Math.max(leftTotal, rightTotal));
+      const coverage = (leftTotal + rightTotal - splitSameRow) / Math.max(1, active.length);
+      const score = Number((coverage * 0.55 + balance * 0.35 + Math.max(0, 1 - ratioCross * 2.4) * 0.10).toFixed(3));
+      if (ratioCross <= 0.32 && score > bestScore) {
+        bestScore = score;
+        bestX = gx;
+        bestLeft = leftTotal;
+        bestRight = rightTotal;
+      }
+    }
+
+    // Kiểm tra thêm: ít nhất 35% số hàng cột trái/phải có độ dài văn xuôi (>= 18 ký tự) để không bẻ nhầm bảng giá trị ngắn
+    if (bestScore >= 0.55 && bestX > 0) {
+      let proseSegs = 0;
+      let totalSideSegs = 0;
+      for (const r of active) {
+        const segs = Array.isArray(r.segs) && r.segs.length ? r.segs : [{ x: r.xMin || 0, endX: r.xMax || pw, text: r.text }];
+        if (segs.some((sg) => sg.x < bestX - 6 && sg.endX > bestX + 6)) continue;
+        for (const sg of segs) {
+          totalSideSegs += 1;
+          if (String(sg.text || '').trim().length >= 18) proseSegs += 1;
+        }
+      }
+      if (totalSideSegs > 0 && proseSegs / totalSideSegs < 0.32) {
+        return { isMultiColumn: false, gutterX: 0, score: Number((bestScore * 0.4).toFixed(3)), leftCount: bestLeft, rightCount: bestRight };
+      }
+    }
+
+    return {
+      isMultiColumn: bestScore >= 0.55 && bestX > 0,
+      gutterX: bestX,
+      score: bestScore,
+      leftCount: bestLeft,
+      rightCount: bestRight,
+    };
+  }
+
+  /**
+   * Recursive XY-Cut đơn giản hóa thực chiến cho tài liệu 2–3 cột:
+   * Giữ nguyên tiêu đề toàn trang (full-width banner) ở đúng vị trí trên/dưới,
+   * tách đôi vùng 2 cột theo khe hở dọc sạch (gutterX) để đọc trọn Cột Trái từ trên xuống rồi mới sang Cột Phải!
+   */
+  function reorderPageRowsMultiColumn(rows, pageWidth, depth = 0) {
+    const list = (Array.isArray(rows) ? rows : []).filter(Boolean);
+    if (list.length < 4 || depth >= 2) return list;
+    const g = detectVerticalColumnGutter(list, pageWidth);
+    if (!g.isMultiColumn || !g.gutterX) return list;
+
+    const gutterX = g.gutterX;
+    const makeSubRow = (origRow, segs) => {
+      const items = segs.flatMap((sg) => (Array.isArray(sg.items) ? sg.items : []));
+      const txt = segs.map((sg) => sg.text).join(' ').replace(/\s+/g, ' ').trim();
+      const xMin = Math.min(...segs.map((sg) => sg.x ?? origRow.xMin ?? 0));
+      const xMax = Math.max(...segs.map((sg) => sg.endX ?? origRow.xMax ?? 0));
+      return {
+        ...origRow,
+        segs,
+        items: items.length ? items : origRow.items,
+        text: txt,
+        xMin,
+        xMax,
+        isBold: segs.some((sg) => sg.bold),
+        allBold: segs.length > 0 && segs.every((sg) => sg.bold),
+        isItalic: segs.length > 0 && segs.every((sg) => sg.italic),
+        hasMathFont: segs.some((sg) => sg.isMathFont),
+        _xyCutColumn: xMax <= gutterX + 8 ? 'left' : 'right',
+      };
+    };
+
+    // Chia trang theo băng ngang (Y-cut) tại các dòng full-width bắc ngang qua gutterX (ví dụ tiêu đề lớn, hình rộng)
+    const out = [];
+    let bandLeft = [];
+    let bandRight = [];
+    const flushBand = () => {
+      if (bandLeft.length) {
+        const subLeft = bandLeft.length >= 6 ? reorderPageRowsMultiColumn(bandLeft, gutterX, depth + 1) : bandLeft;
+        out.push(...subLeft);
+      }
+      if (bandRight.length) {
+        const subRight = bandRight.length >= 6 ? reorderPageRowsMultiColumn(bandRight, Math.max(120, pageWidth - gutterX), depth + 1) : bandRight;
+        out.push(...subRight);
+      }
+      bandLeft = [];
+      bandRight = [];
+    };
+
+    for (const r of list) {
+      if (r.consumed) {
+        flushBand();
+        out.push(r);
+        continue;
+      }
+      const segs = Array.isArray(r.segs) && r.segs.length ? r.segs : [{ x: r.xMin || 0, endX: r.xMax || pageWidth, text: r.text, bold: r.isBold, italic: r.isItalic, isMathFont: r.hasMathFont, items: r.items }];
+      const spansAcross = segs.some((sg) => sg.x < gutterX - 8 && sg.endX > gutterX + 8);
+      if (spansAcross) {
+        flushBand();
+        out.push(r);
+        continue;
+      }
+      const leftSegs = segs.filter((sg) => (sg.x + sg.endX) / 2 < gutterX);
+      const rightSegs = segs.filter((sg) => (sg.x + sg.endX) / 2 >= gutterX);
+      if (leftSegs.length) bandLeft.push(leftSegs.length === segs.length ? { ...r, _xyCutColumn: 'left' } : makeSubRow(r, leftSegs));
+      if (rightSegs.length) bandRight.push(rightSegs.length === segs.length ? { ...r, _xyCutColumn: 'right' } : makeSubRow(r, rightSegs));
+    }
+    flushBand();
+    return out;
+  }
+
+  function profilePdfPage(pd) {
+    const pageWidth = Math.max(100, Number(pd?.pageWidth || 595.28));
+    const pageHeight = Math.max(100, Number(pd?.pageHeight || 841.89));
+    const area100k = Math.max(0.5, (pageWidth * pageHeight) / 100000);
+    const fullText = (pd?.rows || []).map((r) => String(r?.text || '')).join(' ');
+    const charCount = fullText.replace(/\s+/g, '').length;
+    const charDensity = Number((charCount / area100k).toFixed(2));
+
+    const corruptHits = (fullText.match(CORRUPT_GLYPH_RE) || []).length + (fullText.match(MOJIBAKE_SEQ_RE) || []).length * 3;
+    const corruptFontRatio = charCount > 0 ? Number(Math.min(1, corruptHits / charCount).toFixed(4)) : 0;
+
+    const imgArea = (pd?.embeddedImgs || []).reduce((sum, im) => sum + Math.max(0, Number(im?.width || 0) * Number(im?.height || 0)), 0);
+    const imageCoverageRatio = Number(Math.min(1, imgArea / Math.max(1, pageWidth * pageHeight)).toFixed(3));
+
+    const colDetect = detectVerticalColumnGutter(pd?.rows || [], pageWidth);
+    const dottedTocRows = (pd?.rows || []).filter((r) => /\.{3,}\s*\d{1,4}\s*$/.test(String(r?.text || '').trim())).length;
+
+    let profile = 'CLEAN_SINGLE_COL';
+    if (charCount < 35 || charDensity < 4.5 || corruptFontRatio >= 0.08 || (imageCoverageRatio >= 0.72 && charDensity < 15)) {
+      profile = 'SCAN_OR_CORRUPT_FONT';
+    } else if (colDetect.isMultiColumn) {
+      profile = 'COMPLEX_MULTI_COL';
+    } else if (imageCoverageRatio >= 0.22 || (pd?.embeddedImgs || []).length >= 2) {
+      profile = 'HYBRID_TEXT_IMAGE';
+    }
+
+    return {
+      pageNo: Number(pd?.pageNo || 1),
+      profile,
+      charCount,
+      charDensity,
+      corruptFontRatio,
+      imageCoverageRatio,
+      multiColumnScore: colDetect.score,
+      gutterX: colDetect.gutterX,
+      dottedTocRows,
+      isLikelyOldTocPage: dottedTocRows >= 4,
+    };
+  }
+
+  /**
+   * TẦNG 7B: MA TRẬN ĐỘ TIN CẬY NỘI BỘ (INTERNAL CONFIDENCE MATRIX)
+   * Tính điểm tin cậy 0..100 cho toàn tài liệu và chỉ đích danh blockId (Pxx_Byy) nào còn nhập nhằng
+   * để người dùng & AI chỉ cần can thiệp đúng điểm yếu, tiết kiệm 70-85% token!
+   */
+  function scoreDocumentConfidence(nodes, pageProfiles = [], fontStats = {}) {
+    const bodySz = Number(fontStats.medianFontSize || 11);
+    const ambiguousHeadings = [];
+    const lowConfidenceTables = [];
+    const brokenMathRegions = [];
+    const scanPages = pageProfiles.filter((p) => p.profile === 'SCAN_OR_CORRUPT_FONT').map((p) => p.pageNo);
+    const multiColumnPages = pageProfiles.filter((p) => p.profile === 'COMPLEX_MULTI_COL').map((p) => p.pageNo);
+    const oldTocPages = pageProfiles.filter((p) => p.isLikelyOldTocPage).map((p) => p.pageNo);
+
+    const hardNumRe = /^(?:CHƯƠNG|PHẦN|PART|CHAPTER|[IVXLCDM]{1,5}\.|\d{1,2}(?:\.\d{1,2}){1,3}\.?)\s+/i;
+
+    for (const n of Array.isArray(nodes) ? nodes : []) {
+      if (!n) continue;
+      const bid = n.blockId || '';
+      if (n.type === 'heading') {
+        let conf = 90;
+        const txt = String(n.text || '');
+        const hasHard = hardNumRe.test(txt);
+        const fSz = Number(n.fontSize || 0);
+        if (hasHard && (n.isBold || fSz >= bodySz * 1.1)) conf = 95;
+        else if (hasHard) conf = 86;
+        else if (n.isBold && fSz >= bodySz * 1.18) conf = 84;
+        else conf = 64;
+        if (txt.length > 95) conf -= 14;
+        if (n.includeInToc === false) conf = Math.min(conf, 60);
+        n.confidence = Math.max(25, Math.min(100, conf));
+        if (n.confidence < 85) {
+          ambiguousHeadings.push({ blockId: bid, pageNo: n.pageNo || 1, text: txt.slice(0, 90), confidence: n.confidence });
+        }
+      } else if (n.type === 'paragraph') {
+        const txt = String(n.text || '').trim();
+        // Phát hiện đoạn ngắn in đậm hoặc lớn hơn body có khả năng bị sót heading
+        if (txt.length >= 6 && txt.length <= 105 && !/[.,;!?]$/.test(txt) && ((n.isBold && Number(n.fontSize || bodySz) >= bodySz * 1.05) || Number(n.fontSize || 0) >= bodySz * 1.18)) {
+          n.confidence = 62;
+          ambiguousHeadings.push({ blockId: bid, pageNo: n.pageNo || 1, text: txt.slice(0, 90), confidence: 62, suspectMissedHeading: true });
+        } else {
+          n.confidence = 94;
+        }
+      } else if (n.type === 'table') {
+        const rows = Array.isArray(n.rows) ? n.rows : [];
+        const cols = Math.max(1, ...(rows.map((r) => (Array.isArray(r) ? r.length : 0))));
+        let emptyCells = 0;
+        let totalCells = 0;
+        rows.forEach((r) => {
+          for (let ci = 0; ci < cols; ci++) {
+            totalCells += 1;
+            if (!String(r?.[ci] || '').trim()) emptyCells += 1;
+          }
+        });
+        const emptyRatio = totalCells ? emptyCells / totalCells : 0;
+        let conf = 88;
+        if (emptyRatio > 0.35) conf -= 18;
+        if (cols >= 8) conf -= 10;
+        if (!n.caption) conf -= 6;
+        n.confidence = Math.max(40, Math.min(98, conf));
+        if (n.confidence < 80) {
+          lowConfidenceTables.push({ blockId: bid, pageNo: n.pageNo || 1, cols, rows: rows.length, confidence: n.confidence });
+        }
+      } else if (n.type === 'mathBlock' || n.type === 'mathImageBlock') {
+        n.confidence = n.type === 'mathImageBlock' ? 82 : 66;
+        brokenMathRegions.push({ blockId: bid, pageNo: n.pageNo || 1, preview: String(n.displayText || n.altText || n.latex || '').slice(0, 80) });
+      } else {
+        n.confidence = 92;
+      }
+    }
+
+    let overall = 96;
+    overall -= Math.min(40, scanPages.length * 16);
+    overall -= Math.min(18, ambiguousHeadings.length * 3);
+    overall -= Math.min(18, lowConfidenceTables.length * 6);
+    overall -= Math.min(14, brokenMathRegions.length * 4);
+    if (multiColumnPages.length > 0) overall -= 4;
+    overall = Math.max(15, Math.min(99, Math.round(overall)));
+
+    const recommendation = overall >= 88 ? 'CODE_READY' : overall >= 65 ? 'AI_OPTIONAL' : 'AI_RECOMMENDED';
+    return {
+      overallConfidence: overall,
+      recommendation,
+      totalPages: pageProfiles.length,
+      profileCounts: {
+        clean: pageProfiles.filter((p) => p.profile === 'CLEAN_SINGLE_COL').length,
+        multiCol: multiColumnPages.length,
+        hybrid: pageProfiles.filter((p) => p.profile === 'HYBRID_TEXT_IMAGE').length,
+        scanOrCorrupt: scanPages.length,
+      },
+      scanPages,
+      multiColumnPages,
+      oldTocPages,
+      ambiguousHeadings: ambiguousHeadings.slice(0, 40),
+      lowConfidenceTables: lowConfidenceTables.slice(0, 20),
+      brokenMathRegions: brokenMathRegions.slice(0, 25),
+      ambiguousPageNumbers: Array.from(new Set([
+        ...scanPages,
+        ...ambiguousHeadings.map((x) => x.pageNo),
+        ...lowConfidenceTables.map((x) => x.pageNo),
+        ...brokenMathRegions.map((x) => x.pageNo),
+      ])).sort((a, b) => a - b),
+    };
+  }
+
+  // ============================================================================
   // TẦNG 7: ĐÁNH GIÁ ĐỘ PHỨC TẠP TÀI LIỆU ("TÀI LIỆU KHÓ")
   // ============================================================================
-  function evaluatePdfComplexity({ numPages, lowTextPages, mathRegionCount, tableCount, borderlessTableCount }) {
+  function evaluatePdfComplexity({ numPages, lowTextPages, mathRegionCount, tableCount, borderlessTableCount, multiColumnPagesCount = 0, corruptFontPages = 0 }) {
     let score = 0;
     const reasons = [];
-    if (lowTextPages > 0) {
+    if (lowTextPages > 0 || corruptFontPages > 0) {
       score += 45;
-      reasons.push(`Có ${lowTextPages} trang PDF scan / ít văn bản (nên dùng Gemini Vision hoặc OCR)`);
+      reasons.push(`Có ${Math.max(lowTextPages, corruptFontPages)} trang PDF scan / lỗi mã font (nên dùng Gemini Vision hoặc OCR)`);
+    }
+    if (multiColumnPagesCount > 0) {
+      score += 14;
+      reasons.push(`Phát hiện ${multiColumnPagesCount} trang bố cục nhiều cột (đã tự chạy Recursive XY-Cut xếp đúng thứ tự đọc)`);
     }
     if (mathRegionCount > 0) {
       score += Math.min(40, mathRegionCount * 14);
@@ -1169,7 +1534,7 @@
       level,
       score,
       reasons,
-      recommendGeminiVision: lowTextPages > 0 || mathRegionCount >= 3 || score >= 55,
+      recommendGeminiVision: lowTextPages > 0 || corruptFontPages > 0 || mathRegionCount >= 3 || score >= 55,
     };
   }
 
@@ -1233,6 +1598,17 @@
     // Tầng 2: Lọc Header/Footer lặp & Boilerplate
     const strippedHeadersFooters = stripHeadersFootersAndBoilerplate(pageDataList);
 
+    // Tầng 2B: Per-Page Triage Profiler + Recursive XY-Cut cho các trang bố cục nhiều cột
+    const pageProfiles = [];
+    for (const pd of pageDataList) {
+      const prof = profilePdfPage(pd);
+      pd.pageProfile = prof;
+      pageProfiles.push(prof);
+      if (prof.profile === 'COMPLEX_MULTI_COL') {
+        pd.rows = reorderPageRowsMultiColumn(pd.rows, pd.pageWidth);
+      }
+    }
+
     // Đánh dấu các dòng nằm trong bảng vector (Layer A) trước khi chạy Layer B
     const allStageTokens = [];
     let mathRegionCount = 0;
@@ -1242,7 +1618,7 @@
 
     for (const pd of pageDataList) {
       const charCount = pd.rows.reduce((sum, r) => sum + r.text.length, 0);
-      if (charCount < 40 && pd.embeddedImgs.length >= 0) lowTextPages += 1;
+      if (charCount < 40 || pd.pageProfile?.profile === 'SCAN_OR_CORRUPT_FONT') lowTextPages += 1;
 
       const vectorEvents = [];
       for (const vt of pd.vectorTables) {
@@ -1267,12 +1643,14 @@
         if (tok.kind === 'math_region') mathRegionCount += 1;
       }
 
-      // Chèn Vector Table đúng thứ tự Y từ trên xuống dưới
-      const combined = [...layerBTokens, ...vectorEvents].sort((a, b) => {
-        const ya = a.yTop ?? a.y ?? 0;
-        const yb = b.yTop ?? b.y ?? 0;
-        return yb - ya;
-      });
+      // Chèn Vector Table đúng thứ tự (nếu trang 2 cột đã chạy XY-Cut, giữ nguyên thứ tự cột của layerBTokens!)
+      const combined = pd.pageProfile?.profile === 'COMPLEX_MULTI_COL'
+        ? [...layerBTokens, ...vectorEvents]
+        : [...layerBTokens, ...vectorEvents].sort((a, b) => {
+            const ya = a.yTop ?? a.y ?? 0;
+            const yb = b.yTop ?? b.y ?? 0;
+            return yb - ya;
+          });
 
       const splitMerged = mergeAndEmitPageProse(combined, medianFontSize, medianLineGap, ast);
 
@@ -1375,16 +1753,22 @@
         { bodyFontSize: medianFontSize, prevEndedWithColon }
       );
       if (cls.isHeading) {
-        preliminaryNodes.push(ast.nodes.heading({
+        const hNode = ast.nodes.heading({
           level: cls.level,
           text: cls.cleanText,
           numberPrefix: cls.numberPrefix,
           source: 'pdf-geometry',
           includeInToc: cls.includeInToc,
           pageNo: tok.pageNo,
-        }));
+        });
+        hNode.fontSize = Number(tok.fontSize || medianFontSize);
+        hNode.isBold = Boolean(tok.isBold);
+        preliminaryNodes.push(hNode);
       } else {
-        preliminaryNodes.push(ast.nodes.paragraph({ text: txt, pageNo: tok.pageNo }));
+        const pNode = ast.nodes.paragraph({ text: txt, pageNo: tok.pageNo });
+        pNode.fontSize = Number(tok.fontSize || medianFontSize);
+        pNode.isBold = Boolean(tok.isBold);
+        preliminaryNodes.push(pNode);
       }
       prevEndedWithColon = /:\s*$/.test(txt);
     }
@@ -1392,6 +1776,17 @@
 
     // Tầng 4B: Nối bảng vắt trang + Gắn Caption & Nguồn thật
     const linkedNodes = mergeCrossPageTablesAndBindCaptions(preliminaryNodes, ast);
+    const taggedNodes = typeof ast.assignDeterministicBlockIds === 'function'
+      ? ast.assignDeterministicBlockIds(linkedNodes)
+      : linkedNodes;
+
+    // Tầng 7B: Chấm điểm Ma trận Độ tin cậy Nội bộ (Internal Confidence Matrix)
+    const confidenceMatrix = scoreDocumentConfidence(taggedNodes, pageProfiles, {
+      medianFontSize,
+      medianLineGap,
+    });
+    const multiColumnPagesCount = pageProfiles.filter((p) => p.profile === 'COMPLEX_MULTI_COL').length;
+    const corruptFontPages = pageProfiles.filter((p) => p.corruptFontRatio >= 0.08).length;
 
     const complexity = evaluatePdfComplexity({
       numPages: maxP,
@@ -1399,14 +1794,18 @@
       mathRegionCount,
       tableCount: vectorTableCount + borderlessTableCount,
       borderlessTableCount,
+      multiColumnPagesCount,
+      corruptFontPages,
     });
 
     return ast.createDocumentAst({
       title: String(fileObj?.name || 'TaiLieuPDF').replace(/\.[^.]+$/, ''),
       sourceFormat: 'pdf',
-      blocks: linkedNodes,
+      blocks: taggedNodes,
       meta: {
         complexity,
+        pageProfiles,
+        confidenceMatrix,
         strippedHeadersFooters,
         medianFontSize,
         medianLineGap,
@@ -1420,6 +1819,10 @@
     extractVectorTablesFromOps,
     mergeTableContinuationRows,
     isMathRegionNotTable,
+    detectVerticalColumnGutter,
+    reorderPageRowsMultiColumn,
+    profilePdfPage,
+    scoreDocumentConfidence,
     evaluatePdfComplexity,
     parsePdfGeometryToAst,
   });

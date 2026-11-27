@@ -69,24 +69,96 @@
         clearTimeout(this._spotlightTimer);
         this._spotlightTimer = null;
       }
+      if (this._spotlightTrackCleanup) {
+        try { this._spotlightTrackCleanup(); } catch (_e) {}
+        this._spotlightTrackCleanup = null;
+      }
       document.querySelectorAll('.at-spotlight-box').forEach((el) => el.remove());
     }
 
-    highlightTargetOnPage(selector, labelText = 'Chỗ cần xem ở đây!') {
-      this.clearSpotlight();
-      if (!selector) {
-        this.ctrl.notify('Không có vị trí nút cụ thể để chỉ trên màn hình này.');
-        return;
-      }
-      const firstSel = String(selector).split(',')[0].trim();
-      let el = null;
-      try {
-        el = document.querySelector(firstSel);
-      } catch (_e) {}
+    async _autoRevealTargetElement(firstSel, meta = {}) {
+      const ns = globalScope.NoirStudio || {};
+      const hint = `${firstSel || ''} ${meta.moduleRef || ''} ${meta.id || ''}`.toLowerCase();
+
+      const tryQuery = () => {
+        if (!firstSel) return null;
+        try { return document.querySelector(firstSel); } catch (_e) { return null; }
+      };
+
+      let el = tryQuery();
+
+      // 1. Nếu phần tử chưa dựng trong DOM (nằm trong Modal động) -> tự mở đúng Modal/Studio!
       if (!el) {
-        this.ctrl.notify('Phần tử đang nằm ở màn hình hoặc hộp thoại khác — hãy mở đúng màn hình đó rồi bấm lại nhé.');
+        if (/mod46|danglovepdf|opt-pro-|inp-mod46|btn-mod46/.test(hint) && ns.dangLovePdf?.openDangLovePdfStudio) {
+          ns.dangLovePdf.openDangLovePdfStudio();
+          await AT.sleep(280);
+          el = tryQuery() || document.getElementById('modal-mod46-danglovepdf-studio');
+        } else if (/inv-|invest|mod49/.test(hint) && ns.worldClockStudio?.openModal) {
+          ns.worldClockStudio.openModal('market');
+          await AT.sleep(320);
+          el = tryQuery() || document.getElementById('mod42-world-clock-modal');
+        } else if (/w20-|wisdom|mod50/.test(hint) && ns.worldClockStudio?.openModal) {
+          ns.worldClockStudio.openModal('wisdom');
+          await AT.sleep(320);
+          el = tryQuery() || document.getElementById('mod42-world-clock-modal');
+        } else if (/mod42|world-clock|weather|alarm/.test(hint) && ns.worldClockStudio?.openModal) {
+          ns.worldClockStudio.openModal('timezone');
+          await AT.sleep(280);
+          el = tryQuery() || document.getElementById('mod42-world-clock-modal');
+        } else if (/mod51|lang-studio|flashcard/.test(hint) && (ns.langLearningStudio?.open || ns.mod51?.open)) {
+          await (ns.langLearningStudio?.open || ns.mod51?.open)();
+          await AT.sleep(280);
+          el = tryQuery() || document.getElementById('modal-mod51-lang-studio');
+        } else if (/mod45|fx570|desmos|calc/.test(hint)) {
+          const tab5Btn = document.querySelector('[data-s14-tab="SCREEN_5_UTILITIES"], [data-s14-tab="SCREEN_5_TOOLS"]');
+          tab5Btn?.click?.();
+          await AT.sleep(220);
+          el = tryQuery();
+        }
+      }
+
+      if (!el) return null;
+
+      // 2. Nếu phần tử nằm trong 1 Tab/Màn hình chính đang ẩn -> tự chuyển thẳng tới Tab đó!
+      const screenParent = el.closest?.('section[id^="SCREEN_"], div[id^="SCREEN_"], [data-screen-id]');
+      if (screenParent) {
+        const screenId = screenParent.id || screenParent.getAttribute('data-screen-id');
+        const isHidden = screenParent.classList.contains('hidden') || getComputedStyle(screenParent).display === 'none';
+        if (isHidden && screenId) {
+          if (typeof ns.navigator?.navigateToScreen === 'function') {
+            ns.navigator.navigateToScreen(screenId);
+          } else {
+            document.querySelector(`[data-s14-tab="${screenId}"]`)?.click?.();
+          }
+          await AT.sleep(200);
+        }
+      }
+
+      // 3. Tự mở các khung <details> hoặc accordion đang gập chứa phần tử lỗi
+      let cur = el.parentElement;
+      while (cur && cur !== document.body) {
+        if (cur.tagName === 'DETAILS' && !cur.open) {
+          cur.open = true;
+        }
+        if (cur.classList?.contains('hidden') && !/^modal-/i.test(cur.id || '')) {
+          cur.classList.remove('hidden');
+        }
+        cur = cur.parentElement;
+      }
+
+      return el;
+    }
+
+    async highlightTargetOnPage(selector, labelText = 'Vị trí lỗi ở đây!', meta = {}) {
+      this.clearSpotlight();
+      const firstSel = String(selector || '').split(',')[0].trim();
+      const el = await this._autoRevealTargetElement(firstSel, meta);
+      if (!el) {
+        this.ctrl.notify('Không tìm thấy vị trí cụ thể trên DOM hiện tại — hãy xem tên tệp trong mục "Xem chi tiết cho lập trình viên".', 'warning');
         return;
       }
+
+      // Thu gọn bảng Bác sĩ App sang góc để không che khuất vị trí lỗi
       if (window.innerWidth < 768) {
         this.mobileSnap = 'mini';
       } else {
@@ -98,22 +170,48 @@
         el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
       } catch (_e) {}
 
-      setTimeout(() => {
+      await AT.sleep(260);
+
+      const box = document.createElement('div');
+      box.className = 'at-spotlight-box';
+      box.setAttribute('data-autotester-ui', 'true');
+      box.innerHTML = `<div class="at-spotlight-tag">🎯 ${escHtml(labelText || 'Vị trí lỗi ở đây!')}</div>`;
+      document.body.appendChild(box);
+
+      const prevOutline = el.style.outline;
+      const prevOutlineOffset = el.style.outlineOffset;
+      el.style.outline = '3px solid #f43f5e';
+      el.style.outlineOffset = '3px';
+
+      const syncBoxPosition = () => {
+        if (!el.isConnected || !box.isConnected) return;
         const rect = el.getBoundingClientRect();
-        const box = document.createElement('div');
-        box.className = 'at-spotlight-box';
-        box.setAttribute('data-autotester-ui', 'true');
-        box.style.left = `${Math.max(4, rect.left - 4)}px`;
-        box.style.top = `${Math.max(4, rect.top - 4)}px`;
-        box.style.width = `${Math.max(28, rect.width + 8)}px`;
-        box.style.height = `${Math.max(28, rect.height + 8)}px`;
-        box.innerHTML = `<div class="at-spotlight-tag">🎯 ${escHtml(labelText)}</div>`;
-        document.body.appendChild(box);
-        this._spotlightTimer = setTimeout(() => {
-          box.remove();
-          this._spotlightTimer = null;
-        }, 4200);
-      }, 220);
+        box.style.left = `${Math.max(4, rect.left - 6)}px`;
+        box.style.top = `${Math.max(4, rect.top - 6)}px`;
+        box.style.width = `${Math.max(32, rect.width + 12)}px`;
+        box.style.height = `${Math.max(32, rect.height + 12)}px`;
+      };
+      syncBoxPosition();
+
+      const onRelayout = () => syncBoxPosition();
+      window.addEventListener('scroll', onRelayout, true);
+      window.addEventListener('resize', onRelayout);
+
+      const cleanup = () => {
+        window.removeEventListener('scroll', onRelayout, true);
+        window.removeEventListener('resize', onRelayout);
+        if (el.isConnected) {
+          el.style.outline = prevOutline;
+          el.style.outlineOffset = prevOutlineOffset;
+        }
+        box.remove();
+      };
+      this._spotlightTrackCleanup = cleanup;
+      this._spotlightTimer = setTimeout(() => {
+        cleanup();
+        this._spotlightTrackCleanup = null;
+        this._spotlightTimer = null;
+      }, 5500);
     }
 
     _renderLoadingSplashHtml(prog) {
@@ -357,7 +455,7 @@
                   <div class="at-issue-title">${escHtml(it.plainTitle)}</div>
                   <div class="at-issue-desc">${escHtml(it.plainDesc)}</div>
                   <div class="at-issue-actions">
-                    ${it.selector ? `<button type="button" class="at-small-btn at-small-btn-target" data-at-highlight="${escHtml(it.selector)}" data-at-hlabel="${escHtml(it.plainTitle)}">🎯 Chỉ chỗ bị lỗi</button>` : ''}
+                    ${(it.selector || it.moduleRef) ? `<button type="button" class="at-small-btn at-small-btn-target" data-at-highlight="${escHtml(it.selector || '')}" data-at-hlabel="${escHtml(it.plainTitle)}" data-at-hmod="${escHtml(it.moduleRef || '')}" data-at-hid="${escHtml(it.id || '')}">🎯 Chỉ thẳng chỗ bị lỗi</button>` : ''}
                     <button type="button" class="at-small-btn" data-at-toggle-dev="dev-${idx}">Xem chi tiết cho lập trình viên ▼</button>
                   </div>
                   <div id="at-dev-${idx}" class="at-dev-details at-hidden">Mã: ${escHtml(it.code)}
@@ -632,7 +730,12 @@ Chi tiết: ${escHtml(it.techDetail || '')}
       });
 
       r.querySelectorAll('[data-at-highlight]').forEach((b) => {
-        b.addEventListener('click', () => this.highlightTargetOnPage(b.dataset.atHighlight, b.dataset.atHlabel));
+        b.addEventListener('click', () => {
+          this.highlightTargetOnPage(b.dataset.atHighlight, b.dataset.atHlabel, {
+            moduleRef: b.dataset.atHmod || '',
+            id: b.dataset.atHid || '',
+          });
+        });
       });
       r.querySelectorAll('[data-at-toggle-dev]').forEach((b) => {
         b.addEventListener('click', () => {

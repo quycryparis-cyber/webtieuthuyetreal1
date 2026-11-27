@@ -80,12 +80,15 @@
   }
 
   // --------------------------------------------------------------------------
-  // 3. SURFACE REGISTRY & SURFACE DELTA ENGINE (Spec §8.2)
+  // 3. UNIVERSAL 5-LAYER AUTO-DISCOVERY REGISTRY & SURFACE DELTA (Spec §8.2)
+  // Tự động phát hiện BẤT KỲ nút, tab, modal, công cụ PDF, module hay file JS mới nào!
   // --------------------------------------------------------------------------
   function captureCurrentSurfaces(doc = document) {
     const surfaces = {};
+
+    // Lớp 1: Mọi phần tử tương tác & hộp thoại trong DOM (bao gồm cả ShadowRoot)
     const nodes = AT.crawler?.discoverInteractiveElements
-      ? AT.crawler.discoverInteractiveElements(doc.body, 500)
+      ? AT.crawler.discoverInteractiveElements(doc.body, 700)
       : Array.from(doc.querySelectorAll('button, a[href], [role="dialog"], section[id]'));
 
     for (const el of nodes) {
@@ -93,6 +96,7 @@
       const key = el.getAttribute('data-at-id') || (el.id ? `#${el.id}` : '');
       if (!key) continue;
       surfaces[key] = {
+        kind: 'dom',
         tag: el.tagName.toLowerCase(),
         role: el.getAttribute('role') || '',
         hasContract: Boolean(el.getAttribute('data-at-id') || el.getAttribute('data-at-expect')),
@@ -100,6 +104,71 @@
         label: String(el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 40),
       };
     }
+
+    // Lớp 2: Mọi Tab / Màn hình chính ([data-s14-tab])
+    Array.from(doc.querySelectorAll('[data-s14-tab]')).forEach((tEl) => {
+      const tabId = tEl.getAttribute('data-s14-tab');
+      if (!tabId) return;
+      surfaces[`tab:${tabId}`] = {
+        kind: 'tab',
+        tag: tEl.tagName.toLowerCase(),
+        role: 'tab',
+        hasContract: true,
+        expect: `switch-tab:${tabId}`,
+        label: String(tEl.textContent || tabId).trim().slice(0, 40),
+      };
+    });
+
+    // Lớp 3: Mọi Module đã đăng ký trong NoirStudio & không gian toàn cục
+    try {
+      const nsKeys = Object.keys(globalScope.NoirStudio || {}).filter((k) => !k.startsWith('__'));
+      nsKeys.slice(0, 120).forEach((mk) => {
+        surfaces[`module:${mk}`] = {
+          kind: 'module',
+          tag: 'module',
+          role: 'engine',
+          hasContract: true,
+          expect: 'runtime-module',
+          label: mk,
+        };
+      });
+    } catch (_eNs) {}
+
+    // Lớp 4: Toàn bộ danh mục công cụ ĐăngLovePDF (tự bắt ngay nếu có tool PDF mới!)
+    try {
+      const groups = globalScope.NoirStudio?.dangLovePdfPro?.PRO_TOOL_GROUPS || [];
+      for (const g of groups) {
+        for (const tool of g.tools || []) {
+          if (!tool?.id) continue;
+          surfaces[`tool:${tool.id}`] = {
+            kind: 'pdf_tool',
+            tag: 'tool',
+            role: g.id || 'pdf',
+            hasContract: true,
+            expect: `pdf-tool:${tool.id}`,
+            label: String(tool.name || tool.id).slice(0, 40),
+          };
+        }
+      }
+    } catch (_eTools) {}
+
+    // Lớp 5: Danh sách tệp mã nguồn <script src="..."> đang nạp
+    try {
+      Array.from(doc.querySelectorAll('script[src]')).forEach((sc) => {
+        if (sc.dataset?.atSrc) return;
+        const src = String(sc.getAttribute('src') || '').split('?')[0].trim();
+        if (!src || /^https?:\/\//i.test(src)) return;
+        surfaces[`script:${src}`] = {
+          kind: 'script',
+          tag: 'script',
+          role: 'source',
+          hasContract: true,
+          expect: 'loaded-script',
+          label: src.slice(0, 48),
+        };
+      });
+    } catch (_eSc) {}
+
     return surfaces;
   }
 

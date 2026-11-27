@@ -5,5 +5,8 @@ release/
 android/
 ios/
 _studio_workspace_state.json
+.gdrive-sync-manifest.json
+.gdrive-sync.lock
+*.drive-conflict-*
 *.tmp
 *.log

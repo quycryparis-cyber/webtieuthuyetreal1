@@ -1154,7 +1154,10 @@
     }
 
     mountTab5BackdropStagePanel() {
-      const typoPanel = document.getElementById('s14-panel-typography-box');
+      const typoPanel =
+        document.getElementById('tab5-bg-acc-backdrop-host') ||
+        document.getElementById('s14-panel-background-box') ||
+        document.getElementById('s14-panel-typography-box');
       if (!typoPanel || document.getElementById(MOD32_CONSTANTS.SELECTORS.TAB5_STAGE_PANEL_ID)) {
         return;
       }

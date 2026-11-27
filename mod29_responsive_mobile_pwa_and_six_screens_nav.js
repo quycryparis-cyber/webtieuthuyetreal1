@@ -1092,7 +1092,11 @@
 
     triggerSoftHapticTap(ms = 6) {
       try {
-        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        if (
+          typeof navigator !== 'undefined' &&
+          typeof navigator.vibrate === 'function' &&
+          (!navigator.userActivation || navigator.userActivation.hasBeenActive)
+        ) {
           navigator.vibrate(ms);
         }
       } catch (_err) {
@@ -1383,7 +1387,7 @@
 
     openSpecificTab5Panel(targetPanelId, collapseOthers = false) {
       if (typeof document === 'undefined' || !targetPanelId) return false;
-      const panelIds = ['s14-panel-attendance-box', 's14-panel-pomodoro-box', 's14-panel-music-box', 's14-panel-typography-box', 's14-panel-youtube-box'];
+      const panelIds = ['s14-panel-attendance-box', 's14-panel-pomodoro-box', 's14-panel-music-box', 's14-panel-typography-box', 's14-panel-youtube-box', 's14-panel-background-box'];
       let opened = false;
       for (const pid of panelIds) {
         const panelEl = document.getElementById(pid);
@@ -2754,7 +2758,31 @@
       document
         .querySelectorAll(`.noir-collapse-toggle[data-noir-collapse-target="${targetId}"]`)
         .forEach((btn) => this.applyToggleUI(btn, targetId));
+      this.syncTab4MasterToggleButton();
       return true;
+    }
+
+    syncTab4MasterToggleButton() {
+      const masterBtn = document.getElementById('btn-tab4-toggle-all-6-cards');
+      if (!masterBtn) return;
+      const tab4Ids = [
+        'tab4-card-template-body',
+        'tab4-card-rendered-body',
+        'tab4-card-chars-body',
+        'tab4-card-knowledge-body',
+        'tab4-card-clues-body',
+        'tab4-card-cliche-body'
+      ];
+      const expandedCount = tab4Ids.filter((id) => !this.isTargetCollapsed(id)).length;
+      const tr = (s) =>
+        window.NoirStudio?.i18n?.translateText
+          ? window.NoirStudio.i18n.translateText(s)
+          : s;
+      const allCollapsed = expandedCount === 0;
+      masterBtn.setAttribute('aria-expanded', allCollapsed ? 'false' : 'true');
+      masterBtn.textContent = allCollapsed
+        ? tr('⏬ Mở rộng cả 6 mục')
+        : tr('⏫ Thu gọn cả 6 mục');
     }
 
     expandTarget(targetId) {
@@ -2784,6 +2812,25 @@
           this.setTargetCollapsed(targetId, nextCollapsed);
         });
       });
+
+      const tab4MasterBtn = document.getElementById('btn-tab4-toggle-all-6-cards');
+      if (tab4MasterBtn && tab4MasterBtn.dataset.mod29MasterBound !== '1') {
+        tab4MasterBtn.dataset.mod29MasterBound = '1';
+        tab4MasterBtn.addEventListener('click', () => {
+          const tab4Ids = [
+            'tab4-card-template-body',
+            'tab4-card-rendered-body',
+            'tab4-card-chars-body',
+            'tab4-card-knowledge-body',
+            'tab4-card-clues-body',
+            'tab4-card-cliche-body'
+          ];
+          const expandedCount = tab4Ids.filter((id) => !this.isTargetCollapsed(id)).length;
+          const shouldCollapseAll = expandedCount > 0;
+          tab4Ids.forEach((id) => this.setTargetCollapsed(id, shouldCollapseAll));
+        });
+      }
+      this.syncTab4MasterToggleButton();
       return count;
     }
 

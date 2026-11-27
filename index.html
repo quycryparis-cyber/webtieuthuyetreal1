@@ -1225,7 +1225,7 @@
     <div style="text-align:center;max-width:360px;">
       <div style="display:inline-flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;">
         <span style="font-size:15px;font-weight:700;color:#ecfdf5;letter-spacing:0.01em;">Sổ Tay Tiểu Thuyết Của Bi</span>
-        <span id="app-boot-splash-version" style="padding:2px 9px;border-radius:9999px;background:rgba(16,185,129,0.22);border:1px solid rgba(52,211,153,0.65);font-size:11px;font-weight:700;color:#6ee7b7;letter-spacing:0.04em;">v156</span>
+        <span id="app-boot-splash-version" style="padding:2px 9px;border-radius:9999px;background:rgba(16,185,129,0.22);border:1px solid rgba(52,211,153,0.65);font-size:11px;font-weight:700;color:#6ee7b7;letter-spacing:0.04em;">v159</span>
       </div>
       <div id="app-boot-splash-status" style="margin-top:6px;font-size:12px;font-weight:600;color:#a7f3d0;">⏳ Đang tải toàn bộ tài nguyên &amp; 51 module Studio (v156)...</div>
     </div>
@@ -2407,6 +2407,9 @@
             </p>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
+            <button type="button" id="btn-tab4-toggle-all-6-cards" data-at-id="tab4-toggle-all-6" class="px-3 py-2 rounded-xl border border-amber-500/50 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-bold transition whitespace-nowrap">
+              ⏫ Thu gọn cả 6 mục
+            </button>
             <button type="button" id="btn-toggle-tab4-controls" data-noir-collapse-target="tab4-header-controls-collapsible" data-noir-collapse-key="tab4_header_controls" class="noir-collapse-toggle px-3 py-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-bold transition">
               <span>🎛️ Công Cụ Story Bible</span> <span class="noir-collapse-arrow">▾</span>
             </button>
@@ -2720,8 +2723,8 @@
 
           <button type="button" data-bug13-target="s14-panel-typography-box" aria-expanded="false" class="bug13-toggle-option-btn h-full p-4 rounded-2xl border-2 border-indigo-500/50 bg-studioLightPanel dark:bg-zinc-900 hover:bg-indigo-500/10 text-left transition flex flex-col items-stretch justify-between gap-3 shadow">
             <div class="min-w-0">
-              <div class="text-sm font-extrabold text-indigo-400">🔤 4. Chỉnh Cỡ Chữ &amp; Hình Nền</div>
-              <div class="text-[11px] text-zinc-400 mt-0.5">Cỡ chữ, phông chữ, khổ sách và tranh nền</div>
+              <div class="text-sm font-extrabold text-indigo-400">🔤 4. Chỉnh Cỡ Chữ, Font &amp; Khổ Sách</div>
+              <div class="text-[11px] text-zinc-400 mt-0.5">Cỡ chữ, phông chữ, giãn dòng, khổ sách &amp; xem trước</div>
             </div>
             <span class="bug13-state-badge inline-flex items-center justify-center w-full px-2.5 py-1.5 rounded-xl bg-zinc-800 border border-zinc-600 text-zinc-100 font-extrabold text-[11px] leading-snug text-center shadow-sm transition">Đang thu gọn, bấm vào để mở rộng</span>
           </button>
@@ -2751,6 +2754,108 @@
 
           <!-- KHUNG 5: TRÌNH XEM YOUTUBE & CÀI BACKGROUND VIDEO WEB (MẶC ĐỊNH RÚT GỌN SẴN — MOD 39) -->
           <div id="s14-panel-youtube-box" class="hidden p-4 sm:p-5 border-t border-rose-500/30 bg-studioLightPanel dark:bg-zinc-900 space-y-4"></div>
+        </div>
+
+        <!-- Ô THỨ 6 TAB 5: TÙY CHỈNH NỀN TRANG WEB (6 CỤM ĐÓNG/MỞ ĐỘC LẬP) -->
+        <div id="tab5-background-studio-card" class="rounded-2xl border-2 border-cyan-500/55 bg-studioLightPanel dark:bg-zinc-900 shadow-xl overflow-hidden">
+          <button type="button" id="s14-card-background-btn" data-bug13-target="s14-panel-background-box" aria-expanded="false" class="bug13-toggle-option-btn w-full p-4 bg-gradient-to-r from-cyan-950/35 via-indigo-950/30 to-zinc-900/95 hover:from-cyan-950/55 hover:to-zinc-800/95 text-left transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="space-y-1 min-w-0">
+              <div class="text-sm sm:text-base font-extrabold text-cyan-300">🌌 6. Tùy Chỉnh Nền Trang Web</div>
+              <div class="text-[11px] text-zinc-300">Hiệu ứng không gian 60FPS · Tinh chỉnh vật lý hạt · Lớp kính mờ · Bảo vệ thị lực · Kho tranh nền nghệ thuật · Bộ dựng nền kính mờ (mỗi cụm đóng mở độc lập)</div>
+            </div>
+            <div class="flex items-center self-stretch sm:self-center shrink-0 max-w-full">
+              <span class="bug13-state-badge inline-flex items-center justify-center w-full sm:w-auto px-3.5 py-2 rounded-xl bg-zinc-800 border border-zinc-600 text-zinc-100 font-extrabold text-[11px] text-center leading-snug shadow-sm transition">Đang thu gọn, bấm vào để mở rộng</span>
+            </div>
+          </button>
+
+          <!-- KHUNG 6: TÙY CHỈNH NỀN TRANG WEB (MẶC ĐỊNH RÚT GỌN SẴN) -->
+          <div id="s14-panel-background-box" class="hidden p-4 sm:p-5 border-t border-cyan-500/30 bg-studioLightPanel dark:bg-zinc-900 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-zinc-800">
+              <h3 class="font-extrabold uppercase text-sm text-cyan-300">🌌 6. Tùy Chỉnh Nền Trang Web (Bấm từng cụm để đóng / mở)</h3>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <button type="button" id="btn-tab5-bg-collapse-all" class="px-2.5 py-1 rounded-lg border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-[11px] cursor-pointer">⏫ Thu gọn cả 6 cụm</button>
+                <button type="button" id="btn-tab5-bg-expand-all" class="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[11px] cursor-pointer">⏬ Mở rộng cả 6 cụm</button>
+              </div>
+            </div>
+
+            <!-- Cụm 6.1: Hiệu ứng Không gian Nền 60FPS -->
+            <details class="tab5-bg-sub-acc rounded-xl border border-indigo-500/35 bg-studioLightBg dark:bg-zinc-950 overflow-hidden" open>
+              <summary class="cursor-pointer select-none px-3.5 py-2.5 font-extrabold text-indigo-300 flex items-center justify-between gap-2 hover:bg-indigo-500/10">
+                <span>✨ 6.1. Hiệu Ứng Không Gian Nền (60FPS Canvas / Ảnh &amp; Video Cá Nhân)</span>
+                <span class="text-[10px] text-zinc-400">Bấm đóng / mở ▾</span>
+              </summary>
+              <div class="p-3.5 pt-2 border-t border-zinc-800/80 space-y-2.5">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <input type="file" id="input-custom-bg-media" accept="image/*,video/*" class="hidden" />
+                    <button type="button" id="btn-upload-custom-bg" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px]">
+                      🖼️ Tải Ảnh / Video Nền Từ Máy
+                    </button>
+                    <button type="button" id="btn-clear-custom-bg" class="hidden px-2.5 py-1.5 rounded-lg border border-rose-500/50 bg-rose-500/15 hover:bg-rose-600 text-rose-200 hover:text-white font-bold text-[11px]">
+                      🗑️ Gỡ Ảnh/Video Nền
+                    </button>
+                  </div>
+                  <label class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-studioLightPanel dark:bg-zinc-900 border border-zinc-700 text-[10px] font-bold text-indigo-300">
+                    <span>✨ Độ rõ nền:</span>
+                    <input id="mod22-bg-visibility-slider" type="range" min="15" max="95" value="68" class="w-24 accent-indigo-500 cursor-pointer" />
+                  </label>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                  <button type="button" data-bg-effect="FIREFLIES" class="bg-effect-btn py-1.5 px-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 font-bold text-[11px]">✨ Đom Đóm Đêm</button>
+                  <button type="button" data-bg-effect="LANTERNS" class="bg-effect-btn py-1.5 px-2 rounded-xl border border-zinc-800 bg-zinc-900 hover:border-amber-500 text-[11px] font-semibold">🏮 Đèn Lồng Ấm</button>
+                  <button type="button" data-bg-effect="STARDUST" class="bg-effect-btn py-1.5 px-2 rounded-xl border border-zinc-800 bg-zinc-900 hover:border-indigo-500 text-[11px] font-semibold">🌌 Bụi Sao Đêm</button>
+                  <button type="button" data-bg-effect="RAIN_DROPS" class="bg-effect-btn py-1.5 px-2 rounded-xl border border-zinc-800 bg-zinc-900 hover:border-teal-500 text-[11px] font-semibold">🌧️ Mưa Trên Kính</button>
+                  <button type="button" data-bg-effect="AUTUMN" class="bg-effect-btn py-1.5 px-2 rounded-xl border border-zinc-800 bg-zinc-900 hover:border-orange-500 text-[11px] font-semibold">🍂 Lá Thu Rơi</button>
+                  <button type="button" data-bg-effect="NONE" class="bg-effect-btn py-1.5 px-2 rounded-xl border border-zinc-800 bg-zinc-900 hover:border-rose-500 text-[11px] font-semibold">⬛ Nền Tĩnh Tối Giản</button>
+                </div>
+              </div>
+            </details>
+
+            <!-- Cụm 6.2: Tinh chỉnh Vật lý Hạt nền -->
+            <details class="tab5-bg-sub-acc rounded-xl border border-emerald-500/35 bg-studioLightBg dark:bg-zinc-950 overflow-hidden">
+              <summary class="cursor-pointer select-none px-3.5 py-2.5 font-extrabold text-emerald-300 flex items-center justify-between gap-2 hover:bg-emerald-500/10">
+                <span>🎛️ 6.2. Tinh Chỉnh Vật Lý Hạt Nền (Mật độ &amp; Sức gió 60FPS)</span>
+                <span class="text-[10px] text-zinc-400">Bấm đóng / mở ▾</span>
+              </summary>
+              <div id="tab5-bg-acc-physics-host" class="p-3.5 pt-2 border-t border-zinc-800/80 space-y-2.5"></div>
+            </details>
+
+            <!-- Cụm 6.3: Lớp Kính Mờ -->
+            <details class="tab5-bg-sub-acc rounded-xl border border-sky-500/35 bg-studioLightBg dark:bg-zinc-950 overflow-hidden">
+              <summary class="cursor-pointer select-none px-3.5 py-2.5 font-extrabold text-sky-300 flex items-center justify-between gap-2 hover:bg-sky-500/10">
+                <span>🪟 6.3. Lớp Kính Mờ (Độ tối lớp kính chắn bảo vệ chữ)</span>
+                <span class="text-[10px] text-zinc-400">Bấm đóng / mở ▾</span>
+              </summary>
+              <div id="tab5-bg-acc-frost-host" class="p-3.5 pt-2 border-t border-zinc-800/80 space-y-2.5"></div>
+            </details>
+
+            <!-- Cụm 6.4: Chế độ Bảo vệ Thị lực -->
+            <details class="tab5-bg-sub-acc rounded-xl border border-amber-500/35 bg-studioLightBg dark:bg-zinc-950 overflow-hidden">
+              <summary class="cursor-pointer select-none px-3.5 py-2.5 font-extrabold text-amber-300 flex items-center justify-between gap-2 hover:bg-amber-500/10">
+                <span>🕯️ 6.4. Chế Độ Bảo Vệ Thị Lực Ban Đêm (Circadian Eye-Care)</span>
+                <span class="text-[10px] text-zinc-400">Bấm đóng / mở ▾</span>
+              </summary>
+              <div id="tab5-bg-acc-eyecare-host" class="p-3.5 pt-2 border-t border-zinc-800/80 space-y-2.5"></div>
+            </details>
+
+            <!-- Cụm 6.5: Kho Tranh Nền Nghệ Thuật -->
+            <details class="tab5-bg-sub-acc rounded-xl border border-teal-500/35 bg-studioLightBg dark:bg-zinc-950 overflow-hidden">
+              <summary class="cursor-pointer select-none px-3.5 py-2.5 font-extrabold text-teal-300 flex items-center justify-between gap-2 hover:bg-teal-500/10">
+                <span>🎨 6.5. Kho Tranh Nền Nghệ Thuật Tự Sinh (0MB)</span>
+                <span class="text-[10px] text-zinc-400">Bấm đóng / mở ▾</span>
+              </summary>
+              <div id="tab5-bg-acc-gallery-host" class="p-3.5 pt-2 border-t border-zinc-800/80 space-y-2.5"></div>
+            </details>
+
+            <!-- Cụm 6.6: Bộ Dựng Nền Kính Mờ (Module 32) -->
+            <details class="tab5-bg-sub-acc rounded-xl border border-cyan-500/40 bg-studioLightBg dark:bg-zinc-950 overflow-hidden">
+              <summary class="cursor-pointer select-none px-3.5 py-2.5 font-extrabold text-cyan-300 flex items-center justify-between gap-2 hover:bg-cyan-500/10">
+                <span>🖼️ 6.6. Bộ Dựng Nền Kính Mờ &amp; Soi Nền 100% (Module 32)</span>
+                <span class="text-[10px] text-zinc-400">Bấm đóng / mở ▾</span>
+              </summary>
+              <div id="tab5-bg-acc-backdrop-host" class="p-3.5 pt-2 border-t border-zinc-800/80 space-y-2.5"></div>
+            </details>
+          </div>
         </div>
 
         <!-- THANH QUẢN LÝ MỞ LẠI CÁC THANH NỔI NGOÀI MÀN HÌNH TẠI TAB 5 (POMODORO & ÂM NHẠC) -->
@@ -2909,9 +3014,9 @@
           </div>
         </div>
 
-        <!-- KHUNG 4: CỠ CHỮ, FONT CHỮ, KHỔ TRANG SÁCH & HIỆU ỨNG NỀN 60FPS (MẶC ĐỊNH RÚT GỌN SẴN) -->
+        <!-- KHUNG 4: CỠ CHỮ, FONT CHỮ, KHỔ TRANG SÁCH & XEM TRƯỚC TRỰC TIẾP (MẶC ĐỊNH RÚT GỌN SẴN) -->
         <div id="s14-panel-typography-box" class="hidden p-5 rounded-2xl border border-indigo-500/40 bg-studioLightPanel dark:bg-zinc-900 space-y-4">
-          <h3 class="font-extrabold uppercase text-sm text-indigo-400">🔤 4. Tùy Chỉnh Cỡ Chữ, Font Chữ, Khổ Trang Sách & Không Gian Nền 60FPS</h3>
+          <h3 class="font-extrabold uppercase text-sm text-indigo-400">🔤 4. Tùy Chỉnh Cỡ Chữ, Font Chữ &amp; Khổ Trang Sách</h3>
           <div id="tab5-system-font-scale-bar" class="p-3 rounded-xl border border-indigo-500/30 bg-zinc-950/60"></div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
@@ -2946,31 +3051,15 @@
             </div>
           </div>
 
-          <!-- Chọn hiệu ứng nền động 60FPS -->
-          <div class="pt-3 border-t border-studioLightBorder dark:border-zinc-800 space-y-2">
+          <!-- Khung Xem Trước Font Chữ Bàn Viết Ngay Dưới Lựa Chọn Font / Cỡ Chữ -->
+          <div class="p-3.5 rounded-xl bg-studioLightBg dark:bg-zinc-950 border border-emerald-500/35 space-y-2">
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <span class="font-bold text-indigo-300">🌌 Hiệu Ứng Không Gian Nền (60FPS Canvas / Ảnh & Video Cá Nhân):</span>
-              <div class="flex flex-wrap items-center gap-2">
-                <input type="file" id="input-custom-bg-media" accept="image/*,video/*" class="hidden" />
-                <button type="button" id="btn-upload-custom-bg" class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px]">
-                  🖼️ Tải Ảnh / Video Nền Từ Máy
-                </button>
-                <button type="button" id="btn-clear-custom-bg" class="hidden px-2.5 py-1 rounded-lg border border-rose-500/50 bg-rose-500/15 hover:bg-rose-600 text-rose-200 hover:text-white font-bold text-[11px]">
-                  🗑️ Gỡ Ảnh/Video Nền
-                </button>
-                <label class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-studioLightBg dark:bg-zinc-950 border border-zinc-700 text-[10px] font-bold text-indigo-300">
-                  <span>✨ Độ rõ nền:</span>
-                  <input id="mod22-bg-visibility-slider" type="range" min="15" max="95" value="68" class="w-24 accent-indigo-500 cursor-pointer" />
-                </label>
-              </div>
+              <span class="font-extrabold text-emerald-400">👁️ Xem Trước Font Chữ Bàn Viết (Cập nhật trực tiếp):</span>
+              <span class="text-[10px] text-zinc-400">Tự động đồng bộ Font, Cỡ chữ, Giãn dòng &amp; Khổ trang với Bàn viết Tab 1</span>
             </div>
-            <div class="grid grid-cols-2 sm:grid-cols-6 gap-2">
-              <button type="button" data-bg-effect="FIREFLIES" class="bg-effect-btn py-1.5 px-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 font-bold text-[11px]">✨ Đom Đóm Đêm</button>
-              <button type="button" data-bg-effect="LANTERNS" class="bg-effect-btn py-1.5 px-2 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-amber-500 text-[11px] font-semibold">🏮 Đèn Lồng Ấm</button>
-              <button type="button" data-bg-effect="STARDUST" class="bg-effect-btn py-1.5 px-2 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-indigo-500 text-[11px] font-semibold">🌌 Bụi Sao Đêm</button>
-              <button type="button" data-bg-effect="RAIN_DROPS" class="bg-effect-btn py-1.5 px-2 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-teal-500 text-[11px] font-semibold">🌧️ Mưa Trên Kính</button>
-              <button type="button" data-bg-effect="AUTUMN" class="bg-effect-btn py-1.5 px-2 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-orange-500 text-[11px] font-semibold">🍂 Lá Thu Rơi</button>
-              <button type="button" data-bg-effect="NONE" class="bg-effect-btn py-1.5 px-2 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-rose-500 text-[11px] font-semibold">⬛ Nền Tĩnh Tối Giản</button>
+            <div id="mod22-typography-specimen-preview" class="p-3.5 rounded-xl border border-studioLightBorder dark:border-zinc-800 bg-studioLightPanel/85 dark:bg-zinc-900/90 select-text mx-auto transition-all">
+              Mưa đêm gõ nhịp đều đặn lên ô cửa kính mờ hơi sương. Ánh đèn bàn vàng ấm hắt lên trang bản thảo còn thơm mùi mực mới.<br/>
+              - Đêm nay chúng ta sẽ viết tiếp chương cao trào chứ? (Lâm Phong)
             </div>
           </div>
         </div>
