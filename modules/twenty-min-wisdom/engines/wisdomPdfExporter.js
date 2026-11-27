@@ -1161,21 +1161,45 @@
       document.getElementById('w20-pdf-live-preview-modal')?.remove();
       const modal = document.createElement('div');
       modal.id = 'w20-pdf-live-preview-modal';
+      modal.setAttribute?.('role', 'dialog');
+      modal.setAttribute?.('aria-modal', 'true');
+      modal.setAttribute?.('data-at-id', 'w20-pdf-live-preview-modal');
       modal.className = 'fixed inset-0 z-[2147483645] bg-black/90 backdrop-blur-md flex flex-col text-zinc-100';
       modal.innerHTML = `
-        <div class="px-3 py-2.5 bg-[#0f2942] border-b border-teal-500/50 flex flex-wrap items-center justify-between gap-2 shrink-0 max-w-full overflow-x-hidden">
+        <div class="px-3 py-2.5 bg-[#0f2942] border-b border-teal-500/50 flex flex-wrap items-center justify-between gap-2 shrink-0 w-full min-w-0">
           <div class="min-w-0 flex-1">
-            <div class="text-xs sm:text-base font-black text-white truncate">👁️ Xem Trước PDF (${totalPages} trang)</div>
+            <div class="text-xs sm:text-base font-bold text-white truncate">👁️ Xem Trước PDF (${totalPages} trang)</div>
             <div class="text-[11px] text-teal-200 truncate">Bìa · Biểu đồ · Sơ đồ đủ 8 chuỗi · Link bài báo bấm trực tiếp</div>
           </div>
-          <div class="flex flex-wrap items-center gap-1.5 shrink-0">
-            <button type="button" id="w20-pv-download" class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-black shadow-lg cursor-pointer">⬇️ Tải PDF</button>
-            <button type="button" id="w20-pv-close" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
+          <div class="flex flex-wrap items-center gap-1.5 shrink-0 max-w-full">
+            <div class="inline-flex items-center gap-1 bg-zinc-950/90 border border-zinc-600 rounded-lg px-1 py-0.5">
+              <button type="button" id="w20-pv-zoom-out" aria-label="Thu nhỏ" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-[11px] font-bold cursor-pointer">➖</button>
+              <input id="w20-pv-zoom-pct" list="w20-pv-zoom-list" type="number" min="40" max="300" step="10" value="100" aria-label="Phần trăm phóng to" class="w-12 px-1 py-0.5 rounded bg-zinc-900 border border-zinc-700 text-center text-[11px] font-bold text-emerald-300" />
+              <span class="text-[10px] text-zinc-400 font-bold">%</span>
+              <datalist id="w20-pv-zoom-list"><option value="50"></option><option value="75"></option><option value="100"></option><option value="125"></option><option value="150"></option><option value="200"></option><option value="250"></option><option value="300"></option></datalist>
+              <button type="button" id="w20-pv-zoom-in" aria-label="Phóng to" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-[11px] font-bold cursor-pointer">➕</button>
+            </div>
+            <button type="button" id="w20-pv-download" data-at-id="w20-pdf-preview-download" data-at-expect="download:pdf" class="px-3 py-1.5 min-h-[36px] rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold shadow-lg cursor-pointer whitespace-nowrap">⬇️ Tải PDF</button>
+            <button type="button" id="w20-pv-close" data-at-id="w20-pdf-preview-close" data-at-expect="closes:#w20-pdf-live-preview-modal" aria-label="Đóng xem trước PDF" class="px-3 py-1.5 min-h-[36px] rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer whitespace-nowrap">✕ Đóng</button>
           </div>
         </div>
         <div id="w20-pv-pages-scroll" class="flex-1 overflow-y-auto p-3 sm:p-6 space-y-5 flex flex-col items-center bg-zinc-950/95"></div>
       `;
       document.body.appendChild(modal);
+      let w20ZoomPct = 100;
+      const applyW20Zoom = (pct) => {
+        w20ZoomPct = Math.max(40, Math.min(300, Math.round(Number(pct) || 100)));
+        const inp = modal.querySelector('#w20-pv-zoom-pct');
+        if (inp) inp.value = String(w20ZoomPct);
+        const targetW = Math.round((820 * w20ZoomPct) / 100);
+        modal.querySelectorAll('#w20-pv-pages-scroll > div').forEach((wrap) => {
+          wrap.style.maxWidth = `${targetW}px`;
+          wrap.style.width = w20ZoomPct > 100 ? `${targetW}px` : '100%';
+        });
+      };
+      modal.querySelector('#w20-pv-zoom-out')?.addEventListener('click', () => applyW20Zoom(w20ZoomPct - 15));
+      modal.querySelector('#w20-pv-zoom-in')?.addEventListener('click', () => applyW20Zoom(w20ZoomPct + 15));
+      modal.querySelector('#w20-pv-zoom-pct')?.addEventListener('change', (ev) => applyW20Zoom(ev.target.value));
       const box = modal.querySelector('#w20-pv-pages-scroll');
       allCanvases.forEach((cv, idx) => {
         const wrap = document.createElement('div');

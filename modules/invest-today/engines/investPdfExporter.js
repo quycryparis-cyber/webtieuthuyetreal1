@@ -1151,32 +1151,44 @@
     document.getElementById('inv-pdf-live-preview-modal')?.remove();
     const modal = document.createElement('div');
     modal.id = 'inv-pdf-live-preview-modal';
+    modal.setAttribute?.('role', 'dialog');
+    modal.setAttribute?.('aria-modal', 'true');
+    modal.setAttribute?.('data-at-id', 'inv-pdf-live-preview-modal');
     modal.className = 'fixed inset-0 z-[2147483645] bg-black/90 backdrop-blur-md flex flex-col text-zinc-100';
     modal.innerHTML = `
-      <div class="px-3 py-2.5 bg-[#0f2942] border-b border-teal-500/50 flex flex-wrap items-center justify-between gap-2 shrink-0 max-w-full overflow-x-hidden">
-        <div class="min-w-0 flex-1">
-          <div class="text-xs sm:text-base font-black text-white truncate">👁️ Xem Trước PDF (${built.allPages.length} trang) — ${built.modeMeta.title}</div>
-          <div class="text-[11px] text-teal-200 truncate">Bìa · Biểu đồ · Tin tức bấm mở link trực tiếp · Phân tích chuyên sâu</div>
+      <div class="px-3 py-2.5 bg-[#0f2942] border-b border-teal-500/50 flex flex-col gap-2 shrink-0 w-full min-w-0">
+        <div class="flex items-center justify-between gap-2 w-full min-w-0">
+          <div class="min-w-0 flex-1">
+            <div class="text-xs sm:text-base font-bold text-white truncate">👁️ Xem Trước PDF (${built.allPages.length} trang) — ${built.modeMeta.title}</div>
+            <div class="text-[11px] text-teal-200 truncate">Bìa · Biểu đồ · Tin tức bấm mở link trực tiếp · Phân tích chuyên sâu</div>
+          </div>
+          <button type="button" id="inv-pv-close" data-at-id="inv-pdf-preview-close" data-at-expect="closes:#inv-pdf-live-preview-modal" aria-label="Đóng xem trước PDF" class="px-3 py-1.5 min-h-[36px] rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer shrink-0 whitespace-nowrap">✕ Đóng</button>
         </div>
-        <div class="flex flex-wrap items-center gap-1.5 shrink-0">
-          <select id="inv-pv-size" class="px-2 py-1 rounded-lg bg-zinc-950 border border-zinc-600 text-[11px] font-bold">
+        <div class="flex flex-wrap items-center gap-1.5 w-full min-w-0">
+          <select id="inv-pv-size" aria-label="Cỡ chữ PDF" class="px-2 py-1.5 min-h-[34px] rounded-lg bg-zinc-950 border border-zinc-600 text-[11px] font-bold">
             <option value="md" ${curOpts.size === 'md' ? 'selected' : ''}>Vừa</option>
             <option value="lg" ${curOpts.size === 'lg' ? 'selected' : ''}>Lớn</option>
             <option value="xl" ${curOpts.size === 'xl' ? 'selected' : ''}>Rất lớn</option>
             <option value="xxl" ${curOpts.size === 'xxl' ? 'selected' : ''}>Cực đại</option>
           </select>
-          <select id="inv-pv-font" class="px-2 py-1 rounded-lg bg-zinc-950 border border-zinc-600 text-[11px] font-bold">
+          <select id="inv-pv-font" aria-label="Phông chữ PDF" class="px-2 py-1.5 min-h-[34px] rounded-lg bg-zinc-950 border border-zinc-600 text-[11px] font-bold">
             <option value="sans" ${curOpts.font === 'sans' ? 'selected' : ''}>Sans</option>
             <option value="serif" ${curOpts.font === 'serif' ? 'selected' : ''}>Serif</option>
             <option value="classic" ${curOpts.font === 'classic' ? 'selected' : ''}>Classic</option>
             <option value="mono" ${curOpts.font === 'mono' ? 'selected' : ''}>Mono</option>
           </select>
-          <select id="inv-pv-theme" class="px-2 py-1 rounded-lg bg-zinc-950 border border-zinc-600 text-[11px] font-bold">
+          <select id="inv-pv-theme" aria-label="Nền giấy PDF" class="px-2 py-1.5 min-h-[34px] rounded-lg bg-zinc-950 border border-zinc-600 text-[11px] font-bold">
             <option value="light" ${curOpts.paperTheme === 'light' ? 'selected' : ''}>☀️ Sáng</option>
             <option value="dark" ${curOpts.paperTheme === 'dark' ? 'selected' : ''}>🌙 Tối</option>
           </select>
-          <button type="button" id="inv-pv-download" class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-black shadow-lg cursor-pointer">⬇️ Tải PDF</button>
-          <button type="button" id="inv-pv-close" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
+          <div class="inline-flex items-center gap-1 bg-zinc-950/90 border border-zinc-600 rounded-lg px-1 py-0.5">
+            <button type="button" id="inv-pv-zoom-out" aria-label="Thu nhỏ" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-[11px] font-bold cursor-pointer">➖</button>
+            <input id="inv-pv-zoom-pct" list="inv-pv-zoom-list" type="number" min="40" max="300" step="10" value="100" aria-label="Phần trăm phóng to" class="w-12 px-1 py-0.5 rounded bg-zinc-900 border border-zinc-700 text-center text-[11px] font-bold text-emerald-300" />
+            <span class="text-[10px] text-zinc-400 font-bold">%</span>
+            <datalist id="inv-pv-zoom-list"><option value="50"></option><option value="75"></option><option value="100"></option><option value="125"></option><option value="150"></option><option value="200"></option><option value="250"></option><option value="300"></option></datalist>
+            <button type="button" id="inv-pv-zoom-in" aria-label="Phóng to" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-[11px] font-bold cursor-pointer">➕</button>
+          </div>
+          <button type="button" id="inv-pv-download" data-at-id="inv-pdf-preview-download" data-at-expect="download:pdf" class="ml-auto px-3 py-1.5 min-h-[36px] rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold shadow-lg cursor-pointer shrink-0 whitespace-nowrap">⬇️ Tải PDF</button>
         </div>
       </div>
       <div id="inv-pv-pages-scroll" class="flex-1 overflow-y-auto p-3 sm:p-6 space-y-5 flex flex-col items-center bg-zinc-950/95"></div>
@@ -1236,6 +1248,20 @@
       built = await buildAllPagesForMode(mode, curOpts);
       renderPreviewSheets();
     };
+    let pvZoomPct = 100;
+    const applyPvZoom = (pct) => {
+      pvZoomPct = Math.max(40, Math.min(300, Math.round(Number(pct) || 100)));
+      const inp = modal.querySelector('#inv-pv-zoom-pct');
+      if (inp) inp.value = String(pvZoomPct);
+      const targetW = Math.round((820 * pvZoomPct) / 100);
+      modal.querySelectorAll('#inv-pv-pages-scroll > div').forEach((wrap) => {
+        wrap.style.maxWidth = `${targetW}px`;
+        wrap.style.width = pvZoomPct > 100 ? `${targetW}px` : '100%';
+      });
+    };
+    modal.querySelector('#inv-pv-zoom-out')?.addEventListener('click', () => applyPvZoom(pvZoomPct - 15));
+    modal.querySelector('#inv-pv-zoom-in')?.addEventListener('click', () => applyPvZoom(pvZoomPct + 15));
+    modal.querySelector('#inv-pv-zoom-pct')?.addEventListener('change', (ev) => applyPvZoom(ev.target.value));
     modal.querySelector('#inv-pv-size')?.addEventListener('change', rebuild);
     modal.querySelector('#inv-pv-font')?.addEventListener('change', rebuild);
     modal.querySelector('#inv-pv-theme')?.addEventListener('change', rebuild);

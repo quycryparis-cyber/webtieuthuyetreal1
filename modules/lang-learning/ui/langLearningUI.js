@@ -1324,7 +1324,7 @@
             <h2 class="text-sm sm:text-base font-black text-white">🎓 Học Ngoại Ngữ Qua Trang Web · 6 Languages &amp; Flashcards Studio</h2>
             <div class="text-xs text-sky-200/85">Từ vựng thật từ giao diện web · Phiên âm &amp; Giọng đọc 6 thứ tiếng · Ngữ pháp đối chiếu · Xuất PDF &amp; Flashcard</div>
           </div>
-          <button type="button" id="ll51-btn-close" class="ll51-btn ll51-btn-rose text-xs">✕ Đóng</button>
+          <button type="button" id="ll51-btn-close" data-at-id="ll51-modal-close" data-at-expect="closes:#modal-ll51-studio" aria-label="Đóng studio học ngoại ngữ" class="ll51-btn ll51-btn-rose text-xs shrink-0 whitespace-nowrap">✕ Đóng</button>
         </div>
         <div class="ll51-body">${bodyHtml}</div>
       </div>

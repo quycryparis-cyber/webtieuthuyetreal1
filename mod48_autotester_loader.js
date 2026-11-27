@@ -33,6 +33,11 @@
     'autotester/intelligence/intelligence.js',
     'autotester/core/coreEngine.js',
     'autotester/auditors/auditors.js',
+    'autotester/modules/stabilityAndSandbox.js',
+    'autotester/modules/viewportAndGeometry.js',
+    'autotester/modules/logicChaosAndEdge.js',
+    'autotester/modules/securityA11ySeoAndPerf.js',
+    'autotester/modules/bridgeAndCoEvolution.js',
     'autotester/suites/appSuites.js',
     'autotester/ui/shell.js',
     'autotester/main.js',
@@ -107,6 +112,42 @@
 
   NS.autoTesterLoader = loaderApi;
 
+  // Lazy Single-Call Pull-Based Bridge Proxy (Spec §10.2):
+  // Antigravity chỉ cần gọi `await window.__AUTOTESTER__.runFullAudit()` bất kỳ lúc nào -> tự động nạp lõi v2.0 & trả JSON < 2K token!
+  if (!globalScope.__AUTOTESTER__) {
+    globalScope.__AUTOTESTER__ = {
+      version: '2.0.0-lazy-proxy',
+      async runFullAudit(opts = {}) {
+        await ensureLoaded();
+        return globalScope.__AUTOTESTER__.runFullAudit(opts);
+      },
+      async auditViewports(widths) {
+        await ensureLoaded();
+        return globalScope.__AUTOTESTER__.auditViewports(widths);
+      },
+      async getCapabilities() {
+        await ensureLoaded();
+        return globalScope.__AUTOTESTER__.getCapabilities();
+      },
+      async getSurfaceDelta() {
+        await ensureLoaded();
+        return globalScope.__AUTOTESTER__.getSurfaceDelta();
+      },
+      async getDelegationQueue(ctx) {
+        await ensureLoaded();
+        return globalScope.__AUTOTESTER__.getDelegationQueue(ctx);
+      },
+      async exportTokenCappedReport(ctx) {
+        await ensureLoaded();
+        return globalScope.__AUTOTESTER__.exportTokenCappedReport(ctx);
+      },
+      async updateBaselines() {
+        await ensureLoaded();
+        return globalScope.__AUTOTESTER__.updateBaselines();
+      },
+    };
+  }
+
   // 1. Lắng nghe bấm nút "🩺 Autotester nội bộ" ở bất kỳ đâu trên giao diện
   document.addEventListener('click', (ev) => {
     const btn = ev.target?.closest?.('#btn-mod48-open-autotester, [data-open-autotester="true"]');
@@ -144,11 +185,19 @@
     }
   });
 
-  // 4. Tự mở nếu URL có ?autotest=1
+  // 4. Tự mở nếu URL có ?autotest=1 hoặc tự mở & chạy luôn 0-Token nếu ?autotest=auto
   try {
     const params = new URLSearchParams(globalScope.location?.search || '');
-    if (params.get('autotest') === '1') {
-      const boot = () => setTimeout(() => loaderApi.open(), 600);
+    const atMode = params.get('autotest');
+    if (atMode === '1' || atMode === 'auto') {
+      const boot = () => setTimeout(async () => {
+        const engine = await loaderApi.open();
+        if (atMode === 'auto' && engine && typeof engine.runAllSelected === 'function') {
+          setTimeout(() => {
+            if (!engine.isRunning) engine.runAllSelected();
+          }, 350);
+        }
+      }, 650);
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
       else boot();
     }

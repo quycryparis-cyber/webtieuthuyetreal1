@@ -6,7 +6,7 @@
 .at-root,
 .at-root * {
   box-sizing: border-box;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, -apple-system, Roboto, sans-serif;
 }
 
 .at-root {
@@ -396,6 +396,24 @@
   box-shadow: 0 6px 18px rgba(245, 158, 11, 0.35);
 }
 .at-btn-copy-rx:hover { filter: brightness(1.08); }
+.at-btn-copy-bridge {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 7px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(56, 189, 248, 0.75);
+  background: linear-gradient(135deg, #0369a1, #0ea5e9);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 5px 16px rgba(14, 165, 233, 0.3);
+}
+.at-btn-copy-bridge:hover { filter: brightness(1.08); }
 
 /* Thanh tiến trình gọn */
 .at-progress-wrap {

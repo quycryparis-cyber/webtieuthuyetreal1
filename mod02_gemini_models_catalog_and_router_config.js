@@ -112,10 +112,10 @@
     },
     {
       id: 'gemini-3.8-flash',
-      label: '🌟 Gemini 3.8 Flash (Giàu cảm xúc & Mượt mà)',
+      label: '🌟 Gemini 3.8 Flash (Mặc định 2026 · Siêu nhanh & Chính xác)',
       shortLabel: '🌟 Gemini 3.8 Flash',
-      apiTarget: 'gemini-2.5-flash',
-      fallbacks: ['gemini-flash-latest', 'gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-lite-latest'],
+      apiTarget: 'gemini-3.8-flash',
+      fallbacks: ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest'],
       tier: 'RECOMMENDED_FLASH',
       isLite: false,
       contextWindowTokens: 1048576,

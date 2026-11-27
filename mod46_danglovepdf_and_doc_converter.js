@@ -710,7 +710,7 @@
                        <a href="index.html" data-noir-internal-nav="1" class="px-3 py-1.5 rounded-xl border border-amber-400/50 bg-amber-500/15 hover:bg-amber-600 text-amber-200 hover:text-white text-xs font-bold">📖 Web Tiểu Thuyết</a>
                        <button type="button" data-noir-exit-trigger="1" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">🚪 Thoát</button>`
                     : `<a href="danglovepdf.html" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-xl border border-teal-500/50 bg-teal-500/15 hover:bg-teal-600 text-teal-200 hover:text-white text-xs font-bold" title="Mở trang web riêng chỉ dành cho ĐăngLovePDF (tự đồng bộ cập nhật)">🌐 Mở Web Riêng</a>
-                       <button type="button" id="btn-mod46-close-studio" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>`
+                       <button type="button" id="btn-mod46-close-studio" data-at-id="mod46-studio-close" data-at-expect="closes:#modal-mod46-danglovepdf-studio" class="px-3 py-1.5 min-h-[34px] rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer shrink-0 whitespace-nowrap">✕ Đóng</button>`
                 }
               </div>
             </div>
@@ -1566,9 +1566,17 @@
               <div class="text-xs font-black uppercase tracking-wider text-amber-300 border-b border-zinc-800 pb-2">⚙️ Tùy chọn nhanh</div>
               <div id="mod46-options-panel" class="space-y-3 text-xs">${this.buildOptionsPanelHtml()}</div>
               <div class="pt-2 border-t border-zinc-800 space-y-2">
-                <button type="button" id="btn-mod46-run-primary" ${canRun ? '' : 'disabled'} class="w-full py-3 rounded-2xl font-black text-sm shadow-xl transition ${canRun ? 'bg-rose-600 hover:bg-rose-500 text-white cursor-pointer' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}">
+                <button type="button" id="btn-mod46-run-primary" ${canRun ? '' : 'disabled'} data-at-id="mod46-run-primary" class="w-full py-3 rounded-2xl font-bold text-sm shadow-xl transition ${canRun ? 'bg-rose-600 hover:bg-rose-500 text-white cursor-pointer' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}">
                   🚀 ${escHtml(tool.actionLabel)}
                 </button>
+                ${tool.id === 'ocr_pdf' ? `
+                  <button type="button" id="btn-mod46-ocr-ai-fast" ${canRun ? '' : 'disabled'} data-at-id="mod46-ocr-ai-fast" class="w-full py-2.5 px-3 rounded-2xl font-bold text-xs shadow-lg transition ${canRun ? 'bg-gradient-to-r from-violet-600 to-amber-600 hover:from-violet-500 hover:to-amber-500 text-white cursor-pointer' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}">
+                    ⚡ Chạy OCR Siêu Tốc bằng AI (Gemini 3.8 Flash · JSON chuẩn)
+                  </button>
+                  <button type="button" id="btn-pro-manual-ai-ocr" data-at-id="mod46-ocr-manual-ai" class="w-full py-2 px-3 rounded-xl border border-sky-500/55 bg-sky-950/40 hover:bg-sky-900/60 text-sky-100 text-[11.5px] font-bold cursor-pointer">
+                    📋 Nhập AI Thủ công OCR (0-Token · Copy Prompt + Gửi file → Dán kết quả)
+                  </button>
+                ` : ''}
                 ${!canRun ? `<div class="text-[11px] text-amber-300 text-center">Cần ít nhất ${tool.minFiles} tệp để thực hiện.</div>` : ''}
               </div>
             </div>
@@ -1709,6 +1717,29 @@
               </div>
             </div>
             <p class="text-[11px] text-zinc-400">${isToc ? '💡 Mọi thay đổi về Phông chữ, Cỡ chữ, Màu, Đậm/Nghiêng/Gạch chân và Kiểu mục lục bên cột phải sẽ cập nhật trực tiếp ngay trên tờ A4 mẫu ở trên.' : '💡 Mẹo: Chọn chế độ <strong>🧹 Kéo khung che xóa chữ/số cũ</strong> để khoanh trắng xóa số trang/tiêu đề cũ của file gốc, sau đó đặt số mới chuẩn xác vào vị trí mong muốn!'}</p>
+          </div>
+        `;
+      }
+
+      if (tool.id === 'create_blank_pdf') {
+        const hasF = this.files.length > 0;
+        return `
+          <div class="rounded-2xl border border-emerald-500/40 bg-zinc-950 p-3.5 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="text-xs font-bold text-emerald-300">
+                🗒️ Xem trước trực tiếp ${hasF ? `— Phủ ô ly/dòng kẻ lên "${escHtml(this.files[0].name)}"` : '— Sổ ghi chú PDF mới'}
+              </div>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <input id="input-mod46-blank-existing-pdf" type="file" accept=".pdf" class="hidden" />
+                <button type="button" id="btn-mod46-blank-pick-pdf" data-at-id="mod46-blank-pick-pdf" class="px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold cursor-pointer">
+                  ${hasF ? '🔄 Đổi tệp PDF cũ' : '📂 Chèn PDF cũ để phủ ô ly (Tùy chọn)'}
+                </button>
+              </div>
+            </div>
+            <div class="flex justify-center overflow-auto bg-zinc-900/75 rounded-xl p-3 border border-zinc-800">
+              <canvas id="canvas-mod46-blank-preview" width="380" height="537" class="rounded-lg shadow-2xl border border-zinc-700 bg-white max-w-full h-auto block"></canvas>
+            </div>
+            <p class="text-[11px] text-zinc-400 text-center">Kéo thanh <strong>Độ đậm đường kẻ / ô ly</strong> hoặc đổi kiểu giấy bên phải — trang xem trước cập nhật tức thì!</p>
           </div>
         `;
       }
@@ -1993,11 +2024,9 @@
             </select>
           </label>
           <label class="flex items-center gap-2"><input id="opt-ocr-smart-skip" type="checkbox" checked class="accent-teal-400" /><span>Smart Skip: Tự lấy chữ gốc với trang đã có lớp văn bản</span></label>
-          <label class="flex items-center gap-2"><input id="opt-ocr-denoise" type="checkbox" checked class="accent-teal-400" /><span>Tiền xử lý: Tẩy nền ố vàng, khử bóng &amp; làm nét trước khi OCR</span></label>
-          <label class="flex items-center gap-2"><input id="opt-ocr-ai-fast-native" type="checkbox" ${hasG ? 'checked' : ''} class="accent-sky-400" /><span>⚡ Chế độ Siêu tốc Gemini Flash Native (Đọc thẳng PDF/Ảnh 1 lượt — nhanh gấp 10× &amp; chính xác 99%)</span></label>
-          <label class="flex items-center gap-2"><input id="opt-ocr-ai-polish" type="checkbox" ${hasG ? 'checked' : ''} class="accent-emerald-400" /><span>🤖 Hậu kiểm OCR bằng Gemini AI (sửa lỗi dấu tiếng Việt &amp; tách từ)</span></label>
-          <button type="button" id="btn-pro-manual-ai-ocr" class="w-full py-1.5 px-3 rounded-xl border border-sky-500/50 bg-sky-950/35 hover:bg-sky-900/50 text-sky-200 text-[11px] font-bold cursor-pointer">📋 AI Thủ công OCR (0-Token · Copy Prompt + Gửi file → Dán kết quả)</button>
-          <p class="text-[11px] text-zinc-400">Chạy trực tiếp trên CPU máy bạn — giữ nguyên ảnh gốc sắc nét ở bản thành phẩm.</p>`;
+          <label class="flex items-center gap-2"><input id="opt-ocr-denoise" type="checkbox" checked class="accent-teal-400" /><span>✨ Tiền nhận diện ảnh thông minh (Cắt viền, tẩy nền ố vàng, khử bóng, tự nắn nghiêng &amp; làm nét chữ)</span></label>
+          <label class="flex items-center gap-2"><input id="opt-ocr-ai-polish" type="checkbox" ${hasG ? 'checked' : ''} class="accent-emerald-400" /><span>🤖 Hậu kiểm OCR bằng Gemini 3.8 Flash (sửa lỗi dấu tiếng Việt &amp; tách từ sau khi Code quét xong)</span></label>
+          <p class="text-[11px] text-zinc-400">Bấm nút đỏ <strong>🚀 Chạy OCR 5 bước ngay</strong> để chạy thuần Code trên CPU máy bạn, hoặc dùng <strong>⚡ OCR Siêu Tốc bằng AI</strong> / <strong>📋 AI Thủ công</strong> ngay bên dưới.</p>`;
       }
       const proOpt = NS.dangLovePdfPro?.buildProOptionsHtml?.(this, id);
       if (proOpt) return proOpt;
@@ -2063,15 +2092,25 @@
           attachFileBlob: f0?.file || (f0?.bytes ? new Blob([f0.bytes]) : null),
           applyBtnLabel: '✅ Đóng gói kết quả & Xuất file ngay',
           onApplyPasted: async (pastedText) => {
-            const cleanOut = String(pastedText || '').trim();
+            const parsedStruct = gBridge?.parseStructuredOcrIcrReply ? gBridge.parseStructuredOcrIcrReply(pastedText, taskKey) : null;
+            const cleanOut = String(parsedStruct?.isStructuredJson ? parsedStruct.fullText : (pastedText || '')).trim();
             const outs = [];
             if (outKind === 'xlsx' || outKind === 'csv') {
               const XLSX = await ensureXlsx();
               let rows = [];
-              try {
-                const jm = cleanOut.match(/\[[\s\S]*\]/);
-                if (jm) { const p = JSON.parse(jm[0]); if (Array.isArray(p) && Array.isArray(p[0])) rows = p; }
-              } catch (_eJ) {}
+              if (parsedStruct?.isStructuredJson && Array.isArray(parsedStruct.tables) && parsedStruct.tables.length) {
+                parsedStruct.tables.forEach((tb) => {
+                  if (tb.caption) rows.push([tb.caption]);
+                  if (Array.isArray(tb.rows)) rows.push(...tb.rows);
+                  rows.push([]);
+                });
+              }
+              if (!rows.length) {
+                try {
+                  const jm = cleanOut.match(/\[[\s\S]*\]/);
+                  if (jm) { const p = JSON.parse(jm[0]); if (Array.isArray(p) && Array.isArray(p[0])) rows = p; }
+                } catch (_eJ) {}
+              }
               if (!rows.length) {
                 rows = cleanOut.split(/\r?\n/).filter((l) => l.trim() && !/^\|?[\s:|-]+\|?$/.test(l.trim())).map((l) => (l.includes('|') ? l.replace(/^\||\|$/g, '').split('|').map((c) => c.trim()) : [l.trim()]));
               }
@@ -2125,6 +2164,220 @@
         const promptTxt = gBridge?.buildTaskManualPrompt?.('ocr_fast', { fileName: f0?.name || 'Scan.pdf' }) || '';
         openManualToolPackageOutput('ocr_fast', 'OCR Nhận Diện Chữ — AI Thủ công 0-Token', f0, promptTxt, out);
       });
+
+      // Nút ⚡ Chạy OCR Siêu Tốc bằng AI (Gemini 3.8 Flash + Tiền nhận diện ảnh + response_schema JSON) nằm DƯỚI nút Chạy OCR 5 bước ngay
+      body.querySelector('#btn-mod46-ocr-ai-fast')?.addEventListener('click', async () => {
+        const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
+        if (!this.files.length) {
+          this.toast('⚠️ Hãy chọn tệp PDF hoặc Ảnh scan trước khi chạy OCR AI.', 'warning', 3000);
+          return;
+        }
+        if (!gBridge?.hasApiKey?.()) {
+          gBridge?.openApiKeyQuickModal?.({ onSaved: () => this.renderUploadOrWorkspaceScreen() });
+          return;
+        }
+        const f0 = this.files[0];
+        const baseName = String(f0.name || 'OCR_AI').replace(/\.[^.]+$/, '');
+        const outFmt = body.querySelector('#opt-ocr-out-fmt')?.value || 'docx';
+        const doPre = body.querySelector('#opt-ocr-denoise')?.checked !== false;
+        const loader = gBridge.showAiFullLoadingOverlay?.('⚡ OCR Siêu Tốc (Gemini 3.8 Flash + response_schema)', 'Đang tiền nhận diện ảnh & gửi Gemini 3.8 Flash...');
+        try {
+          let sendBytes = f0.bytes instanceof Uint8Array ? f0.bytes : new Uint8Array(f0.bytes || []);
+          const isPdf0 = /\.pdf$/i.test(f0.name || '');
+          let mime0 = isPdf0 ? 'application/pdf' : (/\.png$/i.test(f0.name || '') ? 'image/png' : /\.webp$/i.test(f0.name || '') ? 'image/webp' : 'image/jpeg');
+          if (!isPdf0 && doPre && typeof gBridge.preprocessImageForOcrIcr === 'function') {
+            loader?.setProgress?.(18, '🔬 Đang tiền nhận diện ảnh (cắt viền, khử bóng, nắn nghiêng, làm nét chữ)...');
+            const im = await new Promise((resolve, reject) => {
+              const el = new Image();
+              el.onload = () => resolve(el);
+              el.onerror = reject;
+              el.src = this.trackUrl(f0.file || new Blob([sendBytes], { type: mime0 }));
+            });
+            const cv = document.createElement('canvas');
+            const sc = Math.min(1, 2400 / Math.max(1, im.naturalWidth || im.width, im.naturalHeight || im.height));
+            cv.width = Math.max(1, Math.round((im.naturalWidth || im.width) * sc));
+            cv.height = Math.max(1, Math.round((im.naturalHeight || im.height) * sc));
+            cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+            const pre = gBridge.preprocessImageForOcrIcr(cv, { mode: 'ocr_print', deskew: true, autoCrop: true });
+            if (pre?.canvas && NS.dangLovePdfPro?.dataUrlToUint8) {
+              sendBytes = NS.dangLovePdfPro.dataUrlToUint8(pre.canvas.toDataURL('image/png'));
+              mime0 = 'image/png';
+              loader?.addLog?.(`✅ Tiền xử lý xong: nắn ${pre.metrics?.deskewDeg || 0}°, độ nét ${pre.metrics?.sharpnessScore || 0}/100`);
+            }
+          }
+          loader?.setProgress?.(46, '🤖 Đang gọi Gemini 3.8 Flash OCR với lược đồ JSON response_schema...');
+          const rawOut = await gBridge.callGeminiGenerateContent({
+            parts: [
+              { text: 'Hãy OCR nhận diện CHÍNH XÁC 100% toàn bộ văn bản (tiếng Việt đầy đủ dấu, bảng biểu, số liệu, công thức) trong tài liệu sau theo đúng response_schema JSON.' },
+              { inlineData: { mimeType: mime0, data: gBridge.uint8ToBase64(sendBytes) } },
+            ],
+            taskType: 'doc_multimodal',
+            temperature: 0.1,
+            maxOutputTokens: 32768,
+            responseSchema: gBridge.RESPONSE_SCHEMAS?.OCR_STRUCTURED || null,
+            responseMimeType: 'application/json',
+          });
+          loader?.setProgress?.(86, '📦 Code đang đọc JSON & xuất tệp hoàn chỉnh...');
+          const parsed = gBridge.parseStructuredOcrIcrReply ? gBridge.parseStructuredOcrIcrReply(rawOut, 'ocr') : { fullText: String(rawOut || '').trim() };
+          const textOut = String(parsed.fullText || rawOut || '').trim();
+          const outs = [];
+          if (outFmt === 'md') {
+            outs.push({ name: `${baseName}_OCR_AI.md`, blob: new Blob([textOut], { type: 'text/markdown;charset=utf-8' }) });
+          } else if (outFmt === 'txt') {
+            outs.push({ name: `${baseName}_OCR_AI.txt`, blob: new Blob([textOut], { type: 'text/plain;charset=utf-8' }) });
+          } else if (outFmt === 'searchable_pdf') {
+            outs.push({ name: `${baseName}_OCR_AI.pdf`, blob: await renderLinesToVietnamesePdfBlob(`${baseName} (OCR AI)`, textOut.split(/\r?\n/), () => {}) });
+            outs.push({ name: `${baseName}_OCR_AI.docx`, blob: await buildDocxBlobFromParagraphs(baseName, textOut.split(/\r?\n/)) });
+          } else {
+            outs.push({ name: `${baseName}_OCR_AI.docx`, blob: await buildDocxBlobFromParagraphs(baseName, textOut.split(/\r?\n/)) });
+          }
+          loader?.close?.();
+          this.resultItems = outs.map((o) => ({ name: o.name, blob: o.blob, size: o.blob.size, url: this.trackUrl(o.blob) }));
+          this.resultZipItem = null;
+          this.renderResultScreen(f0.size || 0);
+        } catch (err) {
+          loader?.showError?.('⚠️ Lỗi OCR Siêu Tốc AI', String(err?.message || err), {
+            onRetry: () => body.querySelector('#btn-mod46-ocr-ai-fast')?.click(),
+            manualFallback: {
+              taskTitle: 'OCR Nhận Diện Chữ — AI Thủ công (0-Token)',
+              promptText: gBridge.buildTaskManualPrompt('ocr_fast', { fileName: f0?.name || 'Scan.pdf' }),
+              attachFileName: f0?.name || '',
+              attachFileBlob: f0?.file || (f0?.bytes ? new Blob([f0.bytes]) : null),
+              applyBtnLabel: '✅ Nạp kết quả OCR & Xuất file',
+              onApplyPasted: async (raw) => {
+                const parsed = gBridge.parseStructuredOcrIcrReply ? gBridge.parseStructuredOcrIcrReply(raw, 'ocr') : { fullText: String(raw || '').trim() };
+                const t = String(parsed.fullText || raw || '').trim();
+                const blob = outFmt === 'md'
+                  ? new Blob([t], { type: 'text/markdown;charset=utf-8' })
+                  : (outFmt === 'txt' ? new Blob([t], { type: 'text/plain;charset=utf-8' }) : await buildDocxBlobFromParagraphs(baseName, t.split(/\r?\n/)));
+                const ext = outFmt === 'md' ? 'md' : (outFmt === 'txt' ? 'txt' : 'docx');
+                this.resultItems = [{ name: `${baseName}_OCR_AI.${ext}`, blob, size: blob.size, url: this.trackUrl(blob) }];
+                this.resultZipItem = null;
+                this.renderResultScreen(f0.size || 0);
+              },
+            },
+          });
+        }
+      });
+
+      // Live Preview & Nạp PDF cũ cho công cụ Tạo sổ PDF Trắng / Kẻ ngang / Ô ly / Cornell
+      if (this.activeTool?.id === 'create_blank_pdf') {
+        const blankPickInp = body.querySelector('#input-mod46-blank-existing-pdf');
+        body.querySelector('#btn-mod46-blank-pick-pdf')?.addEventListener('click', () => blankPickInp?.click());
+        blankPickInp?.addEventListener('change', (ev) => {
+          const fl = ev.target.files ? Array.from(ev.target.files) : [];
+          try { ev.target.value = ''; } catch (_e) {}
+          if (fl.length) this.ingestFiles(fl);
+        });
+
+        let cachedPdfBgCanvas = null;
+        const renderBlankLivePreview = async () => {
+          const cv = body.querySelector('#canvas-mod46-blank-preview');
+          if (!cv || !cv.isConnected) return;
+          const style = body.querySelector('#opt-pro-blank-style')?.value || 'grid';
+          const opacityPct = Math.max(10, Math.min(100, Number(body.querySelector('#opt-pro-blank-opacity')?.value || 45)));
+          const spacingPt = Math.max(10, Math.min(48, Number(body.querySelector('#opt-pro-blank-spacing')?.value || 20)));
+          const colorKey = body.querySelector('#opt-pro-blank-color')?.value || 'blue';
+          const lblOp = body.querySelector('#lbl-pro-blank-opacity');
+          if (lblOp) lblOp.textContent = `${opacityPct}%`;
+
+          const ctx = cv.getContext('2d');
+          const cw = cv.width;
+          const ch = cv.height;
+          ctx.clearRect(0, 0, cw, ch);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, cw, ch);
+
+          if (this.files.length > 0 && this.files[0]?.bytes) {
+            if (!cachedPdfBgCanvas) {
+              try {
+                const pdfjsLib = await ensurePdfJs();
+                const pdfDoc = await pdfjsLib.getDocument({ data: this.files[0].bytes.slice() }).promise;
+                const p1 = await pdfDoc.getPage(1);
+                const bvp = p1.getViewport({ scale: 1 });
+                const fit = cw / Math.max(1, bvp.width);
+                const vp = p1.getViewport({ scale: fit });
+                cv.height = Math.max(240, Math.min(620, Math.round(vp.height)));
+                const bg = document.createElement('canvas');
+                bg.width = cw;
+                bg.height = cv.height;
+                await p1.render({ canvasContext: bg.getContext('2d'), viewport: vp }).promise;
+                cachedPdfBgCanvas = bg;
+              } catch (_ePvPdf) {}
+            }
+            if (cachedPdfBgCanvas) {
+              cv.height = cachedPdfBgCanvas.height;
+              ctx.drawImage(cachedPdfBgCanvas, 0, 0);
+            }
+          }
+
+          const colors = {
+            blue: `rgba(61, 132, 220, ${opacityPct / 100})`,
+            slate: `rgba(115, 133, 158, ${opacityPct / 100})`,
+            dark: `rgba(46, 51, 61, ${opacityPct / 100})`,
+            amber: `rgba(158, 112, 61, ${opacityPct / 100})`,
+          };
+          const strokeCol = colors[colorKey] || colors.blue;
+          const hNow = cv.height;
+          const scaleRatio = cw / 595.28;
+          const stepPx = Math.max(6, spacingPt * scaleRatio);
+          const marginPx = Math.round(32 * scaleRatio);
+
+          ctx.strokeStyle = strokeCol;
+          ctx.fillStyle = strokeCol;
+          ctx.lineWidth = 1;
+          if (style === 'ruled') {
+            ctx.beginPath();
+            for (let y = Math.round(48 * scaleRatio); y <= hNow - marginPx; y += stepPx) {
+              ctx.moveTo(marginPx, y);
+              ctx.lineTo(cw - marginPx, y);
+            }
+            ctx.stroke();
+          } else if (style === 'grid') {
+            ctx.beginPath();
+            for (let y = marginPx; y <= hNow - marginPx; y += stepPx) {
+              ctx.moveTo(marginPx, y);
+              ctx.lineTo(cw - marginPx, y);
+            }
+            for (let x = marginPx; x <= cw - marginPx; x += stepPx) {
+              ctx.moveTo(x, marginPx);
+              ctx.lineTo(x, hNow - marginPx);
+            }
+            ctx.stroke();
+          } else if (style === 'dots') {
+            for (let y = marginPx; y <= hNow - marginPx; y += stepPx) {
+              for (let x = marginPx; x <= cw - marginPx; x += stepPx) {
+                ctx.beginPath();
+                ctx.arc(x, y, 1.1, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
+          } else if (style === 'cornell') {
+            const cueX = Math.round(cw * 0.28);
+            const headY = Math.round(62 * scaleRatio);
+            const sumY = Math.round(hNow * 0.82);
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.moveTo(marginPx, headY); ctx.lineTo(cw - marginPx, headY);
+            ctx.moveTo(cueX, headY); ctx.lineTo(cueX, sumY);
+            ctx.moveTo(marginPx, sumY); ctx.lineTo(cw - marginPx, sumY);
+            ctx.stroke();
+            ctx.lineWidth = 0.9;
+            ctx.beginPath();
+            for (let y = headY + stepPx; y <= sumY - 4; y += stepPx) {
+              ctx.moveTo(cueX + 4, y);
+              ctx.lineTo(cw - marginPx, y);
+            }
+            ctx.stroke();
+          }
+        };
+
+        ['#opt-pro-blank-style', '#opt-pro-blank-opacity', '#opt-pro-blank-spacing', '#opt-pro-blank-color'].forEach((sel) => {
+          body.querySelector(sel)?.addEventListener('input', renderBlankLivePreview);
+          body.querySelector(sel)?.addEventListener('change', renderBlankLivePreview);
+        });
+        renderBlankLivePreview();
+      }
       body.querySelector('#btn-pro-manual-ai-p2d')?.addEventListener('click', () => {
         const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
         const out = body.querySelector('#opt-p2d-out')?.value || 'docx';
@@ -3414,28 +3667,27 @@
             this.theme10TocDepth = curDepth;
             const hasKey = Boolean(geminiBridge?.hasApiKey?.());
 
-            const visionCardHtml = isPdfInput
-              ? `<div class="rounded-2xl border ${comp?.recommendGeminiVision ? 'border-amber-400/70 bg-amber-950/25' : 'border-cyan-500/35 bg-zinc-950/80'} p-3 space-y-2">
-                   <div class="flex flex-wrap items-center justify-between gap-2">
-                     <div class="text-xs font-bold text-amber-200">
-                       🔬 Đánh giá PDF: ${comp?.level === 'hard' ? '⚠️ Tài liệu khó (nhiều bảng/công thức/scan)' : comp?.level === 'medium' ? '🟡 Trung bình' : '✅ Chuẩn'}
-                       ${comp?.reasons?.length ? ` · <span class="font-normal text-zinc-300">${escHtml(comp.reasons.slice(0, 2).join('; '))}</span>` : ''}
-                     </div>
-                     <div class="flex flex-wrap items-center gap-1.5">
-                       <button type="button" id="btn-mod46-vision-key-pill" class="px-2.5 py-1 rounded-lg border text-[11px] font-bold cursor-pointer ${hasKey ? 'border-emerald-500/50 bg-emerald-950/40 text-emerald-300' : 'border-zinc-700 bg-zinc-800 text-zinc-200'}">
-                         ${hasKey ? '✅ API Key sẵn sàng' : '🔑 Gắn API Key'}
-                       </button>
-                       <button type="button" id="btn-mod46-run-gemini-vision" class="px-3 py-1 rounded-lg bg-gradient-to-r from-violet-600 to-amber-600 hover:from-violet-500 hover:to-amber-500 text-white text-[11px] font-bold shadow cursor-pointer ${comp?.recommendGeminiVision ? 'animate-pulse' : ''}">
-                         ⚡ Đọc Siêu Tốc bằng Gemini Flash (File gốc 1 lượt)
-                       </button>
-                       <button type="button" id="btn-mod46-vision-manual-ai" class="px-3 py-1 rounded-lg border border-sky-400/65 bg-sky-950/60 hover:bg-sky-800/80 text-sky-100 text-[11px] font-bold shadow cursor-pointer">
-                         📋 Nhập lệnh AI Thủ công (0-Token)
-                       </button>
-                     </div>
-                   </div>
-                   <div id="mod46-vision-status" class="text-[11px] text-cyan-300 hidden"></div>
-                 </div>`
-              : '';
+            const visionCardHtml = `
+              <div class="rounded-2xl border ${comp?.recommendGeminiVision ? 'border-amber-400/70 bg-amber-950/25' : 'border-cyan-500/35 bg-zinc-950/80'} p-3 space-y-2">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="text-xs font-bold text-amber-200">
+                    🔬 Đánh giá tài liệu: ${comp?.level === 'hard' ? '⚠️ Tài liệu khó (nhiều bảng/công thức/scan)' : comp?.level === 'medium' ? '🟡 Trung bình' : '✅ Chuẩn'}
+                    ${comp?.reasons?.length ? ` · <span class="font-normal text-zinc-300">${escHtml(comp.reasons.slice(0, 2).join('; '))}</span>` : ' · <span class="font-normal text-zinc-300">AI chỉ định vị Tiêu đề/Bảng/Hình/Công thức — Code dựng 100% nội dung gốc</span>'}
+                  </div>
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <button type="button" id="btn-mod46-vision-key-pill" class="px-2.5 py-1 rounded-lg border text-[11px] font-bold cursor-pointer ${hasKey ? 'border-emerald-500/50 bg-emerald-950/40 text-emerald-300' : 'border-zinc-700 bg-zinc-800 text-zinc-200'}">
+                      ${hasKey ? '✅ API Key sẵn sàng' : '🔑 Gắn API Key'}
+                    </button>
+                    <button type="button" id="btn-mod46-run-gemini-vision" data-at-id="mod46-ai-fast-locator" class="px-3 py-1 rounded-lg bg-gradient-to-r from-violet-600 to-amber-600 hover:from-violet-500 hover:to-amber-500 text-white text-[11px] font-bold shadow cursor-pointer ${comp?.recommendGeminiVision ? 'animate-pulse' : ''}">
+                      ⚡ Đọc Siêu Tốc &amp; Định Vị Cấu Trúc (Gemini 3.8 Flash)
+                    </button>
+                    <button type="button" id="btn-mod46-vision-manual-ai" data-at-id="mod46-vision-manual-ai" class="px-3 py-1 rounded-lg border border-sky-400/65 bg-sky-950/60 hover:bg-sky-800/80 text-sky-100 text-[11px] font-bold shadow cursor-pointer">
+                      📋 Nhập AI Thủ công (0-Token)
+                    </button>
+                  </div>
+                </div>
+                <div id="mod46-vision-status" class="text-[11px] text-cyan-300 hidden"></div>
+              </div>`;
 
             const tocRowsHtml = headingIndices.length
               ? headingIndices.map(({ b, idx }) => `
@@ -3506,27 +3758,40 @@
             v2Host.querySelector('#btn-mod46-vision-key-pill')?.addEventListener('click', () => {
               geminiBridge?.openApiKeyQuickModal?.({ onSaved: () => renderV2TocAndVision(this.theme10OverrideBlocks, meta) });
             });
+            const applyPastedBlueprintOrMd = (rawPasted) => {
+              // Ưu tiên khớp JSON Bản Đồ Cấu Trúc (AI-Locator) lên 100% văn bản gốc do Code quét!
+              if (geminiBridge?.applyBlueprintToBlocks && this.theme10OverrideBlocks?.length) {
+                const merged = geminiBridge.applyBlueprintToBlocks(this.theme10OverrideBlocks, rawPasted);
+                if (merged.applied) {
+                  this._theme10AnalyzedCache = { fileId: primaryFile.id, blocks: merged.blocks, ast: meta ? { meta } : null };
+                  renderV2TocAndVision(merged.blocks, meta);
+                  const st = merged.stats;
+                  this.toast(`✅ Đã khớp Bản đồ AI lên 100% văn bản gốc (${st.headingsApplied} tiêu đề, ${st.tablesCaptioned} bảng, ${st.figuresCaptioned} hình, ${st.formulasFixed} công thức, ${st.symbolsFixed} ký tự)!`, 'success', 4500);
+                  return;
+                }
+              }
+              const stitched = geminiBridge.stitchContinueTables ? geminiBridge.stitchContinueTables(rawPasted) : rawPasted;
+              const parsers = global.NoirStructuredParsers || NS.structuredParsers;
+              const astLib = global.NoirDocAst || NS.docAst;
+              if (parsers && astLib) {
+                const ast = parsers.parseMarkdownToAst(stitched, { filename: primaryFile?.name || 'ai_manual.md' });
+                const blocks = astLib.astToLegacyBlocks(ast);
+                this._theme10AnalyzedCache = { fileId: primaryFile.id, blocks, ast };
+                renderV2TocAndVision(blocks, ast?.meta || {});
+                this.toast('✅ Đã nạp nội dung cấu trúc từ Gemini Web! Bấm Áp dụng Theme để xuất PDF đẹp.', 'success', 4000);
+              }
+            };
             v2Host.querySelector('#btn-mod46-vision-manual-ai')?.addEventListener('click', () => {
               if (!geminiBridge) return;
-              const promptTxt = geminiBridge.buildTaskManualPrompt('theme10_beautify', { fileName: primaryFile?.name || 'Tai_lieu.pdf' });
+              const compactIdx = (this.theme10OverrideBlocks || []).slice(0, 140).map((b, i) => `[#${i}|P${b?.page || b?.pageNo || 1}|${b?.type || 'p'}] ${String(b?.caption || b?.text || '').slice(0, 100)}`).join('\n');
+              const promptTxt = geminiBridge.buildTaskManualPrompt('theme10_beautify', { fileName: primaryFile?.name || 'Tai_lieu.pdf', text: compactIdx });
               geminiBridge.openManualAiAssistantModal?.({
-                taskTitle: 'Đọc sâu Tài liệu 10 Theme — AI Thủ công (0-Token)',
+                taskTitle: 'Định Vị Cấu Trúc 10 Theme (AI-Locator JSON) — Thủ công 0-Token',
                 promptText: promptTxt,
                 attachFileName: primaryFile?.name || '',
                 attachFileBlob: primaryFile?.file || (primaryFile?.bytes ? new Blob([primaryFile.bytes]) : null),
-                applyBtnLabel: '✅ Nạp Markdown vào Cấu trúc & Xem Trước PDF',
-                onApplyPasted: (md) => {
-                  const stitched = geminiBridge.stitchContinueTables ? geminiBridge.stitchContinueTables(md) : md;
-                  const parsers = global.NoirStructuredParsers || NS.structuredParsers;
-                  const astLib = global.NoirDocAst || NS.docAst;
-                  if (parsers && astLib) {
-                    const ast = parsers.parseMarkdownToAst(stitched, { filename: primaryFile?.name || 'ai_manual.md' });
-                    const blocks = astLib.astToLegacyBlocks(ast);
-                    this._theme10AnalyzedCache = { fileId: primaryFile.id, blocks, ast };
-                    renderV2TocAndVision(blocks, ast?.meta || {});
-                    this.toast('✅ Đã nạp xong nội dung cấu trúc từ Gemini Web! Bấm Áp dụng Theme để xuất PDF đẹp.', 'success', 4000);
-                  }
-                },
+                applyBtnLabel: '✅ Khớp Bản Đồ AI vào 100% Văn Bản Gốc',
+                onApplyPasted: applyPastedBlueprintOrMd,
               });
             });
             v2Host.querySelector('#btn-mod46-run-gemini-vision')?.addEventListener('click', async () => {
@@ -3536,40 +3801,45 @@
                 const btnV = v2Host.querySelector('#btn-mod46-run-gemini-vision');
                 try {
                   if (btnV) btnV.disabled = true;
-                  if (stEl) { stEl.classList.remove('hidden'); stEl.textContent = '⚡ Đang gửi trực tiếp tệp tới Gemini Flash...'; }
-                  const vRes = await geminiBridge.runGeminiVisionDeepRead(primaryFile, {
-                    ensurePdfJs,
-                    ensurePdfLib,
-                    onProgress: (pct, msg) => {
-                      if (stEl) stEl.textContent = `✨ [${pct}%] ${msg}`;
-                    },
-                  });
-                  this._theme10AnalyzedCache = { fileId: primaryFile.id, blocks: vRes.blocks, ast: vRes.ast };
-                  renderV2TocAndVision(vRes.blocks, vRes.ast?.meta || {});
-                  this.toast(`✅ Gemini Vision đã đọc sâu ${vRes.pageCount} trang & dựng lại AST sạch!`, 'success', 3600);
+                  const codeBlocks = this.theme10OverrideBlocks || [];
+                  const codeChars = codeBlocks.reduce((acc, b) => acc + String(b?.text || '').length, 0);
+                  // Kiến trúc AI-Locator + Code-Builder: nếu Code đã đọc được văn bản (>= 80 ký tự) -> AI chỉ lập Bản đồ Cấu trúc JSON!
+                  if (codeChars >= 80 && typeof geminiBridge.runAiBlueprintLocator === 'function') {
+                    if (stEl) { stEl.classList.remove('hidden'); stEl.textContent = '🧠 Gemini 3.8 Flash đang lập Bản đồ Cấu trúc JSON (response_schema)...'; }
+                    const updatedBlocks = await geminiBridge.runAiBlueprintLocator(codeBlocks, {
+                      fileBytes: isPdfInput ? primaryFile.bytes : null,
+                      mimeType: isPdfInput ? 'application/pdf' : '',
+                      fileName: primaryFile?.name || 'Tai_lieu',
+                      onProgress: (pct, msg) => { if (stEl) stEl.textContent = `✨ [${pct}%] ${msg}`; },
+                    });
+                    this._theme10AnalyzedCache = { fileId: primaryFile.id, blocks: updatedBlocks, ast: meta ? { meta } : null };
+                    renderV2TocAndVision(updatedBlocks, meta);
+                    this.toast('✅ Gemini 3.8 Flash đã định vị chuẩn Tiêu đề/Bảng/Hình/Công thức — Code giữ 100% văn bản gốc!', 'success', 4000);
+                  } else {
+                    if (stEl) { stEl.classList.remove('hidden'); stEl.textContent = '⚡ Tài liệu scan ít chữ — đang gửi trực tiếp tới Gemini 3.8 Flash...'; }
+                    const vRes = await geminiBridge.runGeminiVisionDeepRead(primaryFile, {
+                      ensurePdfJs,
+                      ensurePdfLib,
+                      onProgress: (pct, msg) => {
+                        if (stEl) stEl.textContent = `✨ [${pct}%] ${msg}`;
+                      },
+                    });
+                    this._theme10AnalyzedCache = { fileId: primaryFile.id, blocks: vRes.blocks, ast: vRes.ast };
+                    renderV2TocAndVision(vRes.blocks, vRes.ast?.meta || {});
+                    this.toast(`✅ Gemini 3.8 Flash đã đọc sâu ${vRes.pageCount} trang & dựng lại AST sạch!`, 'success', 3600);
+                  }
                 } catch (err) {
                   if (stEl) { stEl.classList.remove('hidden'); stEl.textContent = '⚠️ ' + (err?.message || err); }
-                  const errOv = geminiBridge.showAiFullLoadingOverlay?.('⚠️ Gemini Flash gặp giới hạn', String(err?.message || err));
+                  const errOv = geminiBridge.showAiFullLoadingOverlay?.('⚠️ Gemini 3.8 Flash gặp giới hạn', String(err?.message || err));
                   errOv?.showError?.('⚠️ Không thể đọc tự động qua API', String(err?.message || err), {
                     onRetry: () => execVision(),
                     manualFallback: {
-                      taskTitle: 'Đọc sâu Tài liệu — Dán Markdown chuẩn từ Gemini Web',
+                      taskTitle: 'Định Vị Cấu Trúc 10 Theme — Dán JSON/Markdown từ Gemini Web',
                       promptText: geminiBridge.buildTaskManualPrompt('theme10_beautify', { fileName: primaryFile?.name || 'Tai_lieu.pdf' }),
                       attachFileName: primaryFile?.name || '',
                       attachFileBlob: primaryFile?.file || (primaryFile?.bytes ? new Blob([primaryFile.bytes]) : null),
-                      applyBtnLabel: '✅ Nạp Markdown vào Cấu trúc & Xem Trước PDF',
-                      onApplyPasted: (md) => {
-                        const stitched = geminiBridge.stitchContinueTables(md);
-                        const parsers = global.NoirStructuredParsers || NS.structuredParsers;
-                        const astLib = global.NoirDocAst || NS.docAst;
-                        if (parsers && astLib) {
-                          const ast = parsers.parseMarkdownToAst(stitched, { filename: primaryFile?.name || 'ai_manual.md' });
-                          const blocks = astLib.astToLegacyBlocks(ast);
-                          this._theme10AnalyzedCache = { fileId: primaryFile.id, blocks, ast };
-                          renderV2TocAndVision(blocks, ast?.meta || {});
-                          this.toast('✅ Đã nạp xong nội dung từ Gemini Web & dựng lại AST chuẩn!', 'success', 3800);
-                        }
-                      },
+                      applyBtnLabel: '✅ Khớp Bản Đồ AI vào 100% Văn Bản Gốc',
+                      onApplyPasted: applyPastedBlueprintOrMd,
                     },
                   });
                 } finally {
@@ -4255,29 +4525,8 @@
             outputs.push({ name: `${baseName}.pdf`, blob: pdfBlob });
           }
         } else if (tool.id === 'ocr_pdf') {
+          // Nút chính "🚀 Chạy OCR 5 bước ngay" LUÔN chạy thuần Code (Smart Skip + Tiền nhận diện ảnh DSP + Tesseract + PNG 2 lớp)
           const gBridgeOcr = global.NoirGeminiBridge || NS.geminiBridge;
-          if (opts.ocrAiFastNative && pro.ocrOutFormat !== 'searchable_pdf' && gBridgeOcr?.hasApiKey?.() && this.files[0]?.bytes?.byteLength <= 18 * 1024 * 1024) {
-            prog(28, '⚡ Đang chạy OCR Siêu Tốc 1 lượt bằng Gemini Flash Native...');
-            const f0 = this.files[0];
-            const isPdf0 = /\.pdf$/i.test(f0.name || '');
-            const mime0 = isPdf0 ? 'application/pdf' : (/\.png$/i.test(f0.name || '') ? 'image/png' : /\.webp$/i.test(f0.name || '') ? 'image/webp' : 'image/jpeg');
-            const fastOcrText = await gBridgeOcr.callGeminiGenerateContent({
-              parts: [
-                { text: 'Hãy OCR nhận diện CHÍNH XÁC 100% toàn bộ văn bản (tiếng Việt đầy đủ dấu, bảng biểu, số liệu) trong tài liệu sau. Không tóm tắt, giữ nguyên phân đoạn.' },
-                { inlineData: { mimeType: mime0, data: gBridgeOcr.uint8ToBase64(f0.bytes) } },
-              ],
-              temperature: 0.1,
-              maxOutputTokens: 32768,
-            });
-            prog(88, '📦 Đang xuất kết quả OCR Gemini Flash...');
-            const outStr = String(fastOcrText || '').trim();
-            if (pro.ocrOutFormat === 'docx') {
-              outputs.push({ name: `${baseName}_OCR_AI.docx`, blob: await buildDocxBlobFromParagraphs(baseName, outStr.split(/\r?\n/)) });
-            } else if (pro.ocrOutFormat === 'md') {
-              outputs.push({ name: `${baseName}_OCR_AI.md`, blob: new Blob([outStr], { type: 'text/markdown;charset=utf-8' }) });
-            }
-            outputs.push({ name: `${baseName}_OCR_AI.txt`, blob: new Blob([outStr], { type: 'text/plain;charset=utf-8' }) });
-          } else {
           const Tesseract = await ensureTesseract();
           const fullTextParts = [];
           const wantSearchablePdf = pro.ocrOutFormat === 'searchable_pdf';
@@ -4286,10 +4535,10 @@
 
           const appendSearchablePage = async (canvasEl, ocrData) => {
             if (!outPdf) return;
-            const jpgBytes = NS.dangLovePdfPro?.dataUrlToUint8
-              ? NS.dangLovePdfPro.dataUrlToUint8(canvasEl.toDataURL('image/jpeg', 0.88))
+            const pngBytes = NS.dangLovePdfPro?.dataUrlToUint8
+              ? NS.dangLovePdfPro.dataUrlToUint8(canvasEl.toDataURL('image/png'))
               : new Uint8Array();
-            const emb = await outPdf.embedJpg(jpgBytes);
+            const emb = await outPdf.embedPng(pngBytes);
             const pw = 595.28;
             const ph = (canvasEl.height / Math.max(1, canvasEl.width)) * pw;
             const pg = outPdf.addPage([pw, ph]);
@@ -4307,26 +4556,17 @@
                 pg.drawText(safeWord, { x: bx, y: Math.max(2, by), size: Math.min(28, bh), font: stdFont, opacity: 0.01 });
               } catch (_eW) {}
             }
-            // Lớp 2 (hiển thị phía trên): ảnh gốc sắc nét
+            // Lớp 2 (hiển thị phía trên): ảnh gốc PNG siêu nét không nén
             pg.drawImage(emb, { x: 0, y: 0, width: pw, height: ph });
           };
 
           const preprocessScanCanvas = (srcCanvas) => {
             if (!pro.ocrDenoise) return srcCanvas;
-            const tmp = document.createElement('canvas');
-            tmp.width = srcCanvas.width;
-            tmp.height = srcCanvas.height;
-            const tctx = tmp.getContext('2d');
-            tctx.drawImage(srcCanvas, 0, 0);
-            const im = tctx.getImageData(0, 0, tmp.width, tmp.height);
-            const d = im.data;
-            for (let k = 0; k < d.length; k += 4) {
-              const g = 0.299 * d[k] + 0.587 * d[k + 1] + 0.114 * d[k + 2];
-              const boosted = g > 192 ? 255 : g < 110 ? Math.max(0, g - 32) : g;
-              d[k] = d[k + 1] = d[k + 2] = boosted;
+            if (typeof gBridgeOcr?.preprocessImageForOcrIcr === 'function') {
+              const pre = gBridgeOcr.preprocessImageForOcrIcr(srcCanvas, { mode: 'ocr_print', deskew: true, autoCrop: false });
+              if (pre?.canvas) return pre.canvas;
             }
-            tctx.putImageData(im, 0, 0);
-            return tmp;
+            return srcCanvas;
           };
 
           if (/\.pdf$/i.test(this.files[0].name)) {
@@ -4335,7 +4575,6 @@
             for (let i = 1; i <= pdf.numPages; i++) {
               if (this.cancelled) return;
               const page = await pdf.getPage(i);
-              // Bước 1: Smart Skip — nếu trang đã có lớp chữ vector đầy đủ thì lấy thẳng không tốn CPU OCR lại!
               let existingText = '';
               if (pro.ocrSmartSkip) {
                 try {
@@ -4348,19 +4587,19 @@
                 fullTextParts.push(`--- TRANG ${i} ---\n${existingText}`);
                 continue;
               }
-              prog(10 + ((i - 1) / pdf.numPages) * 80, `Đang tiền xử lý & quét OCR trang ${i}/${pdf.numPages}...`);
-              const vp = page.getViewport({ scale: 2.0 });
+              prog(10 + ((i - 1) / pdf.numPages) * 80, `Đang tiền nhận diện ảnh & quét OCR trang ${i}/${pdf.numPages}...`);
+              const vp = page.getViewport({ scale: 2.5 });
               const c = document.createElement('canvas');
-              c.width = vp.width;
-              c.height = vp.height;
-              await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+              c.width = Math.round(vp.width);
+              c.height = Math.round(vp.height);
+              await page.render({ canvasContext: c.getContext('2d'), viewport: vp, intent: 'print' }).promise;
               const cleanForOcr = preprocessScanCanvas(c);
               const res = await Tesseract.recognize(cleanForOcr, opts.ocrLang);
               fullTextParts.push(`--- TRANG ${i} ---\n${res?.data?.text || ''}`);
               if (wantSearchablePdf) await appendSearchablePage(c, res?.data);
             }
           } else {
-            prog(30, 'Đang tiền xử lý ảnh & nhận diện chữ (OCR 5 bước)...');
+            prog(30, 'Đang tiền nhận diện ảnh & nhận diện chữ (OCR 5 bước)...');
             const im = await new Promise((resolve, reject) => {
               const el = new Image();
               el.onload = () => resolve(el);
@@ -4377,13 +4616,12 @@
             if (wantSearchablePdf) await appendSearchablePage(c, res?.data);
           }
           let combinedText = fullTextParts.join('\n\n');
-          if (opts.ocrAiPolish && (global.NoirGeminiBridge || NS.geminiBridge)?.hasApiKey?.() && combinedText.trim().length > 20) {
+          if (opts.ocrAiPolish && gBridgeOcr?.hasApiKey?.() && combinedText.trim().length > 20) {
             try {
-              prog(92, '🤖 AI đang hậu kiểm & sửa lỗi dấu tiếng Việt sau OCR...');
-              const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
-              const polished = await gBridge.callGeminiText(
+              prog(92, '🤖 Gemini 3.8 Flash đang hậu kiểm & sửa lỗi dấu tiếng Việt sau OCR...');
+              const polished = await gBridgeOcr.callGeminiText(
                 `Hãy sửa các lỗi nhận diện OCR (lỗi dấu tiếng Việt, ký tự vỡ, khoảng trắng thừa tách chữ) nhưng GIỮ NGUYÊN 100% nội dung & số liệu của văn bản sau:\n\n${combinedText.slice(0, 14000)}`,
-                { temperature: 0.1, maxOutputTokens: 8192 }
+                { temperature: 0.1, maxOutputTokens: 8192, taskType: 'doc_multimodal' }
               );
               if (polished && polished.trim().length > combinedText.slice(0, 14000).length * 0.4) {
                 combinedText = polished + (combinedText.length > 14000 ? '\n\n' + combinedText.slice(14000) : '');
@@ -4398,7 +4636,6 @@
             outputs.push({ name: `${baseName}_OCR.md`, blob: new Blob([combinedText], { type: 'text/markdown;charset=utf-8' }) });
           }
           outputs.push({ name: `${baseName}_OCR.txt`, blob: new Blob([combinedText], { type: 'text/plain;charset=utf-8' }) });
-          }
         }
 
         if (this.cancelled) return;
@@ -4628,23 +4865,44 @@
       const isHtml = /\.html?$/i.test(resItem.name);
       const isImg = /\.(png|jpe?g|webp|gif|bmp)$/i.test(resItem.name);
 
+      pv.setAttribute('role', 'dialog');
+      pv.setAttribute('aria-modal', 'true');
+      pv.setAttribute('data-at-id', 'mod46-result-preview-modal');
       pv.innerHTML = `
-        <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-zinc-800 shrink-0">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="text-sm sm:text-base font-black text-sky-300 truncate">👁️ Xem trước: ${escHtml(resItem.name)}</span>
-            <span id="mod46-pv-meta" class="px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 text-[10.5px] font-bold shrink-0">${formatBytes(resItem.size)}</span>
+        <div class="flex flex-col gap-2 pb-2.5 border-b border-zinc-800 shrink-0 w-full min-w-0">
+          <div class="flex items-center justify-between gap-2 w-full min-w-0">
+            <div class="flex items-center gap-2 min-w-0 flex-1">
+              <span class="text-sm sm:text-base font-bold text-sky-300 truncate">👁️ Xem trước: ${escHtml(resItem.name)}</span>
+              <span id="mod46-pv-meta" class="px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 text-[10.5px] font-bold shrink-0">${formatBytes(resItem.size)}</span>
+            </div>
+            <button type="button" id="btn-mod46-pv-close" data-at-id="mod46-preview-close" data-at-expect="closes:#mod46-result-preview-modal" aria-label="Đóng xem trước" class="px-3 py-1.5 min-h-[36px] rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer shrink-0 whitespace-nowrap">✕ Đóng</button>
           </div>
-          <div class="flex items-center gap-1.5 flex-wrap">
+          <div class="flex items-center gap-1.5 flex-wrap w-full min-w-0">
             ${isPdf ? `
-              <button type="button" id="btn-mod46-pv-prev" class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer">◀ Trước</button>
-              <span id="mod46-pv-page-info" class="px-2 py-1 text-xs font-extrabold text-amber-300">Đang dựng...</span>
-              <button type="button" id="btn-mod46-pv-next" class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer">Sau ▶</button>
-              <button type="button" id="btn-mod46-pv-zoom-out" class="px-2 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-black cursor-pointer" title="Thu nhỏ">➖</button>
-              <span id="mod46-pv-zoom-val" class="text-[11px] font-bold text-zinc-300 w-10 text-center">100%</span>
-              <button type="button" id="btn-mod46-pv-zoom-in" class="px-2 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-black cursor-pointer" title="Phóng to">➕</button>
+              <button type="button" id="btn-mod46-pv-prev" class="px-2.5 py-1.5 min-h-[34px] rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer">◀ Trước</button>
+              <span id="mod46-pv-page-info" class="px-2 py-1 text-xs font-bold text-amber-300">Đang dựng...</span>
+              <button type="button" id="btn-mod46-pv-next" class="px-2.5 py-1.5 min-h-[34px] rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer">Sau ▶</button>
             ` : ''}
-            <a href="${resItem.url}" download="${escHtml(resItem.name)}" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black">⬇️ Tải</a>
-            <button type="button" id="btn-mod46-pv-close" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
+            <div class="inline-flex items-center gap-1 bg-zinc-900/90 border border-zinc-700 rounded-xl px-1.5 py-0.5">
+              <button type="button" id="btn-mod46-pv-zoom-out" aria-label="Thu nhỏ" class="px-2 py-1 min-h-[30px] rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer" title="Thu nhỏ (-15%)">➖</button>
+              <input id="inp-mod46-pv-zoom-pct" list="mod46-pv-zoom-presets" type="number" min="25" max="400" step="5" value="100" aria-label="Tỷ lệ phóng to (%)" class="w-14 px-1.5 py-1 rounded-lg bg-zinc-950 border border-zinc-700 text-center text-xs font-bold text-emerald-300" title="Nhập hoặc chọn % phóng to (25% – 400%)" />
+              <span class="text-[11px] font-bold text-zinc-400">%</span>
+              <datalist id="mod46-pv-zoom-presets">
+                <option value="50"></option><option value="75"></option><option value="100"></option><option value="125"></option><option value="150"></option><option value="200"></option><option value="250"></option><option value="300"></option>
+              </datalist>
+              <select id="sel-mod46-pv-zoom-preset" aria-label="Chọn nhanh % phóng to" class="px-1.5 py-1 rounded-lg bg-zinc-950 border border-zinc-700 text-[11px] font-bold text-zinc-200 cursor-pointer">
+                <option value="50">50%</option>
+                <option value="75">75%</option>
+                <option value="100" selected>100%</option>
+                <option value="125">125%</option>
+                <option value="150">150%</option>
+                <option value="200">200%</option>
+                <option value="250">250%</option>
+                <option value="300">300%</option>
+              </select>
+              <button type="button" id="btn-mod46-pv-zoom-in" aria-label="Phóng to" class="px-2 py-1 min-h-[30px] rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer" title="Phóng to (+15%)">➕</button>
+            </div>
+            <a href="${resItem.url}" download="${escHtml(resItem.name)}" data-at-id="mod46-preview-download" data-at-expect="download:file" class="ml-auto px-3 py-1.5 min-h-[36px] inline-flex items-center rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold whitespace-nowrap">⬇️ Tải</a>
           </div>
         </div>
         <div id="mod46-pv-stage" class="flex-1 min-h-0 overflow-auto py-4 px-2 flex flex-col items-center gap-4 bg-zinc-900/70 rounded-2xl mt-2 border border-zinc-800">
@@ -4667,21 +4925,54 @@
       const stage = pv.querySelector('#mod46-pv-stage');
       if (!stage) return;
 
+      let zoomFactor = 1.0;
+      const zoomInp = pv.querySelector('#inp-mod46-pv-zoom-pct');
+      const zoomSel = pv.querySelector('#sel-mod46-pv-zoom-preset');
+      let onZoomChanged = () => {};
+      const setZoomPercent = (pct) => {
+        const clamped = Math.max(25, Math.min(400, Math.round(Number(pct) || 100)));
+        zoomFactor = Number((clamped / 100).toFixed(2));
+        if (zoomInp) zoomInp.value = String(clamped);
+        if (zoomSel && Array.from(zoomSel.options).some((o) => Number(o.value) === clamped)) {
+          zoomSel.value = String(clamped);
+        }
+        onZoomChanged(zoomFactor, clamped);
+      };
+      pv.querySelector('#btn-mod46-pv-zoom-out')?.addEventListener('click', () => setZoomPercent(Math.round(zoomFactor * 100) - 15));
+      pv.querySelector('#btn-mod46-pv-zoom-in')?.addEventListener('click', () => setZoomPercent(Math.round(zoomFactor * 100) + 15));
+      zoomInp?.addEventListener('change', () => setZoomPercent(zoomInp.value));
+      zoomInp?.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') setZoomPercent(zoomInp.value); });
+      zoomSel?.addEventListener('change', () => setZoomPercent(zoomSel.value));
+
       try {
         if (isImg) {
-          stage.innerHTML = `<img src="${resItem.url}" alt="${escHtml(resItem.name)}" class="max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-zinc-700 bg-white" />`;
+          stage.innerHTML = `<img id="mod46-pv-img-el" src="${resItem.url}" alt="${escHtml(resItem.name)}" class="rounded-xl shadow-2xl border border-zinc-700 bg-white block transition-all" style="width:min(100%, 820px);height:auto;" />`;
+          onZoomChanged = (zf) => {
+            const im = stage.querySelector('#mod46-pv-img-el');
+            if (im) im.style.width = `${Math.round(Math.min(stage.clientWidth - 28, 820) * zf)}px`;
+          };
           return;
         }
         if (isHtml) {
           const htmlText = await resItem.blob.text();
-          stage.innerHTML = `<iframe id="mod46-pv-html-frame" class="w-full h-full min-h-[70vh] rounded-xl border border-zinc-700 bg-white"></iframe>`;
+          stage.innerHTML = `<iframe id="mod46-pv-html-frame" class="w-full h-full min-h-[70vh] rounded-xl border border-zinc-700 bg-white" style="transform-origin:top center;"></iframe>`;
           const ifr = stage.querySelector('#mod46-pv-html-frame');
           if (ifr) ifr.srcdoc = htmlText;
+          onZoomChanged = (zf) => {
+            if (ifr) {
+              ifr.style.transform = `scale(${zf})`;
+              ifr.style.width = `${Math.round(100 / Math.max(0.5, zf))}%`;
+            }
+          };
           return;
         }
         if (!isPdf) {
           const txt = await resItem.blob.text();
-          stage.innerHTML = `<pre class="w-full max-w-4xl p-4 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 whitespace-pre-wrap break-words font-mono">${escHtml(txt.slice(0, 60000))}</pre>`;
+          stage.innerHTML = `<pre id="mod46-pv-pre-el" class="w-full max-w-4xl p-4 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 whitespace-pre-wrap break-words font-mono">${escHtml(txt.slice(0, 60000))}</pre>`;
+          onZoomChanged = (zf) => {
+            const pre = stage.querySelector('#mod46-pv-pre-el');
+            if (pre) pre.style.fontSize = `${Math.round(12 * zf)}px`;
+          };
           return;
         }
 
@@ -4691,10 +4982,8 @@
         pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
         const totalPages = pdfDoc.numPages;
         let currentPage = 1;
-        let zoomFactor = 1.0;
 
         const pageInfoEl = pv.querySelector('#mod46-pv-page-info');
-        const zoomValEl = pv.querySelector('#mod46-pv-zoom-val');
         const prevBtn = pv.querySelector('#btn-mod46-pv-prev');
         const nextBtn = pv.querySelector('#btn-mod46-pv-next');
 
@@ -4702,7 +4991,6 @@
           if (!pdfDoc || !pv.isConnected) return;
           currentPage = Math.max(1, Math.min(totalPages, pageNo));
           if (pageInfoEl) pageInfoEl.textContent = `Trang ${currentPage} / ${totalPages}`;
-          if (zoomValEl) zoomValEl.textContent = `${Math.round(zoomFactor * 100)}%`;
           if (prevBtn) prevBtn.disabled = currentPage <= 1;
           if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
 
@@ -4711,7 +4999,7 @@
           const availW = Math.max(280, Math.min(stage.clientWidth - 28, 960));
           const fitScale = availW / Math.max(1, baseVp.width);
           const outSc = Math.min(Math.max(window.devicePixelRatio || 1, 2), 3);
-          const renderScale = Math.max(0.5, Math.min(3.2, fitScale * zoomFactor));
+          const renderScale = Math.max(0.35, Math.min(4.0, fitScale * zoomFactor));
 
           stage.innerHTML = '';
           const canvas = document.createElement('canvas');
@@ -4738,14 +5026,7 @@
 
         prevBtn?.addEventListener('click', () => renderPage(currentPage - 1));
         nextBtn?.addEventListener('click', () => renderPage(currentPage + 1));
-        pv.querySelector('#btn-mod46-pv-zoom-out')?.addEventListener('click', () => {
-          zoomFactor = Math.max(0.5, Number((zoomFactor - 0.2).toFixed(2)));
-          renderPage(currentPage);
-        });
-        pv.querySelector('#btn-mod46-pv-zoom-in')?.addEventListener('click', () => {
-          zoomFactor = Math.min(2.4, Number((zoomFactor + 0.2).toFixed(2)));
-          renderPage(currentPage);
-        });
+        onZoomChanged = () => renderPage(currentPage);
 
         await renderPage(1);
       } catch (err) {

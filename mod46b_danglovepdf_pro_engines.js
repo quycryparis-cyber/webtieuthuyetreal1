@@ -889,7 +889,7 @@
         { id: 'nup_booklet', icon: '📖', name: 'Dàn trang Nhiều trang/tờ & Đóng gáy sách', badge: 'N-up 2/4/6/9 & Booklet', desc: 'Gom 2, 4, 6, 9 trang vào 1 mặt giấy hoặc đảo trang tự động để in sách đóng gáy giữa.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Dàn trang ngay' },
         { id: 'split_smart_books', icon: '🪓', name: 'Cắt đôi trang sách A3, In Áp phích & Tách theo trang trắng/từ khóa', badge: 'Split Half / Posterize / Smart', desc: 'Cắt dọc trang scan 2 trang liền nhau, chia khổ lớn A0/A1 ra lưới A4 dán tường, hoặc tách tự động theo trang trắng/từ khóa.', accept: '.pdf', multiple: false, minFiles: 1, actionLabel: 'Xử lý cắt tách thông minh' },
         { id: 'alternate_mix', icon: '🔀', name: 'Trộn xen kẽ 2 file PDF (Scan 1 mặt)', badge: 'File 1 lẻ + File 2 chẵn', desc: 'Ghép xen kẽ trang từ 2 file PDF (có tùy chọn đảo ngược file 2 cho tài liệu scan 1 mặt).', accept: '.pdf', multiple: true, minFiles: 2, actionLabel: 'Trộn xen kẽ ngay' },
-        { id: 'create_blank_pdf', icon: '🗒️', name: 'Tạo sổ PDF Trắng / Kẻ ngang / Ô ly', badge: 'Tạo mới 0 file', desc: 'Khởi tạo nhanh tập giấy PDF A4/A5 trắng, dòng kẻ ngang hoặc chấm bi để ghi chú & in ấn.', accept: '.pdf', multiple: false, minFiles: 0, noFileRequired: true, actionLabel: 'Tạo file PDF mới' },
+        { id: 'create_blank_pdf', icon: '🗒️', name: 'Tạo sổ PDF Trắng / Kẻ ngang / Ô ly (hoặc Phủ lên PDF cũ)', badge: 'Tạo mới · Phủ ô ly PDF cũ', desc: 'Tạo tập giấy PDF trắng, kẻ ngang, ô ly, chấm bi, Cornell HOẶC tải PDF cũ lên để phủ trực tiếp dòng kẻ/ô ly chỉnh độ đậm kèm xem trước trực tiếp!', accept: '.pdf', multiple: false, minFiles: 0, noFileRequired: true, actionLabel: 'Tạo / Phủ ô ly PDF ngay' },
       ],
     },
     {
@@ -997,6 +997,24 @@
     const out = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
     return out;
+  }
+
+  /**
+   * Tính tỷ lệ render siêu nét (~216-300 DPI) giữ chữ vector sắc cạnh tuyệt đối trên
+   * Dark Mode, Đen trắng, Làm sạch Scan & Batch mà vẫn bảo toàn RAM trên Mobile.
+   */
+  function computeSharpScale(baseVp, totalPages = 1, highDpi = true) {
+    const maxDim = Math.max(1, baseVp?.width || 595, baseVp?.height || 842);
+    const targetScale = highDpi ? (totalPages > 45 ? 2.4 : 3.0) : 2.2;
+    const maxPxCap = totalPages > 45 ? 2400 : 3200;
+    return Math.max(1.8, Math.min(targetScale, maxPxCap / maxDim));
+  }
+
+  async function embedCrispCanvasPage(pdfDoc, canvasEl, useLosslessPng = true, jpgQuality = 0.96) {
+    if (useLosslessPng) {
+      return pdfDoc.embedPng(dataUrlToUint8(canvasEl.toDataURL('image/png')));
+    }
+    return pdfDoc.embedJpg(dataUrlToUint8(canvasEl.toDataURL('image/jpeg', jpgQuality)));
   }
 
   // So sánh dòng LCS gọn cho Compare PDF (Semantic Text Diff)
@@ -1344,7 +1362,14 @@
     }
 
     if (toolId === 'create_blank_pdf') {
+      const hasExistingPdf = Boolean(ctrl?.files?.length);
       return `
+        <div class="p-2 rounded-xl border ${hasExistingPdf ? 'border-emerald-500/45 bg-emerald-950/30 text-emerald-200' : 'border-sky-500/35 bg-sky-950/25 text-sky-200'} text-[11px] leading-snug">
+          ${hasExistingPdf
+            ? `✅ Đang phủ lưới/dòng kẻ vector trực tiếp lên tệp <strong>${escHtml(ctrl.files[0].name)}</strong> (giữ nguyên độ sắc nét bản gốc 100%).`
+            : '💡 Đang ở chế độ tạo sổ mới. Bạn cũng có thể nạp thêm <strong>tệp PDF có sẵn</strong> ở khung trái để phủ ô ly / dòng kẻ ngang trực tiếp lên tệp cũ!'}
+        </div>
+        ${!hasExistingPdf ? `
         <div class="grid grid-cols-2 gap-2">
           <label class="space-y-1"><span class="font-bold">Số trang:</span><input id="opt-pro-blank-count" type="number" min="1" max="200" value="10" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" /></label>
           <label class="space-y-1"><span class="font-bold">Khổ giấy:</span>
@@ -1352,15 +1377,33 @@
               <option value="a4">A4</option><option value="a5">A5</option><option value="letter">Letter</option>
             </select>
           </label>
-        </div>
-        <label class="block space-y-1"><span class="font-bold">Kiểu nền giấy:</span>
+        </div>` : ''}
+        <label class="block space-y-1"><span class="font-bold">Kiểu nền / Lưới áp dụng:</span>
           <select id="opt-pro-blank-style" class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-700">
-            <option value="blank">Giấy trắng trơn hoàn toàn</option>
             <option value="ruled">Giấy dòng kẻ ngang (Viết tay)</option>
-            <option value="grid">Giấy kẻ ô ly vuông (Toán/Kỹ thuật)</option>
+            <option value="grid" selected>Giấy kẻ ô ly vuông (Toán/Kỹ thuật)</option>
             <option value="dots">Giấy chấm bi Bullet Journal</option>
+            <option value="cornell">Giấy ghi chú Cornell (Lề ghi chú + Tổng kết)</option>
+            <option value="blank">Giấy trắng trơn hoàn toàn</option>
           </select>
-        </label>`;
+        </label>
+        <label class="block space-y-1">
+          <div class="flex items-center justify-between"><span class="font-bold">Độ đậm đường kẻ / ô ly:</span><span id="lbl-pro-blank-opacity" class="text-emerald-300 font-bold">45%</span></div>
+          <input id="opt-pro-blank-opacity" type="range" min="10" max="100" step="5" value="45" class="w-full accent-emerald-400 cursor-pointer" />
+        </label>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="space-y-1"><span class="font-bold">Khoảng cách ô (pt):</span>
+            <input id="opt-pro-blank-spacing" type="number" min="10" max="48" value="20" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700" />
+          </label>
+          <label class="space-y-1"><span class="font-bold">Màu nét kẻ:</span>
+            <select id="opt-pro-blank-color" class="w-full px-2 py-1 rounded bg-zinc-950 border border-zinc-700">
+              <option value="blue" selected>Xanh vở học sinh</option>
+              <option value="slate">Xám xanh tinh tế</option>
+              <option value="dark">Đen than rõ nét</option>
+              <option value="amber">Nâu giấy cổ điển</option>
+            </select>
+          </label>
+        </div>`;
     }
 
     if (toolId === 'grayscale_pdf') {
@@ -1370,11 +1413,14 @@
             <option value="gray">Thang độ xám mịn (Grayscale — giữ rõ ảnh)</option>
             <option value="bw">Đen trắng độ tương phản cao (B&amp;W siêu sắc nét)</option>
           </select>
-        </label>`;
+        </label>
+        <label class="flex items-center gap-2 pt-1"><input id="opt-pro-hd-lossless" type="checkbox" checked class="accent-emerald-400" /><span>💎 Xuất siêu nét chuẩn bản gốc (300 DPI PNG không nén — không mờ chữ)</span></label>`;
     }
 
     if (toolId === 'invert_dark_pdf') {
-      return `<p class="text-zinc-300">Đảo ngược nền trắng thành nền tối than chì dịu mắt, giữ nguyên độ sắc nét của chữ để đọc ban đêm không mỏi mắt.</p>`;
+      return `
+        <p class="text-zinc-300">Đảo ngược nền trắng thành nền tối than chì dịu mắt, giữ nguyên độ sắc nét cực cao của từng nét chữ để đọc ban đêm không mỏi mắt.</p>
+        <label class="flex items-center gap-2 pt-1"><input id="opt-pro-hd-lossless" type="checkbox" checked class="accent-emerald-400" /><span>💎 Xuất siêu nét chuẩn bản gốc (300 DPI PNG không nén — không mờ chữ)</span></label>`;
     }
 
     if (toolId === 'repair_pdf') {
@@ -1601,6 +1647,7 @@ Chương 3: Tổng kết | 12</textarea>
             <option value="txt">Văn bản thuần (.TXT)</option>
           </select>
         </label>
+        <label class="flex items-center gap-2"><input id="opt-pro-icr-preprocess" type="checkbox" checked class="accent-emerald-400" /><span>✨ Tiền nhận diện ảnh thông minh (Tự cắt viền, tẩy bóng, nắn nghiêng &amp; làm sắc nét mực trước khi gửi Gemini 3.8 Flash)</span></label>
         <button type="button" id="btn-pro-manual-ai-icr" class="w-full py-2 px-3 rounded-xl border border-sky-500/55 bg-sky-950/35 hover:bg-sky-900/55 text-sky-200 text-[11px] font-bold cursor-pointer">📋 Dùng AI Thủ công ICR (0-Token · Copy Prompt theo chế độ + Gửi ảnh/PDF → Xuất file)</button>`;
     }
 
@@ -1747,8 +1794,13 @@ Chương 3: Tổng kết | 12</textarea>
       mixRev2: Boolean(document.getElementById('opt-pro-mix-rev2')?.checked),
       blankCount: Math.max(1, Math.min(200, Number(document.getElementById('opt-pro-blank-count')?.value || 10))),
       blankSize: document.getElementById('opt-pro-blank-size')?.value || 'a4',
-      blankStyle: document.getElementById('opt-pro-blank-style')?.value || 'ruled',
+      blankStyle: document.getElementById('opt-pro-blank-style')?.value || 'grid',
+      blankOpacity: Math.max(0.1, Math.min(1, Number(document.getElementById('opt-pro-blank-opacity')?.value || 45) / 100)),
+      blankSpacing: Math.max(10, Math.min(48, Number(document.getElementById('opt-pro-blank-spacing')?.value || 20))),
+      blankColor: document.getElementById('opt-pro-blank-color')?.value || 'blue',
       grayMode: document.getElementById('opt-pro-gray-mode')?.value || 'gray',
+      hdLossless: document.getElementById('opt-pro-hd-lossless') ? Boolean(document.getElementById('opt-pro-hd-lossless').checked) : true,
+      icrPreprocess: document.getElementById('opt-pro-icr-preprocess') ? Boolean(document.getElementById('opt-pro-icr-preprocess').checked) : true,
       pdfaTitle: document.getElementById('opt-pro-pdfa-title')?.value?.trim() || '',
       annPage: Math.max(1, Number(document.getElementById('opt-pro-ann-page')?.value || 1)),
       annType: document.getElementById('opt-pro-ann-type')?.value || 'sticky',
@@ -3118,31 +3170,72 @@ Chương 3: Tổng kết | 12</textarea>
       return outputs;
     }
 
-    // 5. TẠO SỔ PDF TRẮNG / KẺ NGANG / Ô LY / CHẤM BI
+    // 5. TẠO SỔ PDF TRẮNG / KẺ NGANG / Ô LY / CHẤM BI / CORNELL — HỖ TRỢ PHỦ LÊN PDF CŨ + ĐỘ ĐẬM TÙY CHỈNH!
     if (tool.id === 'create_blank_pdf') {
       const { PDFDocument, rgb } = await ensurePdfLib();
+      const colorPalette = {
+        blue: rgb(0.24, 0.52, 0.86),
+        slate: rgb(0.45, 0.52, 0.62),
+        dark: rgb(0.18, 0.20, 0.24),
+        amber: rgb(0.62, 0.44, 0.24),
+      };
+      const lineCol = colorPalette[pro.blankColor] || colorPalette.blue;
+      const opacity = Math.max(0.1, Math.min(1, Number(pro.blankOpacity) || 0.45));
+      const step = Math.max(10, Math.min(48, Number(pro.blankSpacing) || 20));
+      const margin = 32;
+
+      const drawGridOnPage = (pg) => {
+        const { width: w, height: h } = pg.getSize();
+        if (pro.blankStyle === 'ruled') {
+          for (let y = h - 48; y >= margin; y -= step) {
+            pg.drawLine({ start: { x: margin, y }, end: { x: w - margin, y }, thickness: 0.75, color: lineCol, opacity });
+          }
+        } else if (pro.blankStyle === 'grid') {
+          for (let y = h - margin; y >= margin; y -= step) {
+            pg.drawLine({ start: { x: margin, y }, end: { x: w - margin, y }, thickness: 0.6, color: lineCol, opacity });
+          }
+          for (let x = margin; x <= w - margin; x += step) {
+            pg.drawLine({ start: { x, y: margin }, end: { x, y: h - margin }, thickness: 0.6, color: lineCol, opacity });
+          }
+        } else if (pro.blankStyle === 'dots') {
+          for (let y = h - margin; y >= margin; y -= step) {
+            for (let x = margin; x <= w - margin; x += step) {
+              pg.drawCircle({ x, y, size: 1.0, color: lineCol, opacity: Math.min(1, opacity + 0.1) });
+            }
+          }
+        } else if (pro.blankStyle === 'cornell') {
+          const cueX = Math.round(w * 0.28);
+          const sumY = Math.round(h * 0.18);
+          const headY = h - 62;
+          pg.drawLine({ start: { x: margin, y: headY }, end: { x: w - margin, y: headY }, thickness: 1.1, color: lineCol, opacity: Math.min(1, opacity + 0.2) });
+          pg.drawLine({ start: { x: cueX, y: sumY }, end: { x: cueX, y: headY }, thickness: 1.0, color: lineCol, opacity: Math.min(1, opacity + 0.15) });
+          pg.drawLine({ start: { x: margin, y: sumY }, end: { x: w - margin, y: sumY }, thickness: 1.1, color: lineCol, opacity: Math.min(1, opacity + 0.2) });
+          for (let y = headY - step; y >= sumY + 8; y -= step) {
+            pg.drawLine({ start: { x: cueX + 6, y }, end: { x: w - margin, y }, thickness: 0.55, color: lineCol, opacity });
+          }
+        }
+      };
+
+      if (ctrl.files.length > 0 && ctrl.files[0]?.bytes) {
+        const doc = await PDFDocument.load(ctrl.files[0].bytes, { ignoreEncryption: true });
+        const pages = doc.getPages();
+        for (let i = 0; i < pages.length; i++) {
+          if (ctrl.cancelled) return [];
+          prog(15 + ((i + 1) / Math.max(1, pages.length)) * 75, `Đang phủ lưới ${pro.blankStyle} (đậm ${Math.round(opacity * 100)}%) lên trang ${i + 1}/${pages.length}...`);
+          drawGridOnPage(pages[i]);
+        }
+        outputs.push({ name: `${baseName}_Phu_${pro.blankStyle}_${Math.round(opacity * 100)}pct.pdf`, blob: new Blob([await doc.save()], { type: 'application/pdf' }) });
+        return outputs;
+      }
+
       const out = await PDFDocument.create();
       const [w, h] = PAPER_SIZES[pro.blankSize] || PAPER_SIZES.a4;
-      const lineCol = rgb(0.82, 0.85, 0.9);
       for (let p = 0; p < pro.blankCount; p++) {
         prog(15 + ((p + 1) / pro.blankCount) * 75, `Đang tạo trang ${p + 1}/${pro.blankCount}...`);
         const pg = out.addPage([w, h]);
-        if (pro.blankStyle === 'ruled') {
-          for (let y = h - 54; y >= 42; y -= 24) {
-            pg.drawLine({ start: { x: 36, y }, end: { x: w - 36, y }, thickness: 0.7, color: lineCol });
-          }
-        } else if (pro.blankStyle === 'grid') {
-          for (let y = h - 36; y >= 36; y -= 20) pg.drawLine({ start: { x: 36, y }, end: { x: w - 36, y }, thickness: 0.5, color: lineCol });
-          for (let x = 36; x <= w - 36; x += 20) pg.drawLine({ start: { x, y: 36 }, end: { x, y: h - 36 }, thickness: 0.5, color: lineCol });
-        } else if (pro.blankStyle === 'dots') {
-          for (let y = h - 36; y >= 36; y -= 20) {
-            for (let x = 36; x <= w - 36; x += 20) {
-              pg.drawCircle({ x, y, size: 0.9, color: rgb(0.68, 0.72, 0.78) });
-            }
-          }
-        }
+        drawGridOnPage(pg);
       }
-      outputs.push({ name: `SoGhiChu_${pro.blankStyle}_${pro.blankCount}Trang.pdf`, blob: new Blob([await out.save()], { type: 'application/pdf' }) });
+      outputs.push({ name: `SoGhiChu_${pro.blankStyle}_${Math.round(opacity * 100)}pct_${pro.blankCount}Trang.pdf`, blob: new Blob([await out.save()], { type: 'application/pdf' }) });
       return outputs;
     }
 
@@ -3164,62 +3257,87 @@ Chương 3: Tổng kết | 12</textarea>
         const pdf = await pdfjsLib.getDocument({ data: ctrl.files[0].bytes.slice() }).promise;
         const rebuilt = await PDFDocument.create();
         for (let i = 1; i <= pdf.numPages; i++) {
-          prog(30 + (i / pdf.numPages) * 60, `Đang phục hồi hình ảnh trang ${i}/${pdf.numPages}...`);
+          prog(30 + (i / pdf.numPages) * 60, `Đang phục hồi hình ảnh siêu nét trang ${i}/${pdf.numPages}...`);
           const page = await pdf.getPage(i);
-          const vp = page.getViewport({ scale: 1.7 });
+          const baseVp = page.getViewport({ scale: 1 });
+          const sc = computeSharpScale(baseVp, pdf.numPages, true);
+          const vp = page.getViewport({ scale: sc });
           const c = document.createElement('canvas');
-          c.width = vp.width;
-          c.height = vp.height;
-          await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
-          const emb = await rebuilt.embedJpg(dataUrlToUint8(c.toDataURL('image/jpeg', 0.9)));
-          const p = rebuilt.addPage([vp.width / 1.7, vp.height / 1.7]);
-          p.drawImage(emb, { x: 0, y: 0, width: vp.width / 1.7, height: vp.height / 1.7 });
+          c.width = Math.round(vp.width);
+          c.height = Math.round(vp.height);
+          const ctx = c.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          await page.render({ canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
+          const emb = await embedCrispCanvasPage(rebuilt, c, pdf.numPages <= 30, 0.96);
+          const p = rebuilt.addPage([baseVp.width, baseVp.height]);
+          p.drawImage(emb, { x: 0, y: 0, width: baseVp.width, height: baseVp.height });
         }
         outputs.push({ name: `${baseName}_DaPhucHoi.pdf`, blob: new Blob([await rebuilt.save()], { type: 'application/pdf' }) });
         return outputs;
       }
     }
 
-    // 7 & 8. ĐEN TRẮNG (GRAYSCALE) & ĐẢO MÀU BAN ĐÊM (DARK MODE)
+    // 7 & 8. ĐEN TRẮNG (GRAYSCALE) & ĐẢO MÀU BAN ĐÊM (DARK MODE) — SIÊU NÉT 300 DPI PNG KHÔNG MỜ CHỮ!
     if (tool.id === 'grayscale_pdf' || tool.id === 'invert_dark_pdf') {
       const pdfjsLib = await ensurePdfJs();
       const { PDFDocument } = await ensurePdfLib();
       const pdf = await pdfjsLib.getDocument({ data: ctrl.files[0].bytes.slice() }).promise;
       const out = await PDFDocument.create();
+      const useLossless = pro.hdLossless !== false;
       for (let i = 1; i <= pdf.numPages; i++) {
         if (ctrl.cancelled) return [];
-        prog(12 + (i / pdf.numPages) * 80, `Đang xử lý màu trang ${i}/${pdf.numPages}...`);
+        prog(12 + (i / pdf.numPages) * 80, `Đang xử lý màu siêu nét trang ${i}/${pdf.numPages}...`);
         const page = await pdf.getPage(i);
         const baseVp = page.getViewport({ scale: 1 });
-        const vp = page.getViewport({ scale: 1.65 });
+        const sc = computeSharpScale(baseVp, pdf.numPages, useLossless);
+        const vp = page.getViewport({ scale: sc });
         const c = document.createElement('canvas');
-        c.width = vp.width;
-        c.height = vp.height;
-        const ctx = c.getContext('2d');
-        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        c.width = Math.round(vp.width);
+        c.height = Math.round(vp.height);
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        await page.render({ canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
         const imgData = ctx.getImageData(0, 0, c.width, c.height);
         const d = imgData.data;
         if (tool.id === 'grayscale_pdf') {
           const isBw = pro.grayMode === 'bw';
           for (let k = 0; k < d.length; k += 4) {
             let g = 0.299 * d[k] + 0.587 * d[k + 1] + 0.114 * d[k + 2];
-            if (isBw) g = g > 175 ? 255 : g < 90 ? 0 : g;
+            if (isBw) {
+              g = g > 198 ? 255 : g < 85 ? 0 : Math.round(((g - 85) / 113) * 255);
+            }
             d[k] = d[k + 1] = d[k + 2] = g;
           }
         } else {
-          // Dark mode dịu mắt (nền #141821 thay vì đen gắt #000)
+          // Dark mode siêu nét (nền #111827 dịu mắt, chữ sáng #f8fafc sắc cạnh không nhòe biên!)
           for (let k = 0; k < d.length; k += 4) {
-            d[k] = Math.min(255, Math.max(18, 255 - d[k] + 12));
-            d[k + 1] = Math.min(255, Math.max(22, 255 - d[k + 1] + 14));
-            d[k + 2] = Math.min(255, Math.max(30, 255 - d[k + 2] + 18));
+            const invR = 255 - d[k];
+            const invG = 255 - d[k + 1];
+            const invB = 255 - d[k + 2];
+            const lum = 0.299 * invR + 0.587 * invG + 0.114 * invB;
+            if (lum < 14) {
+              d[k] = 17; d[k + 1] = 24; d[k + 2] = 39; // #111827 nền tối sạch
+            } else if (lum > 215) {
+              d[k] = Math.min(255, invR + 8);
+              d[k + 1] = Math.min(255, invG + 8);
+              d[k + 2] = Math.min(255, invB + 10);
+            } else {
+              d[k] = Math.min(255, Math.max(17, Math.round(17 + (invR / 255) * 238)));
+              d[k + 1] = Math.min(255, Math.max(24, Math.round(24 + (invG / 255) * 231)));
+              d[k + 2] = Math.min(255, Math.max(39, Math.round(39 + (invB / 255) * 216)));
+            }
           }
         }
         ctx.putImageData(imgData, 0, 0);
-        const emb = await out.embedJpg(dataUrlToUint8(c.toDataURL('image/jpeg', 0.88)));
+        const emb = await embedCrispCanvasPage(out, c, useLossless, 0.97);
         const pg = out.addPage([baseVp.width, baseVp.height]);
         pg.drawImage(emb, { x: 0, y: 0, width: baseVp.width, height: baseVp.height });
       }
-      const suffix = tool.id === 'grayscale_pdf' ? 'DenTrang' : 'DarkMode';
+      const suffix = tool.id === 'grayscale_pdf' ? 'DenTrang_HD' : 'DarkMode_HD';
       outputs.push({ name: `${baseName}_${suffix}.pdf`, blob: new Blob([await out.save()], { type: 'application/pdf' }) });
       return outputs;
     }
@@ -3383,7 +3501,7 @@ Chương 3: Tổng kết | 12</textarea>
           c.width = im.naturalWidth || im.width;
           c.height = im.naturalHeight || im.height;
           c.getContext('2d').drawImage(im, 0, 0);
-          const emb = await out.embedJpg(dataUrlToUint8(c.toDataURL('image/jpeg', 0.9)));
+          const emb = await embedCrispCanvasPage(out, c, imgKeys.length <= 25, 0.96);
           const pg = out.addPage([c.width, c.height]);
           pg.drawImage(emb, { x: 0, y: 0, width: c.width, height: c.height });
         }
@@ -3561,12 +3679,13 @@ Chương 3: Tổng kết | 12</textarea>
         const page = await pdf.getPage(i);
         // Render đúng khung CropBox -> hủy vĩnh viễn mọi đối tượng nằm ngoài lề cắt, JS, lớp ẩn & lịch sử Incremental!
         const baseVp = page.getViewport({ scale: 1 });
-        const vp = page.getViewport({ scale: 1.85 });
+        const sc = computeSharpScale(baseVp, pdf.numPages, true);
+        const vp = page.getViewport({ scale: sc });
         const c = document.createElement('canvas');
-        c.width = vp.width;
-        c.height = vp.height;
-        await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
-        const emb = await cleanDoc.embedJpg(dataUrlToUint8(c.toDataURL('image/jpeg', 0.92)));
+        c.width = Math.round(vp.width);
+        c.height = Math.round(vp.height);
+        await page.render({ canvasContext: c.getContext('2d'), viewport: vp, intent: 'print' }).promise;
+        const emb = await embedCrispCanvasPage(cleanDoc, c, pdf.numPages <= 30, 0.96);
         const pg = cleanDoc.addPage([baseVp.width, baseVp.height]);
         pg.drawImage(emb, { x: 0, y: 0, width: baseVp.width, height: baseVp.height });
       }
@@ -3943,45 +4062,84 @@ Chương 3: Tổng kết | 12</textarea>
       return outputs;
     }
 
-    // 15B. ICR THÔNG MINH — ĐỌC CHỮ VIẾT TAY & BIỂU MẪU SCAN BẰNG GEMINI FLASH
+    // 15B. ICR THÔNG MINH — TIỀN NHẬN DIỆN ẢNH DSP + GEMINI 3.8 FLASH + response_schema JSON
     if (tool.id === 'icr_handwriting_pdf') {
       const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
       if (!gBridge?.hasApiKey?.()) {
-        throw new Error('ICR nhận diện chữ viết tay yêu cầu Gemini API Key. Hãy bấm "Kết nối AI của bạn" và xác minh Key trước.');
+        throw new Error('ICR nhận diện chữ viết tay yêu cầu Gemini API Key. Hãy bấm "Kết nối AI của bạn" hoặc dùng nút "AI Thủ công ICR (0-Token)".');
       }
       const f0 = ctrl.files[0];
-      const rawBytes = f0.bytes instanceof Uint8Array ? f0.bytes : new Uint8Array(f0.bytes || []);
+      let sendBytes = f0.bytes instanceof Uint8Array ? f0.bytes : new Uint8Array(f0.bytes || []);
       const isPdf = /\.pdf$/i.test(f0.name || '');
-      const mimeType = isPdf ? 'application/pdf' : (/\.png$/i.test(f0.name || '') ? 'image/png' : /\.webp$/i.test(f0.name || '') ? 'image/webp' : 'image/jpeg');
+      let mimeType = isPdf ? 'application/pdf' : (/\.png$/i.test(f0.name || '') ? 'image/png' : /\.webp$/i.test(f0.name || '') ? 'image/webp' : 'image/jpeg');
+
+      // Bước 1: Tiền nhận diện ảnh thông minh (Auto-Crop + Khử bóng + Auto-Deskew + Contrast/Unsharp) cho ảnh viết tay trước khi gửi API!
+      if (!isPdf && pro.icrPreprocess !== false && typeof gBridge.preprocessImageForOcrIcr === 'function') {
+        try {
+          prog(16, '🔬 Đang tiền nhận diện ảnh thông minh (cắt viền, khử bóng, nắn nghiêng & làm sắc nét mực)...');
+          const im = await new Promise((resolve, reject) => {
+            const el = new Image();
+            el.onload = () => resolve(el);
+            el.onerror = reject;
+            el.src = ctrl.trackUrl(f0.file || new Blob([sendBytes], { type: mimeType }));
+          });
+          const srcCv = document.createElement('canvas');
+          const maxEdge = 2400;
+          const sc = Math.min(1, maxEdge / Math.max(1, im.naturalWidth || im.width, im.naturalHeight || im.height));
+          srcCv.width = Math.max(1, Math.round((im.naturalWidth || im.width) * sc));
+          srcCv.height = Math.max(1, Math.round((im.naturalHeight || im.height) * sc));
+          srcCv.getContext('2d').drawImage(im, 0, 0, srcCv.width, srcCv.height);
+          const pre = gBridge.preprocessImageForOcrIcr(srcCv, { mode: 'icr_handwriting', deskew: true, autoCrop: true });
+          if (pre?.canvas) {
+            sendBytes = dataUrlToUint8(pre.canvas.toDataURL('image/png'));
+            mimeType = 'image/png';
+            prog(32, `✨ Đã tiền xử lý ảnh (nắn nghiêng ${pre.metrics?.deskewDeg || 0}°, độ nét ${pre.metrics?.sharpnessScore || 0}/100) → gửi Gemini 3.8 Flash...`);
+          }
+        } catch (_ePreIcr) {}
+      }
+
       const modeInstructions = {
         handwriting_general: 'Đọc chính xác 100% chữ viết tay tiếng Việt & tiếng Anh, giữ nguyên cấu trúc đề mục, gạch đầu dòng, ngày tháng và chú thích.',
-        table_survey_checkbox: 'Nhận diện toàn bộ biểu mẫu/phiếu khảo sát viết tay, đánh dấu rõ ô đã tick là [☑] và ô chưa tick là [☐]. Mọi bảng viết tay phải trình bày thành bảng Markdown GFM chuẩn | Cột 1 | Cột 2 |.',
-        medical_rx_form: 'Đọc thật kỹ đơn thuốc, tên thuốc, liều lượng, ghi chú bác sĩ hoặc hóa đơn viết tay. Nếu có chữ cực kỳ khó đọc, giữ phỏng đoán tốt nhất kèm ghi chú [cần đối chiếu].',
-        math_notes_latex: 'Chuyển toàn bộ công thức toán học, hóa học, tài chính viết tay sang cú pháp LaTeX ($...$ và $$...$$) sắc nét kèm phần giải thích chữ viết tay.',
+        table_survey_checkbox: 'Nhận diện toàn bộ biểu mẫu/phiếu khảo sát viết tay, đánh dấu checkboxState="checked" (☑) hoặc "unchecked" (☐), tách bảng vào tables[].rows[][].',
+        medical_rx_form: 'Đọc thật kỹ đơn thuốc, tên thuốc, liều lượng, ghi chú bác sĩ hoặc hóa đơn viết tay. Chữ quá mờ ghi rõ vào uncertainNote.',
+        math_notes_latex: 'Chuyển toàn bộ công thức toán học, hóa học, tài chính viết tay sang trường latex chuẩn kèm phần giải thích chữ viết tay.',
       };
       const icrPrompt =
         `Bạn là chuyên gia ICR (Intelligent Character Recognition) đọc chữ viết tay tiếng Việt & đa ngôn ngữ độ chính xác cao.\n` +
         `${modeInstructions[pro.icrMode] || modeInstructions.handwriting_general}\n` +
-        `Tuyệt đối KHÔNG tóm tắt hay bỏ sót bất kỳ chữ viết tay nào. Chỉ trả về nội dung đã số hóa sạch đẹp.`;
+        `Tuyệt đối KHÔNG tóm tắt hay bỏ sót bất kỳ chữ viết tay nào. Trả về ĐÚNG JSON theo response_schema đã khai báo.`;
 
-      prog(25, '✍️ Đang gửi tệp viết tay trực tiếp tới Gemini Flash ICR...');
-      const b64 = gBridge.uint8ToBase64(rawBytes);
-      const icrText = await gBridge.callGeminiGenerateContent({
+      prog(42, '✍️ Đang gửi tệp viết tay tới Gemini 3.8 Flash ICR (response_schema JSON)...');
+      const b64 = gBridge.uint8ToBase64(sendBytes);
+      const icrRaw = await gBridge.callGeminiGenerateContent({
         parts: [
           { text: icrPrompt },
           { inlineData: { mimeType, data: b64 } },
         ],
+        taskType: 'doc_multimodal',
         temperature: 0.1,
         maxOutputTokens: 16384,
+        responseSchema: gBridge.RESPONSE_SCHEMAS?.ICR_STRUCTURED || null,
+        responseMimeType: 'application/json',
       });
-      prog(85, '📦 Đang đóng gói kết quả ICR...');
-      const cleanOut = String(icrText || '').trim();
+      prog(85, '📦 Code đang đọc JSON chuẩn hóa & đóng gói kết quả ICR...');
+      const parsedIcr = gBridge.parseStructuredOcrIcrReply ? gBridge.parseStructuredOcrIcrReply(icrRaw, 'icr') : { fullText: String(icrRaw || '').trim(), tables: [] };
+      const cleanOut = String(parsedIcr.fullText || icrRaw || '').trim();
       if (pro.icrOut === 'xlsx') {
         const XLSX = await ensureXlsx();
-        const rows = cleanOut
-          .split(/\r?\n/)
-          .filter((l) => l.trim() && !/^\|?[\s:|-]+\|?$/.test(l.trim()))
-          .map((l) => (l.includes('|') ? l.replace(/^\||\|$/g, '').split('|').map((c) => c.trim()) : [l.trim()]));
+        let rows = [];
+        if (Array.isArray(parsedIcr.tables) && parsedIcr.tables.length > 0) {
+          parsedIcr.tables.forEach((tb) => {
+            if (tb.caption) rows.push([tb.caption]);
+            if (Array.isArray(tb.rows)) rows.push(...tb.rows);
+            rows.push([]);
+          });
+        } else {
+          rows = cleanOut
+            .split(/\r?\n/)
+            .filter((l) => l.trim() && !/^\|?[\s:|-]+\|?$/.test(l.trim()))
+            .map((l) => (l.includes('|') ? l.replace(/^\||\|$/g, '').split('|').map((c) => c.trim()) : [l.trim()]));
+        }
         const ws = XLSX.utils.aoa_to_sheet(rows.length ? rows : [['(Không có dữ liệu bảng)']]);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'ICR_VietTay');
@@ -4013,10 +4171,11 @@ Chương 3: Tổng kết | 12</textarea>
         prog(12 + (i / pdf.numPages) * 80, `Đang nắn thẳng & lọc nhiễu trang ${i}/${pdf.numPages}...`);
         const page = await pdf.getPage(i);
         const baseVp = page.getViewport({ scale: 1 });
-        const vp = page.getViewport({ scale: 1.7 });
+        const sc = computeSharpScale(baseVp, pdf.numPages, true);
+        const vp = page.getViewport({ scale: sc });
         const c = document.createElement('canvas');
-        c.width = vp.width;
-        c.height = vp.height;
+        c.width = Math.round(vp.width);
+        c.height = Math.round(vp.height);
         const ctx = c.getContext('2d');
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, c.width, c.height);
@@ -4041,7 +4200,7 @@ Chương 3: Tổng kết | 12</textarea>
           }
           ctx.putImageData(imgData, 0, 0);
         }
-        const emb = await out.embedJpg(dataUrlToUint8(c.toDataURL('image/jpeg', 0.9)));
+        const emb = await embedCrispCanvasPage(out, c, pdf.numPages <= 30, 0.96);
         const pg = out.addPage([baseVp.width, baseVp.height]);
         pg.drawImage(emb, { x: 0, y: 0, width: baseVp.width, height: baseVp.height });
       }
@@ -4124,12 +4283,13 @@ Chương 3: Tổng kết | 12</textarea>
           prog(20 + (i / pdf.numPages) * 70, `Đang khóa lớp chống sao chép & sửa trang ${i}/${pdf.numPages}...`);
           const page = await pdf.getPage(i);
           const baseVp = page.getViewport({ scale: 1 });
-          const vp = page.getViewport({ scale: 1.75 });
+          const sc = computeSharpScale(baseVp, pdf.numPages, true);
+          const vp = page.getViewport({ scale: sc });
           const c = document.createElement('canvas');
-          c.width = vp.width;
-          c.height = vp.height;
-          await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
-          const emb = await out.embedJpg(dataUrlToUint8(c.toDataURL('image/jpeg', 0.9)));
+          c.width = Math.round(vp.width);
+          c.height = Math.round(vp.height);
+          await page.render({ canvasContext: c.getContext('2d'), viewport: vp, intent: 'print' }).promise;
+          const emb = await embedCrispCanvasPage(out, c, pdf.numPages <= 30, 0.96);
           const pg = out.addPage([baseVp.width, baseVp.height]);
           pg.drawImage(emb, { x: 0, y: 0, width: baseVp.width, height: baseVp.height });
         }
@@ -4411,19 +4571,20 @@ ${visualOverlayHtml ? `<h2>2. Chồng lớp hình ảnh soi từng pixel (Visual
           for (let p = 1; p <= pdf.numPages; p++) {
             const page = await pdf.getPage(p);
             const bvp = page.getViewport({ scale: 1 });
-            const vp = page.getViewport({ scale: 1.4 });
+            const sc = computeSharpScale(bvp, pdf.numPages, true);
+            const vp = page.getViewport({ scale: sc });
             const c = document.createElement('canvas');
-            c.width = vp.width;
-            c.height = vp.height;
+            c.width = Math.round(vp.width);
+            c.height = Math.round(vp.height);
             const ctx = c.getContext('2d');
-            await page.render({ canvasContext: ctx, viewport: vp }).promise;
+            await page.render({ canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
             const im = ctx.getImageData(0, 0, c.width, c.height);
             for (let k = 0; k < im.data.length; k += 4) {
               const g = 0.299 * im.data[k] + 0.587 * im.data[k + 1] + 0.114 * im.data[k + 2];
               im.data[k] = im.data[k + 1] = im.data[k + 2] = g;
             }
             ctx.putImageData(im, 0, 0);
-            const emb = await doc.embedJpg(dataUrlToUint8(c.toDataURL('image/jpeg', 0.82)));
+            const emb = await embedCrispCanvasPage(doc, c, pdf.numPages <= 25, 0.95);
             const np = doc.addPage([bvp.width, bvp.height]);
             np.drawImage(emb, { x: 0, y: 0, width: bvp.width, height: bvp.height });
           }

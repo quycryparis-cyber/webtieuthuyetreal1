@@ -209,11 +209,15 @@
             }
           </div>
 
-          <!-- Bộ Giả Lập Màn Hình Hai Chiều (Desktop <-> Mobile 375px / 1280px) -->
+          <!-- Bộ Giả Lập Đa Khung Hình Mobile & Desktop (320 / 375 / 414 / 768 / 1280 / 1920px) -->
           <div class="at-vp-bar">
-            <button type="button" class="at-vp-chip ${(!AT.viewportSim?.isSimulated?.() ? 'is-active' : '')}" data-at-sim-vp="real">🖥️ Thật (${AT.viewportSim?.getWidth?.() || window.innerWidth}px)</button>
-            <button type="button" class="at-vp-chip ${(AT.viewportSim?.mode === 'mobile' ? 'is-active' : '')}" data-at-sim-vp="mobile">📱 Giả Mobile (375px)</button>
-            <button type="button" class="at-vp-chip ${(AT.viewportSim?.mode === 'desktop' ? 'is-active' : '')}" data-at-sim-vp="desktop">💻 Giả Desktop (1280px)</button>
+            <button type="button" class="at-vp-chip ${(!AT.viewportSim?.isSimulated?.() ? 'is-active' : '')}" data-at-sim-vp="real">🖥️ Thật (${AT.viewportSim?._customWidth || AT.viewportSim?.getWidth?.() || window.innerWidth}px)</button>
+            <button type="button" class="at-vp-chip ${(AT.viewportSim?._customWidth === 320 ? 'is-active' : '')}" data-at-sim-vp="320">📱 320px</button>
+            <button type="button" class="at-vp-chip ${(AT.viewportSim?.mode === 'mobile' && (!AT.viewportSim?._customWidth || AT.viewportSim?._customWidth === 375) ? 'is-active' : '')}" data-at-sim-vp="375">📱 375px</button>
+            <button type="button" class="at-vp-chip ${(AT.viewportSim?._customWidth === 414 ? 'is-active' : '')}" data-at-sim-vp="414">📱 414px</button>
+            <button type="button" class="at-vp-chip ${(AT.viewportSim?._customWidth === 768 ? 'is-active' : '')}" data-at-sim-vp="768">📟 768px</button>
+            <button type="button" class="at-vp-chip ${(AT.viewportSim?.mode === 'desktop' && (!AT.viewportSim?._customWidth || AT.viewportSim?._customWidth === 1280) ? 'is-active' : '')}" data-at-sim-vp="1280">💻 1280px</button>
+            <button type="button" class="at-vp-chip ${(AT.viewportSim?._customWidth === 1920 ? 'is-active' : '')}" data-at-sim-vp="1920">🖥️ 1920px</button>
           </div>
 
           <!-- Thanh tiến độ gọn -->
@@ -263,6 +267,7 @@
           </label>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button type="button" id="at-btn-export-json" class="at-small-btn">⬇️ Tải báo cáo (.json)</button>
+            <button type="button" id="at-btn-update-baselines" class="at-small-btn" style="border-color:rgba(16,185,129,0.55);color:#6ee7b7;">📌 Cập nhật Baseline Chuẩn</button>
             <button type="button" id="at-btn-clear-hist" class="at-small-btn">🗑️ Xóa lịch sử khám cũ</button>
           </div>
         </div>
@@ -317,11 +322,18 @@
         .join('');
 
       const kpis = report.kpis || { buttonsTested: 0, deadButtonsFound: 0, syncPassed: 0, syncTotal: 0 };
+      const bridgeSnap = this.ctrl.lastBridgePayload || null;
+      const b3Count = bridgeSnap?.aiDelegationQueue?.length ?? 0;
+      const syncReqCount = bridgeSnap?.surfaceDelta?.syncRequests?.length ?? 0;
+      const flakyCount = AT.retryVerifier?.flakyWarnings?.length ?? 0;
       const kpiHtml = `
         <div class="at-kpi-row">
           <span class="at-kpi-pill">🖱️ Đã kiểm: ${kpis.buttonsTested} nút</span>
           <span class="at-kpi-pill" style="color:${kpis.deadButtonsFound > 0 ? '#fca5a5' : '#6ee7b7'};">⚡ Nút liệt: ${kpis.deadButtonsFound}</span>
           <span class="at-kpi-pill" style="color:#67e8f9;">🔄 Đồng bộ: ${kpis.syncPassed}/${kpis.syncTotal}</span>
+          <span class="at-kpi-pill" style="color:#fcd34d;">🤖 Rổ 3 AI: ${b3Count}</span>
+          <span class="at-kpi-pill" style="color:#c4b5fd;">🔄 Sync Rổ 2: ${syncReqCount}</span>
+          ${flakyCount > 0 ? `<span class="at-kpi-pill" style="color:#fde68a;">⚠️ Flaky: ${flakyCount}</span>` : ''}
         </div>
       `;
 
@@ -406,6 +418,18 @@ Chi tiết: ${escHtml(it.techDetail || '')}
           ${kpiHtml}
           ${regHtml}
           <button type="button" id="at-btn-copy-rx" class="at-btn-copy-rx">${escHtml(AT.PLAIN_VI_MAP.copyRxBtn)}</button>
+          <button type="button" id="at-btn-copy-bridge" class="at-btn-copy-bridge">🤝 Chép JSON Phối Hợp Antigravity (&lt;2K Token)</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+            <button type="button" id="at-btn-update-baselines-inline" class="at-small-btn" style="flex:1;border-color:rgba(16,185,129,0.55);color:#6ee7b7;font-weight:700;">📌 Cập nhật Baseline Chuẩn (Pha 4)</button>
+          </div>
+          ${
+            bridgeSnap
+              ? `<details id="at-bridge-json-details" style="margin-top:8px;font-size:11px;color:#cbd5e1;">
+                  <summary style="cursor:pointer;font-weight:700;color:#67e8f9;">📦 Xem JSON Phối Hợp Antigravity (~${bridgeSnap.estimatedTokens || 0} token · ${bridgeSnap.hardBugs?.length || 0} lỗi cứng · ${b3Count} Rổ 3 · ${syncReqCount} Sync Rổ 2)</summary>
+                  <pre id="at-bridge-json-preview" style="margin-top:6px;padding:8px;border-radius:10px;background:#09090b;border:1px solid #27272a;color:#a7f3d0;font-size:10px;line-height:1.4;max-height:220px;overflow:auto;white-space:pre-wrap;word-break:break-word;">${escHtml(JSON.stringify(bridgeSnap, null, 2))}</pre>
+                </details>`
+              : ''
+          }
         </div>
         ${issuesHtml}
         ${passedHtml}
@@ -553,10 +577,19 @@ Chi tiết: ${escHtml(it.techDetail || '')}
       r.querySelectorAll('[data-at-sim-vp]').forEach((b) => {
         b.addEventListener('click', () => {
           const mode = b.dataset.atSimVp || 'real';
-          const res = AT.viewportSim?.apply?.(mode);
-          if (res) {
-            const label = mode === 'mobile' ? '📱 Đang giả lập Mobile (375x812px)' : mode === 'desktop' ? '💻 Đang giả lập Desktop (1280x800px)' : '🖥️ Đã về kích thước màn hình thật';
-            this.ctrl.notify(label);
+          if (mode === 'real') {
+            AT.viewportGeometry?.restoreViewportWidth?.();
+            AT.viewportSim?.apply?.('real');
+            this.ctrl.notify('🖥️ Đã về kích thước màn hình thật');
+          } else {
+            const numW = Number(mode);
+            if (Number.isFinite(numW) && numW >= 320 && AT.viewportGeometry?.applyViewportWidth) {
+              const bp = AT.VIEWPORT_MATRIX?.find((x) => x.width === numW);
+              AT.viewportGeometry.applyViewportWidth(numW, bp?.height || (numW < 768 ? 812 : 900), bp?.label || `${numW}px`);
+              this.ctrl.notify(`📐 Đang giả lập khung hình ${bp?.label || `${numW}px`}`);
+            } else {
+              AT.viewportSim?.apply?.(mode);
+            }
           }
           this.render();
         });
@@ -583,8 +616,16 @@ Chi tiết: ${escHtml(it.techDetail || '')}
         this.ctrl.notify('🗑️ Đã xóa sạch lịch sử khám cũ.');
       });
       r.querySelector('#at-btn-export-json')?.addEventListener('click', () => this.ctrl.exportReportJson());
+      const triggerBaselineUpdate = async () => {
+        if (!globalScope.__AUTOTESTER__?.updateBaselines) return;
+        const res = await globalScope.__AUTOTESTER__.updateBaselines();
+        this.ctrl.notify(`📌 Đã cập nhật Baseline Chuẩn (${res?.surfacesSaved || 0} bề mặt · Ảnh chuẩn YIQ: ${res?.visualSaved ? 'OK' : 'N/A'})!`, 'success');
+      };
+      r.querySelector('#at-btn-update-baselines')?.addEventListener('click', triggerBaselineUpdate);
+      r.querySelector('#at-btn-update-baselines-inline')?.addEventListener('click', triggerBaselineUpdate);
 
       r.querySelector('#at-btn-copy-rx')?.addEventListener('click', () => this.ctrl.copyAiPrescription());
+      r.querySelector('#at-btn-copy-bridge')?.addEventListener('click', () => this.ctrl.copyTokenCappedBridgeJson());
       r.querySelector('#at-btn-toggle-passed')?.addEventListener('click', () => {
         this.passedExpanded = !this.passedExpanded;
         this.render();

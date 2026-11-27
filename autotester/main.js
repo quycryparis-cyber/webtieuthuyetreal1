@@ -59,7 +59,11 @@
       try { AT.geoMock.restore(); } catch (_e) {}
       try { AT.virtualClock.restore(); } catch (_e) {}
       try { AT.interceptors.restoreAll(); } catch (_e) {}
+      try { AT.settleSensor?.stopNetworkTracking?.(); } catch (_e) {}
+      try { AT.networkCwvAuditor?.stopCwvObservers?.(); } catch (_e) {}
+      try { AT.viewportGeometry?.restoreViewportWidth?.(); } catch (_e) {}
       try { AT.sandbox.exitAndRestore(); } catch (_e) {}
+      try { AT.fullSandbox?.restoreAll?.(); } catch (_e) {}
       this.shell.unmount();
       this.notify('🩺 Đã tắt Bác sĩ App và dọn sạch bộ nhớ.', 'info');
     }
@@ -76,6 +80,10 @@
       this.shell.render();
 
       AT.sandbox.enter();
+      try { AT.fullSandbox?.captureAll?.(); } catch (_eSb2) {}
+      try { AT.settleSensor?.startNetworkTracking?.(); } catch (_eNet) {}
+      try { AT.retryVerifier?.reset?.(); } catch (_eRt) {}
+      try { AT.networkCwvAuditor?.startCwvObservers?.(); } catch (_eCwv) {}
       AT.driver.resetRunState();
       AT.causal.reset();
       AT.clipboard.start();
@@ -101,7 +109,10 @@
           this.shell.render();
 
           try {
-            const res = await t.run(ctx);
+            // Cơ chế Xác Minh Hai Nhịp (Spec §2.3): phân tách lỗi cứng 100% vs cảnh báo Flaky!
+            const res = AT.retryVerifier?.verifyTest
+              ? await AT.retryVerifier.verifyTest(t, ctx)
+              : await t.run(ctx);
             if (res) results.push(res);
           } catch (err) {
             results.push({
@@ -164,19 +175,28 @@
         }
       } finally {
         const perfStats = AT.smoothAuditor.snapshot();
+        try { AT.networkCwvAuditor?.stopCwvObservers?.(); } catch (_eCwvStop) {}
         AT.errorAuditor.stop();
         AT.smoothAuditor.stop();
         AT.clipboard.restore();
         AT.geoMock.restore();
         AT.virtualClock.restore();
+        // LIFO restore: gỡ interceptors trước khi gỡ settleSensor để window.fetch luôn trả về native fetch sạch!
         AT.interceptors.restoreAll();
+        try { AT.settleSensor?.stopNetworkTracking?.(); } catch (_eNetStop) {}
+        try { AT.viewportGeometry?.restoreViewportWidth?.(); } catch (_eVpR) {}
         AT.sandbox.exitAndRestore();
+        try { AT.fullSandbox?.restoreAll?.(); } catch (_eSb2R) {}
 
         const kpis = {
           buttonsTested: AT.causal.buttonsTested,
           deadButtonsFound: AT.causal.deadButtonsFound,
+          flakyFiltered: AT.retryVerifier?.flakyWarnings?.length || 0,
         };
         this.lastReport = AT.loopEngine.computeReport(results, perfStats, AT.driver.breadcrumbs, kpis);
+        if (AT.coEvolution?.buildTokenCappedPayload) {
+          this.lastBridgePayload = AT.coEvolution.buildTokenCappedPayload(this.lastReport);
+        }
         this.isRunning = false;
         window.__NOIR_AUTOTESTER_RUNNING__ = false;
         this.progress = {
@@ -291,6 +311,32 @@
         this.notify('📋 Đã chép đơn thuốc gửi AI sửa lỗi vào bộ nhớ tạm! Bạn chỉ cần dán (Ctrl+V) vào khung chat.', 'success');
       } catch (_e) {
         this.notify('⚠️ Trình duyệt chặn tự chép — hãy mở tải báo cáo JSON trong nút Cài đặt ⚙️.', 'warning');
+      }
+    }
+
+    async copyTokenCappedBridgeJson() {
+      const payload = globalScope.__AUTOTESTER__?.exportTokenCappedReport
+        ? globalScope.__AUTOTESTER__.exportTokenCappedReport()
+        : this.lastBridgePayload;
+      if (!payload) {
+        this.notify('Chưa có kết quả khám để xuất gói JSON phối hợp Antigravity.', 'warning');
+        return;
+      }
+      const text = JSON.stringify(payload, null, 2);
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          ta.remove();
+        }
+        this.notify(`🤝 Đã chép gói JSON phối hợp Antigravity (~${payload.estimatedTokens || Math.ceil(text.length / 4)} token, ${payload.hardBugs?.length || 0} lỗi cứng, ${payload.aiDelegationQueue?.length || 0} mục ủy thác Rổ 3)!`, 'success');
+      } catch (_e) {
+        this.notify('⚠️ Trình duyệt chặn tự chép — hãy mở Console và gọi window.__AUTOTESTER__.exportTokenCappedReport().', 'warning');
       }
     }
 

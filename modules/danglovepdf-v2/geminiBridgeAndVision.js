@@ -106,12 +106,184 @@
     return Array.from(new Set([saved, ...base].filter((id) => Boolean(id && GEMINI_TRANSPORTS[id]))));
   }
   const TASK_MODEL_PROFILES = Object.freeze({
-    // Tác vụ nhẹ (Verify, Metadata, Split keyword, Form, PII, Auto-TOC, sửa chính tả) -> Ưu tiên Flash-Lite hạn mức cao nhất & < 1s
-    fast_light: Object.freeze(['gemini-2.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash']),
-    // Tác vụ đa phương thức tệp (10 Theme PDF gốc, OCR 1 lượt, ICR chữ viết tay, Bóc bảng Excel, Dịch trang) -> Flash chính xác nhất, tự lùi sang Flash-Lite khi 429
-    doc_multimodal: Object.freeze(['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite']),
-    // Tác vụ phân tích chuyên sâu dài (Mod 49 Đầu tư, Mod 50 30 phút thông thái, So sánh Diff, Tóm tắt PDF) -> Flash + tự xoay vòng Flash-Lite / Pro khi 429
-    deep_analysis: Object.freeze(['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro', 'gemini-2.0-flash']),
+    // Tác vụ nhẹ (Verify, Metadata, Split keyword, Form, PII, Auto-TOC, sửa chính tả) -> Ưu tiên Flash 3.5-Lite / 3.8 Flash mới nhất
+    fast_light: Object.freeze(['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-2.5-flash-lite']),
+    // Tác vụ đa phương thức tệp (10 Theme Blueprint, OCR, ICR, Bóc bảng Excel, Dịch trang) -> Ưu tiên Gemini 3.8 Flash (thay thế 2.5 sắp ngừng)
+    doc_multimodal: Object.freeze(['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest', 'gemini-2.5-flash']),
+    // Tác vụ phân tích chuyên sâu dài (Mod 49 Đầu tư, Mod 50 30 phút thông thái, So sánh Diff, Tóm tắt PDF)
+    deep_analysis: Object.freeze(['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest', 'gemini-2.5-flash']),
+  });
+
+  // Bộ lược đồ JSON chuẩn (response_schema) ép Gemini trả JSON đúng 100% cấu trúc Code tiêu thụ
+  const RESPONSE_SCHEMAS = Object.freeze({
+    THEME10_BLUEPRINT: Object.freeze({
+      type: 'OBJECT',
+      properties: {
+        title: { type: 'STRING' },
+        subtitle: { type: 'STRING' },
+        headings: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              page: { type: 'INTEGER' },
+              level: { type: 'INTEGER' },
+              text: { type: 'STRING' },
+              matchAnchor: { type: 'STRING' },
+            },
+            required: ['page', 'level', 'text'],
+          },
+        },
+        tables: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              page: { type: 'INTEGER' },
+              caption: { type: 'STRING' },
+              startAnchor: { type: 'STRING' },
+              headers: { type: 'ARRAY', items: { type: 'STRING' } },
+              columnCount: { type: 'INTEGER' },
+            },
+            required: ['page', 'caption'],
+          },
+        },
+        figures: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              page: { type: 'INTEGER' },
+              caption: { type: 'STRING' },
+              nearAnchor: { type: 'STRING' },
+            },
+            required: ['page', 'caption'],
+          },
+        },
+        formulas: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              page: { type: 'INTEGER' },
+              latex: { type: 'STRING' },
+              rawAnchor: { type: 'STRING' },
+            },
+            required: ['page', 'latex'],
+          },
+        },
+        specialSymbols: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              page: { type: 'INTEGER' },
+              rawText: { type: 'STRING' },
+              normalizedUnicode: { type: 'STRING' },
+            },
+            required: ['page', 'rawText', 'normalizedUnicode'],
+          },
+        },
+      },
+      required: ['headings', 'tables', 'figures', 'formulas', 'specialSymbols'],
+    }),
+    OCR_STRUCTURED: Object.freeze({
+      type: 'OBJECT',
+      properties: {
+        detectedLanguage: { type: 'STRING' },
+        pages: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              pageNumber: { type: 'INTEGER' },
+              confidence: { type: 'NUMBER' },
+              blocks: {
+                type: 'ARRAY',
+                items: {
+                  type: 'OBJECT',
+                  properties: {
+                    type: { type: 'STRING' },
+                    text: { type: 'STRING' },
+                    latex: { type: 'STRING' },
+                  },
+                  required: ['type', 'text'],
+                },
+              },
+              fullText: { type: 'STRING' },
+            },
+            required: ['pageNumber', 'fullText'],
+          },
+        },
+      },
+      required: ['pages'],
+    }),
+    ICR_STRUCTURED: Object.freeze({
+      type: 'OBJECT',
+      properties: {
+        documentType: { type: 'STRING' },
+        pages: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              pageNumber: { type: 'INTEGER' },
+              confidence: { type: 'NUMBER' },
+              items: {
+                type: 'ARRAY',
+                items: {
+                  type: 'OBJECT',
+                  properties: {
+                    type: { type: 'STRING' },
+                    text: { type: 'STRING' },
+                    checkboxState: { type: 'STRING' },
+                    latex: { type: 'STRING' },
+                    uncertainNote: { type: 'STRING' },
+                  },
+                  required: ['type', 'text'],
+                },
+              },
+              tables: {
+                type: 'ARRAY',
+                items: {
+                  type: 'OBJECT',
+                  properties: {
+                    caption: { type: 'STRING' },
+                    rows: {
+                      type: 'ARRAY',
+                      items: { type: 'ARRAY', items: { type: 'STRING' } },
+                    },
+                  },
+                  required: ['rows'],
+                },
+              },
+              fullText: { type: 'STRING' },
+            },
+            required: ['pageNumber', 'fullText'],
+          },
+        },
+      },
+      required: ['pages'],
+    }),
+    AUTO_TOC: Object.freeze({
+      type: 'OBJECT',
+      properties: {
+        entries: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              title: { type: 'STRING' },
+              level: { type: 'INTEGER' },
+              page: { type: 'INTEGER' },
+              kind: { type: 'STRING' },
+            },
+            required: ['title', 'page'],
+          },
+        },
+      },
+      required: ['entries'],
+    }),
   });
 
   const DEFAULT_VISION_MODELS = TASK_MODEL_PROFILES.doc_multimodal;
@@ -634,6 +806,8 @@
       models = null,
       temperature = 0.2,
       maxOutputTokens = 8192,
+      responseSchema = null,
+      responseMimeType = '',
       useGoogleSearch = false,
       signal = null,
       fetchImpl = global.fetch?.bind(global),
@@ -649,9 +823,17 @@
       throw new Error('Trình duyệt không hỗ trợ fetch() để gọi Gemini API.');
     }
 
+    const generationConfig = { temperature, maxOutputTokens };
+    if (responseSchema && typeof responseSchema === 'object') {
+      generationConfig.responseMimeType = responseMimeType || 'application/json';
+      generationConfig.responseSchema = responseSchema;
+    } else if (responseMimeType) {
+      generationConfig.responseMimeType = responseMimeType;
+    }
+
     const bodyPayload = {
       contents: [{ role: 'user', parts }],
-      generationConfig: { temperature, maxOutputTokens },
+      generationConfig,
     };
     if (systemInstruction) {
       bodyPayload.systemInstruction = { parts: [{ text: String(systemInstruction) }] };
@@ -669,14 +851,25 @@
       if (!tr) continue;
       let transportRejectedKey = false;
       for (const modelName of resolvedModels) {
+        let schemaDowngraded = false;
         for (let attempt = 0; attempt <= backoffDelays.length; attempt++) {
           if (signal?.aborted) throw new Error('Đã hủy yêu cầu Gemini API.');
           const endpoint = tr.buildGenerateUrl(modelName, cleanKey);
+          const payloadToSend = schemaDowngraded
+            ? {
+                ...bodyPayload,
+                generationConfig: {
+                  temperature,
+                  maxOutputTokens,
+                  ...(generationConfig.responseMimeType ? { responseMimeType: generationConfig.responseMimeType } : {}),
+                },
+              }
+            : bodyPayload;
           try {
             const res = await fetchImpl(endpoint, {
               method: 'POST',
               headers: tr.buildHeaders(cleanKey),
-              body: JSON.stringify(bodyPayload),
+              body: JSON.stringify(payloadToSend),
               signal,
             });
             if (res.status === 429 || res.status === 503) {
@@ -692,9 +885,17 @@
             if (!res.ok) {
               const errTxt = await res.text().catch(() => '');
               lastErr = new Error(`Gemini API lỗi HTTP ${res.status} (${modelName}): ${errTxt.slice(0, 180)}`);
+              // Nếu model từ chối responseSchema (400 schema), tự hạ nhẹ giữ responseMimeType JSON và thử lại 1 lần
+              if (res.status === 400 && responseSchema && !schemaDowngraded && /schema|responseSchema|generationConfig/i.test(errTxt)) {
+                schemaDowngraded = true;
+                continue;
+              }
+              if (res.status === 404) {
+                break; // Model ID không tồn tại trên endpoint này -> chuyển sang model dự phòng kế tiếp ngay
+              }
               if (res.status === 400 || res.status === 401 || res.status === 403) {
                 transportRejectedKey = true;
-                break; // Thử transport khác (VD: AQ. từ AI Studio -> Vertex Express)
+                break; // Thử transport khác (VD: Vertex 403 Agent Platform API -> AI Studio hoặc ngược lại)
               }
               break;
             }
@@ -1349,6 +1550,489 @@
     return true;
   }
 
+  function extractJsonObjectFromText(raw) {
+    const str = String(raw || '').trim();
+    if (!str) return null;
+    const fenced = str.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const candidate = fenced ? fenced[1].trim() : str;
+    const firstBrace = candidate.indexOf('{');
+    const lastBrace = candidate.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace <= firstBrace) return null;
+    try {
+      const parsed = JSON.parse(candidate.slice(firstBrace, lastBrace + 1));
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function normalizeAnchorText(s) {
+    return String(s || '')
+      .normalize('NFC')
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim();
+  }
+
+  /**
+   * AI-AS-LOCATOR + CODE-AS-BUILDER MERGER:
+   * Giữ 100% văn bản thường do Code quét (0 thất thoát chữ/số), chỉ áp dụng
+   * Bản Đồ Cấu Trúc JSON từ AI (tiêu đề, bảng & tên bảng, hình & tên hình, công thức LaTeX, ký tự đặc biệt).
+   */
+  function applyBlueprintToBlocks(sourceBlocks, blueprintOrRawText) {
+    const bp = typeof blueprintOrRawText === 'string'
+      ? extractJsonObjectFromText(blueprintOrRawText)
+      : blueprintOrRawText;
+    const blocks = (Array.isArray(sourceBlocks) ? sourceBlocks : []).map((b) => (b ? { ...b } : b));
+    if (!bp || typeof bp !== 'object') {
+      return { applied: false, blocks, stats: { headingsApplied: 0, tablesCaptioned: 0, figuresCaptioned: 0, formulasFixed: 0, symbolsFixed: 0 } };
+    }
+
+    const stats = { headingsApplied: 0, tablesCaptioned: 0, figuresCaptioned: 0, formulasFixed: 0, symbolsFixed: 0 };
+
+    // 1. Áp dụng danh sách Tiêu đề chính xác từ AI (xác định cấp bậc + sửa tiêu đề vỡ + chuẩn Mục lục)
+    const aiHeadings = Array.isArray(bp.headings) ? bp.headings : [];
+    for (const h of aiHeadings) {
+      const hText = String(h?.text || '').trim();
+      if (!hText) continue;
+      const lvl = Math.max(1, Math.min(4, Number(h?.level) || 1));
+      const needle = normalizeAnchorText(h?.matchAnchor || hText);
+      if (!needle) continue;
+      const targetPage = Number(h?.page) || 0;
+      let hitIdx = -1;
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        if (!b || b.type === 'table' || b.type === 'image') continue;
+        const bNorm = normalizeAnchorText(b.text || '');
+        if (!bNorm) continue;
+        const pageOk = !targetPage || !b.page || Math.abs(Number(b.page) - targetPage) <= 1;
+        if (pageOk && (bNorm === needle || bNorm.includes(needle) || (needle.length >= 12 && needle.includes(bNorm) && bNorm.length >= 8))) {
+          hitIdx = i;
+          break;
+        }
+      }
+      if (hitIdx >= 0) {
+        blocks[hitIdx] = {
+          ...blocks[hitIdx],
+          type: lvl <= 2 ? 'heading' : 'subheading',
+          kind: lvl === 1 ? 'h1' : (lvl === 2 ? 'h2' : 'h3'),
+          level: lvl,
+          text: hText,
+          includeInToc: true,
+          aiLocated: true,
+        };
+        stats.headingsApplied += 1;
+      }
+    }
+
+    // 2. Áp dụng vị trí Bảng & Tự gắn tên Bảng (nếu tài liệu gốc chưa có tên bảng)
+    const aiTables = Array.isArray(bp.tables) ? bp.tables : [];
+    let tableCursor = 0;
+    for (let tIdx = 0; tIdx < aiTables.length; tIdx++) {
+      const tbl = aiTables[tIdx];
+      const cap = String(tbl?.caption || '').trim();
+      const targetPage = Number(tbl?.page) || 0;
+      let matchedIdx = -1;
+      for (let i = tableCursor; i < blocks.length; i++) {
+        if (blocks[i]?.type !== 'table') continue;
+        const pgOk = !targetPage || !blocks[i].page || Math.abs(Number(blocks[i].page) - targetPage) <= 1;
+        if (pgOk) {
+          matchedIdx = i;
+          tableCursor = i + 1;
+          break;
+        }
+      }
+      if (matchedIdx >= 0) {
+        if (cap && !blocks[matchedIdx].caption) {
+          blocks[matchedIdx].caption = cap;
+          stats.tablesCaptioned += 1;
+        }
+        if (Array.isArray(tbl?.headers) && tbl.headers.length && Array.isArray(blocks[matchedIdx].rows) && blocks[matchedIdx].rows.length) {
+          if (blocks[matchedIdx].rows[0].length === tbl.headers.length) {
+            blocks[matchedIdx].aiHeaders = tbl.headers;
+          }
+        }
+      }
+    }
+
+    // 3. Áp dụng vị trí Hình & Tự gắn tên Hình (nếu tài liệu gốc chưa có tên hình)
+    const aiFigures = Array.isArray(bp.figures) ? bp.figures : [];
+    let figCursor = 0;
+    for (let fIdx = 0; fIdx < aiFigures.length; fIdx++) {
+      const fig = aiFigures[fIdx];
+      const cap = String(fig?.caption || '').trim();
+      const targetPage = Number(fig?.page) || 0;
+      if (!cap) continue;
+      let matchedIdx = -1;
+      for (let i = figCursor; i < blocks.length; i++) {
+        if (blocks[i]?.type !== 'image') continue;
+        const pgOk = !targetPage || !blocks[i].pageNo || Math.abs(Number(blocks[i].pageNo) - targetPage) <= 1;
+        if (pgOk) {
+          matchedIdx = i;
+          figCursor = i + 1;
+          break;
+        }
+      }
+      if (matchedIdx >= 0 && !blocks[matchedIdx].caption) {
+        blocks[matchedIdx].caption = cap;
+        stats.figuresCaptioned += 1;
+      }
+    }
+
+    // 4. Áp dụng Công thức Toán/Tài chính LaTeX vào đúng vị trí đoạn gốc
+    const aiFormulas = Array.isArray(bp.formulas) ? bp.formulas : [];
+    for (const fm of aiFormulas) {
+      const latex = String(fm?.latex || '').trim();
+      const rawAnchor = String(fm?.rawAnchor || '').trim();
+      if (!latex || !rawAnchor) continue;
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        if (!b || typeof b.text !== 'string') continue;
+        if (b.text.includes(rawAnchor)) {
+          const wrapped = /^\$/.test(latex) ? latex : `$${latex}$`;
+          blocks[i].text = b.text.replace(rawAnchor, wrapped);
+          stats.formulasFixed += 1;
+          break;
+        }
+      }
+    }
+
+    // 5. Chuẩn hóa Ký tự đặc biệt bị vỡ font Unicode
+    const aiSymbols = Array.isArray(bp.specialSymbols) ? bp.specialSymbols : [];
+    for (const sym of aiSymbols) {
+      const raw = String(sym?.rawText || '').trim();
+      const uni = String(sym?.normalizedUnicode || '').trim();
+      if (!raw || !uni || raw === uni) continue;
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        if (!b || typeof b.text !== 'string') continue;
+        if (b.text.includes(raw)) {
+          blocks[i].text = b.text.split(raw).join(uni);
+          stats.symbolsFixed += 1;
+        }
+      }
+    }
+
+    return { applied: true, blocks, blueprint: bp, stats };
+  }
+
+  /**
+   * TIỀN NHẬN DIỆN ẢNH THÔNG MINH CHO OCR & ICR (PURE CLIENT-SIDE DSP PIPELINE):
+   * 1) Smart Auto-Crop cắt viền tối thừa quanh tài liệu chụp điện thoại
+   * 2) Illumination / Shadow Normalization tẩy bóng & nền giấy ố vàng
+   * 3) Auto-Deskew (±4° Projection Profile Variance) nắn thẳng trang nghiêng
+   * 4) Percentile Local Contrast Stretch + 3x3 Unsharp Mask sắc nét dấu tiếng Việt & ô tick ☑/☐
+   */
+  function preprocessImageForOcrIcr(srcCanvas, opts = {}) {
+    if (!srcCanvas || !srcCanvas.width || !srcCanvas.height) {
+      return { canvas: srcCanvas, metrics: { deskewDeg: 0, cropped: false, sharpnessScore: 0 } };
+    }
+    const mode = opts.mode || 'ocr_print'; // 'ocr_print' | 'icr_handwriting'
+    const enableDeskew = opts.deskew !== false;
+    const enableAutoCrop = opts.autoCrop !== false;
+
+    const w0 = srcCanvas.width;
+    const h0 = srcCanvas.height;
+    const work = document.createElement('canvas');
+    work.width = w0;
+    work.height = h0;
+    const wctx = work.getContext('2d', { willReadFrequently: true });
+    wctx.drawImage(srcCanvas, 0, 0);
+
+    const img = wctx.getImageData(0, 0, w0, h0);
+    const d = img.data;
+    const nPx = w0 * h0;
+
+    // Bước 1: Tính ảnh độ sáng xám + histogram phân vị 2%..98%
+    const gray = new Uint8Array(nPx);
+    const hist = new Uint32Array(256);
+    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+      const g = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+      gray[p] = g;
+      hist[g] += 1;
+    }
+
+    // Bước 2: Ước lượng nền chiếu sáng cục bộ (Illumination Map 16x16) để khử bóng chụp nghiêng & nền vàng
+    const bgW = 16;
+    const bgH = 16;
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = bgW;
+    bgCanvas.height = bgH;
+    const bgCtx = bgCanvas.getContext('2d', { willReadFrequently: true });
+    bgCtx.drawImage(srcCanvas, 0, 0, bgW, bgH);
+    const bgExpand = document.createElement('canvas');
+    bgExpand.width = w0;
+    bgExpand.height = h0;
+    const bgExCtx = bgExpand.getContext('2d', { willReadFrequently: true });
+    bgExCtx.imageSmoothingEnabled = true;
+    bgExCtx.imageSmoothingQuality = 'high';
+    bgExCtx.drawImage(bgCanvas, 0, 0, w0, h0);
+    const bgData = bgExCtx.getImageData(0, 0, w0, h0).data;
+
+    // Chuẩn hóa chiếu sáng: norm = (gray / max(localBg, 64)) * 248
+    const normGray = new Uint8Array(nPx);
+    const normHist = new Uint32Array(256);
+    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+      const bgL = Math.max(70, Math.round(0.299 * bgData[i] + 0.587 * bgData[i + 1] + 0.114 * bgData[i + 2]));
+      const val = Math.min(255, Math.max(0, Math.round((gray[p] / bgL) * 246)));
+      normGray[p] = val;
+      normHist[val] += 1;
+    }
+
+    // Bước 3: Percentile Contrast Stretch (2%..96%)
+    let acc = 0;
+    let lo = 15;
+    let hi = 245;
+    const loTarget = Math.floor(nPx * 0.015);
+    const hiTarget = Math.floor(nPx * 0.96);
+    for (let v = 0; v < 256; v++) {
+      acc += normHist[v];
+      if (acc >= loTarget && lo === 15) lo = v;
+      if (acc >= hiTarget) { hi = Math.max(lo + 24, v); break; }
+    }
+    const span = Math.max(24, hi - lo);
+    const stretched = new Uint8Array(nPx);
+    for (let p = 0; p < nPx; p++) {
+      let s = Math.round(((normGray[p] - lo) / span) * 255);
+      if (mode === 'ocr_print') {
+        s = s > 214 ? 255 : s < 118 ? Math.max(0, Math.round(s * 0.72)) : s;
+      } else {
+        // ICR chữ viết tay: giữ sắc thái nét mực nhẹ & ô tick không làm đứt nét
+        s = s > 224 ? 255 : Math.max(0, Math.min(255, s));
+      }
+      stretched[p] = s;
+    }
+
+    // Bước 4: 3x3 Unsharp Mask nhẹ làm sắc dấu tiếng Việt & đo độ nét (Laplacian energy)
+    const sharpAmt = mode === 'ocr_print' ? 0.65 : 0.45;
+    let lapSum = 0;
+    let lapCount = 0;
+    for (let y = 1; y < h0 - 1; y++) {
+      const row = y * w0;
+      for (let x = 1; x < w0 - 1; x++) {
+        const idx = row + x;
+        const c = stretched[idx];
+        const avg = (stretched[idx - 1] + stretched[idx + 1] + stretched[idx - w0] + stretched[idx + w0]) * 0.25;
+        const diff = c - avg;
+        const out = Math.min(255, Math.max(0, Math.round(c + diff * sharpAmt)));
+        const di = idx * 4;
+        d[di] = d[di + 1] = d[di + 2] = out;
+        d[di + 3] = 255;
+        if ((x & 3) === 0 && (y & 3) === 0) {
+          lapSum += Math.abs(diff);
+          lapCount += 1;
+        }
+      }
+    }
+    wctx.putImageData(img, 0, 0);
+    const sharpnessScore = Math.min(100, Math.round((lapSum / Math.max(1, lapCount)) * 4.5));
+
+    // Bước 5: Auto-Deskew nhẹ (±3.5°, bước 0.7°) qua phương sai hình chiếu ngang trên ảnh thu nhỏ 200px
+    let bestAngle = 0;
+    let outCanvas = work;
+    if (enableDeskew && w0 >= 240 && h0 >= 240) {
+      const sw = 180;
+      const sh = Math.max(120, Math.round((h0 / w0) * sw));
+      const probe = document.createElement('canvas');
+      probe.width = sw;
+      probe.height = sh;
+      const pctx = probe.getContext('2d', { willReadFrequently: true });
+      let bestVar = -1;
+      for (let deg = -3.5; deg <= 3.51; deg += 0.7) {
+        pctx.fillStyle = '#ffffff';
+        pctx.fillRect(0, 0, sw, sh);
+        pctx.save();
+        pctx.translate(sw / 2, sh / 2);
+        pctx.rotate((deg * Math.PI) / 180);
+        pctx.drawImage(work, -sw / 2, -sh / 2, sw, sh);
+        pctx.restore();
+        const pd = pctx.getImageData(0, 0, sw, sh).data;
+        let sum = 0;
+        let sumSq = 0;
+        for (let y = 8; y < sh - 8; y++) {
+          let rowInk = 0;
+          for (let x = 8; x < sw - 8; x++) {
+            if (pd[(y * sw + x) * 4] < 160) rowInk += 1;
+          }
+          sum += rowInk;
+          sumSq += rowInk * rowInk;
+        }
+        const rowsN = Math.max(1, sh - 16);
+        const mean = sum / rowsN;
+        const variance = sumSq / rowsN - mean * mean;
+        if (variance > bestVar) {
+          bestVar = variance;
+          bestAngle = Number(deg.toFixed(1));
+        }
+      }
+      if (Math.abs(bestAngle) >= 0.7) {
+        const rot = document.createElement('canvas');
+        rot.width = w0;
+        rot.height = h0;
+        const rctx = rot.getContext('2d');
+        rctx.fillStyle = '#ffffff';
+        rctx.fillRect(0, 0, w0, h0);
+        rctx.translate(w0 / 2, h0 / 2);
+        rctx.rotate((bestAngle * Math.PI) / 180);
+        rctx.drawImage(work, -w0 / 2, -h0 / 2);
+        outCanvas = rot;
+      }
+    }
+
+    // Bước 6: Smart Auto-Crop viền trống thừa (giữ lại lề an toàn 14px)
+    let cropped = false;
+    if (enableAutoCrop && outCanvas.width >= 300 && outCanvas.height >= 300) {
+      const octx = outCanvas.getContext('2d', { willReadFrequently: true });
+      const od = octx.getImageData(0, 0, outCanvas.width, outCanvas.height).data;
+      let minX = outCanvas.width, minY = outCanvas.height, maxX = 0, maxY = 0;
+      const step = 4;
+      for (let y = 0; y < outCanvas.height; y += step) {
+        for (let x = 0; x < outCanvas.width; x += step) {
+          if (od[(y * outCanvas.width + x) * 4] < 210) {
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      const pad = 16;
+      minX = Math.max(0, minX - pad);
+      minY = Math.max(0, minY - pad);
+      maxX = Math.min(outCanvas.width - 1, maxX + pad);
+      maxY = Math.min(outCanvas.height - 1, maxY + pad);
+      const cw = maxX - minX + 1;
+      const ch = maxY - minY + 1;
+      const areaRatio = (cw * ch) / Math.max(1, outCanvas.width * outCanvas.height);
+      if (cw > 180 && ch > 180 && areaRatio >= 0.35 && areaRatio <= 0.90) {
+        const cropCv = document.createElement('canvas');
+        cropCv.width = cw;
+        cropCv.height = ch;
+        cropCv.getContext('2d').drawImage(outCanvas, minX, minY, cw, ch, 0, 0, cw, ch);
+        outCanvas = cropCv;
+        cropped = true;
+      }
+    }
+
+    return {
+      canvas: outCanvas,
+      metrics: {
+        deskewDeg: bestAngle,
+        cropped,
+        sharpnessScore,
+        width: outCanvas.width,
+        height: outCanvas.height,
+      },
+    };
+  }
+
+  /**
+   * Chuẩn hóa phản hồi OCR / ICR từ JSON response_schema HOẶC văn bản/Markdown dán thủ công
+   */
+  function parseStructuredOcrIcrReply(rawReply, mode = 'ocr') {
+    const rawStr = String(rawReply || '').trim();
+    const obj = extractJsonObjectFromText(rawStr);
+    if (obj && Array.isArray(obj.pages) && obj.pages.length > 0) {
+      const pageTexts = [];
+      const allTables = [];
+      for (const pg of obj.pages) {
+        const pNo = pg.pageNumber || (pageTexts.length + 1);
+        const lines = [];
+        if (pg.fullText && String(pg.fullText).trim()) {
+          lines.push(String(pg.fullText).trim());
+        } else if (Array.isArray(pg.blocks)) {
+          pg.blocks.forEach((b) => {
+            if (b?.latex) lines.push(`$$${b.latex}$$`);
+            else if (b?.text) lines.push(String(b.text).trim());
+          });
+        } else if (Array.isArray(pg.items)) {
+          pg.items.forEach((it) => {
+            const cb = it?.checkboxState === 'checked' ? '[☑] ' : it?.checkboxState === 'unchecked' ? '[☐] ' : '';
+            const note = it?.uncertainNote ? ` [${it.uncertainNote}]` : '';
+            if (it?.latex) lines.push(`${cb}$${it.latex}$${note}`);
+            else if (it?.text) lines.push(`${cb}${String(it.text).trim()}${note}`);
+          });
+        }
+        if (Array.isArray(pg.tables)) {
+          pg.tables.forEach((tb) => {
+            if (Array.isArray(tb?.rows) && tb.rows.length) {
+              allTables.push({ page: pNo, caption: tb.caption || '', rows: tb.rows });
+            }
+          });
+        }
+        pageTexts.push(obj.pages.length > 1 ? `--- TRANG ${pNo} ---\n${lines.join('\n')}` : lines.join('\n'));
+      }
+      return {
+        isStructuredJson: true,
+        detectedLanguage: obj.detectedLanguage || obj.documentType || mode,
+        pages: obj.pages,
+        tables: allTables,
+        fullText: pageTexts.join('\n\n').trim(),
+      };
+    }
+    return {
+      isStructuredJson: false,
+      detectedLanguage: mode,
+      pages: [{ pageNumber: 1, fullText: rawStr }],
+      tables: [],
+      fullText: rawStr,
+    };
+  }
+
+  /**
+   * GỌI AI CHỈ ĐỂ ĐỊNH VỊ BẢN ĐỒ CẤU TRÚC (BLUEPRINT LOCATOR) VỚI response_schema JSON
+   * AI không viết lại văn bản thường -> Nhanh gấp 5 lần, 0 mất chữ, 0 lỗi mục lục/bảng/hình/công thức!
+   */
+  async function runAiBlueprintLocator(sourceBlocks, opts = {}) {
+    const {
+      apiKey = getApiKey(),
+      fileBytes = null,
+      mimeType = '',
+      fileName = 'Tai_lieu',
+      onProgress = null,
+    } = opts;
+    const cleanKey = String(apiKey || '').trim();
+    if (!cleanKey) throw new Error('NO_API_KEY');
+
+    if (typeof onProgress === 'function') {
+      onProgress(28, '🧠 Gemini 3.8 Flash đang lập Bản đồ Cấu trúc (Tiêu đề, Bảng, Hình, Công thức, Ký tự đặc biệt)...');
+    }
+
+    const compactIndex = (Array.isArray(sourceBlocks) ? sourceBlocks : [])
+      .slice(0, 260)
+      .map((b, i) => {
+        if (!b) return '';
+        const pg = b.page || b.pageNo || 1;
+        if (b.type === 'table') return `[#${i}|P${pg}|TABLE|rows=${b.rows?.length || 0}] ${(b.caption || b.rows?.[0]?.join(' | ') || '').slice(0, 120)}`;
+        if (b.type === 'image') return `[#${i}|P${pg}|IMAGE] ${b.caption || '(Chưa có tên hình)'}`;
+        return `[#${i}|P${pg}|${b.type || 'p'}] ${String(b.text || '').replace(/\s+/g, ' ').trim().slice(0, 140)}`;
+      })
+      .filter(Boolean)
+      .join('\n');
+
+    const prompt = buildTaskManualPrompt('theme10_beautify', { fileName, text: compactIndex });
+    const parts = [{ text: prompt }];
+    if (fileBytes && fileBytes.byteLength > 0 && fileBytes.byteLength <= 18 * 1024 * 1024 && mimeType) {
+      parts.push({ inlineData: { mimeType, data: uint8ToBase64(fileBytes) } });
+    }
+
+    const rawJson = await callGeminiGenerateContent({
+      parts,
+      apiKey: cleanKey,
+      taskType: 'doc_multimodal',
+      temperature: 0.1,
+      maxOutputTokens: 8192,
+      responseSchema: RESPONSE_SCHEMAS.THEME10_BLUEPRINT,
+      responseMimeType: 'application/json',
+    });
+
+    if (typeof onProgress === 'function') {
+      onProgress(82, '⚙️ Code đang áp dụng Bản đồ AI lên 100% văn bản gốc...');
+    }
+    const merged = applyBlueprintToBlocks(sourceBlocks, rawJson);
+    return merged.applied ? merged.blocks : sourceBlocks;
+  }
+
   function extractJsonArrayFromText(raw) {
     const str = String(raw || '').trim();
     if (!str) return null;
@@ -1529,14 +2213,36 @@
     switch (taskId) {
       case 'theme10_beautify':
         return [
-          PROMPT_CHINH_TIEU_DE_CHUAN,
+          'BẠN LÀ BỘ ĐỊNH VỊ CẤU TRÚC TÀI LIỆU (AI-LOCATOR) PHỐI HỢP VỚI CODE CỦA ĐĂNGLOVEPDF.',
+          '⚠️ QUY TẮC SỐNG CÒN: TUYỆT ĐỐI KHÔNG viết lại toàn bộ văn bản từ A đến Z! Code của trang web đã đọc nguyên vẹn 100% văn bản thường rồi.',
+          'Bạn CHỈ làm phần khó nhất mà code dễ nhầm: xác định chính xác VỊ TRÍ & CẤU TRÚC rồi trả về ĐÚNG 1 khối JSON chuẩn để khi dán về, Code tự khớp và dàn trang PDF 10 Theme không sai bất kỳ chi tiết nào:',
           '',
           `TỆP ĐÍNH KÈM: "${fileName}".`,
-          'HƯỚNG DẪN ĐẶC BIỆT CHO TRÌNH PHỐI MÀU 10 THEME (ĐĂNGLOVEPDF):',
-          '- Hãy đọc ĐẦY ĐỦ 100% nội dung từ tệp tôi đính kèm (từ trang đầu đến trang cuối, kể cả bảng biểu, công thức & tài liệu tham khảo).',
-          '- Trả kết quả bằng Markdown chuẩn (#, ##, ###, ####, bảng GFM có `<!-- CONTINUE_TABLE -->` nếu bảng vắt trang, LaTeX `$...$` / `$$...$$`, giữ nguyên tiền tệ `$28.40` không bọc LaTeX).',
-          '- Không thêm lời chào mở đầu hay lời kết; chỉ xuất đúng nội dung Markdown hoàn chỉnh để tôi dán trực tiếp về trang web xuất PDF đẹp!',
-          rawText ? `\n--- VĂN BẢN THAM CHIẾU ĐÃ TRÍCH ---\n${rawText.slice(0, 12000)}` : '',
+          'HÃY TRẢ VỀ ĐÚNG 1 KHỐI JSON THEO CẤU TRÚC SAU (KHÔNG viết văn giải thích ngoài JSON):',
+          '```json',
+          '{',
+          '  "title": "Tên báo cáo / tài liệu chính",',
+          '  "subtitle": "Phụ đề hoặc tổ chức (nếu có)",',
+          '  "headings": [',
+          '    { "page": 1, "level": 1, "text": "CHƯƠNG 1. ...", "matchAnchor": "6-10 từ đầu giống y trong tài liệu gốc" },',
+          '    { "page": 2, "level": 2, "text": "1.1. ...", "matchAnchor": "6-10 từ đầu giống y trong tài liệu gốc" }',
+          '  ],',
+          '  "tables": [',
+          '    { "page": 3, "caption": "Bảng 1: Tên bảng (nếu tài liệu chưa có tên bảng thì HÃY TỰ ĐẶT TÊN KHOA HỌC PHÙ HỢP)", "startAnchor": "tiêu đề cột hoặc dòng đầu bảng", "headers": ["Cột 1", "Cột 2"], "columnCount": 2 }',
+          '  ],',
+          '  "figures": [',
+          '    { "page": 5, "caption": "Hình 1: Tên hình/biểu đồ (nếu chưa có tên hình thì HÃY TỰ ĐẶT TÊN KHOA HỌC PHÙ HỢP)", "nearAnchor": "đoạn văn ngay sát hình" }',
+          '  ],',
+          '  "formulas": [',
+          '    { "page": 4, "latex": "WACC = E/V \\\\cdot R_e + D/V \\\\cdot R_d(1 - T_c)", "rawAnchor": "chuỗi công thức thô bị vỡ trong file gốc" }',
+          '  ],',
+          '  "specialSymbols": [',
+          '    { "page": 4, "rawText": "chuỗi ký tự lỗi font trong file gốc", "normalizedUnicode": "≥ / ≤ / × / → / Δ / ±" }',
+          '  ]',
+          '}',
+          '```',
+          '- Lưu ý: Loại bỏ dòng mục lục cũ có dấu chấm `.....55` khỏi `headings[]`; KHÔNG biến các bước tính số (`1. EBIT = 62.500`) thành heading; giữ nguyên tiền tệ `$28.40` (không đưa vào `formulas`).',
+          rawText ? `\n--- CHỈ MỤC ĐOẠN/BẢNG/HÌNH DO CODE ĐÃ QUÉT ---\n${rawText.slice(0, 12000)}` : '',
         ].filter(Boolean).join('\n');
 
       case 'auto_toc':
@@ -1554,23 +2260,30 @@
       case 'icr_handwriting': {
         const modeDesc = {
           handwriting_general: 'Đọc chính xác 100% chữ viết tay tiếng Việt & Anh, giữ đúng đề mục, gạch đầu dòng, ngày tháng.',
-          table_survey_checkbox: 'Đọc toàn bộ phiếu khảo sát/bảng viết tay, đánh dấu ô đã tick là `[☑]` và ô chưa tick là `[☐]`. Kẻ mọi bảng bằng Markdown GFM `| Cột 1 | Cột 2 |`.',
-          medical_rx_form: 'Đọc kỹ đơn thuốc, tên thuốc, liều lượng, ghi chú bác sĩ hoặc hóa đơn viết tay. Chữ quá mờ đánh dấu `[cần đối chiếu]`.',
-          math_notes_latex: 'Chuyển toàn bộ công thức Toán/Tài chính viết tay sang LaTeX `$...$` và `$$...$$` kèm lời giải chữ viết tay.',
+          table_survey_checkbox: 'Đọc toàn bộ phiếu khảo sát/bảng viết tay, đánh dấu checkboxState là "checked" (☑) hoặc "unchecked" (☐), tách bảng vào mảng tables[].rows[][].',
+          medical_rx_form: 'Đọc kỹ đơn thuốc, tên thuốc, liều lượng, ghi chú bác sĩ hoặc hóa đơn viết tay. Chữ quá mờ ghi rõ trong uncertainNote.',
+          math_notes_latex: 'Chuyển toàn bộ công thức Toán/Tài chính viết tay sang trường latex chuẩn kèm lời giải chữ viết tay.',
         };
         return [
-          'Bạn là chuyên gia ICR (Intelligent Character Recognition) đọc chữ viết tay của hệ thống ĐăngLovePDF.',
+          'Bạn là chuyên gia ICR (Intelligent Character Recognition) đọc chữ viết tay phối hợp với Code của ĐăngLovePDF.',
           `Tệp viết tay tôi đính kèm: "${fileName}".`,
           `CHẾ ĐỘ: ${modeDesc[ctx.icrMode] || modeDesc.handwriting_general}`,
-          'QUY TẮC: Không tóm tắt, không bỏ sót bất kỳ chữ nào. Chỉ trả về văn bản/bảng đã số hóa sạch để trang web đóng gói thẳng sang Word/Excel/PDF.',
+          'ĐỊNH DẠNG BẮT BUỘC (JSON chuẩn để Code đọc thẳng vào DOCX / XLSX / PDF):',
+          '```json',
+          '{ "documentType": "handwriting", "pages": [{ "pageNumber": 1, "confidence": 0.98, "items": [{ "type": "heading|paragraph|checkbox|formula", "text": "...", "checkboxState": "checked|unchecked|none", "latex": "", "uncertainNote": "" }], "tables": [{ "caption": "Bảng 1", "rows": [["Cột 1", "Cột 2"]] }], "fullText": "Toàn văn đã số hóa đầy đủ dấu tiếng Việt" }] }',
+          '```',
+          'QUY TẮC: Không tóm tắt, không bỏ sót bất kỳ chữ nào. Chỉ trả đúng khối JSON trên.',
         ].join('\n');
       }
 
       case 'ocr_fast':
         return [
-          'Bạn là động cơ OCR siêu chính xác của ĐăngLovePDF.',
-          `Hãy đọc toàn bộ tệp PDF/Ảnh scan tôi đính kèm ("${fileName}") và trích xuất CHÍNH XÁC 100% toàn bộ văn bản (tiếng Việt đầy đủ dấu, giữ nguyên phân đoạn, tiêu đề, bảng biểu GFM và số liệu).`,
-          'Không thêm lời bình mở đầu/kết thúc; chỉ trả nội dung đã nhận diện để tôi dán về trang web xuất file ngay.',
+          'Bạn là động cơ OCR siêu chính xác phối hợp với Code của ĐăngLovePDF.',
+          `Hãy đọc toàn bộ tệp PDF/Ảnh scan tôi đính kèm ("${fileName}") và trả về ĐÚNG 1 khối JSON chuẩn (response_schema) để Code tự dựng DOCX / MD / TXT / PDF 2 lớp:`,
+          '```json',
+          '{ "detectedLanguage": "vi", "pages": [{ "pageNumber": 1, "confidence": 0.99, "blocks": [{ "type": "heading|paragraph|table|formula", "text": "...", "latex": "" }], "fullText": "Toàn văn trang 1 đầy đủ dấu tiếng Việt, giữ bảng GFM" }] }',
+          '```',
+          'Không thêm lời giải thích ngoài JSON; giữ nguyên 100% số liệu & dấu tiếng Việt.',
         ].join('\n');
 
       case 'pdf_to_docx':
@@ -1865,6 +2578,7 @@
     API_STORAGE_KEY,
     PROMPT_CHINH_TIEU_DE_CHUAN,
     TASK_MODEL_PROFILES,
+    RESPONSE_SCHEMAS,
     DEFAULT_VISION_MODELS,
     getOptimalModelsForTask,
     isQuota429Error,
@@ -1891,6 +2605,11 @@
     callGeminiWithGrounding,
     showAiFullLoadingOverlay,
     maybeShowWelcomeApiUpsellModal,
+    extractJsonObjectFromText,
+    applyBlueprintToBlocks,
+    runAiBlueprintLocator,
+    preprocessImageForOcrIcr,
+    parseStructuredOcrIcrReply,
     runAiFormatDocumentToAst,
     runAiAndCodeAutoToc,
     stitchContinueTables,

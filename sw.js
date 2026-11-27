@@ -6,7 +6,7 @@
  * (Windows / macOS / Linux) ngay cả khi mất kết nối mạng.
  * ============================================================================
  */
-const CACHE_NAME = 'bi-novel-studio-pwa-v154';
+const CACHE_NAME = 'bi-novel-studio-pwa-v156';
 const OFFLINE_CDN_HOSTS = [
   'cdn.tailwindcss.com',
   'cdnjs.cloudflare.com',
@@ -113,6 +113,11 @@ const CORE_ASSETS = [
   './mod46_danglovepdf_and_doc_converter.js',
   './mod47_performance_ram_and_lifecycle_manager.js',
   './mod48_autotester_loader.js',
+  './autotester/modules/stabilityAndSandbox.js',
+  './autotester/modules/viewportAndGeometry.js',
+  './autotester/modules/logicChaosAndEdge.js',
+  './autotester/modules/securityA11ySeoAndPerf.js',
+  './autotester/modules/bridgeAndCoEvolution.js',
   './mod49_market_gold_realestate_stock_advisor.js',
   './mod50_twenty_min_wisdom_loader.js',
   './mod51_language_learning_loader.js',

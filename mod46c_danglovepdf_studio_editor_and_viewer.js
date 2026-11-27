@@ -459,9 +459,23 @@
             <span id="mod46-pv-page-total" class="text-zinc-300 font-bold">/ ...</span>
           </span>
           <button type="button" id="btn-mod46-pv-next" class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer">Sau ▶</button>
-          <button type="button" id="btn-mod46-pv-zoom-out" class="px-2 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-black cursor-pointer" title="Thu nhỏ">➖</button>
-          <span id="mod46-pv-zoom-val" class="text-[11px] font-bold text-zinc-300 w-10 text-center">100%</span>
-          <button type="button" id="btn-mod46-pv-zoom-in" class="px-2 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-black cursor-pointer" title="Phóng to">➕</button>
+          <button type="button" id="btn-mod46-pv-zoom-out" class="px-2 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer" title="Thu nhỏ">➖</button>
+          <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-xl bg-zinc-950/90 border border-zinc-700" title="Nhập hoặc chọn % phóng to (25% – 400%)">
+            <span id="mod46-pv-zoom-val" class="sr-only">100%</span>
+            <input id="inp-mod46-pv-zoom-pct" type="number" min="25" max="400" step="5" value="100" inputmode="numeric" aria-label="Tỷ lệ phóng to (%)" class="w-12 bg-transparent text-center text-[11px] font-bold text-amber-300 focus:outline-none" />
+            <span class="text-[10px] font-bold text-zinc-400">%</span>
+            <select id="sel-mod46-pv-zoom-preset" aria-label="Chọn nhanh tỷ lệ phóng to" class="w-5 bg-zinc-900 text-zinc-300 text-[10px] font-bold rounded cursor-pointer focus:outline-none">
+              <option value="50">50%</option>
+              <option value="75">75%</option>
+              <option value="100" selected>100%</option>
+              <option value="125">125%</option>
+              <option value="150">150%</option>
+              <option value="200">200%</option>
+              <option value="250">250%</option>
+              <option value="300">300%</option>
+            </select>
+          </span>
+          <button type="button" id="btn-mod46-pv-zoom-in" class="px-2 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer" title="Phóng to">➕</button>
           <button type="button" id="btn-mod46-pv-rotate" class="px-2 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold cursor-pointer" title="Xoay góc nhìn 90°">↻</button>
           <select id="sel-mod46-pv-layout" class="px-2 py-1.5 rounded-xl bg-zinc-800 border border-zinc-700 text-[11px] font-bold text-zinc-100" title="Chọn chế độ hiển thị trang">
             <option value="scroll" selected>📜 Cuộn liên tục</option>
@@ -481,8 +495,8 @@
           </div>
           <button type="button" id="btn-mod46-pv-ai-summary" class="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold cursor-pointer" title="AI tóm tắt nhanh nội dung tài liệu PDF này">🤖 Tóm tắt AI</button>
           <button type="button" id="btn-mod46-pv-ai-manual" class="px-2.5 py-1.5 rounded-xl border border-sky-500/55 bg-sky-950/45 hover:bg-sky-900/65 text-sky-200 text-xs font-bold cursor-pointer" title="Dùng AI Thủ công 0-Token không cần API Key">📋 AI Thủ công</button>
-          <a href="${resItem.url}" download="${escHtml(resItem.name)}" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black">⬇️ Tải</a>
-          <button type="button" id="btn-mod46-pv-close" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">✕ Đóng</button>
+          <a href="${resItem.url}" download="${escHtml(resItem.name)}" class="px-3 py-1.5 min-h-[36px] inline-flex items-center rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shrink-0 whitespace-nowrap">⬇️ Tải</a>
+          <button type="button" id="btn-mod46-pv-close" class="px-3 py-1.5 min-h-[36px] rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer shrink-0 whitespace-nowrap">✕ Đóng</button>
         </div>
       </div>
 
@@ -532,6 +546,8 @@
     const pageInputEl = pv.querySelector('#inp-mod46-pv-page');
     const pageTotalEl = pv.querySelector('#mod46-pv-page-total');
     const zoomValEl = pv.querySelector('#mod46-pv-zoom-val');
+    const zoomInputEl = pv.querySelector('#inp-mod46-pv-zoom-pct');
+    const zoomPresetEl = pv.querySelector('#sel-mod46-pv-zoom-preset');
     const prevBtn = pv.querySelector('#btn-mod46-pv-prev');
     const nextBtn = pv.querySelector('#btn-mod46-pv-next');
     const searchInput = pv.querySelector('#inp-mod46-pv-search');
@@ -654,7 +670,12 @@
             ? `–${currentPage + 1} / ${total}`
             : `/ ${total}`;
       }
-      if (zoomValEl) zoomValEl.textContent = `${Math.round(zoomFactor * 100)}%`;
+      const pct = Math.round(zoomFactor * 100);
+      if (zoomValEl) zoomValEl.textContent = `${pct}%`;
+      if (zoomInputEl && document.activeElement !== zoomInputEl) zoomInputEl.value = String(pct);
+      if (zoomPresetEl && Array.from(zoomPresetEl.options).some((o) => Number(o.value) === pct)) {
+        zoomPresetEl.value = String(pct);
+      }
       if (prevBtn) prevBtn.disabled = currentPage <= 1;
       if (nextBtn) nextBtn.disabled = currentPage >= total;
       // Tô sáng ảnh thu nhỏ đang xem ở cột trái
@@ -1135,14 +1156,39 @@
 
       prevBtn?.addEventListener('click', () => goToPage(currentPage - (layoutMode === 'spread' ? 2 : 1), { smooth: true }));
       nextBtn?.addEventListener('click', () => goToPage(currentPage + (layoutMode === 'spread' ? 2 : 1), { smooth: true }));
-      pv.querySelector('#btn-mod46-pv-zoom-out')?.addEventListener('click', () => {
-        zoomFactor = Math.max(0.5, Number((zoomFactor - 0.2).toFixed(2)));
+      const applyZoomPct = (rawPct) => {
+        const parsed = parseInt(String(rawPct || '').replace(/[^\d]/g, ''), 10);
+        const clamped = Number.isFinite(parsed) ? Math.max(25, Math.min(400, parsed)) : Math.round(zoomFactor * 100);
+        zoomFactor = Number((clamped / 100).toFixed(2));
+        if (zoomValEl) zoomValEl.textContent = `${clamped}%`;
+        if (zoomInputEl) zoomInputEl.value = String(clamped);
+        if (zoomPresetEl && Array.from(zoomPresetEl.options).some((o) => Number(o.value) === clamped)) {
+          zoomPresetEl.value = String(clamped);
+        }
         rebuildCurrentLayout(currentPage);
+      };
+      pv.querySelector('#btn-mod46-pv-zoom-out')?.addEventListener('click', () => {
+        applyZoomPct(Math.round(zoomFactor * 100) - 20);
       });
       pv.querySelector('#btn-mod46-pv-zoom-in')?.addEventListener('click', () => {
-        zoomFactor = Math.min(3.0, Number((zoomFactor + 0.2).toFixed(2)));
-        rebuildCurrentLayout(currentPage);
+        applyZoomPct(Math.round(zoomFactor * 100) + 20);
       });
+      zoomInputEl?.addEventListener('focus', () => {
+        try { zoomInputEl.select(); } catch (_e) {}
+      });
+      zoomInputEl?.addEventListener('change', () => applyZoomPct(zoomInputEl.value));
+      zoomInputEl?.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          applyZoomPct(zoomInputEl.value);
+          zoomInputEl.blur();
+        } else if (ev.key === 'Escape') {
+          ev.stopPropagation();
+          zoomInputEl.value = String(Math.round(zoomFactor * 100));
+          zoomInputEl.blur();
+        }
+      });
+      zoomPresetEl?.addEventListener('change', (ev) => applyZoomPct(ev.target.value));
       pv.querySelector('#btn-mod46-pv-rotate')?.addEventListener('click', () => {
         viewRot = (viewRot + 90) % 360;
         rebuildCurrentLayout(currentPage);
