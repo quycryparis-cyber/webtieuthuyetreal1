@@ -5956,5 +5956,15 @@
     "· Xuất đẹp ngay không cần AI": "· Ready to export without AI",
     "· Khuyên dùng AI chốt mục nhập nhằng": "· AI recommended for ambiguous items",
     "· Nên dùng AI định vị": "· AI locator recommended",
+    "🧠 1. Sóng Não & Tần Số Trị Liệu (Brainwaves · Solfeggio)": "🧠 1. Brainwaves & Healing Frequencies (Solfeggio)",
+    "🎨 2. Tiếng Ồn Màu Chống Tạp Âm (Color Noises)": "🎨 2. Color Noises (Masking & Focus)",
+    "🌿 3. Âm Thanh Tự Nhiên & Môi Trường (Ngủ Ngon & Thiền)": "🌿 3. Nature & Ambient Environments (Sleep & Meditation)",
+    "🎹 4. Màu Sắc Hợp Âm, Nhạc Cụ & Nhạc Thể Thao (Chord Colors)": "🎹 4. Chord Colors, Instruments & Workout Beats",
+    "🎧 5. ASMR Thuần Túy & Binaural Thở Theo Nhịp 4-7-8": "🎧 5. Pure ASMR & 4-7-8 Guided Breathing Binaural",
+    "Chọn âm thanh": "Select Sound",
+    "Mở / Đóng ▾": "Toggle ▾",
+    "▲ Thu gọn 5 cụm âm thanh": "▲ Collapse 5 Sound Groups",
+    "Chia 5 cụm trình đơn thả xuống (Sóng não · Tiếng ồn màu · Môi trường · Màu sắc hợp âm/Thể thao · ASMR & Thở 4-7-8) — bấm từng cụm để mở danh sách cụ thể": "Organized into 5 collapsible clusters (Brainwaves · Color Noises · Environments · Chord Colors/Workout · ASMR & 4-7-8 Breathing) — click any cluster to expand",
+    "Nhạc MP3, lặp đoạn & Kho âm thanh 5 cụm (Ngủ · Thiền · Thể thao)": "MP3 Player, A-B Loop & 5-Cluster Sound Library (Sleep · Zen · Sport)",
   });
 })(typeof window !== 'undefined' ? window : globalThis);

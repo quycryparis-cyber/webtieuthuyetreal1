@@ -5935,5 +5935,15 @@
     "· Xuất đẹp ngay không cần AI": "· AI 없이 바로 내보내기 가능",
     "· Khuyên dùng AI chốt mục nhập nhằng": "· 모호한 항목 AI 확인 권장",
     "· Nên dùng AI định vị": "· AI 구조 인식 권장",
+    "🧠 1. Sóng Não & Tần Số Trị Liệu (Brainwaves · Solfeggio)": "🧠 1. 뇌파 및 힐링 주파수 (Brainwaves · Solfeggio)",
+    "🎨 2. Tiếng Ồn Màu Chống Tạp Âm (Color Noises)": "🎨 2. 컬러 노이즈 소음 차단 (Color Noises)",
+    "🌿 3. Âm Thanh Tự Nhiên & Môi Trường (Ngủ Ngon & Thiền)": "🌿 3. 자연 및 환경 사운드 (숙면 · 명상)",
+    "🎹 4. Màu Sắc Hợp Âm, Nhạc Cụ & Nhạc Thể Thao (Chord Colors)": "🎹 4. 코드 컬러, 악기 및 운동 비트 (Chord Colors)",
+    "🎧 5. ASMR Thuần Túy & Binaural Thở Theo Nhịp 4-7-8": "🎧 5. 순수 ASMR 및 4-7-8 호흡 가이드 바이노럴",
+    "Chọn âm thanh": "사운드 선택",
+    "Mở / Đóng ▾": "열기/닫기 ▾",
+    "▲ Thu gọn 5 cụm âm thanh": "▲ 5개 그룹 접기",
+    "Chia 5 cụm trình đơn thả xuống (Sóng não · Tiếng ồn màu · Môi trường · Màu sắc hợp âm/Thể thao · ASMR & Thở 4-7-8) — bấm từng cụm để mở danh sách cụ thể": "5개 드롭다운 그룹(뇌파 · 컬러 노이즈 · 자연환경 · 코드/운동 · ASMR & 4-7-8 호흡) — 각 그룹을 클릭해 펼치세요",
+    "Nhạc MP3, lặp đoạn & Kho âm thanh 5 cụm (Ngủ · Thiền · Thể thao)": "MP3 플레이어, A-B 반복 및 5개 그룹 사운드 라이브러리",
   });
 })(typeof window !== 'undefined' ? window : globalThis);

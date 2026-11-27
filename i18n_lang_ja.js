@@ -5935,5 +5935,15 @@
     "· Xuất đẹp ngay không cần AI": "· AI不要でそのまま出力可能",
     "· Khuyên dùng AI chốt mục nhập nhằng": "· 曖昧な箇所はAI推奨",
     "· Nên dùng AI định vị": "· AI構造認識を推奨",
+    "🧠 1. Sóng Não & Tần Số Trị Liệu (Brainwaves · Solfeggio)": "🧠 1. 脳波＆ヒーリング周波数 (Brainwaves · Solfeggio)",
+    "🎨 2. Tiếng Ồn Màu Chống Tạp Âm (Color Noises)": "🎨 2. カラーノイズ環境音 (Color Noises)",
+    "🌿 3. Âm Thanh Tự Nhiên & Môi Trường (Ngủ Ngon & Thiền)": "🌿 3. 自然・環境サウンド（睡眠・瞑想）",
+    "🎹 4. Màu Sắc Hợp Âm, Nhạc Cụ & Nhạc Thể Thao (Chord Colors)": "🎹 4. コード色彩・楽器＆ワークアウト (Chord Colors)",
+    "🎧 5. ASMR Thuần Túy & Binaural Thở Theo Nhịp 4-7-8": "🎧 5. 純粋ASMR＆4-7-8呼吸ガイドバイノーラル",
+    "Chọn âm thanh": "サウンド選択",
+    "Mở / Đóng ▾": "開閉 ▾",
+    "▲ Thu gọn 5 cụm âm thanh": "▲ 5グループを折りたたむ",
+    "Chia 5 cụm trình đơn thả xuống (Sóng não · Tiếng ồn màu · Môi trường · Màu sắc hợp âm/Thể thao · ASMR & Thở 4-7-8) — bấm từng cụm để mở danh sách cụ thể": "5つのドロップダウン分類（脳波・カラーノイズ・自然環境・コード/運動・ASMR＆4-7-8呼吸）— 各グループをクリックして展開",
+    "Nhạc MP3, lặp đoạn & Kho âm thanh 5 cụm (Ngủ · Thiền · Thể thao)": "MP3・A-Bリピート＆5分類サウンドライブラリ（睡眠・瞑想・運動）",
   });
 })(typeof window !== 'undefined' ? window : globalThis);

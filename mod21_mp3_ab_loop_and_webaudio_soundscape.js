@@ -217,6 +217,239 @@
       reverbMix: 0.08,
       masterLowpassHz: 7400
     },
+    BROWN_NOISE: {
+      key: 'BROWN_NOISE',
+      label: '🟤 Ồn Nâu',
+      fullName: 'Tiếng Ồn Nâu Trầm Ấm (-6dB/octave Deep Brown Noise)',
+      statusText: 'Đang phát: 🟤 Tiếng Ồn Nâu (Brown Noise · Ngủ & Thiền)',
+      description: 'Trầm, ấm, dày như thác nước xa hay sấm rền nhẹ — tắt suy nghĩ (overthinking) cực nhanh cho giấc ngủ và thiền định.',
+      layers: {
+        pureBrownNoise: 0.88
+      },
+      reverbMix: 0.1,
+      masterLowpassHz: 950
+    },
+    GREEN_NOISE: {
+      key: 'GREEN_NOISE',
+      label: '🟢 Ồn Xanh Lá',
+      fullName: 'Tiếng Ồn Xanh Lá Tự Nhiên (Mid-Band 500Hz Green Noise)',
+      statusText: 'Đang phát: 🟢 Tiếng Ồn Xanh Lá (Green Noise · Không gian thoáng)',
+      description: 'Tập trung dải tần trung bình ~500Hz tựa gió qua rừng cây và suối chảy, tạo cảm giác không gian thoáng đãng dễ chịu.',
+      layers: {
+        pureGreenNoise: 0.86
+      },
+      reverbMix: 0.16,
+      masterLowpassHz: 3200
+    },
+    RAIN_TENT: {
+      key: 'RAIN_TENT',
+      label: '⛺ Mưa Lều Vải',
+      fullName: 'Mưa Rơi Trên Lều Vải & Cửa Sổ (Cozy Tent & Window Rain)',
+      statusText: 'Đang phát: ⛺ Mưa Trong Lều Vải & Gõ Cửa Sổ',
+      description: 'Tiếng mưa lộp độp mềm ấm trên vòm lều vải và ô kính sát tai, tạo cảm giác ấm cúng an toàn khi đi ngủ.',
+      layers: {
+        rainDeepRumble: 0.42, rainMidWash: 0.62, rainWindowDrops: 0.85, thunderRoll: 0.18
+      },
+      reverbMix: 0.22,
+      masterLowpassHz: 5400
+    },
+    CRICKETS_NIGHT: {
+      key: 'CRICKETS_NIGHT',
+      label: '🦗 Dế Đêm Quê',
+      fullName: 'Tiếng Dế Kêu & Côn Trùng Đêm Vùng Quê Yên Tĩnh',
+      statusText: 'Đang phát: 🦗 Tiếng Dế Kêu & Côn Trùng Đêm',
+      description: 'Nhịp dế kêu rả rích kết hợp làn gió đồng quê dịu nhẹ giúp thư giãn thần kinh và dễ chìm vào giấc ngủ.',
+      layers: {
+        pureGreenNoise: 0.22, cricketsNight: 0.88
+      },
+      reverbMix: 0.34,
+      masterLowpassHz: 9600
+    },
+    AIRPLANE_CABIN: {
+      key: 'AIRPLANE_CABIN',
+      label: '✈️ Khoang Máy Bay',
+      fullName: 'Tiếng Ồn Khoang Máy Bay Bay Đêm (Airplane Cabin Hum)',
+      statusText: 'Đang phát: ✈️ Khoang Máy Bay Bay Đêm',
+      description: 'Âm rung đều đặn êm ái của khoang máy bay hành trình dài — cực kỳ dễ gây buồn ngủ và che sạch tạp âm.',
+      layers: {
+        airplaneCabin: 0.9
+      },
+      reverbMix: 0.12,
+      masterLowpassHz: 1800
+    },
+    TRAIN_RIDE: {
+      key: 'TRAIN_RIDE',
+      label: '🚆 Tàu Hỏa Đêm',
+      fullName: 'Tiếng Tàu Hỏa Chạy Đường Dài (Rhythmic Night Train)',
+      statusText: 'Đang phát: 🚆 Tàu Hỏa Chạy Đường Dài',
+      description: 'Nhịp bánh sắt lăn đều đặn trên đường ray hòa cùng tiếng gió lướt qua khung cửa sổ tàu đêm ru ngủ cực êm.',
+      layers: {
+        pureBrownNoise: 0.36, trainRide: 0.88
+      },
+      reverbMix: 0.18,
+      masterLowpassHz: 3600
+    },
+    FOREST_STREAM: {
+      key: 'FOREST_STREAM',
+      label: '🏞️ Suối Khe Đá',
+      fullName: 'Suối Chảy Róc Rách Qua Khe Đá (Babbling Brook)',
+      statusText: 'Đang phát: 🏞️ Suối Chảy Róc Rách Qua Khe Đá',
+      description: 'Dòng suối trong vắt len lỏi qua khe đá kết hợp dải tần xanh lá mát lành, lý tưởng cho thiền định và đọc sách.',
+      layers: {
+        forestStream: 0.88, pureGreenNoise: 0.25
+      },
+      reverbMix: 0.32,
+      masterLowpassHz: 6800
+    },
+    TIBETAN_BOWLS: {
+      key: 'TIBETAN_BOWLS',
+      label: '🔔 Chuông Tây Tạng',
+      fullName: 'Chuông Xoay Tây Tạng, Chuông Gió & Cồng Chiêng (Gong Bath)',
+      statusText: 'Đang phát: 🔔 Chuông Xoay Tây Tạng & Cồng Chiêng',
+      description: 'Âm ngân đa hài âm dài của chuông xoay Tây Tạng, tiếng chuông gió lanh lảnh và cồng chiêng sâu lắng tĩnh tâm.',
+      layers: {
+        tibetanBowls: 0.9, noirPad: 0.22
+      },
+      reverbMix: 0.62,
+      masterLowpassHz: 8400
+    },
+    BAMBOO_FLUTE: {
+      key: 'BAMBOO_FLUTE',
+      label: '🎋 Sáo Trúc Thiền',
+      fullName: 'Sáo Trúc Shakuhachi / Sáo Tiêu Thiền Định',
+      statusText: 'Đang phát: 🎋 Sáo Trúc Thiền (Shakuhachi)',
+      description: 'Tiếng sáo trúc thổi chậm giàu hơi thở theo thang ngũ cung thanh thoát, không giai điệu dồn dập.',
+      layers: {
+        bambooFlute: 0.88, forestStream: 0.24
+      },
+      reverbMix: 0.56,
+      masterLowpassHz: 6600
+    },
+    SLEEP_FELT_CELLO: {
+      key: 'SLEEP_FELT_CELLO',
+      label: '🎻 Felt Piano & Cello',
+      fullName: 'Piano Đệm Nỉ, Cello & Pad (Maj7 · Maj9 · Add9 · 52 BPM)',
+      statusText: 'Đang phát: 🎻 Piano Đệm Nỉ & Cello (Maj7/Add9 · Ngủ ngon)',
+      description: 'Hợp âm trưởng mở rộng trầm ấm Cmaj7/Fmaj7/Add9 dưới 60 BPM với tiếng búa nỉ mềm, Cello và Ambient Pad.',
+      layers: {
+        piano: 0.82, noirPad: 0.52
+      },
+      reverbMix: 0.52,
+      masterLowpassHz: 4600
+    },
+    MEDITATION_HANDPAN: {
+      key: 'MEDITATION_HANDPAN',
+      label: '🛸 Handpan & Sus2/4',
+      fullName: 'Handpan, Đàn Hạc & Cổ Cầm (Sus2 · Sus4 · Quartal)',
+      statusText: 'Đang phát: 🛸 Handpan & Hợp Âm Treo Sus2/Sus4 (Thiền)',
+      description: 'Hợp âm treo Sus2/Sus4 và chồng quãng 4 lơ lửng không trọng lực trên âm sắc Handpan, Harp và Drone không gian.',
+      layers: {
+        handpanHarp: 0.9, noirPad: 0.36
+      },
+      reverbMix: 0.58,
+      masterLowpassHz: 7200
+    },
+    WORKOUT_PHONK: {
+      key: 'WORKOUT_PHONK',
+      label: '🏋️ Drift Phonk',
+      fullName: 'Drift Phonk / Bass 808 Nặng (136 BPM · Đẩy Tạ)',
+      statusText: 'Đang phát: 🏋️ Drift Phonk 136 BPM (Bass nặng đẩy tạ)',
+      description: 'Sub-bass 808 đầm chắc, nhịp Cowbell Phonk và hợp âm thứ dồn dập tiếp lửa cho hiệp tập nặng.',
+      layers: {
+        workoutSynth: 0.92
+      },
+      workoutStyle: 'PHONK',
+      reverbMix: 0.14,
+      masterLowpassHz: 9800
+    },
+    WORKOUT_HARDSTYLE: {
+      key: 'WORKOUT_HARDSTYLE',
+      label: '🏃 Hardstyle / DnB',
+      fullName: 'Hardstyle / Techno / Drum & Bass (146 BPM · Chạy Bộ)',
+      statusText: 'Đang phát: 🏃 Hardstyle / Techno 146 BPM (Giữ nhịp bền)',
+      description: 'Nhịp trống nhanh dứt khoát 146 BPM giúp khóa guồng chân chạy bộ, đi bộ dốc và tập HIIT bền bỉ.',
+      layers: {
+        workoutSynth: 0.92
+      },
+      workoutStyle: 'HARDSTYLE',
+      reverbMix: 0.16,
+      masterLowpassHz: 10500
+    },
+    WORKOUT_EPIC_DRUMS: {
+      key: 'WORKOUT_EPIC_DRUMS',
+      label: '🥁 Trống Trận Epic',
+      fullName: 'Epic Orchestral & Trống Trận War Drums (130 BPM)',
+      statusText: 'Đang phát: 🥁 Epic Orchestral & Trống Trận 130 BPM',
+      description: 'Dàn trống trận Taiko/Timpani trầm hùng kết hợp hợp âm thứ & giảm (Diminished) tạo khí thế bùng nổ.',
+      layers: {
+        workoutSynth: 0.92, noirPad: 0.35
+      },
+      workoutStyle: 'EPIC_DRUMS',
+      reverbMix: 0.36,
+      masterLowpassHz: 8800
+    },
+    WORKOUT_METAL: {
+      key: 'WORKOUT_METAL',
+      label: '🎸 Metal Power Riff',
+      fullName: 'Instrumental Metal / Nu-Metal Power Chords (142 BPM)',
+      statusText: 'Đang phát: 🎸 Metal Power Chords 142 BPM',
+      description: 'Riff guitar điện quãng 5 (Power Chords) sắc bén kết hợp trống rock tốc độ cao kích thích adrenaline.',
+      layers: {
+        workoutSynth: 0.9
+      },
+      workoutStyle: 'METAL',
+      reverbMix: 0.15,
+      masterLowpassHz: 9200
+    },
+    WORKOUT_SYNTHWAVE: {
+      key: 'WORKOUT_SYNTHWAVE',
+      label: '🕹️ Synthwave / 8-bit',
+      fullName: 'Synthwave / Chiptune Tốc Độ Cao (148 BPM)',
+      statusText: 'Đang phát: 🕹️ Synthwave / Chiptune 148 BPM',
+      description: 'Arpeggio điện tử sắc nét tốc độ cao giữ trạng thái hưng phấn, tỉnh táo và tập trung đỉnh cao.',
+      layers: {
+        workoutSynth: 0.9
+      },
+      workoutStyle: 'SYNTHWAVE',
+      reverbMix: 0.22,
+      masterLowpassHz: 10200
+    },
+    ASMR_PAGES_WOOD: {
+      key: 'ASMR_PAGES_WOOD',
+      label: '📖 ASMR Sách & Gỗ',
+      fullName: 'ASMR Thuần Túy: Lật Trang Sách & Gõ Nhẹ Lên Gỗ',
+      statusText: 'Đang phát: 📖 ASMR Lật Trang Sách & Gõ Gỗ (Không giọng nói)',
+      description: 'Tiếng giấy lật êm tai đan xen tiếng gõ gỗ trầm ấm không lời, tạo cảm giác thư thái như ngồi trong thư phòng.',
+      layers: {
+        asmrPagesWood: 0.9, purePinkNoise: 0.12
+      },
+      reverbMix: 0.2,
+      masterLowpassHz: 7800
+    },
+    ASMR_UMBRELLA_BRUSH: {
+      key: 'ASMR_UMBRELLA_BRUSH',
+      label: '☂️ ASMR Ô & Chải Tóc',
+      fullName: 'ASMR Thuần Túy: Mưa Trên Ô & Chải Tóc Nhẹ Nhàng',
+      statusText: 'Đang phát: ☂️ ASMR Mưa Trên Ô & Chải Tóc',
+      description: 'Tiếng hạt mưa gõ sát vòm ô kết hợp âm chải tóc mượt nhẹ nhàng giúp thư giãn đầu óc tức thì.',
+      layers: {
+        rainWindowDrops: 0.65, asmrUmbrellaBrush: 0.88
+      },
+      reverbMix: 0.22,
+      masterLowpassHz: 6200
+    },
+    BRAINWAVE_PURE: {
+      key: 'BRAINWAVE_PURE',
+      label: '🧠 Sóng Não Thuần',
+      fullName: 'Sóng Não / Tần Số Trị Liệu Kèm Nền Siêu Êm',
+      statusText: 'Đang phát: 🧠 Sóng Não / Tần Số Chuyên Dụng',
+      description: 'Phát sóng não Binaural / Isochronic / Solfeggio hoặc dẫn nhịp thở 4-7-8 trên nền lọc cực êm tai.',
+      layers: {
+        pureBrownNoise: 0.16
+      },
+      reverbMix: 0.18,
+      masterLowpassHz: 4200
+    },
     OFF: {
       key: 'OFF',
       label: '🔇 Tắt Âm',
@@ -413,6 +646,45 @@
           nextWeights: [0.65, 0.15, 0.15, 0.05]
         }
       ]
+    },
+    SLEEP_WARM_MAJ7: {
+      id: 'SLEEP_WARM_MAJ7',
+      name: '😴 Ngủ Ngon Ấm Áp (Cmaj7 · Fmaj7 · Maj9 · Add9 · 52 BPM)',
+      tempoBpm: 52,
+      arpeggioDensity: 0.65,
+      melodyChance: 0.62,
+      chords: [
+        { name: 'Cmaj7 (Đô trưởng 7 ấm)', bassMidi: 36, fifthMidi: 43, chordMidis: [52, 55, 59, 62], scaleMidis: [60, 62, 64, 67, 69, 71, 72], nextWeights: [0.1, 0.45, 0.25, 0.2] },
+        { name: 'Fmaj7add9 (Fa trưởng 7 thêm 9)', bassMidi: 41, fifthMidi: 48, chordMidis: [52, 57, 60, 64], scaleMidis: [60, 62, 64, 65, 67, 69, 72], nextWeights: [0.35, 0.1, 0.35, 0.2] },
+        { name: 'Am9 (La thứ 9 buông bỏ)', bassMidi: 33, fifthMidi: 40, chordMidis: [52, 55, 59, 60], scaleMidis: [60, 62, 64, 67, 69, 71, 74], nextWeights: [0.3, 0.35, 0.1, 0.25] },
+        { name: 'Gadd9 (Sol thêm 9 dịu)', bassMidi: 43, fifthMidi: 50, chordMidis: [55, 57, 59, 62], scaleMidis: [62, 64, 67, 69, 71, 74], nextWeights: [0.6, 0.2, 0.15, 0.05] }
+      ]
+    },
+    MEDITATION_SUS_QUARTAL: {
+      id: 'MEDITATION_SUS_QUARTAL',
+      name: '🧘 Thiền Định Lơ Lửng (Dsus2 · Asus4 · Quartal Chồng Quãng 4)',
+      tempoBpm: 46,
+      arpeggioDensity: 0.58,
+      melodyChance: 0.7,
+      chords: [
+        { name: 'Dsus2 (Rê treo 2 lơ lửng)', bassMidi: 38, fifthMidi: 45, chordMidis: [50, 52, 57, 62], scaleMidis: [62, 64, 67, 69, 71, 74, 76], nextWeights: [0.15, 0.4, 0.25, 0.2] },
+        { name: 'Asus4 (La treo 4 mở không gian)', bassMidi: 33, fifthMidi: 40, chordMidis: [50, 52, 57, 62], scaleMidis: [62, 64, 67, 69, 74, 76], nextWeights: [0.3, 0.1, 0.35, 0.25] },
+        { name: 'Quartal E-A-D-G (Chồng quãng 4)', bassMidi: 40, fifthMidi: 45, chordMidis: [52, 57, 62, 67], scaleMidis: [62, 64, 67, 69, 71, 74], nextWeights: [0.35, 0.25, 0.15, 0.25] },
+        { name: 'G5/D (Quãng 5 tĩnh tại)', bassMidi: 43, fifthMidi: 50, chordMidis: [50, 55, 62, 67], scaleMidis: [62, 64, 67, 69, 74], nextWeights: [0.5, 0.25, 0.2, 0.05] }
+      ]
+    },
+    WORKOUT_MINOR_POWER: {
+      id: 'WORKOUT_MINOR_POWER',
+      name: '🔥 Thể Thao Kịch Tính (Minor · Power Chords · Diminished · 138 BPM)',
+      tempoBpm: 138,
+      arpeggioDensity: 0.85,
+      melodyChance: 0.78,
+      chords: [
+        { name: 'Em5 (Mi Power Chord)', bassMidi: 40, fifthMidi: 47, chordMidis: [52, 59, 64, 67], scaleMidis: [64, 66, 67, 69, 71, 72, 74, 76], nextWeights: [0.15, 0.4, 0.25, 0.2] },
+        { name: 'Cm (Đô thứ bùng nổ)', bassMidi: 36, fifthMidi: 43, chordMidis: [51, 55, 60, 63], scaleMidis: [60, 62, 63, 67, 68, 72], nextWeights: [0.25, 0.15, 0.4, 0.2] },
+        { name: 'D5 (Rê Power Chord đi lên)', bassMidi: 38, fifthMidi: 45, chordMidis: [50, 57, 62, 65], scaleMidis: [62, 64, 65, 69, 70, 74], nextWeights: [0.25, 0.2, 0.15, 0.4] },
+        { name: 'Bdim7 (Si giảm căng thẳng)', bassMidi: 35, fifthMidi: 41, chordMidis: [50, 53, 56, 59], scaleMidis: [59, 62, 65, 68, 71, 74], nextWeights: [0.65, 0.15, 0.15, 0.05] }
+      ]
     }
   };
 
@@ -460,31 +732,83 @@
   const BINAURAL_FOCUS_MODES = {
     OFF: {
       id: 'OFF',
-      label: 'Tắt sóng não',
+      label: '🔇 Tắt sóng não',
       carrierHz: 0,
       beatHz: 0,
+      kind: 'off',
       desc: 'Không phát tần số sóng não phụ trợ'
+    },
+    DELTA_DEEP_SLEEP: {
+      id: 'DELTA_DEEP_SLEEP',
+      label: '😴 Sóng Delta 2Hz (Ngủ sâu phục hồi · 0.5–4Hz)',
+      carrierHz: 136.1,
+      beatHz: 2,
+      kind: 'binaural',
+      desc: 'Trái 136.1Hz / Phải 138.1Hz — Tần số giấc ngủ sâu không mộng mị, phục hồi thể chất tối đa sau tập nặng.'
+    },
+    THETA_SLEEP_REM: {
+      id: 'THETA_SLEEP_REM',
+      label: '🌙 Sóng Theta 5.5Hz (Ru ngủ & REM · 4–8Hz)',
+      carrierHz: 174,
+      beatHz: 5.5,
+      kind: 'binaural',
+      desc: 'Trái 174Hz / Phải 179.5Hz — Trạng thái lơ mơ ru ngủ êm ái và hỗ trợ giấc ngủ REM.'
     },
     ALPHA_FLOW: {
       id: 'ALPHA_FLOW',
-      label: '🧠 Sóng Alpha 10Hz (Trạng thái Flow sáng tác)',
+      label: '🌿 Sóng Alpha 10Hz (Thiền thư giãn & Flow · 8–13Hz)',
       carrierHz: 200,
       beatHz: 10,
-      desc: 'Trái 200Hz / Phải 210Hz — Giúp tâm trí thư thái nhưng tập trung liền mạch khi viết nháp dài.'
+      kind: 'binaural',
+      desc: 'Trái 200Hz / Phải 210Hz — Thư giãn tỉnh táo, thả lỏng tâm trí, giảm căng thẳng mà không buồn ngủ.'
     },
     THETA_IMAGINATION: {
       id: 'THETA_IMAGINATION',
-      label: '🌙 Sóng Theta 6Hz (Liên tưởng & Miêu tả nội tâm)',
+      label: '🧘 Sóng Theta Sâu 4.5Hz (Thiền sâu & Tĩnh tâm · 4–7Hz)',
       carrierHz: 180,
-      beatHz: 6,
-      desc: 'Trái 180Hz / Phải 186Hz — Kích thích trí tưởng tượng sâu, phù hợp khi lên ý tưởng hoặc viết cảnh nội tâm.'
+      beatHz: 4.5,
+      kind: 'binaural_iso',
+      desc: 'Trái 180Hz / Phải 184.5Hz + xung Isochronic nhẹ — Thiền sâu, tĩnh tâm hoàn toàn & mở rộng liên tưởng.'
+    },
+    SOLFEGGIO_432: {
+      id: 'SOLFEGGIO_432',
+      label: '✨ Tần số Solfeggio 432 Hz (Hài hòa dịu thần kinh)',
+      carrierHz: 432,
+      beatHz: 0,
+      kind: 'solfeggio',
+      desc: 'Âm cộng hưởng thuần 432Hz + 216Hz — Tần số hài hòa tự nhiên giúp dịu hệ thần kinh khi thiền hoặc thư giãn.'
+    },
+    SOLFEGGIO_528: {
+      id: 'SOLFEGGIO_528',
+      label: '💚 Tần số Solfeggio 528 Hz (Tái tạo & Bình an)',
+      carrierHz: 528,
+      beatHz: 0,
+      kind: 'solfeggio',
+      desc: 'Âm cộng hưởng thuần 528Hz + 264Hz — Tần số hài hòa sâu lắng giúp giải tỏa áp lực tinh thần.'
     },
     BETA_LOGIC: {
       id: 'BETA_LOGIC',
-      label: '⚡ Sóng Beta 15Hz (Soát lỗi & Kiểm toán cốt truyện)',
+      label: '⚡ Sóng Beta 18Hz (Thể thao, Phản xạ & Soát logic · 14–30Hz)',
       carrierHz: 220,
-      beatHz: 15,
-      desc: 'Trái 220Hz / Phải 235Hz — Tăng độ tỉnh táo, sắc bén khi rà soát logic và biên tập câu chữ.'
+      beatHz: 18,
+      kind: 'binaural_iso',
+      desc: 'Trái 220Hz / Phải 238Hz + xung Isochronic — Tăng tỉnh táo, phản xạ thể thao và tập trung cao độ.'
+    },
+    GAMMA_PEAK_40: {
+      id: 'GAMMA_PEAK_40',
+      label: '🔥 Sóng Gamma 40Hz (Bùng nổ sức mạnh thần kinh-cơ · 30–100Hz)',
+      carrierHz: 240,
+      beatHz: 40,
+      kind: 'binaural_iso',
+      desc: 'Trái 240Hz / Phải 280Hz + xung Isochronic 40Hz — Đỉnh cao tập trung và kết nối thần kinh-cơ khi đẩy tạ nặng/HIIT.'
+    },
+    BREATHING_478_GUIDED: {
+      id: 'BREATHING_478_GUIDED',
+      label: '🌬️ Binaural Thở Theo Nhịp 4-7-8 (Hít 4s · Giữ 7s · Thở 8s)',
+      carrierHz: 174,
+      beatHz: 6,
+      kind: 'breathing_478',
+      desc: 'Cao độ tăng dần 4 giây (hít vào), giữ êm 7 giây (nín thở) và hạ dần 8 giây (thở ra) — không cần đếm nhẩm!'
     }
   };
 
@@ -852,6 +1176,9 @@
       this.crackleTimer = null;
       this.pianoChordTimer = null;
       this.pianoMelodyTimer = null;
+      this.extraFxTimers = [];
+      this.breathingInterval = null;
+      this.workoutStepIdx = 0;
 
       // Trạng thái bộ sinh hợp âm Markov cho Piano
       this.currentChordIndex = 0;
@@ -1215,6 +1542,93 @@
       bluePureGain.connect(this.dryBusGain);
       bluePureSrc.start(0, Math.random() * 2.0);
       this.continuousBranches.pureBlueNoise = { src: bluePureSrc, filter: blueBp, gain: bluePureGain };
+
+      // 10. Nhánh Tiếng Ồn Nâu Trầm Ấm (Deep Brown Noise -6dB/oct cho Ngủ & Thiền)
+      const brownPureSrc = ctx.createBufferSource();
+      brownPureSrc.buffer = this.brownBuffer;
+      brownPureSrc.loop = true;
+      const brownPureLp = ctx.createBiquadFilter();
+      brownPureLp.type = 'lowpass';
+      brownPureLp.frequency.value = 460;
+      const brownPureGain = ctx.createGain();
+      brownPureGain.gain.value = 0.0001;
+      brownPureSrc.connect(brownPureLp);
+      brownPureLp.connect(brownPureGain);
+      brownPureGain.connect(this.dryBusGain);
+      brownPureSrc.start(0, Math.random() * 2.5);
+      this.continuousBranches.pureBrownNoise = { src: brownPureSrc, filter: brownPureLp, gain: brownPureGain };
+
+      // 11. Nhánh Tiếng Ồn Xanh Lá (Green Noise - dải trung bình 500Hz tự nhiên)
+      const greenPureSrc = ctx.createBufferSource();
+      greenPureSrc.buffer = this.pinkBuffer;
+      greenPureSrc.loop = true;
+      const greenBp = ctx.createBiquadFilter();
+      greenBp.type = 'bandpass';
+      greenBp.frequency.value = 520;
+      greenBp.Q.value = 0.72;
+      const greenPureGain = ctx.createGain();
+      greenPureGain.gain.value = 0.0001;
+      greenPureSrc.connect(greenBp);
+      greenBp.connect(greenPureGain);
+      greenPureGain.connect(this.dryBusGain);
+      greenPureSrc.start(0, Math.random() * 2.5);
+      this.continuousBranches.pureGreenNoise = { src: greenPureSrc, filter: greenBp, gain: greenPureGain };
+
+      // 12. Nhánh Khoang Máy Bay Bay Đêm (Airplane Cabin - Brown/Pink + Turbine Drone 126Hz/252Hz)
+      const cabinSrc = ctx.createBufferSource();
+      cabinSrc.buffer = this.brownBuffer;
+      cabinSrc.loop = true;
+      const cabinLp = ctx.createBiquadFilter();
+      cabinLp.type = 'lowpass';
+      cabinLp.frequency.value = 620;
+      const cabinOsc1 = ctx.createOscillator();
+      const cabinOsc1G = ctx.createGain();
+      cabinOsc1.type = 'sine';
+      cabinOsc1.frequency.value = 126;
+      cabinOsc1G.gain.value = 0.04;
+      const cabinOsc2 = ctx.createOscillator();
+      const cabinOsc2G = ctx.createGain();
+      cabinOsc2.type = 'triangle';
+      cabinOsc2.frequency.value = 252;
+      cabinOsc2G.gain.value = 0.015;
+      const cabinGain = ctx.createGain();
+      cabinGain.gain.value = 0.0001;
+      cabinSrc.connect(cabinLp);
+      cabinLp.connect(cabinGain);
+      cabinOsc1.connect(cabinOsc1G);
+      cabinOsc1G.connect(cabinGain);
+      cabinOsc2.connect(cabinOsc2G);
+      cabinOsc2G.connect(cabinGain);
+      cabinGain.connect(this.dryBusGain);
+      cabinSrc.start(0, Math.random() * 2.0);
+      cabinOsc1.start(0);
+      cabinOsc2.start(0);
+      this.continuousBranches.airplaneCabin = { src: cabinSrc, filter: cabinLp, gain: cabinGain, osc1: cabinOsc1, osc2: cabinOsc2 };
+
+      // 13. Nhánh Suối Chảy Róc Rách Qua Khe Đá (Forest Stream - Pink + Dual Sweeping Bandpass)
+      const streamSrc = ctx.createBufferSource();
+      streamSrc.buffer = this.pinkBuffer;
+      streamSrc.loop = true;
+      const streamBp = ctx.createBiquadFilter();
+      streamBp.type = 'bandpass';
+      streamBp.frequency.value = 1150;
+      streamBp.Q.value = 1.4;
+      const streamLfo = ctx.createOscillator();
+      const streamLfoG = ctx.createGain();
+      streamLfo.type = 'sine';
+      streamLfo.frequency.value = 0.65;
+      streamLfoG.gain.value = 420;
+      streamLfo.connect(streamLfoG);
+      streamLfoG.connect(streamBp.frequency);
+      const streamGain = ctx.createGain();
+      streamGain.gain.value = 0.0001;
+      streamSrc.connect(streamBp);
+      streamBp.connect(streamGain);
+      streamGain.connect(this.dryBusGain);
+      streamGain.connect(this.reverbSendGain);
+      streamSrc.start(0, Math.random() * 3.0);
+      streamLfo.start(0);
+      this.continuousBranches.forestStream = { src: streamSrc, filter: streamBp, gain: streamGain, lfo: streamLfo };
     }
 
     /**
@@ -1288,6 +1702,10 @@
       setSmoothGain('purePinkNoise', (layers.purePinkNoise || 0) * 0.48);
       setSmoothGain('pureWhiteNoise', (layers.pureWhiteNoise || 0) * 0.22);
       setSmoothGain('pureBlueNoise', (layers.pureBlueNoise || 0) * 0.28);
+      setSmoothGain('pureBrownNoise', (layers.pureBrownNoise || 0) * 0.56);
+      setSmoothGain('pureGreenNoise', (layers.pureGreenNoise || 0) * 0.52);
+      setSmoothGain('airplaneCabin', (layers.airplaneCabin || 0) * 0.54);
+      setSmoothGain('forestStream', (layers.forestStream || 0) * 0.44);
     }
 
     stopStochasticSchedulers() {
@@ -1310,6 +1728,10 @@
       if (this.pianoMelodyTimer) {
         clearInterval(this.pianoMelodyTimer);
         this.pianoMelodyTimer = null;
+      }
+      if (Array.isArray(this.extraFxTimers) && this.extraFxTimers.length) {
+        this.extraFxTimers.forEach((tid) => clearInterval(tid));
+        this.extraFxTimers = [];
       }
     }
 
@@ -1380,6 +1802,400 @@
           if (!this.isRunning) return;
           this.maybeTriggerPianoMelodyNote(preset);
         }, eighthNoteMs);
+      }
+
+      // 5. Các bộ tổng hợp chuyên biệt mới (Dế đêm, Tàu hỏa, Chuông Tây Tạng, Sáo trúc, Handpan, Thể thao, ASMR)
+      const pushExtraTimer = (fn, ms, fireImmediately = false) => {
+        if (fireImmediately) {
+          try { fn(); } catch (_e) {}
+        }
+        const tid = setInterval(() => {
+          if (!this.isRunning) return;
+          try { fn(); } catch (_e) {}
+        }, ms);
+        this.extraFxTimers.push(tid);
+      };
+
+      if (preset.layers.cricketsNight > 0) {
+        pushExtraTimer(() => this.spawnCricketChirp(preset.layers.cricketsNight), 1450, true);
+      }
+      if (preset.layers.trainRide > 0) {
+        pushExtraTimer(() => this.spawnTrainRailClack(preset.layers.trainRide), 1520, true);
+      }
+      if (preset.layers.tibetanBowls > 0) {
+        pushExtraTimer(() => this.spawnTibetanBowlOrChime(preset.layers.tibetanBowls), 5400, true);
+      }
+      if (preset.layers.bambooFlute > 0) {
+        pushExtraTimer(() => this.spawnBambooFlutePhrase(preset.layers.bambooFlute), 4600, true);
+      }
+      if (preset.layers.handpanHarp > 0) {
+        pushExtraTimer(() => this.spawnHandpanOrHarpNote(preset.layers.handpanHarp), 1150, true);
+      }
+      if (preset.layers.asmrPagesWood > 0) {
+        pushExtraTimer(() => this.spawnAsmrPageOrWoodTap(preset.layers.asmrPagesWood), 1650, true);
+      }
+      if (preset.layers.asmrUmbrellaBrush > 0) {
+        pushExtraTimer(() => this.spawnAsmrSoftBrush(preset.layers.asmrUmbrellaBrush), 2100, true);
+      }
+      if (preset.layers.workoutSynth > 0) {
+        this.workoutStepIdx = 0;
+        const style = preset.workoutStyle || 'PHONK';
+        const bpmMap = { PHONK: 136, HARDSTYLE: 146, EPIC_DRUMS: 130, METAL: 142, SYNTHWAVE: 148 };
+        const bpm = bpmMap[style] || 138;
+        const stepMs = Math.round((60 / bpm / 4) * 1000); // 16th note step
+        pushExtraTimer(() => {
+          this.triggerWorkoutStep(style, this.workoutStepIdx, preset.layers.workoutSynth);
+          this.workoutStepIdx = (this.workoutStepIdx + 1) % 16;
+        }, stepMs, true);
+      }
+    }
+
+    spawnCricketChirp(intensity = 0.85) {
+      if (!this.ctx) return;
+      const ctx = this.ctx;
+      const base = ctx.currentTime + 0.05;
+      const freq = 4250 + Math.random() * 480;
+      const pulses = 3 + Math.floor(Math.random() * 2);
+      const pan = Math.random() * 1.4 - 0.7;
+      for (let i = 0; i < pulses; i++) {
+        const t = base + i * 0.062;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.022 * intensity, t + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.044);
+        osc.connect(g);
+        if (ctx.createStereoPanner) {
+          const p = ctx.createStereoPanner();
+          p.pan.setValueAtTime(pan, t);
+          g.connect(p);
+          p.connect(this.dryBusGain);
+          p.connect(this.reverbSendGain);
+        } else {
+          g.connect(this.dryBusGain);
+        }
+        osc.start(t);
+        osc.stop(t + 0.05);
+      }
+    }
+
+    spawnTrainRailClack(intensity = 0.85) {
+      if (!this.ctx || !this.brownBuffer) return;
+      const ctx = this.ctx;
+      const now = ctx.currentTime + 0.04;
+      // Nhịp "ta-tặc ... ta-tặc" đặc trưng bánh sắt qua mối nối ray
+      [0, 0.16, 0.56, 0.72].forEach((dt, idx) => {
+        const t = now + dt;
+        const src = ctx.createBufferSource();
+        src.buffer = this.brownBuffer;
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.setValueAtTime(idx % 2 === 0 ? 155 : 220, t);
+        bp.Q.setValueAtTime(1.8, t);
+        const g = ctx.createGain();
+        const amp = (idx % 2 === 0 ? 0.18 : 0.13) * intensity;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(amp, t + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+        src.connect(bp);
+        bp.connect(g);
+        g.connect(this.dryBusGain);
+        src.start(t, Math.random() * 2.0, 0.15);
+      });
+    }
+
+    spawnTibetanBowlOrChime(intensity = 0.88) {
+      if (!this.ctx) return;
+      const ctx = this.ctx;
+      const now = ctx.currentTime + 0.06;
+      const roots = [174, 216, 256, 288, 396, 432, 528];
+      const f0 = roots[Math.floor(Math.random() * roots.length)];
+      // Tỷ lệ hài âm chuông xoay Tây Tạng & cồng chiêng (1 : 2.756 : 5.404)
+      [1, 2.756, 5.404].forEach((mult, idx) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f0 * mult, now);
+        const dur = idx === 0 ? 7.2 : idx === 1 ? 4.8 : 2.6;
+        const peak = (idx === 0 ? 0.095 : idx === 1 ? 0.032 : 0.012) * intensity;
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.linearRampToValueAtTime(peak, now + 0.08);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        osc.connect(g);
+        g.connect(this.dryBusGain);
+        g.connect(this.reverbSendGain);
+        osc.start(now);
+        osc.stop(now + dur + 0.1);
+      });
+      // Thêm 1-2 tiếng chuông gió (Wind Chimes) lanh lảnh nhẹ
+      if (Math.random() < 0.65) {
+        const chimeFreq = 1280 + Math.random() * 1400;
+        const t2 = now + 1.4 + Math.random() * 1.2;
+        const oscC = ctx.createOscillator();
+        const gC = ctx.createGain();
+        oscC.type = 'sine';
+        oscC.frequency.setValueAtTime(chimeFreq, t2);
+        gC.gain.setValueAtTime(0.0001, t2);
+        gC.gain.linearRampToValueAtTime(0.018 * intensity, t2 + 0.01);
+        gC.gain.exponentialRampToValueAtTime(0.0001, t2 + 1.9);
+        oscC.connect(gC);
+        gC.connect(this.reverbSendGain);
+        oscC.start(t2);
+        oscC.stop(t2 + 2.0);
+      }
+    }
+
+    spawnBambooFlutePhrase(intensity = 0.85) {
+      if (!this.ctx || !this.pinkBuffer) return;
+      const ctx = this.ctx;
+      const now = ctx.currentTime + 0.1;
+      const penta = [62, 64, 67, 69, 72, 74, 76]; // Ngũ cung Shakuhachi D-E-G-A-C-D-E
+      const midi = penta[Math.floor(Math.random() * penta.length)];
+      const freq = WebAudioDspKernel.midiToFreq(midi);
+      const dur = 2.6 + Math.random() * 1.4;
+
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq * 0.985, now);
+      osc.frequency.linearRampToValueAtTime(freq, now + 0.35);
+
+      const vib = ctx.createOscillator();
+      const vibG = ctx.createGain();
+      vib.frequency.value = 4.6;
+      vibG.gain.value = freq * 0.006;
+      vib.connect(vibG);
+      vibG.connect(osc.frequency);
+
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(1400, now);
+
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(0.075 * intensity, now + 0.55);
+      g.gain.setValueAtTime(0.065 * intensity, now + dur * 0.65);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+      osc.connect(lp);
+      lp.connect(g);
+      g.connect(this.dryBusGain);
+      g.connect(this.reverbSendGain);
+
+      // Tiếng hơi thở sáo trúc mềm mại
+      const breath = ctx.createBufferSource();
+      breath.buffer = this.pinkBuffer;
+      const bBp = ctx.createBiquadFilter();
+      bBp.type = 'bandpass';
+      bBp.frequency.value = freq * 1.6;
+      bBp.Q.value = 3.0;
+      const bG = ctx.createGain();
+      bG.gain.setValueAtTime(0.0001, now);
+      bG.gain.linearRampToValueAtTime(0.018 * intensity, now + 0.4);
+      bG.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      breath.connect(bBp);
+      bBp.connect(bG);
+      bG.connect(this.reverbSendGain);
+
+      osc.start(now);
+      vib.start(now);
+      breath.start(now, Math.random() * 2.0, dur + 0.1);
+      osc.stop(now + dur + 0.1);
+      vib.stop(now + dur + 0.1);
+    }
+
+    spawnHandpanOrHarpNote(intensity = 0.88) {
+      if (!this.ctx) return;
+      const ctx = this.ctx;
+      const now = ctx.currentTime + 0.04;
+      // Hợp âm treo Sus2 / Sus4 / Quartal D-E-A-D-E-G-A (lơ lửng thiền định)
+      const notes = [50, 52, 57, 62, 64, 67, 69, 74];
+      const midi = notes[Math.floor(Math.random() * notes.length)];
+      const freq = WebAudioDspKernel.midiToFreq(midi);
+
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      osc1.type = 'sine';
+      osc2.type = 'triangle';
+      osc1.frequency.setValueAtTime(freq, now);
+      osc2.frequency.setValueAtTime(freq * 2.0, now);
+
+      const g1 = ctx.createGain();
+      const g2 = ctx.createGain();
+      g1.gain.setValueAtTime(0.0001, now);
+      g1.gain.linearRampToValueAtTime(0.11 * intensity, now + 0.012);
+      g1.gain.exponentialRampToValueAtTime(0.0001, now + 2.8);
+      g2.gain.setValueAtTime(0.0001, now);
+      g2.gain.linearRampToValueAtTime(0.036 * intensity, now + 0.008);
+      g2.gain.exponentialRampToValueAtTime(0.0001, now + 1.1);
+
+      osc1.connect(g1);
+      osc2.connect(g2);
+      g1.connect(this.dryBusGain);
+      g1.connect(this.reverbSendGain);
+      g2.connect(this.reverbSendGain);
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 2.9);
+      osc2.stop(now + 1.2);
+    }
+
+    spawnAsmrPageOrWoodTap(intensity = 0.85) {
+      if (!this.ctx || !this.pinkBuffer) return;
+      const ctx = this.ctx;
+      const now = ctx.currentTime + 0.04;
+      if (Math.random() < 0.55) {
+        // Tiếng gõ nhẹ lên gỗ trầm ấm (2-3 nhịp mềm)
+        [0, 0.24].forEach((dt) => {
+          const t = now + dt;
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(340 + Math.random() * 140, t);
+          osc.frequency.exponentialRampToValueAtTime(125, t + 0.055);
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.linearRampToValueAtTime(0.095 * intensity, t + 0.004);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.075);
+          osc.connect(g);
+          g.connect(this.dryBusGain);
+          osc.start(t);
+          osc.stop(t + 0.085);
+        });
+      } else {
+        // Tiếng lật trang sách êm tai (filtered pink noise sweep)
+        const src = ctx.createBufferSource();
+        src.buffer = this.pinkBuffer;
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.setValueAtTime(1500, now);
+        bp.frequency.linearRampToValueAtTime(3400, now + 0.18);
+        bp.frequency.linearRampToValueAtTime(1200, now + 0.42);
+        bp.Q.value = 1.6;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.linearRampToValueAtTime(0.085 * intensity, now + 0.12);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+        src.connect(bp);
+        bp.connect(g);
+        g.connect(this.dryBusGain);
+        src.start(now, Math.random() * 2.5, 0.48);
+      }
+    }
+
+    spawnAsmrSoftBrush(intensity = 0.85) {
+      if (!this.ctx || !this.pinkBuffer) return;
+      const ctx = this.ctx;
+      const now = ctx.currentTime + 0.05;
+      const src = ctx.createBufferSource();
+      src.buffer = this.pinkBuffer;
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.setValueAtTime(1900, now);
+      bp.frequency.linearRampToValueAtTime(2800, now + 0.55);
+      bp.frequency.linearRampToValueAtTime(1500, now + 1.15);
+      bp.Q.value = 1.2;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(0.068 * intensity, now + 0.35);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+      src.connect(bp);
+      bp.connect(g);
+      g.connect(this.dryBusGain);
+      src.start(now, Math.random() * 2.5, 1.25);
+    }
+
+    triggerWorkoutStep(style, step, intensity = 0.9) {
+      if (!this.ctx) return;
+      const ctx = this.ctx;
+      const now = ctx.currentTime + 0.015;
+
+      const kick = (startHz = 140, endHz = 42, dur = 0.22, gainAmp = 0.24) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(startHz, now);
+        osc.frequency.exponentialRampToValueAtTime(endHz, now + dur * 0.75);
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.linearRampToValueAtTime(gainAmp * intensity, now + 0.006);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        osc.connect(g);
+        g.connect(this.dryBusGain);
+        osc.start(now);
+        osc.stop(now + dur + 0.02);
+      };
+
+      const hihat = (amp = 0.045, dur = 0.04) => {
+        if (!this.whiteBuffer) return;
+        const src = ctx.createBufferSource();
+        src.buffer = this.whiteBuffer;
+        const hp = ctx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.value = 6800;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(amp * intensity, now);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        src.connect(hp);
+        hp.connect(g);
+        g.connect(this.dryBusGain);
+        src.start(now, Math.random() * 1.2, dur + 0.01);
+      };
+
+      const synthNote = (midi, wave = 'sawtooth', dur = 0.18, amp = 0.085, cutoff = 1800) => {
+        const osc = ctx.createOscillator();
+        const lp = ctx.createBiquadFilter();
+        const g = ctx.createGain();
+        osc.type = wave;
+        osc.frequency.setValueAtTime(WebAudioDspKernel.midiToFreq(midi), now);
+        lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(cutoff, now);
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.linearRampToValueAtTime(amp * intensity, now + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        osc.connect(lp);
+        lp.connect(g);
+        g.connect(this.dryBusGain);
+        g.connect(this.reverbSendGain);
+        osc.start(now);
+        osc.stop(now + dur + 0.02);
+      };
+
+      if (style === 'PHONK') {
+        if (step % 4 === 0 || step === 10) kick(135, 36, 0.28, 0.26); // 808 Sub nặng
+        if (step % 2 === 1) hihat(0.038, 0.035);
+        // Cowbell Drift Phonk (thang âm thứ kịch tính)
+        const cbPat = [64, 0, 67, 0, 71, 67, 64, 0, 64, 0, 72, 0, 71, 67, 62, 0];
+        if (cbPat[step]) {
+          synthNote(cbPat[step], 'square', 0.14, 0.055, 2200);
+          synthNote(cbPat[step] + 7, 'triangle', 0.12, 0.035, 2400);
+        }
+      } else if (style === 'HARDSTYLE') {
+        if (step % 4 === 0) kick(190, 44, 0.2, 0.26); // 4-on-the-floor Hardstyle punch
+        if (step % 4 === 2) hihat(0.055, 0.06);
+        const bassPat = [40, 0, 40, 43, 40, 0, 47, 45, 40, 0, 40, 43, 38, 0, 43, 45];
+        if (bassPat[step]) synthNote(bassPat[step], 'sawtooth', 0.14, 0.08, 1450);
+      } else if (style === 'EPIC_DRUMS') {
+        // Trống trận War Drums (Taiko/Timpani) + Hợp âm thứ & giảm (Minor/Diminished)
+        if (step === 0 || step === 3 || step === 6 || step === 8 || step === 11 || step === 14) {
+          kick(step % 8 === 0 ? 118 : 95, 38, 0.34, step % 8 === 0 ? 0.28 : 0.18);
+        }
+        if (step === 0) { synthNote(40, 'sawtooth', 0.85, 0.075, 950); synthNote(47, 'sawtooth', 0.85, 0.06, 950); }
+        if (step === 8) { synthNote(43, 'sawtooth', 0.85, 0.075, 1100); synthNote(49, 'sawtooth', 0.85, 0.055, 1100); } // Diminished tension
+      } else if (style === 'METAL') {
+        if (step % 4 === 0 || step === 6 || step === 14) kick(150, 45, 0.18, 0.24);
+        if (step === 4 || step === 12) hihat(0.08, 0.11); // Snare punch
+        // Power Chords quãng 5 (Root + Fifth)
+        const riff = [40, 40, 0, 43, 40, 0, 45, 43, 40, 40, 0, 47, 45, 43, 38, 0];
+        if (riff[step]) {
+          synthNote(riff[step], 'sawtooth', 0.16, 0.075, 2600);
+          synthNote(riff[step] + 7, 'sawtooth', 0.16, 0.06, 2600);
+        }
+      } else {
+        // SYNTHWAVE / CHIPTUNE tốc độ cao 148 BPM
+        if (step % 4 === 0) kick(155, 44, 0.18, 0.22);
+        if (step % 2 === 1) hihat(0.035, 0.03);
+        const arp = [64, 67, 71, 76, 64, 67, 71, 74, 60, 64, 67, 72, 62, 66, 69, 74];
+        synthNote(arp[step], step % 2 === 0 ? 'square' : 'sawtooth', 0.13, 0.058, 3200);
       }
     }
 
@@ -1695,23 +2511,27 @@
       const mode = BINAURAL_FOCUS_MODES[modeKey] || BINAURAL_FOCUS_MODES.OFF;
       this.currentBinauralKey = mode.id;
 
+      // Dừng bộ đếm nhịp thở 4-7-8 nếu có
+      if (this.breathingInterval) {
+        clearInterval(this.breathingInterval);
+        this.breathingInterval = null;
+      }
+
       // Dừng nhánh Binaural cũ nếu có
       if (this.binauralNodes) {
+        const oldNodes = this.binauralNodes;
+        this.binauralNodes = null;
         try {
           const now = this.ctx ? this.ctx.currentTime : 0;
-          this.binauralNodes.gain.gain.linearRampToValueAtTime(0.0001, now + 0.3);
+          oldNodes.gain.gain.linearRampToValueAtTime(0.0001, now + 0.3);
           setTimeout(() => {
             try {
-              this.binauralNodes?.leftOsc?.stop();
-              this.binauralNodes?.rightOsc?.stop();
-            } catch (_e) {
-              // Đã dừng
-            }
+              oldNodes.leftOsc?.stop();
+              oldNodes.rightOsc?.stop();
+              oldNodes.isoLfo?.stop();
+            } catch (_e) {}
           }, 350);
-        } catch (_err) {
-          // Bỏ qua
-        }
-        this.binauralNodes = null;
+        } catch (_err) {}
       }
 
       if (mode.id === 'OFF' || mode.carrierHz <= 0) return mode;
@@ -1724,25 +2544,80 @@
       const rightOsc = ctx.createOscillator();
       leftOsc.type = 'sine';
       rightOsc.type = 'sine';
-      leftOsc.frequency.setValueAtTime(mode.carrierHz, now);
-      rightOsc.frequency.setValueAtTime(mode.carrierHz + mode.beatHz, now);
+
+      const kind = mode.kind || 'binaural';
+      if (kind === 'solfeggio') {
+        // Solfeggio 432Hz / 528Hz: sóng thuần + quãng 8 trầm ấm bên dưới
+        leftOsc.frequency.setValueAtTime(mode.carrierHz, now);
+        rightOsc.frequency.setValueAtTime(mode.carrierHz / 2, now);
+      } else {
+        leftOsc.frequency.setValueAtTime(mode.carrierHz, now);
+        rightOsc.frequency.setValueAtTime(mode.carrierHz + (mode.beatHz || 0), now);
+      }
 
       const merger = ctx.createChannelMerger(2);
       const binauralGain = ctx.createGain();
       binauralGain.gain.setValueAtTime(0.0001, now);
-      binauralGain.gain.linearRampToValueAtTime(0.045, now + 1.0);
+      const baseVol = kind === 'solfeggio' ? 0.038 : kind === 'breathing_478' ? 0.052 : 0.045;
+      binauralGain.gain.linearRampToValueAtTime(baseVol, now + 1.0);
 
-      leftOsc.connect(merger, 0, 0);
-      rightOsc.connect(merger, 0, 1);
-      merger.connect(binauralGain);
+      let isoLfo = null;
+      if (kind === 'binaural_iso' && mode.beatHz > 0) {
+        // Kết hợp nhẹ xung Isochronic Tones tại tần số beatHz
+        const isoMod = ctx.createGain();
+        isoMod.gain.setValueAtTime(0.85, now);
+        isoLfo = ctx.createOscillator();
+        const isoDepth = ctx.createGain();
+        isoLfo.type = 'sine';
+        isoLfo.frequency.setValueAtTime(Math.min(40, mode.beatHz), now);
+        isoDepth.gain.setValueAtTime(0.15, now);
+        isoLfo.connect(isoDepth);
+        isoDepth.connect(isoMod.gain);
+        leftOsc.connect(merger, 0, 0);
+        rightOsc.connect(merger, 0, 1);
+        merger.connect(isoMod);
+        isoMod.connect(binauralGain);
+        isoLfo.start(now);
+      } else {
+        leftOsc.connect(merger, 0, 0);
+        rightOsc.connect(merger, 0, 1);
+        merger.connect(binauralGain);
+      }
+
       binauralGain.connect(this.masterGain);
-
       leftOsc.start(now);
       rightOsc.start(now);
+
+      // Chế độ dẫn nhịp thở 4-7-8 (Hít 4s tăng cao độ · Giữ 7s êm · Thở ra 8s hạ dần = chu kỳ 19 giây)
+      if (kind === 'breathing_478') {
+        const scheduleBreathCycle = () => {
+          if (!this.ctx || this.currentBinauralKey !== 'BREATHING_478_GUIDED') return;
+          const t0 = this.ctx.currentTime;
+          const lo = 174;
+          const hi = 261.63; // C4 ấm áp
+          const beat = 6;
+          leftOsc.frequency.cancelScheduledValues(t0);
+          rightOsc.frequency.cancelScheduledValues(t0);
+          leftOsc.frequency.setValueAtTime(lo, t0);
+          rightOsc.frequency.setValueAtTime(lo + beat, t0);
+          // 4 giây hít vào: tăng cao độ đều
+          leftOsc.frequency.linearRampToValueAtTime(hi, t0 + 4.0);
+          rightOsc.frequency.linearRampToValueAtTime(hi + beat, t0 + 4.0);
+          // 7 giây nín thở: giữ ổn định
+          leftOsc.frequency.setValueAtTime(hi, t0 + 11.0);
+          rightOsc.frequency.setValueAtTime(hi + beat, t0 + 11.0);
+          // 8 giây thở ra: hạ dịu dần về tần số thấp
+          leftOsc.frequency.linearRampToValueAtTime(lo, t0 + 19.0);
+          rightOsc.frequency.linearRampToValueAtTime(lo + beat, t0 + 19.0);
+        };
+        scheduleBreathCycle();
+        this.breathingInterval = setInterval(scheduleBreathCycle, 19000);
+      }
 
       this.binauralNodes = {
         leftOsc,
         rightOsc,
+        isoLfo,
         gain: binauralGain
       };
       return mode;
@@ -1878,11 +2753,359 @@
       id: 'SCENE_BLUE_NOISE_BREEZE',
       title: '💙 Tiếng Ồn Xanh Thanh Thoát (Blue Noise)',
       genreTag: 'Tỉnh táo nhẹ / Trong trẻo / Đọc sách',
+      clusterId: 'CLUSTER_COLOR_NOISES',
       basePreset: 'BLUE_NOISE',
       pianoMood: 'IMPRESSIONIST_DREAM',
       binaural: 'OFF',
       mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
       description: 'Tiếng ồn xanh dịu nhẹ như làn gió sớm lướt qua tán lá, giữ đầu óc tỉnh táo và thanh thản.'
+    },
+    // --- CỤM 1: SÓNG NÃO & TẦN SỐ TRỊ LIỆU (8 CHẾ ĐỘ) ---
+    {
+      id: 'SCENE_BW_DELTA_SLEEP',
+      title: '😴 Sóng Delta (0.5–4 Hz) · Ngủ Sâu Phục Hồi',
+      genreTag: 'Ngủ sâu / Phục hồi cơ bắp',
+      clusterId: 'CLUSTER_BRAINWAVES',
+      basePreset: 'BRAINWAVE_PURE',
+      pianoMood: 'SLEEP_WARM_MAJ7',
+      binaural: 'DELTA_DEEP_SLEEP',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Binaural Delta 2Hz trên nền lọc trầm cực êm — đưa cơ thể vào giấc ngủ sâu không mộng mị sau khi tập nặng.'
+    },
+    {
+      id: 'SCENE_BW_THETA_SLEEP',
+      title: '🌙 Sóng Theta (4–8 Hz) · Ru Ngủ & REM',
+      genreTag: 'Ngủ ngon / Ru ngủ REM',
+      clusterId: 'CLUSTER_BRAINWAVES',
+      basePreset: 'BRAINWAVE_PURE',
+      pianoMood: 'SLEEP_WARM_MAJ7',
+      binaural: 'THETA_SLEEP_REM',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Tần số Theta 5.5Hz hỗ trợ giai đoạn lơ mơ chìm vào giấc ngủ dịu dàng và giấc ngủ REM.'
+    },
+    {
+      id: 'SCENE_BW_ALPHA_RELAX',
+      title: '🌿 Sóng Alpha (8–13 Hz) · Thiền Thư Giãn Tỉnh Táo',
+      genreTag: 'Thiền định / Flow sáng tác',
+      clusterId: 'CLUSTER_BRAINWAVES',
+      basePreset: 'BRAINWAVE_PURE',
+      pianoMood: 'MEDITATION_SUS_QUARTAL',
+      binaural: 'ALPHA_FLOW',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Sóng Alpha 10Hz thả lỏng tâm trí, giảm căng thẳng mà vẫn giữ sự tỉnh táo nhẹ nhàng.'
+    },
+    {
+      id: 'SCENE_BW_THETA_DEEP_MED',
+      title: '🧘 Sóng Theta Sâu (4–7 Hz) · Thiền Sâu Tĩnh Tâm',
+      genreTag: 'Thiền sâu / Isochronic + Binaural',
+      clusterId: 'CLUSTER_BRAINWAVES',
+      basePreset: 'BRAINWAVE_PURE',
+      pianoMood: 'MEDITATION_SUS_QUARTAL',
+      binaural: 'THETA_IMAGINATION',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Sóng Theta 4.5Hz kèm xung Isochronic dịu giúp lắng sâu tâm trí hoàn toàn.'
+    },
+    {
+      id: 'SCENE_BW_SOLFEGGIO_432',
+      title: '✨ Tần Số Solfeggio 432 Hz · Hài Hòa Thần Kinh',
+      genreTag: 'Thiền định / Solfeggio',
+      clusterId: 'CLUSTER_BRAINWAVES',
+      basePreset: 'BRAINWAVE_PURE',
+      pianoMood: 'MEDITATION_SUS_QUARTAL',
+      binaural: 'SOLFEGGIO_432',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Tần số cộng hưởng tự nhiên 432Hz + 216Hz làm dịu hệ thần kinh căng thẳng.'
+    },
+    {
+      id: 'SCENE_BW_SOLFEGGIO_528',
+      title: '💚 Tần Số Solfeggio 528 Hz · Chữa Lành & Bình An',
+      genreTag: 'Thiền định / Chữa lành',
+      clusterId: 'CLUSTER_BRAINWAVES',
+      basePreset: 'BRAINWAVE_PURE',
+      pianoMood: 'MEDITATION_SUS_QUARTAL',
+      binaural: 'SOLFEGGIO_528',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Tần số cộng hưởng 528Hz + 264Hz thanh lọc áp lực và khôi phục sự cân bằng.'
+    },
+    {
+      id: 'SCENE_BW_BETA_SPORT',
+      title: '⚡ Sóng Beta (14–30 Hz) · Tỉnh Táo & Phản Xạ Thể Thao',
+      genreTag: 'Thể thao / Tập trung cao',
+      clusterId: 'CLUSTER_BRAINWAVES',
+      basePreset: 'BRAINWAVE_PURE',
+      pianoMood: 'WORKOUT_MINOR_POWER',
+      binaural: 'BETA_LOGIC',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Binaural + Isochronic Beta 18Hz tăng độ tỉnh táo, phản xạ nhanh và kiểm soát động tác.'
+    },
+    {
+      id: 'SCENE_BW_GAMMA_40',
+      title: '🔥 Sóng Gamma 40 Hz (30–100 Hz) · Bùng Nổ Sức Mạnh',
+      genreTag: 'Thể thao nặng / Thần kinh-Cơ',
+      clusterId: 'CLUSTER_BRAINWAVES',
+      basePreset: 'BRAINWAVE_PURE',
+      pianoMood: 'WORKOUT_MINOR_POWER',
+      binaural: 'GAMMA_PEAK_40',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Sóng Gamma 40Hz đỉnh cao tập trung & kết nối thần kinh-cơ bắp khi phá mức tạ hoặc tập HIIT.'
+    },
+    // --- CỤM 2: TIẾNG ỒN MÀU BỔ SUNG (BROWN + GREEN) ---
+    {
+      id: 'SCENE_BROWN_NOISE_DEEP',
+      title: '🟤 Tiếng Ồn Nâu (Brown Noise) · Tắt Overthinking',
+      genreTag: 'Ngủ ngon / Thiền / Trầm ấm',
+      clusterId: 'CLUSTER_COLOR_NOISES',
+      basePreset: 'BROWN_NOISE',
+      pianoMood: 'SLEEP_WARM_MAJ7',
+      binaural: 'OFF',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Trầm, ấm, dày như thác nước xa — dập tắt dòng suy nghĩ miên man nhanh nhất để vào giấc.'
+    },
+    {
+      id: 'SCENE_GREEN_NOISE_FOREST',
+      title: '🟢 Tiếng Ồn Xanh Lá (Green Noise) · Gió Rừng Tự Nhiên',
+      genreTag: 'Ngủ ngon / Thiền / Dải trung',
+      clusterId: 'CLUSTER_COLOR_NOISES',
+      basePreset: 'GREEN_NOISE',
+      pianoMood: 'MEDITATION_SUS_QUARTAL',
+      binaural: 'OFF',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Tập trung dải tần trung bình ~500Hz như gió qua tán rừng & suối chảy, tạo không gian thoáng đãng.'
+    },
+    // --- CỤM 3: ÂM THANH TỰ NHIÊN & MÔI TRƯỜNG MỚI (NGỦ NGON & THIỀN) ---
+    {
+      id: 'SCENE_RAIN_TENT_WINDOW',
+      title: '⛺ Mưa Trong Lều Vải & Gõ Cửa Sổ',
+      genreTag: 'Ngủ ngon / Ấm cúng',
+      clusterId: 'CLUSTER_NATURE_ENV',
+      basePreset: 'RAIN_TENT',
+      pianoMood: 'SLEEP_WARM_MAJ7',
+      binaural: 'OFF',
+      mix: { rain: 1.0, thunder: 0.25, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Tiếng mưa lộp độp mềm ấm trên vòm lều vải và ô kính cửa sổ mang lại cảm giác an toàn dễ ngủ.'
+    },
+    {
+      id: 'SCENE_CRICKETS_COUNTRYSIDE',
+      title: '🦗 Tiếng Dế Kêu & Côn Trùng Đêm Quê',
+      genreTag: 'Ngủ ngon / Đồng quê yên tĩnh',
+      clusterId: 'CLUSTER_NATURE_ENV',
+      basePreset: 'CRICKETS_NIGHT',
+      pianoMood: 'SLEEP_WARM_MAJ7',
+      binaural: 'OFF',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Tiếng dế kêu rả rích giữa đêm quê tĩnh mịch giúp xoa dịu tâm trí mệt mỏi.'
+    },
+    {
+      id: 'SCENE_AIRPLANE_CABIN_SLEEP',
+      title: '✈️ Khoang Máy Bay Bay Đêm (Cabin Hum)',
+      genreTag: 'Ngủ ngon / Nhịp rung đều',
+      clusterId: 'CLUSTER_NATURE_ENV',
+      basePreset: 'AIRPLANE_CABIN',
+      pianoMood: 'SLEEP_WARM_MAJ7',
+      binaural: 'OFF',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Âm nền trầm đều trong khoang máy bay hành trình dài giúp dễ chìm vào giấc ngủ sâu.'
+    },
+    {
+      id: 'SCENE_NIGHT_TRAIN_RIDE',
+      title: '🚆 Tiếng Tàu Hỏa Chạy Đường Dài',
+      genreTag: 'Ngủ ngon / Nhịp ray đều',
+      clusterId: 'CLUSTER_NATURE_ENV',
+      basePreset: 'TRAIN_RIDE',
+      pianoMood: 'SLEEP_WARM_MAJ7',
+      binaural: 'OFF',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Nhịp bánh sắt qua mối nối ray tàu đều đặn kết hợp nền trầm ấm cực kỳ gây buồn ngủ.'
+    },
+    {
+      id: 'SCENE_FOREST_STREAM_MED',
+      title: '🏞️ Suối Chảy Róc Rách Qua Khe Đá',
+      genreTag: 'Thiền định / Tự nhiên',
+      clusterId: 'CLUSTER_NATURE_ENV',
+      basePreset: 'FOREST_STREAM',
+      pianoMood: 'MEDITATION_SUS_QUARTAL',
+      binaural: 'OFF',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Tiếng suối trong veo chảy róc rách qua ghềnh đá giúp rửa trôi mọi căng thẳng.'
+    },
+    {
+      id: 'SCENE_TIBETAN_BOWLS_GONG',
+      title: '🔔 Chuông Xoay Tây Tạng, Chuông Gió & Cồng Chiêng',
+      genreTag: 'Thiền định / Gong Bath',
+      clusterId: 'CLUSTER_NATURE_ENV',
+      basePreset: 'TIBETAN_BOWLS',
+      pianoMood: 'MEDITATION_SUS_QUARTAL',
+      binaural: 'SOLFEGGIO_432',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.5, fireplace: 0.0, ocean: 0.0 },
+      description: 'Âm ngân dài của chuông xoay Tây Tạng, tiếng chuông gió thanh mảnh và cồng chiêng tĩnh tại.'
+    },
+    {
+      id: 'SCENE_BAMBOO_FLUTE_ZEN',
+      title: '🎋 Sáo Trúc Thiền (Shakuhachi / Sáo Tiêu)',
+      genreTag: 'Thiền định / Không dồn dập',
+      clusterId: 'CLUSTER_NATURE_ENV',
+      basePreset: 'BAMBOO_FLUTE',
+      pianoMood: 'WUXIA_ANCIENT_MOON',
+      binaural: 'ALPHA_FLOW',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Tiếng sáo trúc thổi chậm giàu hơi thở bên dòng suối nhỏ, giữ tâm trí an nhiên.'
+    },
+    // --- CỤM 4: MÀU SẮC HỢP ÂM & NHẠC CỤ (NGỦ · THIỀN · THỂ THAO) ---
+    {
+      id: 'SCENE_CHORD_SLEEP_FELT_CELLO',
+      title: '🎻 Piano Đệm Nỉ & Cello (Maj7 · Maj9 · Add9 · 52 BPM)',
+      genreTag: 'Ngủ ngon / Hợp âm trưởng ấm',
+      clusterId: 'CLUSTER_CHORDS_MUSIC',
+      basePreset: 'SLEEP_FELT_CELLO',
+      pianoMood: 'SLEEP_WARM_MAJ7',
+      binaural: 'DELTA_DEEP_SLEEP',
+      mix: { rain: 0.0, thunder: 0.0, piano: 1.0, pad: 0.9, fireplace: 0.0, ocean: 0.0 },
+      description: 'Vòng lặp chậm dưới 60 BPM (Cmaj7, Fmaj7, Am9, Add9) tránh hợp âm nghịch, ấm áp buông bỏ.'
+    },
+    {
+      id: 'SCENE_CHORD_MED_HANDPAN_SUS',
+      title: '🛸 Handpan, Đàn Hạc & Cổ Cầm (Sus2 · Sus4 · Quartal)',
+      genreTag: 'Thiền định / Hợp âm treo',
+      clusterId: 'CLUSTER_CHORDS_MUSIC',
+      basePreset: 'MEDITATION_HANDPAN',
+      pianoMood: 'MEDITATION_SUS_QUARTAL',
+      binaural: 'THETA_IMAGINATION',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.75, fireplace: 0.0, ocean: 0.0 },
+      description: 'Hợp âm treo Dsus2/Asus4 và chồng quãng 4 lơ lửng không trọng lực trên âm sắc Handpan & Harp.'
+    },
+    {
+      id: 'SCENE_WORKOUT_PHONK',
+      title: '🏋️ Drift Phonk · Bass 808 Nặng (136 BPM · Đẩy Tạ)',
+      genreTag: 'Thể thao / Minor Power',
+      clusterId: 'CLUSTER_CHORDS_MUSIC',
+      basePreset: 'WORKOUT_PHONK',
+      pianoMood: 'WORKOUT_MINOR_POWER',
+      binaural: 'GAMMA_PEAK_40',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Bass 808 trầm lực + nhịp Cowbell Phonk dồn dập thúc đẩy adrenaline khi đẩy mức tạ nặng.'
+    },
+    {
+      id: 'SCENE_WORKOUT_HARDSTYLE',
+      title: '🏃 Hardstyle / Techno / Drum & Bass (146 BPM)',
+      genreTag: 'Thể thao / Sức bền & Chạy bộ',
+      clusterId: 'CLUSTER_CHORDS_MUSIC',
+      basePreset: 'WORKOUT_HARDSTYLE',
+      pianoMood: 'WORKOUT_MINOR_POWER',
+      binaural: 'BETA_LOGIC',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Nhịp trống nhanh 146 BPM giữ đều sức bền và nhịp bước khi chạy bộ hoặc đi bộ dốc.'
+    },
+    {
+      id: 'SCENE_WORKOUT_EPIC_DRUMS',
+      title: '🥁 Epic Orchestral & Trống Trận War Drums (130 BPM)',
+      genreTag: 'Thể thao / Minor & Diminished',
+      clusterId: 'CLUSTER_CHORDS_MUSIC',
+      basePreset: 'WORKOUT_EPIC_DRUMS',
+      pianoMood: 'WORKOUT_MINOR_POWER',
+      binaural: 'GAMMA_PEAK_40',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.7, fireplace: 0.0, ocean: 0.0 },
+      description: 'Trống trận trầm hùng kết hợp hợp âm thứ & giảm (Diminished) tạo khí thế bùng nổ.'
+    },
+    {
+      id: 'SCENE_WORKOUT_METAL',
+      title: '🎸 Instrumental Metal / Rock Power Riff (142 BPM)',
+      genreTag: 'Thể thao / Power Chords quãng 5',
+      clusterId: 'CLUSTER_CHORDS_MUSIC',
+      basePreset: 'WORKOUT_METAL',
+      pianoMood: 'WORKOUT_MINOR_POWER',
+      binaural: 'GAMMA_PEAK_40',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Riff guitar điện quãng 5 (Power Chords) nặng, sắc bén đẩy cao cường độ luyện tập.'
+    },
+    {
+      id: 'SCENE_WORKOUT_SYNTHWAVE',
+      title: '🕹️ Synthwave / Chiptune Tốc Độ Cao (148 BPM)',
+      genreTag: 'Thể thao / Tập trung điện tử',
+      clusterId: 'CLUSTER_CHORDS_MUSIC',
+      basePreset: 'WORKOUT_SYNTHWAVE',
+      pianoMood: 'WORKOUT_MINOR_POWER',
+      binaural: 'BETA_LOGIC',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Nhịp arpeggio điện tử 148 BPM dứt khoát giữ hưng phấn và phản xạ sắc bén.'
+    },
+    // --- CỤM 5: ASMR THUẦN TÚY (KHÔNG GIỌNG NÓI) & THỞ 4-7-8 ---
+    {
+      id: 'SCENE_ASMR_PAGES_WOOD',
+      title: '📖 ASMR Lật Trang Sách & Gõ Nhẹ Lên Gỗ',
+      genreTag: 'ASMR Thuần / Không giọng nói',
+      clusterId: 'CLUSTER_ASMR_BREATH',
+      basePreset: 'ASMR_PAGES_WOOD',
+      pianoMood: 'SLEEP_WARM_MAJ7',
+      binaural: 'OFF',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Tiếng lật trang giấy sột soạt đan xen nhịp gõ gỗ trầm ấm thư thái không giọng nói.'
+    },
+    {
+      id: 'SCENE_ASMR_UMBRELLA_BRUSH',
+      title: '☂️ ASMR Mưa Rơi Trên Ô & Tiếng Chải Tóc Nhẹ',
+      genreTag: 'ASMR Thuần / Thư giãn ngủ',
+      clusterId: 'CLUSTER_ASMR_BREATH',
+      basePreset: 'ASMR_UMBRELLA_BRUSH',
+      pianoMood: 'SLEEP_WARM_MAJ7',
+      binaural: 'OFF',
+      mix: { rain: 0.75, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Tiếng giọt mưa gõ sát vòm dù hòa cùng âm chải tóc mượt nhẹ dễ chịu.'
+    },
+    {
+      id: 'SCENE_GUIDED_BREATHING_478',
+      title: '🌬️ Binaural Thở Theo Nhịp 4-7-8 (Hít 4s · Giữ 7s · Thở 8s)',
+      genreTag: 'Bài thở 4-7-8 / Ngủ & Thiền',
+      clusterId: 'CLUSTER_ASMR_BREATH',
+      basePreset: 'BRAINWAVE_PURE',
+      pianoMood: 'SLEEP_WARM_MAJ7',
+      binaural: 'BREATHING_478_GUIDED',
+      mix: { rain: 0.0, thunder: 0.0, piano: 0.0, pad: 0.0, fireplace: 0.0, ocean: 0.0 },
+      description: 'Âm thanh tự tăng cao độ 4 giây (hít vào), giữ êm 7 giây (nín thở) và hạ dần 8 giây (thở ra) không cần đếm nhẩm!'
+    }
+  ];
+
+  // Phân chia 5 Cụm Trình Đơn Thả Xuống chuẩn khoa học cho Kho Âm Thanh Tab 5
+  const SOUND_LIBRARY_CLUSTERS = [
+    {
+      id: 'CLUSTER_BRAINWAVES',
+      title: '🧠 1. Sóng Não & Tần Số Trị Liệu (Brainwaves · Solfeggio)',
+      subtitle: 'Ngủ sâu (Delta/Theta) · Thiền định (Alpha/Theta/432Hz/528Hz) · Thể thao (Beta/Gamma 40Hz)',
+      accentClass: 'border-violet-500/35 text-violet-300',
+      matchFn: (s) => s.clusterId === 'CLUSTER_BRAINWAVES'
+    },
+    {
+      id: 'CLUSTER_COLOR_NOISES',
+      title: '🎨 2. Tiếng Ồn Màu Chống Tạp Âm (Color Noises)',
+      subtitle: 'Brown Noise (Ồn Nâu) · Pink Noise (Ồn Hồng) · Green Noise (Ồn Xanh Lá) · White & Blue Noise',
+      accentClass: 'border-cyan-500/35 text-cyan-300',
+      matchFn: (s) =>
+        s.clusterId === 'CLUSTER_COLOR_NOISES' ||
+        ['SCENE_PINK_NOISE_CALM', 'SCENE_WHITE_NOISE_FOCUS', 'SCENE_BLUE_NOISE_BREEZE'].includes(s.id)
+    },
+    {
+      id: 'CLUSTER_NATURE_ENV',
+      title: '🌿 3. Âm Thanh Tự Nhiên & Môi Trường (Ngủ Ngon & Thiền)',
+      subtitle: 'Mưa lều/cửa sổ · Sóng biển · Lửa trại · Dế đêm · Quạt · Máy bay · Tàu hỏa · Suối · Chuông Tây Tạng · Sáo trúc',
+      accentClass: 'border-emerald-500/35 text-emerald-300',
+      matchFn: (s) =>
+        s.clusterId === 'CLUSTER_NATURE_ENV' ||
+        ['SCENE_WINTER_CABIN_HEARTH', 'SCENE_LIGHTHOUSE_STORM', 'SCENE_DAWN_BY_THE_SHORE', 'SCENE_SOFT_ELECTRIC_FAN'].includes(s.id)
+    },
+    {
+      id: 'CLUSTER_CHORDS_MUSIC',
+      title: '🎹 4. Màu Sắc Hợp Âm, Nhạc Cụ & Nhạc Thể Thao (Chord Colors)',
+      subtitle: 'Ngủ (Maj7/Add9 Felt Piano & Cello) · Thiền (Sus2/Sus4 Handpan/Harp) · Thể thao (Phonk · Hardstyle · Epic · Metal · Synthwave) + Bối cảnh truyện',
+      accentClass: 'border-amber-500/35 text-amber-300',
+      matchFn: (s) =>
+        s.clusterId === 'CLUSTER_CHORDS_MUSIC' ||
+        ['SCENE_HANOI_NIGHT_RAIN', 'SCENE_MIDNIGHT_JAZZ_CAFE', 'SCENE_ANCIENT_MOON_PAVILION', 'SCENE_DETECTIVE_CASEFILE', 'SCENE_VICTORIAN_LIBRARY'].includes(s.id)
+    },
+    {
+      id: 'CLUSTER_ASMR_BREATH',
+      title: '🎧 5. ASMR Thuần Túy & Binaural Thở Theo Nhịp 4-7-8',
+      subtitle: 'Lật trang sách · Gõ gỗ · Mưa trên ô · Chải tóc (không giọng nói) · Dẫn nhịp thở 4-7-8 tự động',
+      accentClass: 'border-pink-500/35 text-pink-300',
+      matchFn: (s) => s.clusterId === 'CLUSTER_ASMR_BREATH'
     }
   ];
 
@@ -5139,32 +6362,50 @@
           </div>
         </div>
 
-        <!-- Hàng 2: Danh sách Bối cảnh Âm thanh Văn học có thể Mở rộng / Thu gọn gọn gàng -->
-        <div class="p-3.5 rounded-xl bg-studioLightBg dark:bg-zinc-950 border border-studioLightBorder dark:border-zinc-800 space-y-2">
+        <!-- Hàng 2: Kho Âm Thanh 5 Cụm Trình Đơn Thả Xuống (Ngủ Ngon · Thiền Định · Thể Thao · Sáng Tác) -->
+        <div class="p-3.5 rounded-xl bg-studioLightBg dark:bg-zinc-950 border border-studioLightBorder dark:border-zinc-800 space-y-2.5">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="space-y-0.5 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-extrabold text-amber-400">🎬 Kho Bối Cảnh Âm Thanh Theo Phân Cảnh Truyện (${CURATED_LITERARY_SOUND_SCENES.length} bối cảnh)</span>
-                <span id="mod21-active-scene-pill" class="px-2 py-0.5 rounded-full border border-emerald-500/35 bg-emerald-500/10 text-emerald-300 font-bold text-[10px]">Chọn bối cảnh</span>
+                <span class="font-extrabold text-amber-400">🎬 Kho Âm Thanh &amp; Bối Cảnh 5 Cụm (${CURATED_LITERARY_SOUND_SCENES.length} âm thanh · 0 MB)</span>
+                <span id="mod21-active-scene-pill" class="px-2 py-0.5 rounded-full border border-emerald-500/35 bg-emerald-500/10 text-emerald-300 font-bold text-[10px]">Chọn âm thanh</span>
               </div>
-              <div class="text-[10px] text-zinc-400">Tự động phối trộn 6 kênh âm thanh + chọn thang âm Piano phù hợp với tâm trạng chương truyện</div>
+              <div class="text-[10px] text-zinc-400">Chia 5 cụm trình đơn thả xuống (Sóng não · Tiếng ồn màu · Môi trường · Màu sắc hợp âm/Thể thao · ASMR &amp; Thở 4-7-8) — bấm từng cụm để mở danh sách cụ thể</div>
             </div>
-            <button type="button" id="btn-toggle-mod21-soundscape-list" aria-expanded="false" class="px-3 py-1.5 rounded-xl border border-amber-500/45 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-bold text-[11px] cursor-pointer shrink-0 transition">
-              ▼ Mở rộng danh sách (${CURATED_LITERARY_SOUND_SCENES.length})
+            <button type="button" id="btn-toggle-mod21-soundscape-list" data-at-id="mod21-toggle-sound-library" aria-expanded="false" class="px-3 py-1.5 rounded-xl border border-amber-500/45 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 font-bold text-[11px] cursor-pointer shrink-0 transition">
+              ▼ Mở 5 cụm âm thanh (${CURATED_LITERARY_SOUND_SCENES.length})
             </button>
           </div>
-          <div id="mod21-soundscape-list-body" class="hidden rounded-xl border border-zinc-800/90 bg-zinc-900/70 divide-y divide-zinc-800/80 max-h-72 overflow-y-auto">
-            ${CURATED_LITERARY_SOUND_SCENES.map(
-              (scene) => `
-              <button type="button" data-literary-scene="${scene.id}" class="mod21-scene-card w-full px-3 py-2.5 hover:bg-amber-500/10 text-left transition flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                <div class="min-w-0">
-                  <div class="font-extrabold text-[11.5px] text-emerald-300">${scene.title}</div>
-                  <div class="text-[10px] text-zinc-400 leading-snug truncate">${scene.description}</div>
-                </div>
-                <span class="px-2 py-0.5 rounded-md bg-zinc-950 border border-amber-500/30 text-[9.5px] font-bold uppercase text-amber-400/90 shrink-0 self-start sm:self-center">${scene.genreTag}</span>
-              </button>
-            `
-            ).join('')}
+          <div id="mod21-soundscape-list-body" class="hidden space-y-2 max-h-[420px] overflow-y-auto pr-0.5">
+            ${SOUND_LIBRARY_CLUSTERS.map((cluster) => {
+              const items = CURATED_LITERARY_SOUND_SCENES.filter(cluster.matchFn);
+              return `
+                <details data-sound-cluster="${cluster.id}" class="mod21-sound-cluster rounded-xl border ${cluster.accentClass} bg-zinc-900/75 overflow-hidden">
+                  <summary class="px-3 py-2.5 cursor-pointer select-none flex items-center justify-between gap-2 hover:bg-zinc-800/60 transition list-none">
+                    <div class="min-w-0">
+                      <div class="font-extrabold text-[11.5px] ${cluster.accentClass.split(' ').find((c) => c.startsWith('text-')) || 'text-emerald-300'}">${cluster.title} <span class="text-[10px] text-zinc-400 font-semibold">(${items.length} mục)</span></div>
+                      <div class="text-[10px] text-zinc-400 leading-snug truncate">${cluster.subtitle}</div>
+                    </div>
+                    <span class="text-[10.5px] font-bold text-zinc-300 shrink-0 px-2 py-0.5 rounded-lg bg-zinc-950/80 border border-zinc-700/70">Mở / Đóng ▾</span>
+                  </summary>
+                  <div class="border-t border-zinc-800/80 divide-y divide-zinc-800/70 bg-zinc-950/55">
+                    ${items
+                      .map(
+                        (scene) => `
+                      <button type="button" data-literary-scene="${scene.id}" class="mod21-scene-card w-full px-3 py-2 hover:bg-amber-500/10 text-left transition flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 cursor-pointer">
+                        <div class="min-w-0">
+                          <div class="font-bold text-[11.5px] text-emerald-300">${scene.title}</div>
+                          <div class="text-[10px] text-zinc-400 leading-snug">${scene.description}</div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-md bg-zinc-900 border border-amber-500/30 text-[9.5px] font-bold uppercase text-amber-300/90 shrink-0 self-start sm:self-center">${scene.genreTag}</span>
+                      </button>
+                    `
+                      )
+                      .join('')}
+                  </div>
+                </details>
+              `;
+            }).join('')}
           </div>
         </div>
       `;
@@ -5179,8 +6420,8 @@
         soundListBody.classList.toggle('hidden', !willOpen);
         soundListToggleBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
         soundListToggleBtn.textContent = willOpen
-          ? '▲ Thu gọn danh sách'
-          : `▼ Mở rộng danh sách (${CURATED_LITERARY_SOUND_SCENES.length})`;
+          ? '▲ Thu gọn 5 cụm âm thanh'
+          : `▼ Mở 5 cụm âm thanh (${CURATED_LITERARY_SOUND_SCENES.length})`;
       });
       deck.querySelectorAll('.mod21-scene-card').forEach((card) => {
         card.addEventListener('click', () => {

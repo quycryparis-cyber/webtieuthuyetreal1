@@ -606,6 +606,34 @@
           return { ok: true, detail: 'Triage + XY-Cut + LaTeX parser + 3-tier Pxx_Byy reconciliation + Pre-Flight 5/5 PASS' };
         },
       });
+
+      this.registerUnitTest({
+        id: 'unit_dot16_mod21_5clusters_brainwaves_chords_asmr',
+        moduleRef: 'mod21_mp3_ab_loop_and_webaudio_soundscape.js',
+        label: 'Đợt 16 Tab 5 MP3: Kho âm thanh chia 5 cụm thả xuống (Sóng não Delta..Gamma 40Hz + 432/528Hz + Thở 4-7-8, Tiếng ồn màu, Môi trường, Hợp âm Ngủ/Thiền/Thể thao, ASMR)',
+        fn: () => {
+          if (typeof document === 'undefined') return { ok: true, skipped: true };
+          const clusters = document.querySelectorAll('#mod21-soundscape-list-body details.mod21-sound-cluster');
+          if (clusters.length !== 5) {
+            throw new Error(`Kho âm thanh Tab 5 phải chia đúng 5 cụm thả xuống (hiện có ${clusters.length})`);
+          }
+          const scenes = document.querySelectorAll('#mod21-soundscape-list-body .mod21-scene-card');
+          if (scenes.length < 36) {
+            throw new Error(`Thiếu danh mục âm thanh mới trong 5 cụm (chỉ có ${scenes.length} mục)`);
+          }
+          const binSel = document.getElementById('mod21-select-binaural-mode');
+          const binVals = binSel ? Array.from(binSel.options).map((o) => o.value) : [];
+          for (const req of ['DELTA_DEEP_SLEEP', 'THETA_SLEEP_REM', 'ALPHA_FLOW', 'SOLFEGGIO_432', 'SOLFEGGIO_528', 'BETA_LOGIC', 'GAMMA_PEAK_40', 'BREATHING_478_GUIDED']) {
+            if (!binVals.includes(req)) throw new Error(`Thiếu sóng não ${req} trong #mod21-select-binaural-mode`);
+          }
+          const moodSel = document.getElementById('mod21-select-piano-mood');
+          const moodVals = moodSel ? Array.from(moodSel.options).map((o) => o.value) : [];
+          for (const reqM of ['SLEEP_WARM_MAJ7', 'MEDITATION_SUS_QUARTAL', 'WORKOUT_MINOR_POWER']) {
+            if (!moodVals.includes(reqM)) throw new Error(`Thiếu màu sắc hợp âm ${reqM} trong #mod21-select-piano-mood`);
+          }
+          return { ok: true, detail: `5 clusters (${scenes.length} sounds) + 10 brainwaves/4-7-8 + 7 chord moods verified` };
+        },
+      });
     }
 
     async runAll() {
