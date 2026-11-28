@@ -987,14 +987,15 @@
   // ==========================================================================
 
   const SUPPORTED_VOICE_LANGS = Object.freeze({
-    'vi-VN': { prefix: 'vi', gttsTl: 'vi', label: 'Tiếng Việt', i18nCode: 'vi' },
-    'en-US': { prefix: 'en', gttsTl: 'en', label: 'English', i18nCode: 'en' },
-    'zh-CN': { prefix: 'zh-cn', altPrefix: 'zh', gttsTl: 'zh-CN', label: '中文 (简体)', i18nCode: 'zh-CN' },
-    'zh-TW': { prefix: 'zh-tw', altPrefix: 'zh', gttsTl: 'zh-TW', label: '中文 (繁體)', i18nCode: 'zh-TW' },
-    'ko-KR': { prefix: 'ko', gttsTl: 'ko', label: '한국어', i18nCode: 'ko' },
-    'ja-JP': { prefix: 'ja', gttsTl: 'ja', label: '日本語', i18nCode: 'ja' },
+    'vi-VN': { prefix: 'vi', gttsTl: 'vi', youdaoLe: '', label: 'Tiếng Việt', i18nCode: 'vi', geminiVoice: 'Aoede' },
+    'en-US': { prefix: 'en', gttsTl: 'en', youdaoLe: 'en', label: 'English', i18nCode: 'en', geminiVoice: 'Puck' },
+    'zh-CN': { prefix: 'zh-cn', altPrefix: 'zh', gttsTl: 'zh-CN', youdaoLe: 'zh', label: '中文 (简体)', i18nCode: 'zh-CN', geminiVoice: 'Kore' },
+    'zh-TW': { prefix: 'zh-tw', altPrefix: 'zh', gttsTl: 'zh-TW', youdaoLe: 'zh', label: '中文 (繁體)', i18nCode: 'zh-TW', geminiVoice: 'Kore' },
+    'ko-KR': { prefix: 'ko', gttsTl: 'ko', youdaoLe: 'ko', label: '한국어', i18nCode: 'ko', geminiVoice: 'Kore' },
+    'ja-JP': { prefix: 'ja', gttsTl: 'ja', youdaoLe: 'jap', label: '日本語', i18nCode: 'ja', geminiVoice: 'Aoede' },
   });
   const GOOGLE_TRANSLATE_TTS_URI = '__GOOGLE_TRANSLATE_TTS__';
+  const GEMINI_AI_TTS_URI = '__GEMINI_AI_TTS__';
 
   function normalizeVoiceLangCode(rawCode) {
     const c = String(rawCode || '').trim().toLowerCase().replace('_', '-');
@@ -1135,7 +1136,7 @@
         video: opts.video !== undefined ? Boolean(opts.video) : cur.video !== false,
         chat: opts.chat !== undefined ? Boolean(opts.chat) : cur.chat !== false,
         source: String(opts.source || cur.source || 'VIDEO'),
-        lang: opts.lang === 'en-US' ? 'en-US' : 'vi-VN',
+        lang: normalizeVoiceLangCode(opts.lang || cur.lang || 'vi-VN'),
         pendingText: String(opts.pendingText || cur.pendingText || '').slice(0, 600),
         requestedAt: Date.now(),
       };
@@ -1225,17 +1226,187 @@
     pickBestNaturalVoice(langCode = 'vi-VN') {
       const normLang = normalizeVoiceLangCode(langCode);
       const preferredUri = this.prefs.preferredVoiceByLang?.[normLang] || '';
+      if (preferredUri === GEMINI_AI_TTS_URI) {
+        return { voiceURI: GEMINI_AI_TTS_URI, name: 'Gemini AI Voice (Studio)', lang: normLang, isGeminiAiTts: true };
+      }
       if (preferredUri === GOOGLE_TRANSLATE_TTS_URI) {
         return { voiceURI: GOOGLE_TRANSLATE_TTS_URI, name: 'Google Translate TTS', lang: normLang, isGoogleTranslateTts: true };
       }
       const ranked = this.getRankedVoicesForLanguage(normLang);
-      if (ranked.length === 0) return null;
+      // Với VI/KO/JA, loại bỏ giọng Chrome stub không có Neural/Natural nếu thường bị câm trên máy
+      const reliableRanked = ranked.filter((v) => {
+        const vn = String(v?.name || '');
+        if ((normLang === 'ko-KR' || normLang === 'ja-JP') && /^google\s/i.test(vn) && !/natural|neural/i.test(vn)) {
+          return false;
+        }
+        return true;
+      });
+      const pool = reliableRanked.length > 0 ? reliableRanked : ranked;
+      if (pool.length === 0) return null;
 
       if (preferredUri) {
-        const exact = ranked.find((v) => v.voiceURI === preferredUri || v.name === preferredUri);
+        const exact = pool.find((v) => v.voiceURI === preferredUri || v.name === preferredUri);
         if (exact) return exact;
       }
-      return ranked[0];
+      return pool[0];
+    }
+
+    getAiVoiceOptionsForLanguage(langCode = 'vi-VN') {
+      const normLang = normalizeVoiceLangCode(langCode);
+      const meta = SUPPORTED_VOICE_LANGS[normLang] || SUPPORTED_VOICE_LANGS['vi-VN'];
+      const osVoices = this.getRankedVoicesForLanguage(normLang);
+      const hasGeminiKey = Boolean(this._resolveGeminiApiKey());
+      const list = [
+        {
+          uri: GOOGLE_TRANSLATE_TTS_URI,
+          label: `🌐 AI Cloud TTS (${meta.label} — Chuẩn 6 Ngôn Ngữ)`,
+          engine: 'cloud_tts',
+          available: true,
+        },
+      ];
+      if (hasGeminiKey) {
+        list.unshift({
+          uri: GEMINI_AI_TTS_URI,
+          label: `✨ Gemini AI Neural Voice (${meta.label} · ${meta.geminiVoice || 'Aoede'})`,
+          engine: 'gemini_tts',
+          available: true,
+        });
+      }
+      osVoices.forEach((v) => {
+        const isNeural = /natural|neural|online/i.test(v.name);
+        list.push({
+          uri: v.voiceURI,
+          label: `${isNeural ? '✨ Neural' : v.localService ? '💻 Hệ thống' : '🌐 Online'}: ${v.name.slice(0, 34)}`,
+          engine: 'web_speech',
+          available: true,
+        });
+      });
+      return list;
+    }
+
+    _resolveGeminiApiKey() {
+      try {
+        const key =
+          NS.apiVault?.getActiveApiKey?.() ||
+          NS.apiKeyVault?.getActiveKey?.() ||
+          localStorage.getItem('noir_gemini_api_key') ||
+          localStorage.getItem('gemini_api_key') ||
+          '';
+        return String(key || '').trim();
+      } catch (_e) {
+        return '';
+      }
+    }
+
+    buildCloudTtsUrls(text, langCode = 'vi-VN') {
+      const normLang = normalizeVoiceLangCode(langCode);
+      const langMeta = SUPPORTED_VOICE_LANGS[normLang] || SUPPORTED_VOICE_LANGS['vi-VN'];
+      const tl = langMeta.gttsTl || 'vi';
+      const q = encodeURIComponent(String(text || '').trim());
+      const urls = [
+        `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(tl)}&q=${q}`,
+        `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=${encodeURIComponent(tl)}&q=${q}`,
+        `https://translate.google.com/translate_tts?ie=UTF-8&client=dict-chrome-ex&tl=${encodeURIComponent(tl)}&q=${q}`,
+      ];
+      if (langMeta.youdaoLe) {
+        urls.push(`https://dict.youdao.com/dictvoice?audio=${q}&le=${encodeURIComponent(langMeta.youdaoLe)}`);
+      }
+      return urls;
+    }
+
+    _pcm16Base64ToWavBlobUrl(base64Pcm, sampleRate = 24000) {
+      const bin = atob(base64Pcm);
+      const pcmLen = bin.length;
+      const buf = new ArrayBuffer(44 + pcmLen);
+      const view = new DataView(buf);
+      const writeStr = (off, str) => {
+        for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i));
+      };
+      writeStr(0, 'RIFF');
+      view.setUint32(4, 36 + pcmLen, true);
+      writeStr(8, 'WAVE');
+      writeStr(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeStr(36, 'data');
+      view.setUint32(40, pcmLen, true);
+      const outBytes = new Uint8Array(buf, 44);
+      for (let i = 0; i < pcmLen; i++) outBytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([buf], { type: 'audio/wav' });
+      return URL.createObjectURL(blob);
+    }
+
+    async speakViaGeminiAiTts(rawText, targetLang, myToken, baseRate, options = {}) {
+      const apiKey = this._resolveGeminiApiKey();
+      if (!apiKey || typeof fetch !== 'function' || typeof Audio !== 'function') return false;
+      const langMeta = SUPPORTED_VOICE_LANGS[targetLang] || SUPPORTED_VOICE_LANGS['vi-VN'];
+      const voiceName = langMeta.geminiVoice || 'Aoede';
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${encodeURIComponent(apiKey)}`;
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: String(rawText || '').slice(0, 600) }] }],
+            generationConfig: {
+              responseModalities: ['AUDIO'],
+              speechConfig: {
+                voiceConfig: {
+                  prebuiltVoiceConfig: { voiceName },
+                },
+              },
+            },
+          }),
+        });
+        if (!res.ok || myToken !== this.activePlaybackToken) return false;
+        const data = await res.json();
+        const part = data?.candidates?.[0]?.content?.parts?.find((p) => p?.inlineData?.data);
+        if (!part?.inlineData?.data || myToken !== this.activePlaybackToken) return false;
+        const mime = String(part.inlineData.mimeType || 'audio/L16;rate=24000');
+        let audioUrl = '';
+        if (/audio\/(?:L16|pcm)/i.test(mime)) {
+          const rateMatch = mime.match(/rate=(\d+)/i);
+          audioUrl = this._pcm16Base64ToWavBlobUrl(part.inlineData.data, rateMatch ? Number(rateMatch[1]) : 24000);
+        } else {
+          const bin = atob(part.inlineData.data);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          audioUrl = URL.createObjectURL(new Blob([bytes], { type: mime }));
+        }
+        const audio = this._getSharedTtsAudio();
+        this.currentGttsAudio = audio;
+        this.isSpeaking = true;
+        audio.playbackRate = Math.max(0.75, Math.min(1.6, Number(baseRate) || 1.0));
+        audio.src = audioUrl;
+        const cleanup = () => {
+          try { URL.revokeObjectURL(audioUrl); } catch (_eRev) {}
+          if (myToken === this.activePlaybackToken) {
+            this.isSpeaking = false;
+            if (typeof options.onComplete === 'function') options.onComplete();
+          }
+        };
+        audio.onended = cleanup;
+        audio.onerror = cleanup;
+        await audio.play();
+        return true;
+      } catch (_eGem) {
+        return false;
+      }
+    }
+
+    _getSharedTtsAudio() {
+      if (!this._sharedTtsAudio && typeof Audio === 'function') {
+        this._sharedTtsAudio = new Audio();
+        try { this._sharedTtsAudio.referrerPolicy = 'no-referrer'; } catch (_eRef) {}
+        this._sharedTtsAudio.preload = 'auto';
+        this._sharedTtsAudio.volume = 0.96;
+      }
+      return this._sharedTtsAudio;
     }
 
     setPreferredVoice(langCode, voiceUriOrName) {
@@ -1372,13 +1543,13 @@
     }
 
     /**
-     * Phát giọng đọc trực tuyến miễn phí qua Google Translate TTS (hỗ trợ chuẩn cả 6 ngôn ngữ: VI, EN, ZH-CN, ZH-TW, KO, JA)
+     * Phát giọng đọc AI trực tuyến 6 ngôn ngữ (VI, EN, ZH-CN, ZH-TW, KO, JA) với chuỗi dự phòng 4 cổng + bảo toàn Audio element trên Mobile
      */
     speakViaGoogleTranslateTts(clauses, targetLang, myToken, baseRate, options = {}) {
       if (typeof Audio !== 'function') return false;
       const langMeta = SUPPORTED_VOICE_LANGS[targetLang] || SUPPORTED_VOICE_LANGS['vi-VN'];
       const tl = langMeta.gttsTl || 'vi';
-      // Chia nhỏ câu dài cho tiếng Nhật / Hàn / Trung (tối đa 62 ký tự CJK để không bao giờ vượt giới hạn URL 200 byte của Google TTS!)
+      // Chia nhỏ câu dài cho tiếng Nhật / Hàn / Trung (tối đa 62 ký tự CJK để không bao giờ vượt giới hạn URL 200 byte!)
       const isCjkLang = /^(ja|ko|zh)/i.test(tl);
       const maxChunk = isCjkLang ? 62 : 145;
       const safeClauses = [];
@@ -1429,29 +1600,65 @@
 
         const item = safeClauses[idx];
         idx += 1;
-        const primaryUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(
-          tl
-        )}&q=${encodeURIComponent(item.text)}`;
-        const backupUrl = `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=${encodeURIComponent(
-          tl
-        )}&q=${encodeURIComponent(item.text)}`;
+        const candidateUrls = this.buildCloudTtsUrls(item.text, targetLang);
 
-        const playUrl = (urlToTry, isBackup) => {
+        const tryCandidate = (urlIndex) => {
+          if (myToken !== this.activePlaybackToken) {
+            this.isSpeaking = false;
+            return;
+          }
+          if (urlIndex >= candidateUrls.length) {
+            // Hết 4 cổng Cloud AI -> fallback sang Web Speech API giọng hệ thống
+            try {
+              if (this.isSupported()) {
+                const u = new globalScope.SpeechSynthesisUtterance(item.text);
+                u.lang = targetLang;
+                const best = this.getRankedVoicesForLanguage(targetLang)[0];
+                if (best) u.voice = best;
+                u.rate = Math.max(0.78, Math.min(1.45, Number(baseRate) || 1.0));
+                const nextFallback = () => {
+                  if (myToken !== this.activePlaybackToken) return;
+                  this.pendingPauseTimer = setTimeout(playNextChunk, item.pauseAfterMs || 90);
+                };
+                u.onend = nextFallback;
+                u.onerror = nextFallback;
+                globalScope.speechSynthesis.speak(u);
+                return;
+              }
+            } catch (_eFallback) {}
+            this.pendingPauseTimer = setTimeout(playNextChunk, item.pauseAfterMs || 90);
+            return;
+          }
+
           try {
-            const audio = new Audio();
+            const audio = this._getSharedTtsAudio() || new Audio();
             try {
               audio.referrerPolicy = 'no-referrer';
             } catch (_eRef) {}
             audio.preload = 'auto';
             audio.volume = 0.96;
             audio.playbackRate = Math.max(0.75, Math.min(1.6, Number(baseRate) || 1.0));
-            audio.src = urlToTry;
             this.currentGttsAudio = audio;
 
-            const nextStep = () => {
-              if (this.currentGttsAudio === audio) {
-                this.currentGttsAudio = null;
+            let settled = false;
+            let watchdog = setTimeout(() => {
+              if (!settled) {
+                settled = true;
+                tryCandidate(urlIndex + 1);
               }
+            }, 7500);
+
+            const clearWatch = () => {
+              if (watchdog) {
+                clearTimeout(watchdog);
+                watchdog = null;
+              }
+            };
+
+            const nextStep = () => {
+              if (settled) return;
+              settled = true;
+              clearWatch();
               if (myToken !== this.activePlaybackToken) {
                 this.isSpeaking = false;
                 return;
@@ -1464,48 +1671,29 @@
             };
 
             const onFail = () => {
+              if (settled) return;
+              settled = true;
+              clearWatch();
               if (myToken !== this.activePlaybackToken) {
                 this.isSpeaking = false;
                 return;
               }
-              if (!isBackup) {
-                playUrl(backupUrl, true);
-              } else {
-                // Nếu cả 2 cổng Google TTS bị chặn mạng/CORS -> fallback sang giọng hệ thống ngay cho câu này
-                try {
-                  if (this.isSupported()) {
-                    const u = new globalScope.SpeechSynthesisUtterance(item.text);
-                    u.lang = targetLang;
-                    const best = this.getRankedVoicesForLanguage(targetLang)[0];
-                    if (best) u.voice = best;
-                    u.rate = Math.max(0.78, Math.min(1.45, Number(baseRate) || 1.0));
-                    u.onend = nextStep;
-                    u.onerror = nextStep;
-                    globalScope.speechSynthesis.speak(u);
-                    return;
-                  }
-                } catch (_eFallback) {}
-                nextStep();
-              }
+              tryCandidate(urlIndex + 1);
             };
 
             audio.onended = nextStep;
             audio.onerror = onFail;
+            audio.src = candidateUrls[urlIndex];
             const p = audio.play();
             if (p && typeof p.catch === 'function') {
               p.catch(() => onFail());
             }
           } catch (_ePlay) {
-            if (!isBackup) {
-              playUrl(backupUrl, true);
-            } else {
-              this.isSpeaking = false;
-              if (typeof options.onComplete === 'function') options.onComplete();
-            }
+            tryCandidate(urlIndex + 1);
           }
         };
 
-        playUrl(primaryUrl, false);
+        tryCandidate(0);
       };
 
       playNextChunk();
@@ -1537,7 +1725,20 @@
         Math.min(1.08, Number(options.pitch || this.prefs.pitch || 1.0))
       );
 
-      // Dùng Google Translate TTS khi người dùng chọn Google Dịch HOẶC máy chưa cài gói giọng bản địa cho ngôn ngữ này
+      // Ưu tiên Gemini AI Neural Voice nếu người dùng chủ động chọn (có BYOK API Key)
+      if ((chosenVoice?.isGeminiAiTts || options.preferGeminiTts) && this._resolveGeminiApiKey()) {
+        const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine !== false;
+        if (isOnline) {
+          this.speakViaGeminiAiTts(normalized, targetLang, myToken, baseRate, options).then((ok) => {
+            if (!ok && myToken === this.activePlaybackToken) {
+              this.speakViaGoogleTranslateTts(clauses, targetLang, myToken, baseRate, options);
+            }
+          });
+          return true;
+        }
+      }
+
+      // Dùng Cloud AI TTS (4 cổng Google/Youdao) khi người dùng chọn Cloud AI HOẶC máy thiếu giọng bản địa (đặc biệt VI/KO/JA)
       const forceGtts = Boolean(
         chosenVoice?.isGoogleTranslateTts ||
         options.preferGoogleTts ||
@@ -1640,18 +1841,23 @@
       const qualityPill = document.getElementById(MOD33_CONFIG.SELECTORS.VOICE_QUALITY_PILL);
       const voices = this.getRankedVoicesForLanguage(lang);
       const activeVoice = this.pickBestNaturalVoice(lang);
+      const isGeminiSelected = Boolean(activeVoice?.isGeminiAiTts);
       const isGttsSelected = Boolean(!activeVoice || activeVoice.isGoogleTranslateTts);
 
       if (selectEl) {
+        const hasGeminiKey = Boolean(this._resolveGeminiApiKey());
+        const geminiOpt = hasGeminiKey
+          ? `<option value="${GEMINI_AI_TTS_URI}"${isGeminiSelected ? ' selected' : ''}>✨ Gemini AI Neural Voice (${escapeHtmlSafe(langMeta.label)} · Studio)</option>`
+          : '';
         const gttsOpt = `<option value="${GOOGLE_TRANSLATE_TTS_URI}"${
           isGttsSelected ? ' selected' : ''
-        }>🌐 Google Dịch TTS (${escapeHtmlSafe(langMeta.label)} — Chuẩn 6 Ngôn Ngữ)</option>`;
+        }>🌐 AI Cloud TTS (${escapeHtmlSafe(langMeta.label)} — Chuẩn 6 Ngôn Ngữ)</option>`;
         const osOpts = voices
           .map((v) => {
             const isNeural = /natural|neural|online/i.test(v.name);
             const tag = isNeural ? '✨ Neural' : v.localService ? '💻 Hệ thống' : '🌐 Online';
             const selected =
-              !isGttsSelected && activeVoice && v.voiceURI === activeVoice.voiceURI
+              !isGttsSelected && !isGeminiSelected && activeVoice && v.voiceURI === activeVoice.voiceURI
                 ? ' selected'
                 : '';
             return `<option value="${escapeHtmlSafe(v.voiceURI)}"${selected}>${tag}: ${escapeHtmlSafe(
@@ -1659,7 +1865,7 @@
             )}</option>`;
           })
           .join('');
-        selectEl.innerHTML = gttsOpt + osOpts;
+        selectEl.innerHTML = geminiOpt + gttsOpt + osOpts;
       }
 
       const hasAnyVoice = this.hasVoiceForLanguage(lang);

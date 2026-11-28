@@ -227,7 +227,7 @@
     if (langCode === 'ko') return romanizeKorean(clean);
     if (langCode === 'ja') return romanizeJapanese(clean);
     if (langCode === 'zh_cn' || langCode === 'zh_tw') return romanizeChinese(clean);
-    if (langCode === 'en') return `/${clean.toLowerCase().slice(0, 48)}/ (🔊 bấm nghe IPA)`;
+    if (langCode === 'en') return `/${clean.toLowerCase().slice(0, 48)}/ (🔊 IPA)`;
     if (langCode === 'vi') return clean.split(/\s+/).slice(0, 8).join(' · ');
     return '';
   }
@@ -259,61 +259,87 @@
     return out.length ? out : [s.slice(0, maxLen)];
   }
 
-  function playGoogleTtsFallback(cleanText, langCode, bcp47) {
+  function playGoogleTtsFallback(cleanText, langCode, bcp47, rate = 0.94) {
     if (typeof Audio !== 'function') return false;
     const tlMap = { vi: 'vi', en: 'en', zh_cn: 'zh-CN', zh_tw: 'zh-TW', ja: 'ja', ko: 'ko' };
+    const youdaoMap = { en: 'en', zh_cn: 'zh', zh_tw: 'zh', ja: 'jap', ko: 'ko' };
     const tl = tlMap[langCode] || 'en';
     const isCjk = langCode === 'ja' || langCode === 'ko' || langCode === 'zh_cn' || langCode === 'zh_tw';
     const chunks = splitTtsChunks(cleanText, isCjk);
     activeTtsToken += 1;
     const myTok = activeTtsToken;
-    if (activeTtsAudio) {
-      try { activeTtsAudio.pause(); activeTtsAudio.src = ''; } catch (_e) {}
-      activeTtsAudio = null;
+    if (!activeTtsAudio) {
+      activeTtsAudio = new Audio();
+      try { activeTtsAudio.referrerPolicy = 'no-referrer'; } catch (_e) {}
+      activeTtsAudio.preload = 'auto';
+    } else {
+      try { activeTtsAudio.pause(); } catch (_e) {}
     }
     let idx = 0;
     const playNext = () => {
       if (myTok !== activeTtsToken || idx >= chunks.length) return;
       const chunk = chunks[idx++];
-      const u1 = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(tl)}&q=${encodeURIComponent(chunk)}`;
-      const u2 = `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=${encodeURIComponent(tl)}&q=${encodeURIComponent(chunk)}`;
-      const tryPlay = (url, isBackup) => {
-        const audio = new Audio();
-        try { audio.referrerPolicy = 'no-referrer'; } catch (_e) {}
-        audio.preload = 'auto';
-        audio.src = url;
-        activeTtsAudio = audio;
-        const onFail = () => {
-          if (myTok !== activeTtsToken) return;
-          if (!isBackup) {
-            tryPlay(u2, true);
-          } else if (globalScope.speechSynthesis) {
+      const q = encodeURIComponent(chunk);
+      const urls = [
+        `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(tl)}&q=${q}`,
+        `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=${encodeURIComponent(tl)}&q=${q}`,
+        `https://translate.google.com/translate_tts?ie=UTF-8&client=dict-chrome-ex&tl=${encodeURIComponent(tl)}&q=${q}`,
+      ];
+      if (youdaoMap[langCode]) {
+        urls.push(`https://dict.youdao.com/dictvoice?audio=${q}&le=${youdaoMap[langCode]}`);
+      }
+      const tryPlay = (uIdx) => {
+        if (myTok !== activeTtsToken) return;
+        if (uIdx >= urls.length) {
+          if (globalScope.speechSynthesis) {
             try {
               const ut = new SpeechSynthesisUtterance(chunk);
               ut.lang = bcp47;
+              ut.rate = Math.max(0.7, Math.min(1.5, Number(rate) || 0.94));
               ut.onend = playNext;
+              ut.onerror = playNext;
               globalScope.speechSynthesis.speak(ut);
             } catch (_e2) {}
           }
-        };
-        audio.onended = playNext;
+          return;
+        }
+        const audio = activeTtsAudio;
+        let done = false;
+        let timer = setTimeout(() => {
+          if (!done) { done = true; tryPlay(uIdx + 1); }
+        }, 7000);
+        const onOk = () => { if (done) return; done = true; clearTimeout(timer); playNext(); };
+        const onFail = () => { if (done) return; done = true; clearTimeout(timer); tryPlay(uIdx + 1); };
+        audio.onended = onOk;
         audio.onerror = onFail;
+        audio.playbackRate = Math.max(0.72, Math.min(1.5, Number(rate) || 0.94));
+        audio.src = urls[uIdx];
         const p = audio.play();
         if (p && typeof p.catch === 'function') p.catch(onFail);
       };
-      tryPlay(u1, false);
+      tryPlay(0);
     };
     playNext();
     return true;
   }
 
-  function speakText(langCode, text) {
+  const VOICE_SAMPLES_6LANG = Object.freeze({
+    vi: 'Xin chào! Đây là giọng đọc AI tiếng Việt chuẩn tự nhiên.',
+    en: 'Hello! This is the natural AI English pronunciation voice.',
+    zh_cn: '你好！这是标准自然的中文普通话 AI 语音朗读。',
+    zh_tw: '你好！這是標準自然的繁體中文 AI 語音朗讀。',
+    ko: '안녕하세요! 자연스러운 한국어 AI 발음 음성입니다.',
+    ja: 'こんにちは！自然な日本語のAI発音音声です。',
+  });
+
+  function speakText(langCode, text, opts = {}) {
     try {
       const clean = String(text || '').replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, '').trim();
       if (!clean) return false;
       const meta = LANGUAGES.find((l) => l.code === langCode) || LANGUAGES[0];
+      const engineMode = opts.engineMode || LL._voiceEngineMode || 'auto';
+      const rate = Number(opts.rate || LL._voiceRate || 0.94);
       try { globalScope.speechSynthesis?.cancel?.(); } catch (_e) {}
-      // Ưu tiên Động cơ giọng AI 6 ngôn ngữ (Mod 33) + bắt buộc Google TTS chuẩn bản xứ cho Tiếng Nhật & Tiếng Hàn khi máy thiếu giọng OS Natural!
       const nv = globalScope.NoirStudio?.neuralVoice;
       const voices = globalScope.speechSynthesis?.getVoices?.() || [];
       const prefix = meta.bcp47.toLowerCase().split('-')[0];
@@ -321,23 +347,27 @@
         const vl = String(v.lang || '').toLowerCase();
         const vn = String(v.name || '');
         if (!vl.startsWith(prefix)) return false;
-        // Bỏ qua stub giọng Chrome Google offline hay bị câm trên Windows với ja/ko
-        if ((prefix === 'ja' || prefix === 'ko') && /^google\s/i.test(vn) && !/natural|neural/i.test(vn)) return false;
+        if ((prefix === 'ja' || prefix === 'ko' || prefix === 'vi') && /^google\s/i.test(vn) && !/natural|neural/i.test(vn)) return false;
         return true;
       });
-      const preferCloud = prefix === 'ja' || prefix === 'ko' || !hasRealOsVoice;
+      const preferGemini = engineMode === 'gemini_ai';
+      const preferCloud = engineMode === 'cloud_ai' || (engineMode === 'auto' && (prefix === 'ja' || prefix === 'ko' || prefix === 'vi' || !hasRealOsVoice));
       if (nv && typeof nv.speakText === 'function') {
         nv.stop?.();
-        const ok = nv.speakText(clean, meta.bcp47, { rate: 0.94, preferGoogleTts: preferCloud });
+        const ok = nv.speakText(clean, meta.bcp47, {
+          rate,
+          preferGeminiTts: preferGemini,
+          preferGoogleTts: preferCloud,
+        });
         if (ok) return true;
       }
       if (preferCloud && (typeof navigator === 'undefined' || navigator.onLine !== false)) {
-        if (playGoogleTtsFallback(clean, meta.code, meta.bcp47)) return true;
+        if (playGoogleTtsFallback(clean, meta.code, meta.bcp47, rate)) return true;
       }
       if (!globalScope.speechSynthesis) return false;
       const u = new SpeechSynthesisUtterance(clean);
       u.lang = meta.bcp47;
-      u.rate = 0.92;
+      u.rate = rate;
       const matched = voices.find((v) => String(v.lang || '').toLowerCase().startsWith(prefix));
       if (matched) u.voice = matched;
       globalScope.speechSynthesis.speak(u);
@@ -605,7 +635,7 @@
     c.width = 1240;
     c.height = 1754;
     const ctx = c.getContext('2d');
-    const fontCjk = '"Segoe UI", "Microsoft YaHei", "Malgun Gothic", "Yu Gothic", Arial, sans-serif';
+    const fontCjk = '"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", sans-serif';
     let pageCounter = 0;
 
     const flushPage = async () => {
@@ -740,7 +770,7 @@
     const pdfDoc = await PDFLib.PDFDocument.create();
     const cards = Array.isArray(deck?.cards) ? deck.cards : [];
     const onProgress = typeof options?.onProgress === 'function' ? options.onProgress : null;
-    const fontCjk = '"Segoe UI", "Microsoft YaHei", "Malgun Gothic", "Yu Gothic", Arial, sans-serif';
+    const fontCjk = '"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", sans-serif';
     const c = document.createElement('canvas');
     c.width = 1240;
     c.height = 1754;
@@ -887,13 +917,14 @@ document.getElementById('next').onclick=()=>{if(!list.length)return;idx=(idx+1)%
 document.getElementById('q').oninput=(e)=>{const kw=e.target.value.trim().toLowerCase();list=kw?DECK.cards.filter(c=>((c.front||'')+' '+(c.back||'')+' '+(c.frontSub||'')).toLowerCase().includes(kw)):DECK.cards.slice();idx=0;back=false;render();};
 document.getElementById('jmp').onchange=(e)=>{const n=Math.max(1,Math.min(list.length,parseInt(e.target.value,10)||1));idx=n-1;back=false;render();};
 document.getElementById('shuf').onclick=()=>{for(let i=list.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=list[i];list[i]=list[j];list[j]=t;}idx=0;back=false;render();};
-document.getElementById('speak').onclick=()=>{const c=list[idx];if(!c||!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(c.speakText||c.front);u.lang=c.bcp47||'en-US';speechSynthesis.speak(u);};
+document.getElementById('speak').onclick=()=>{const c=list[idx];if(!c)return;const txt=(c.speakText||c.front||'').trim();if(!txt)return;const bcp=c.bcp47||'en-US';const tl=bcp.startsWith('zh-TW')?'zh-TW':bcp.startsWith('zh')?'zh-CN':bcp.split('-')[0];const a=new Audio('https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl='+encodeURIComponent(tl)+'&q='+encodeURIComponent(txt.slice(0,120)));a.referrerPolicy='no-referrer';a.onerror=()=>{if(!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang=bcp;speechSynthesis.speak(u);};a.play().catch(()=>a.onerror());};
 render();</script></body></html>`;
     triggerDownload(new Blob([html], { type: 'text/html;charset=utf-8' }), `Flashcard_Tuong_Tac_Offline_${cards.length}Tu_${Date.now()}.html`);
     return { ok: true, count: cards.length };
   }
 
   LL.LANGUAGES = LANGUAGES;
+  LL.VOICE_SAMPLES_6LANG = VOICE_SAMPLES_6LANG;
   LL.GRAMMAR_MATRIX = GRAMMAR_MATRIX;
   LL.STORAGE_KEYS = STORAGE_KEYS;
   LL.ensurePinyinPro = ensurePinyinPro;

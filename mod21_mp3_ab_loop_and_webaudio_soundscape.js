@@ -6411,6 +6411,7 @@
       `;
 
       musicBox.appendChild(deck);
+      const tr21 = (s) => (window.NoirStudio?.i18n?.translateText ? window.NoirStudio.i18n.translateText(s) : s);
 
       const soundListToggleBtn = deck.querySelector('#btn-toggle-mod21-soundscape-list');
       const soundListBody = deck.querySelector('#mod21-soundscape-list-body');
@@ -6419,17 +6420,21 @@
         const willOpen = soundListBody.classList.contains('hidden');
         soundListBody.classList.toggle('hidden', !willOpen);
         soundListToggleBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-        soundListToggleBtn.textContent = willOpen
+        const rawBtn = willOpen
           ? '▲ Thu gọn 5 cụm âm thanh'
           : `▼ Mở 5 cụm âm thanh (${CURATED_LITERARY_SOUND_SCENES.length})`;
+        soundListToggleBtn.textContent = tr21(rawBtn);
       });
       deck.querySelectorAll('.mod21-scene-card').forEach((card) => {
         card.addEventListener('click', () => {
           const sid = card.getAttribute('data-literary-scene');
           const sc = CURATED_LITERARY_SOUND_SCENES.find((x) => x.id === sid);
-          if (sc && activeScenePill) activeScenePill.textContent = sc.title;
+          if (sc && activeScenePill) activeScenePill.textContent = tr21(sc.title);
         });
       });
+      if (window.NoirStudio?.i18n?.translateElement) {
+        window.NoirStudio.i18n.translateElement(deck);
+      }
 
       // Gắn sự kiện cho các nút vừa tạo
       const capABtn = document.getElementById('btn-mod21-capture-point-a');

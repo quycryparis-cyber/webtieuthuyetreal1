@@ -6020,7 +6020,98 @@
       this._styleInjected = true;
     }
 
+    _getLangCode() {
+      const c = String(window.NoirStudio?.i18n?.getLanguage?.() || 'vi');
+      return ['vi', 'en', 'zh-CN', 'zh-TW', 'ko', 'ja'].includes(c) ? c : 'vi';
+    }
+
+    _buildLocalizedGuideCard(title, linkUrl, linkLabel, steps) {
+      return `
+        <div class="space-y-2.5 text-[11.5px] leading-relaxed text-zinc-200">
+          <div class="p-3 rounded-xl border border-indigo-500/45 bg-zinc-900/90 flex flex-wrap items-center justify-between gap-2">
+            <div class="font-bold text-amber-300">${title}</div>
+            <a href="${linkUrl}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] shadow transition">${linkLabel}</a>
+          </div>
+          ${steps
+            .map(
+              (st, idx) => `
+            <div class="p-3 rounded-xl border border-zinc-700/80 bg-zinc-900/90 space-y-1">
+              <div class="font-bold text-sky-300">${idx + 1}. ${st.h}</div>
+              <p class="text-[11px] text-zinc-300">${st.p}</p>
+            </div>`
+            )
+            .join('')}
+        </div>
+      `;
+    }
+
     buildGeminiGuideStepsHtml(modeKey = '') {
+      const lang = this._getLangCode();
+      if (lang !== 'vi') {
+        const G = {
+          en: {
+            t: 'Gemini Web / App A → Z Guide',
+            link: '🚀 Open Gemini (gemini.google.com) ↗',
+            steps: [
+              { h: 'Open Gemini Web / App', p: 'Sign in with your Google account or click Split-Screen with Gemini below.' },
+              { h: 'Pick Your Model', p: 'Click the model switcher at the right side of the Ask Gemini bar (e.g., Pro / Flash / Neon).' },
+              { h: 'Click the (+) Icon & Upload Files', p: 'Click (+) → Upload file → select Story_Bible.pdf (+ Plot brief for Mode 1, or ASCII .TXT for Mode 5).' },
+              { h: 'For Covers (Mode 6)', p: 'Click (+) → Create Image before pasting your cover prompt.' },
+              { h: 'Paste (Ctrl+V) & Send (➤)', p: 'Paste the auto-copied Master Prompt into Ask Gemini and send.' },
+              { h: 'Copy Result Back to Studio', p: 'Click Copy (❐) below Gemini’s reply and paste into Tab 3 Output (or Ctrl+V cover into Mode 6 Gallery).' },
+            ],
+          },
+          'zh-CN': {
+            t: 'Gemini 网页 / App 从零到精通指南',
+            link: '🚀 打开 Gemini (gemini.google.com) ↗',
+            steps: [
+              { h: '打开 Gemini 主页', p: '使用 Google 账号登录，或点击下方“立即与 Gemini 分屏”。' },
+              { h: '选择目标模型', p: '点击输入框右侧的模型切换器（如 Pro / Flash / Neon）。' },
+              { h: '点击 (+) 号并上传文件', p: '点击 (+) → 上传文件 → 选择 Story_Bible.pdf（模式 1 另附剧情参谋，模式 5 附 ASCII .TXT）。' },
+              { h: '封面绘制（模式 6）', p: '先点击 (+) → 生成图像，再粘贴封面提示词。' },
+              { h: '粘贴 (Ctrl+V) 并发送 (➤)', p: '将已自动复制的综合提示词粘贴到对话框并发送。' },
+              { h: '复制结果回工作室', p: '点击回复下方的复制 (❐) 粘贴至第 3 栏输出框（封面图可直接 Ctrl+V 粘贴至模式 6 图库）。' },
+            ],
+          },
+          'zh-TW': {
+            t: 'Gemini 網頁 / App 從零到精通指南',
+            link: '🚀 開啟 Gemini (gemini.google.com) ↗',
+            steps: [
+              { h: '開啟 Gemini 首頁', p: '使用 Google 帳號登入，或點擊下方「立即與 Gemini 分割畫面」。' },
+              { h: '選擇目標模型', p: '點擊輸入框右側的模型切換器（如 Pro / Flash / Neon）。' },
+              { h: '點擊 (+) 號並上傳檔案', p: '點擊 (+) → 上傳檔案 → 選擇 Story_Bible.pdf（模式 1 另附劇情參謀，模式 5 附 ASCII .TXT）。' },
+              { h: '封面繪製（模式 6）', p: '先點擊 (+) → 生成圖像，再貼上封面提示詞。' },
+              { h: '貼上 (Ctrl+V) 並送出 (➤)', p: '將已自動複製的綜合提示詞貼到對話框並送出。' },
+              { h: '複製結果回工作室', p: '點擊回覆下方的複製 (❐) 貼至第 3 欄輸出框（封面圖可直接 Ctrl+V 貼至模式 6 圖庫）。' },
+            ],
+          },
+          ko: {
+            t: 'Gemini 웹 / 앱 A → Z 가이드',
+            link: '🚀 Gemini 열기 (gemini.google.com) ↗',
+            steps: [
+              { h: 'Gemini 홈 열기', p: 'Google 계정으로 로그인하거나 아래 Gemini 화면 분할 버튼을 누르세요.' },
+              { h: '모델 선택', p: '입력창 오른쪽의 모델 선택 메뉴(Pro / Flash / Neon)에서 원하는 모델을 고르세요.' },
+              { h: '(+) 아이콘 클릭 후 파일 업로드', p: '(+) → 파일 업로드 → Story_Bible.pdf 선택 (모드 1은 줄거리 파일 추가, 모드 5는 ASCII .TXT).' },
+              { h: '표지 생성 (모드 6)', p: '(+) → 이미지 생성을 먼저 선택한 뒤 표지 프롬프트를 붙여넣으세요.' },
+              { h: '붙여넣기 (Ctrl+V) & 전송 (➤)', p: '자동 복사된 통합 프롬프트를 붙여넣고 전송 버튼을 누르세요.' },
+              { h: '결과를 스튜디오로 복사', p: '답변 하단 복사(❐) 버튼을 눌러 탭 3 출력창에 붙여넣으세요.' },
+            ],
+          },
+          ja: {
+            t: 'Gemini Web / アプリ A → Z ガイド',
+            link: '🚀 Gemini を開く (gemini.google.com) ↗',
+            steps: [
+              { h: 'Gemini ホームを開く', p: 'Googleアカウントでログインするか、下のGemini画面分割ボタンをクリックします。' },
+              { h: 'モデルを選択', p: '入力欄右側のモデル切替（Pro / Flash / Neon など）から希望モデルを選びます。' },
+              { h: '(+) アイコンからファイル添付', p: '(+) → ファイルをアップロード → Story_Bible.pdf を選択（モード1はプロット、モード5はASCII .TXT）。' },
+              { h: '表紙作成（モード6）', p: '(+) → 画像を作成 を選んでから表紙プロンプトを貼り付けます。' },
+              { h: '貼付 (Ctrl+V) して送信 (➤)', p: '自動コピー済みの統合プロンプトを貼り付けて送信します。' },
+              { h: '結果をスタジオへ戻す', p: '回答下のコピー(❐)を押し、タブ3出力欄へ貼り付けます。' },
+            ],
+          },
+        }[lang];
+        return this._buildLocalizedGuideCard(G.t, 'https://gemini.google.com/app', G.link, G.steps);
+      }
       const isCoverMode = modeKey === 'MODE_6_BOOK_COVER';
       return `
         <div class="space-y-3 text-[11.5px] leading-relaxed text-zinc-200">
@@ -6163,6 +6254,67 @@
     }
 
     buildNotebookLmGuideStepsHtml() {
+      const lang = this._getLangCode();
+      if (lang !== 'vi') {
+        const N = {
+          en: {
+            t: 'Google NotebookLM A → Z Guide',
+            link: '🚀 Open NotebookLM (notebooklm.google.com) ↗',
+            steps: [
+              { h: 'Create or Open a Notebook', p: 'Open NotebookLM and click "+ New Notebook" (or reopen your novel notebook).' },
+              { h: 'Upload Sources', p: 'In the left Sources column, click "+ Add source" → Upload your merged chapters .TXT and Story_Bible.pdf, then ensure Select All is checked.' },
+              { h: 'Paste Prompt & Send (↑)', p: 'Click the center chat input, press Ctrl+V to paste the auto-copied prompt, and press Send (↑).' },
+              { h: 'Copy Clean ASCII / Notes', p: 'Use the Copy (❐) button on code blocks to preserve ASCII alignment, and click "Save to note" to keep great answers.' },
+              { h: 'Use the Right Studio Panel', p: 'Generate Mind Maps, Visual Reports, Infographics, or Audio Overviews directly from your full story.' },
+            ],
+          },
+          'zh-CN': {
+            t: 'Google NotebookLM 从零到精通指南',
+            link: '🚀 打开 NotebookLM (notebooklm.google.com) ↗',
+            steps: [
+              { h: '新建或打开笔记本', p: '进入 NotebookLM 后点击“+ 新建笔记本”（或打开已有小说笔记本）。' },
+              { h: '上传小说来源文件', p: '在左侧来源栏点击“+ 添加来源”→ 上传合并章节 .TXT 与 Story_Bible.pdf，并勾选全选。' },
+              { h: '粘贴指令并发送 (↑)', p: '点击中间聊天框按 Ctrl+V 粘贴已复制提示词并发送 (↑)。' },
+              { h: '复制纯文本 ASCII / 保存笔记', p: '点击代码块右上角复制按钮 (❐) 保持对齐，点击“保存到笔记”永久留存。' },
+              { h: '右侧 Studio 面板可视化', p: '一键生成思维导图、报告、信息图或音频概览。' },
+            ],
+          },
+          'zh-TW': {
+            t: 'Google NotebookLM 從零到精通指南',
+            link: '🚀 開啟 NotebookLM (notebooklm.google.com) ↗',
+            steps: [
+              { h: '新建或開啟筆記本', p: '進入 NotebookLM 後點擊「+ 新建筆記本」（或開啟既有小說筆記本）。' },
+              { h: '上傳小說來源檔案', p: '在左側來源欄點擊「+ 新增來源」→ 上傳合併章節 .TXT 與 Story_Bible.pdf，並勾選全選。' },
+              { h: '貼上指令並送出 (↑)', p: '點擊中間聊天框按 Ctrl+V 貼上已複製提示詞並送出 (↑)。' },
+              { h: '複製純文字 ASCII / 儲存筆記', p: '點擊程式碼塊右上角複製按鈕 (❐) 保持對齊，點擊「儲存至筆記」永久留存。' },
+              { h: '右側 Studio 面板視覺化', p: '一鍵生成心智圖、報告、資訊圖或音訊概覽。' },
+            ],
+          },
+          ko: {
+            t: 'Google NotebookLM A → Z 가이드',
+            link: '🚀 NotebookLM 열기 (notebooklm.google.com) ↗',
+            steps: [
+              { h: '새 노트북 만들기 또는 열기', p: 'NotebookLM에서 "+ 새 노트북"을 클릭하거나 기존 소설 노트북을 엽니다.' },
+              { h: '소스 파일 업로드', p: '왼쪽 소스 열에서 "+ 소스 추가" → 병합된 .TXT 및 Story_Bible.pdf를 업로드하고 모두 선택을 체크합니다.' },
+              { h: '프롬프트 붙여넣기 & 전송 (↑)', p: '가운데 채팅 입력란에 Ctrl+V로 붙여넣고 전송(↑)을 누릅니다.' },
+              { h: 'ASCII 복사 및 메모 저장', p: '코드 블록의 복사(❐) 버튼으로 정렬을 유지하고, "메모에 저장"으로 보관합니다.' },
+              { h: '오른쪽 Studio 패널 활용', p: '마인드맵, 보고서, 인포그래픽, 오디오 개요를 원클릭으로 생성하세요.' },
+            ],
+          },
+          ja: {
+            t: 'Google NotebookLM A → Z ガイド',
+            link: '🚀 NotebookLM を開く (notebooklm.google.com) ↗',
+            steps: [
+              { h: 'ノートブックを作成または開く', p: 'NotebookLM で「+ 新しいノートブック」をクリックするか既存ノートを開きます。' },
+              { h: 'ソースをアップロード', p: '左のソース欄から「+ ソースを追加」→ 結合 .TXT や Story_Bible.pdf をアップロードし全て選択します。' },
+              { h: 'プロンプト貼付＆送信 (↑)', p: '中央チャット欄に Ctrl+V で貼り付けて送信(↑)します。' },
+              { h: 'ASCII コピー＆メモ保存', p: 'コード枠のコピー(❐)で崩れず複製し、「メモに保存」で永続保存できます。' },
+              { h: '右側 Studio パネルを活用', p: 'マインドマップ・レポート・インフォグラフィック・音声概要を生成できます。' },
+            ],
+          },
+        }[lang];
+        return this._buildLocalizedGuideCard(N.t, 'https://notebooklm.google.com/', N.link, N.steps);
+      }
       return `
         <div class="space-y-3 text-[11.5px] leading-relaxed text-zinc-200">
           <!-- BƯỚC 1: Mở thẳng trang chủ Google NotebookLM (Gemini Notebook) -->
@@ -6394,6 +6546,67 @@
         typeof window !== 'undefined' && /^https?:/i.test(window.location?.origin || '')
           ? window.location.origin
           : 'https://quycryparis-cyber.github.io';
+      const lang = this._getLangCode();
+      if (lang !== 'vi') {
+        const D = {
+          en: {
+            t: 'Google Drive & OAuth Client ID A → Z Guide',
+            link: '🚀 Open Google Cloud Console ↗',
+            steps: [
+              { h: 'Sign in & Create a Project', p: 'Open Google Cloud Console, sign in with your Gmail, click Select a project → New Project → Create.' },
+              { h: 'Enable Google Drive API', p: 'Go to APIs & Services → Library → search "Google Drive API" → click ENABLE.' },
+              { h: 'Configure OAuth Consent Screen', p: 'Choose External, fill App Name & Support Email, then ADD YOUR GMAIL under Test Users (prevents 403 error).' },
+              { h: 'Create OAuth Client ID (Web App)', p: `Go to Credentials → Create Credentials → OAuth client ID → Web application → add Authorized JavaScript origin: ${curOrigin}` },
+              { h: 'Paste Client ID & Connect', p: 'Copy the .apps.googleusercontent.com Client ID, paste into Studio Drive Sync, click Connect → Advanced → Continue.' },
+            ],
+          },
+          'zh-CN': {
+            t: 'Google Drive 与 OAuth Client ID 配置指南',
+            link: '🚀 打开 Google Cloud Console ↗',
+            steps: [
+              { h: '登录并创建项目', p: '打开 Google Cloud Console，登录 Gmail，点击“选择项目”→“新建项目”→ Create。' },
+              { h: '启用 Google Drive API', p: '进入 API 和服务 → 库 → 搜索“Google Drive API”→ 点击 ENABLE 启用。' },
+              { h: '配置 OAuth 同意屏幕', p: '选择 External，填写应用名与邮箱，务必在 Test Users 中添加您自己的 Gmail（避免 403 拦截）。' },
+              { h: '创建 Web 应用 OAuth Client ID', p: `进入凭据 → 创建凭据 → OAuth 客户端 ID → Web 应用 → 添加已获授权的 JavaScript 来源：${curOrigin}` },
+              { h: '粘贴 Client ID 并连接', p: '复制 .apps.googleusercontent.com 客户端 ID 粘贴至本应用 Drive 同步面板并授权即可。' },
+            ],
+          },
+          'zh-TW': {
+            t: 'Google Drive 與 OAuth Client ID 設定指南',
+            link: '🚀 開啟 Google Cloud Console ↗',
+            steps: [
+              { h: '登入並建立專案', p: '開啟 Google Cloud Console，登入 Gmail，點擊「選取專案」→「新增專案」→ Create。' },
+              { h: '啟用 Google Drive API', p: '前往 API 和服務 → 程式庫 → 搜尋「Google Drive API」→ 點擊 ENABLE 啟用。' },
+              { h: '設定 OAuth 同意畫面', p: '選擇 External，填寫應用程式名稱與信箱，務必在 Test Users 加入您自己的 Gmail（避免 403 錯誤）。' },
+              { h: '建立 Web 應用 OAuth Client ID', p: `前往憑證 → 建立憑證 → OAuth 用戶端 ID → 網頁應用程式 → 加入已授權的 JavaScript 來源：${curOrigin}` },
+              { h: '貼上 Client ID 並連線', p: '複製 .apps.googleusercontent.com 用戶端 ID 貼至本應用 Drive 同步面板並授權即可。' },
+            ],
+          },
+          ko: {
+            t: 'Google Drive & OAuth Client ID A → Z 가이드',
+            link: '🚀 Google Cloud Console 열기 ↗',
+            steps: [
+              { h: '로그인 및 새 프로젝트 생성', p: 'Google Cloud Console에서 Gmail로 로그인 후 새 프로젝트(New Project)를 생성합니다.' },
+              { h: 'Google Drive API 사용 설정', p: 'API 및 서비스 → 라이브러리 → "Google Drive API" 검색 → ENABLE 클릭.' },
+              { h: 'OAuth 동의 화면 설정', p: 'External 선택, 앱 이름/이메일 입력 후 Test Users에 본인 Gmail을 반드시 추가하세요(403 방지).' },
+              { h: 'OAuth 클라이언트 ID 생성 (웹 앱)', p: `사용자 인증 정보 → OAuth 클라이언트 ID → 웹 애플리케이션 → 승인된 JavaScript 원본 추가: ${curOrigin}` },
+              { h: 'Client ID 붙여넣기 및 연결', p: '.apps.googleusercontent.com ID를 복사해 스튜디오 Drive 동기화에 붙여넣고 연결합니다.' },
+            ],
+          },
+          ja: {
+            t: 'Google Drive & OAuth クライアント ID 設定ガイド',
+            link: '🚀 Google Cloud Console を開く ↗',
+            steps: [
+              { h: 'ログインして新規プロジェクト作成', p: 'Google Cloud Console にログインし、プロジェクト選択 → New Project → Create。' },
+              { h: 'Google Drive API を有効化', p: 'APIとサービス → ライブラリ → 「Google Drive API」を検索して ENABLE。' },
+              { h: 'OAuth 同意画面を設定', p: 'External を選び、アプリ名とメールを入力、Test Users に自分のGmailを追加（403エラー防止）。' },
+              { h: 'OAuth クライアント ID 作成（Webアプリ）', p: `認証情報 → OAuth クライアント ID → ウェブアプリケーション → 承認済み JavaScript 生成元に追加：${curOrigin}` },
+              { h: 'Client ID を貼付して接続', p: '.apps.googleusercontent.com の ID をコピーし、スタジオの Drive 同期に貼り付けて接続します。' },
+            ],
+          },
+        }[lang];
+        return this._buildLocalizedGuideCard(D.t, 'https://console.cloud.google.com/', D.link, D.steps);
+      }
       return `
         <div class="space-y-3 text-[11.5px] leading-relaxed text-zinc-200">
           <!-- BƯỚC 1: Mở Google Cloud Console & đăng nhập (kèm lưu ý xác minh CAPTCHA) -->
@@ -6538,23 +6751,80 @@
       // 1) Mount 3-tab guide inside Tab 6 Section 1 (Gemini + NotebookLM + Google Drive OAuth)
       const root = document.getElementById('tab6-v110-ai-guides-root');
       if (root) {
+        const gLang = this._getLangCode();
+        const HDR = {
+          vi: {
+            t: '🧭 Cẩm Nang Trực Quan A → Z: Dùng Gemini, Google NotebookLM & Liên Kết Google Drive',
+            s: 'Ảnh minh họa từng click giống hệt giao diện thật: dùng Gemini, Google NotebookLM và lấy OAuth Client ID kết nối thư mục Google Drive.',
+            b1: '✨ Hướng dẫn Gemini (A → Z)',
+            b2: '📓 Hướng dẫn NotebookLM (A → Z)',
+            b3: '☁️ Liên kết Google Drive & OAuth (A → Z)',
+            drv: '☁️ Hướng dẫn chi tiết từ A → Z: Lấy Google OAuth Client ID & Liên kết Thư mục Google Drive',
+            exp: 'Mở rộng',
+          },
+          en: {
+            t: '🧭 Visual A → Z Handbook: Gemini, Google NotebookLM & Google Drive Sync',
+            s: 'Step-by-step interactive guide for Gemini Web/App, Google NotebookLM, and setting up Google Drive OAuth Client ID.',
+            b1: '✨ Gemini Guide (A → Z)',
+            b2: '📓 NotebookLM Guide (A → Z)',
+            b3: '☁️ Google Drive & OAuth (A → Z)',
+            drv: '☁️ Step-by-Step Guide: Get Google OAuth Client ID & Link Google Drive Folder',
+            exp: 'Expand',
+          },
+          'zh-CN': {
+            t: '🧭 可视化 A → Z 指南：使用 Gemini、Google NotebookLM 与绑定 Google Drive',
+            s: '分步操作指南：轻松上手 Gemini 网页/App、Google NotebookLM 与获取 OAuth Client ID 同步云端硬盘。',
+            b1: '✨ Gemini 指南 (A → Z)',
+            b2: '📓 NotebookLM 指南 (A → Z)',
+            b3: '☁️ 绑定 Google Drive 与 OAuth',
+            drv: '☁️ 详细指南：获取 Google OAuth Client ID 并绑定 Google Drive 文件夹',
+            exp: '展开',
+          },
+          'zh-TW': {
+            t: '🧭 視覺化 A → Z 指南：使用 Gemini、Google NotebookLM 與綁定 Google Drive',
+            s: '分步操作指南：輕鬆上手 Gemini 網頁/App、Google NotebookLM 與取得 OAuth Client ID 同步雲端硬碟。',
+            b1: '✨ Gemini 指南 (A → Z)',
+            b2: '📓 NotebookLM 指南 (A → Z)',
+            b3: '☁️ 綁定 Google Drive 與 OAuth',
+            drv: '☁️ 詳細指南：取得 Google OAuth Client ID 並綁定 Google Drive 資料夾',
+            exp: '展開',
+          },
+          ko: {
+            t: '🧭 시각적 A → Z 가이드: Gemini, Google NotebookLM & Google Drive 연결',
+            s: 'Gemini 웹/앱, Google NotebookLM 사용법 및 Google Drive OAuth Client ID 발급 단계별 안내.',
+            b1: '✨ Gemini 가이드 (A → Z)',
+            b2: '📓 NotebookLM 가이드 (A → Z)',
+            b3: '☁️ Google Drive & OAuth 연결',
+            drv: '☁️ 단계별 가이드: Google OAuth Client ID 발급 및 Google Drive 폴더 연결',
+            exp: '펼치기',
+          },
+          ja: {
+            t: '🧭 ビジュアル A → Z ガイド：Gemini・Google NotebookLM・Google Drive 連携',
+            s: 'Gemini Web/アプリ、Google NotebookLM の使い方と Google Drive OAuth クライアント ID 取得手順。',
+            b1: '✨ Gemini ガイド (A → Z)',
+            b2: '📓 NotebookLM ガイド (A → Z)',
+            b3: '☁️ Google Drive & OAuth 連携',
+            drv: '☁️ 詳細ガイド：Google OAuth クライアント ID 取得と Google Drive フォルダ連携',
+            exp: '展開',
+          },
+        }[gLang];
         root.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-amber-500/30">
             <div>
               <div class="text-sm font-black text-amber-300 flex items-center gap-1.5">
-                <span>🧭 Cẩm Nang Trực Quan A → Z: Dùng Gemini, Google NotebookLM &amp; Liên Kết Google Drive</span>
+                <span>${HDR.t}</span>
               </div>
-              <p class="text-[11px] text-zinc-300 mt-0.5">Ảnh minh họa từng click giống hệt giao diện thật: dùng Gemini, Google NotebookLM và lấy OAuth Client ID kết nối thư mục Google Drive.</p>
+              <p class="text-[11px] text-zinc-300 mt-0.5">${HDR.s}</p>
             </div>
             <div class="flex items-center gap-1.5 flex-wrap">
               <button type="button" id="btn-tab6-guide-tab-gemini" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-extrabold text-xs shadow transition">
-                ✨ Hướng dẫn Gemini (A → Z)
+                ${HDR.b1}
               </button>
               <button type="button" id="btn-tab6-guide-tab-notebooklm" class="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition">
-                📓 Hướng dẫn NotebookLM (A → Z)
+                ${HDR.b2}
               </button>
               <button type="button" id="btn-tab6-guide-tab-gdrive" class="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition">
-                ☁️ Liên kết Google Drive &amp; OAuth (A → Z)
+                ${HDR.b3}
               </button>
             </div>
           </div>
@@ -6596,13 +6866,23 @@
       // 2) Mount collapsible blinking Google Drive + OAuth A->Z guide right inside the Drive Sync modal!
       const driveSlot = document.getElementById('mod37-v112-gdrive-guide-slot');
       if (driveSlot) {
+        const gLang2 = this._getLangCode();
+        const drvLbl = {
+          vi: '☁️ Hướng dẫn chi tiết từ A → Z: Lấy Google OAuth Client ID & Liên kết Thư mục Google Drive',
+          en: '☁️ Step-by-Step Guide: Get Google OAuth Client ID & Link Google Drive Folder',
+          'zh-CN': '☁️ 详细指南：获取 Google OAuth Client ID 并绑定 Google Drive 文件夹',
+          'zh-TW': '☁️ 詳細指南：取得 Google OAuth Client ID 並綁定 Google Drive 資料夾',
+          ko: '☁️ 단계별 가이드: Google OAuth Client ID 발급 및 Google Drive 폴더 연결',
+          ja: '☁️ 詳細ガイド：Google OAuth クライアント ID 取得と Google Drive フォルダ連携',
+        }[gLang2];
+        const expLbl = { vi: 'Mở rộng', en: 'Expand', 'zh-CN': '展开', 'zh-TW': '展開', ko: '펼치기', ja: '展開' }[gLang2];
         const uid = 'v112-gdrive-modal-guide-body';
         driveSlot.innerHTML = `
           <div class="rounded-xl border border-amber-400/60 bg-zinc-950/90 overflow-hidden">
             <button type="button" data-v110-guide-toggle="${uid}" aria-expanded="false" class="noir-v110-blink-6s w-full px-3.5 py-2.5 flex items-center justify-between gap-2 text-left border border-amber-400/70 rounded-xl bg-amber-950/40 hover:bg-amber-900/50 text-amber-100 font-extrabold text-xs transition cursor-pointer">
-              <span class="min-w-0 flex-1">☁️ Hướng dẫn chi tiết từ A → Z: Lấy Google OAuth Client ID &amp; Liên kết Thư mục Google Drive</span>
+              <span class="min-w-0 flex-1">${drvLbl}</span>
               <span class="shrink-0 px-2 py-0.5 rounded-md bg-amber-400/20 border border-amber-300/60 text-amber-200 text-[10.5px] font-black whitespace-nowrap">
-                <span data-v110-guide-state="${uid}">Mở rộng</span> <span data-v110-guide-arrow="${uid}">▾</span>
+                <span data-v110-guide-state="${uid}">${expLbl}</span> <span data-v110-guide-arrow="${uid}">▾</span>
               </span>
             </button>
             <div id="${uid}" class="hidden p-3 border-t border-amber-500/30 bg-zinc-950/95">
@@ -6647,6 +6927,7 @@
       promptSynthesizer.refreshCommandModeUX?.();
       promptSynthesizer.updateCollapsedParamsSummaryText?.();
       promptSynthesizer.refreshConfirmModalI18n?.();
+      v110AiGuides.mountTab6Guides?.();
       if (window.NoirStudio?.guestMode?.isActive?.()) {
         window.NoirStudio.guestMode.presetStudio?.lockPromptInputsForGuestMode?.();
       }

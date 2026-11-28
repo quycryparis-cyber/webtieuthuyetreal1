@@ -241,6 +241,9 @@ ${checklistLines}`;
     const gnewsVnBiz = `https://news.google.com/rss/search?q=${encodeURIComponent('kinh tế OR chứng khoán OR giá vàng OR bất động sản OR lãi suất Việt Nam when:2d')}&hl=vi&gl=VN&ceid=VN:vi`;
     const gnewsWorld = `https://news.google.com/rss/search?q=${encodeURIComponent('Federal Reserve OR inflation OR oil price OR tariff OR geopolitics OR gold price when:2d')}&hl=en-US&gl=US&ceid=US:en`;
     const gnewsVnBankOmo = `https://news.google.com/rss/search?q=${encodeURIComponent('lãi suất liên ngân hàng OR OMO OR tăng trưởng tín dụng OR nợ xấu ngân hàng Việt Nam when:14d')}&hl=vi&gl=VN&ceid=VN:vi`;
+    const areaHint = String(INV.stateManager.realEstateData?.areaLabel || reg?.areaLabel || 'Việt Nam').replace(/Thành phố\s+|Tỉnh\s+/gi, '').split(',').slice(-2).join(' ').trim() || 'Việt Nam';
+    const gnewsVnRePrice = `https://news.google.com/rss/search?q=${encodeURIComponent(`"${areaHint}" ("giá nhà đất" OR "giá chung cư" OR "bảng giá đất" OR "đấu giá đất" OR "lãi suất vay mua nhà") when:14d`)}&hl=vi&gl=VN&ceid=VN:vi`;
+    const gnewsMacroShift = `https://news.google.com/rss/search?q=${encodeURIComponent('lạm phát CPI OR PMI sản xuất OR giá dầu Brent OR tỷ giá USD/VND OR lãi suất Fed OR tăng trưởng GDP Việt Nam when:7d')}&hl=vi&gl=VN&ceid=VN:vi`;
 
     const [
       usDebtRes,
@@ -254,11 +257,14 @@ ${checklistLines}`;
       bbcWorldRss,
       bbcBizRss,
       vneBizRss,
+      vneBdsRss,
       vneNewsRss,
       tuoitreBizRss,
       gnewsVnRss,
       gnewsWorldRss,
       gnewsVnBankRss,
+      gnewsVnRePriceRss,
+      gnewsMacroShiftRss,
       ecbRateRes,
       hnWarRes,
       hnLeaderRes,
@@ -277,11 +283,14 @@ ${checklistLines}`;
       INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://feeds.bbci.co.uk/news/world/rss.xml'), { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://feeds.bbci.co.uk/news/business/rss.xml'), { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://vnexpress.net/rss/kinh-doanh.rss'), { signal, timeoutMs: 7500, preferDirect: true }),
+      INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://vnexpress.net/rss/bat-dong-san.rss'), { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://vnexpress.net/rss/tin-moi-nhat.rss'), { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://tuoitre.vn/rss/kinh-doanh.rss'), { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(gnewsVnBiz), { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(gnewsWorld), { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(gnewsVnBankOmo), { signal, timeoutMs: 7500, preferDirect: true }),
+      INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(gnewsVnRePrice), { signal, timeoutMs: 7500, preferDirect: true }),
+      INV.networkAdapter.fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(gnewsMacroShift), { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson('https://data-api.ecb.europa.eu/service/data/FM/B.U2.EUR.4F.KR.DFR.LEV?lastNObservations=1&format=jsondata', { signal, timeoutMs: 7000, preferDirect: true }),
       INV.networkAdapter.fetchJson(`https://hn.algolia.com/api/v1/search_by_date?query=Ukraine&tags=story&restrictSearchableAttributes=title&typoTolerance=false&numericFilters=points>5,created_at_i>${minHnUnix}&hitsPerPage=4`, { signal, timeoutMs: 7500, preferDirect: true }),
       INV.networkAdapter.fetchJson(`https://hn.algolia.com/api/v1/search_by_date?query=Trump&tags=story&restrictSearchableAttributes=title&typoTolerance=false&numericFilters=points>5,created_at_i>${minHnUnix}&hitsPerPage=4`, { signal, timeoutMs: 7500, preferDirect: true }),
@@ -439,26 +448,53 @@ ${checklistLines}`;
         }
       });
     };
-    pushRss2Json(gnewsVnRss, bundle.corpHeadlines, 'Google News VN Kinh tế (Hôm nay · Live)', 16);
-    pushRss2Json(gnewsVnBankRss, bundle.corpHeadlines, 'Google News VN Ngân hàng & OMO (Live)', 18);
+    pushRss2Json(gnewsVnRss, bundle.corpHeadlines, 'Google News VN Kinh tế (Hôm nay · Live)', 18);
+    pushRss2Json(gnewsVnBankRss, bundle.corpHeadlines, 'Google News VN Ngân hàng & OMO (Live)', 20);
+    pushRss2Json(gnewsMacroShiftRss, bundle.corpHeadlines, 'Biến động Vĩ mô, CPI, Dầu & Lãi suất (Live)', 22);
+    pushRss2Json(gnewsVnRePriceRss, bundle.corpHeadlines, `Giá Nhà Đất & Bảng Giá Đất ${areaHint} (Live)`, 24);
+    pushRss2Json(vneBdsRss, bundle.corpHeadlines, 'VnExpress Bất động sản (Chính thống · Live)', 26);
     pushRss2Json(gnewsWorldRss, bundle.geoHeadlines, 'Google News Toàn cầu (Hôm nay · Live)', 16);
-    pushRss2Json(vneBizRss, bundle.corpHeadlines, 'VnExpress Kinh doanh (Chính thống · Live)', 14);
-    pushRss2Json(tuoitreBizRss, bundle.corpHeadlines, 'Tuổi Trẻ Kinh doanh (Chính thống · Live)', 14);
-    pushRss2Json(vneNewsRss, bundle.geoHeadlines, 'VnExpress Thời sự (Chính thống · Live)', 14);
-    pushRss2Json(bbcWorldRss, bundle.geoHeadlines, 'BBC World News (Chính thống · Live)', 14);
-    pushRss2Json(bbcBizRss, bundle.corpHeadlines, 'BBC Business (Chính thống · Live)', 14);
+    pushRss2Json(vneBizRss, bundle.corpHeadlines, 'VnExpress Kinh doanh (Chính thống · Live)', 28);
+    pushRss2Json(tuoitreBizRss, bundle.corpHeadlines, 'Tuổi Trẻ Kinh doanh (Chính thống · Live)', 28);
+    pushRss2Json(vneNewsRss, bundle.geoHeadlines, 'VnExpress Thời sự (Chính thống · Live)', 16);
+    pushRss2Json(bbcWorldRss, bundle.geoHeadlines, 'BBC World News (Chính thống · Live)', 16);
+    pushRss2Json(bbcBizRss, bundle.corpHeadlines, 'BBC Business (Chính thống · Live)', 30);
 
-    pushHn(hnWarRes, bundle.geoHeadlines, 'Tin Xung đột & Địa chính trị (Live)', 16, /ukraine|russia|war|iran|israel|gaza|nato|military|conflict|drone|strike/i);
-    pushHn(hnLeaderRes, bundle.geoHeadlines, 'Tin Lãnh đạo & Chính sách Mỹ (Live)', 16, /trump|president|white house|biden|xi|putin|congress|policy/i);
-    pushHn(hnTradeRes, bundle.geoHeadlines, 'Tin Thuế quan & Thương mại (Live)', 16, /tariff|trade|treaty|sanction|china|eu|export|economy|opec/i);
+    pushHn(hnWarRes, bundle.geoHeadlines, 'Tin Xung đột & Địa chính trị (Live)', 18, /ukraine|russia|war|iran|israel|gaza|nato|military|conflict|drone|strike/i);
+    pushHn(hnLeaderRes, bundle.geoHeadlines, 'Tin Lãnh đạo & Chính sách Mỹ (Live)', 18, /trump|president|white house|biden|xi|putin|congress|policy/i);
+    pushHn(hnTradeRes, bundle.geoHeadlines, 'Tin Thuế quan & Thương mại (Live)', 18, /tariff|trade|treaty|sanction|china|eu|export|economy|opec/i);
 
     // 8) Live Mega-Corporations, AI, Fed, Inflation & Macro News (HN Algolia 4 ngày gần nhất)
-    pushHn(hnMacroCorpRes, bundle.corpHeadlines, 'Tin Lạm phát, Fed & Kinh tế (Live)', 16, /inflation|fed|rate|recession|economy|bank|price|gdp|cpi|oil|gold/i);
-    pushHn(hnLeaderRes, bundle.corpHeadlines, 'Tin Tập đoàn & Chính sách (Live)', 16, /nvidia|apple|microsoft|google|openai|anthropic|trump|ceo|ipo|chip|ai/i);
+    pushHn(hnMacroCorpRes, bundle.corpHeadlines, 'Tin Lạm phát, Fed & Kinh tế (Live)', 30, /inflation|fed|rate|recession|economy|bank|price|gdp|cpi|oil|gold/i);
+    pushHn(hnLeaderRes, bundle.corpHeadlines, 'Tin Tập đoàn & Chính sách (Live)', 30, /nvidia|apple|microsoft|google|openai|anthropic|trump|ceo|ipo|chip|ai/i);
 
     const sortNewestFirst = (arr) => arr.sort((a, b) => (Date.parse(b.published_at || b.date || '') || 0) - (Date.parse(a.published_at || a.date || '') || 0));
     sortNewestFirst(bundle.geoHeadlines);
     sortNewestFirst(bundle.corpHeadlines);
+
+    // 9) ĐỌC THÂN BÀI THẬT (550–800 ký tự/bài) CHO TỐI ĐA 6 BÀI BÁO TRỌNG YẾU (BĐS, Vĩ mô, Tài chính, Địa chính trị)
+    // Đảm bảo Gemini đọc & trích dẫn số liệu thật từ bài báo thay vì nói suông!
+    const excerptReader = INV.intelHelpers?.fetchArticleBodyExcerpt;
+    if (typeof excerptReader === 'function') {
+      const directPool = [
+        ...bundle.corpHeadlines.filter((h) => /vnexpress|tuoitre|bbc|cafef|vietstock/i.test(h.url || '')).slice(0, 4),
+        ...bundle.geoHeadlines.filter((h) => /vnexpress|bbc|reuters|apnews/i.test(h.url || '')).slice(0, 2),
+      ];
+      await Promise.allSettled(
+        directPool.slice(0, 6).map(async (art) => {
+          const ex = await excerptReader(art.url, signal, { maxChars: 760, timeoutMs: 5200 });
+          if (ex && ex.length >= 100) {
+            art.fullExcerpt = ex;
+            art.articleReadOk = true;
+          }
+        })
+      );
+    }
+
+    // Rút trích các tín hiệu giá nhà đất / lãi suất vay thực tế từ toàn bộ bài báo sống vừa đọc
+    if (typeof INV.intelHelpers?.extractRealEstatePriceSignals === 'function') {
+      bundle.realEstatePriceSignals = INV.intelHelpers.extractRealEstatePriceSignals(bundle.corpHeadlines);
+    }
 
     return bundle;
   }
@@ -1005,6 +1041,7 @@ ${checklistLines}`;
           guardrail_stats: guardrailStats,
           deterministic_checklist: deterministicChecklist,
           live_headlines: validatedHeadlines,
+          real_estate_price_signals: bundle.realEstatePriceSignals || [],
           gold_history_30d: goldHist30d,
           cycle_phase: cyclePhase,
           channel_scores: channelScores,
@@ -1115,12 +1152,27 @@ ${checklistLines}`;
     return lines.join('\n');
   }
 
-  function buildPrecomputedRealEstateText(reData, stress) {
+  function buildPrecomputedRealEstateText(reData, stress, extraPriceSignals = []) {
     const lines = [];
     if (reData?.areaLabel) {
       lines.push(`- Khu vực người dùng đang kiểm tra: ${reData.areaLabel} (${reData.benchmark?.note || ''})`);
+      if (reData.benchmark?.priceRangeM2) {
+        lines.push(`- Mặt bằng tham chiếu: Giá ${reData.benchmark.priceRangeM2} | Giá thuê ${reData.benchmark.rentRangeMo || '—'} | Lãi vay ${reData.benchmark.mortgageRange || '—'}.`);
+      }
     } else {
       lines.push('- Khu vực: Thị trường BĐS Việt Nam tổng quát (chưa chọn phường/quận cụ thể).');
+    }
+    if (reData?.liveStats && Number.isFinite(reData.liveStats.medianPpm2)) {
+      lines.push(
+        `- Giá rao thực tế quét trực tiếp (${reData.liveStats.sampleCount || 0} tin rao): Trung vị ${reData.liveStats.medianPpm2.toFixed(1)} tr/m² (Dao động ${reData.liveStats.minPpm2.toFixed(1)} – ${reData.liveStats.maxPpm2.toFixed(1)} tr/m²)${Number.isFinite(reData.liveStats.avgRentMo) ? ` · Giá thuê TB ~${(reData.liveStats.avgRentMo / 1e6).toFixed(1)} tr/tháng` : ''}.`
+      );
+    }
+    const allPriceSignals = [...(reData?.livePriceSignals || []), ...(Array.isArray(extraPriceSignals) ? extraPriceSignals : [])];
+    if (allPriceSignals.length) {
+      lines.push('- Trích dẫn giá nhà đất / đấu giá / lãi suất vay thực tế từ báo chí sống vừa quét:');
+      allPriceSignals.slice(0, 6).forEach((sig, i) => {
+        lines.push(`  • [Giá BĐS #${i + 1}] "${sig.quote}" (Nguồn: ${sig.source} · ${sig.date}${sig.url ? ` | ${sig.url}` : ''})`);
+      });
     }
     if (stress) {
       lines.push(
@@ -1150,23 +1202,29 @@ ${checklistLines}`;
       const mergedHeadlines = [...selectedHeadlines, ...extraReNews];
       const liveHeadlinesText = mergedHeadlines.length
         ? mergedHeadlines
-            .map((h) => `- [${h.date || asOfDate}] ${h.title}${h.snippet ? ` — "${h.snippet.slice(0, 160)}"` : ''} (Nguồn: ${h.source} | Link gốc: ${h.url})`)
+            .map((h, idx) => {
+              const excerptBlock = h.fullExcerpt
+                ? `\n  ↳ [NỘI DUNG THẬT ĐÃ ĐỌC TỪ BÀI BÁO #${idx + 1}]: "${String(h.fullExcerpt).slice(0, 720)}"`
+                : (h.snippet ? ` — Tóm tắt gốc: "${String(h.snippet).slice(0, 220)}"` : '');
+              return `- [Bài #${idx + 1}] [${h.date || asOfDate}] ${h.title} (Nguồn: ${h.source} | Link gốc: ${h.url})${excerptBlock}`;
+            })
             .join('\n') +
-          '\n\n[YÊU CẦU BẮT BUỘC VỀ CHIỀU SÂU PHÂN TÍCH (TỐI THIỂU 1.000 TỪ CHO PHẦN TỔNG QUAN) & TRÌNH BÀY]:\n' +
+          '\n\n[QUY TẮC BẮT BUỘC ĐỌC BÀI BÁO THẬT, TRÍCH SỐ LIỆU CỤ THỂ — TUYỆT ĐỐI CẤM NÓI SUÔNG]:\n' +
+          '0. BẮT BUỘC ĐỌC & TRÍCH DẪN TRỰC TIẾP TỪ CÁC BÀI BÁO [Bài #1]..[Bài #N] Ở TRÊN (đặc biệt các đoạn [NỘI DUNG THẬT ĐÃ ĐỌC TỪ BÀI BÁO] và nếu bạn đang có công cụ Google Search/duyệt web, HÃY MỞ ĐỌC THÊM các đường link gốc về giá nhà đất, bảng giá đất, biến động vĩ mô, lãi suất, giá dầu, vàng & chứng khoán!). Mỗi nhận định lớn PHẢI trích đích danh `[Bài #k]` kèm con số/mốc giá/chính sách/sự kiện cụ thể trong bài báo đó — TUYỆT ĐỐI CẤM bình luận chung chung sách giáo khoa không có số liệu bài báo!\n' +
           '1. PHẦN TỔNG QUAN & PHÂN TÍCH VĨ MÔ – LIÊN THỊ TRƯỜNG PHẢI DÀI TỐI THIỂU 1.000 TỪ, đi sâu vào:\n' +
-          '   - Bức tranh vĩ mô toàn cầu & trong nước: cơ chế truyền dẫn giữa lãi suất Mỹ/TPCP, nợ công, tỷ giá USD/VND, lạm phát CPI, tăng trưởng GDP & dòng vốn ngoại.\n' +
-          '   - Phân tích trực tiếp TỪNG tin nóng mới nhất ở trên (ghi rõ tên nguồn & link gốc): sự kiện đó tác động cụ thể ra sao tới Vàng, Chứng khoán, Nhà đất và Tiền mặt (ngắn hạn 1–3 tháng và trung hạn 6–12 tháng).\n' +
+          '   - Bức tranh vĩ mô toàn cầu & trong nước: cơ chế truyền dẫn giữa lãi suất Mỹ/TPCP, nợ công, tỷ giá USD/VND, lạm phát CPI, giá dầu, tăng trưởng GDP & dòng vốn ngoại.\n' +
+          '   - Mổ xẻ trực tiếp TỪNG bài báo trọng yếu `[Bài #1]..[Bài #N]` ở trên (trích rõ số liệu, giá/m², lãi suất, tên chính sách, tên nguồn & link gốc): sự kiện đó tác động cụ thể ra sao tới Vàng, Chứng khoán, Nhà đất và Tiền mặt (ngắn hạn 1–3 tháng và trung hạn 6–12 tháng).\n' +
           '   - So sánh định giá & luân chuyển dòng tiền giữa 4 kênh (Tiền mặt/Tiết kiệm vs Vàng vs Chứng khoán vs Nhà đất), nêu rõ kịch bản Cơ sở / Tích cực / Tiêu cực kèm ngưỡng kích hoạt hành động cụ thể.\n' +
           '   - Chiến lược phân bổ vốn, quản trị rủi ro đòn bẩy và danh sách chốt chặn kỷ luật (tuyệt đối KHÔNG viết qua loa vài gạch đầu dòng chung chung!).\n' +
-          '2. Kết hợp trọn vẹn Khung phân tích 7 chương + Toàn bộ số liệu API sống ở trên + Nguồn thông tin thô để lập báo cáo chuyên sâu có Bảng Markdown và tiêu đề rõ ràng (`PHẦN 1:`, `PHẦN 2:`, `I.`, `II.`, `1.`, `2.`).\n' +
+          '2. Kết hợp trọn vẹn Khung phân tích 7 chương + Toàn bộ số liệu API sống ở trên + Nội dung trích từ bài báo thật để lập báo cáo chuyên sâu có Bảng Markdown và tiêu đề rõ ràng (`PHẦN 1:`, `PHẦN 2:`, `I.`, `II.`, `1.`, `2.`).\n' +
           '3. HÌNH ẢNH & TRÍCH DẪN TỰ ĐỘNG TRONG PDF + CHỐNG GẮN NHẦM [DATA_MISSING]: Tuyệt đối KHÔNG gắn nhãn `[DATA_MISSING]` vào các chỉ tiêu vĩ mô/ngân hàng đã có số liệu hoặc cổng tra cứu ở trên (chỉ mục Khảo sát thực địa nhà đất mới ghi chưa có khảo sát trực tiếp). Bất kỳ mục nào cần người đọc tự kiểm chứng thêm BẮT BUỘC chèn trực tiếp liên kết Markdown `[Tên cơ quan/nguồn](https://...)` ngay trong dòng hướng dẫn để PDF bấm mở thẳng tới trang nguồn! Đồng thời hệ thống tự ghép khu vực Hình ảnh / Thẻ bài báo và danh mục đủ 100% nguồn vào cuối PDF.\n' +
           '4. Cuối bài BẮT BUỘC xuất đủ khối JSON INVEST_INTEL_SYNC_V2 để Web đồng bộ vẽ trọn bộ 6 biểu đồ & xuất PDF đầy đủ biểu đồ!'
-        : '- [CHƯA CÓ DỮ LIỆU TIN TỨC TRONG PHIÊN] — Yêu cầu chỉ rõ các tin tức cần người dùng tự kiểm tra thêm.';
+        : '- [CHƯA CÓ DỮ LIỆU TIN TỨC TRONG PHIÊN] — Hãy dùng công cụ tìm kiếm trực tiếp để tìm các bài báo chính thống mới nhất về giá nhà đất, biến động vĩ mô, lãi suất, vàng và chứng khoán hôm nay, trích rõ tên bài báo, con số & link gốc trong phân tích.';
       const globalSnap = formatLayerSnapshot(report?.items, 'global_macro');
       const vnSnap = formatLayerSnapshot(report?.items, 'vn_macro');
       const goldText = buildPrecomputedGoldText(gold);
       const stockText = buildPrecomputedStockText(stock, mode === 'audit' && anonymize);
-      const reText = buildPrecomputedRealEstateText(reData, stressResult);
+      const reText = buildPrecomputedRealEstateText(reData, stressResult, report?.real_estate_price_signals || []);
       const surveyText = savedSurveys.length
         ? savedSurveys
             .slice(0, 4)

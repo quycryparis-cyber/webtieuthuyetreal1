@@ -1530,7 +1530,7 @@
         },
         {
           id: 'i18n_full_5_languages_audit',
-          label: 'Quét dịch thuật toàn bộ 5 ngôn ngữ (EN / 简体 / 繁體 / KO / JA) trên mọi cửa sổ & pop-up',
+          label: 'Quét sâu dịch thuật toàn bộ 5 ngôn ngữ (EN/简中/繁中/KO/JA) trên 100% DOM, Gate, 6 Tab, Option, Details ẩn & Mod 42/46/51',
           run: async (ctx) => {
             const i18n = globalScope.NoirStudio?.i18n;
             if (!i18n || typeof i18n.setLanguage !== 'function') {
@@ -1539,30 +1539,72 @@
             const origLang = i18n.getLanguage?.() || 'vi';
             const targetLangs = ['en', 'zh-CN', 'zh-TW', 'ko', 'ja'];
             const VN_DIACRITICS_RE = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
-            const ALLOWED_BRAND_RE = /(Tiếng Việt|ĐăngLovePDF|Mai Hải Đăng|Buy Đăng|Đăng's|Tiếng Nhật|Việt Nam|Hà Nội|Đà Nẵng|TP\.?\s*HCM|Hồ Chí Minh|NoirStudio|VietQR)/gi;
-            const STANDALONE_DANG_RE = /(?<!\p{L})Đăng(?=$|[\s.,!?:;)<」"'에게의는이을를가와과는에にをはがでのへと])/gu;
-            const SKIP_ANCESTOR_SEL = '[data-autotester-ui="true"], [data-i18n-ignore="true"], #at-shell-root, #novel-editor, #s18-rich-prompt-editor, #chapter-title-input, textarea, pre, code, script, style, #modal-mod51-lang-studio';
+            const ALLOWED_BRAND_RE = /(Tiếng Việt|ĐăngLovePDF|Mai Hải Đăng|Buy Đăng|Đăng's|Tiếng Nhật|Việt Nam|Hà Nội|Đà Nẵng|TP\.?\s*HCM|Hồ Chí Minh|NoirStudio|VietQR|Của Bi|Trạm Bi|Sài Gòn|Cliché|Café|Résumé|Bé Miu|Lệ Băng|Minh Khôi|Lâm Phong|SaLưới)/gi;
+            const STANDALONE_DANG_RE = /(?<!\p{L})Đăng(?=$|[\s.,!?:;)<」"'에게의는이을를가와과는에도에にをはがでのへとも])/gu;
+            const SKIP_ANCESTOR_SEL = '[data-autotester-ui="true"], [data-i18n-ignore="true"], [data-ll51-keep-orig="true"], [contenteditable="true"], #tab4-rich-bible-editor, #at-shell-root, #bi-i18n-floating-popover, #mod28-live-mirror-scale-wrapper, .live-mini-ui-stage, #novel-editor, #s18-rich-prompt-editor, #chapter-title-input, #mod46-live-preview-canvas, #at-bridge-json-details, #quick-chapter-switcher, #mode5-svg-canvas-Stage, #mode5-chronicle-report, textarea, pre, code, script, style, noscript, template';
             const leaks = [];
+            const seenLeakKeys = new Set();
 
-            const scanDomForViLeaks = (langCode, scopeLabel, rootEl) => {
+            // 0. Kiểm tra cấu trúc toàn vẹn của 5 gói NS.i18nPacks (chặn tuyệt đối lỗi chèn nhầm ngoài exact!)
+            const packs = globalScope.NoirStudio?.i18nPacks || {};
+            const strayTopKeys = Object.keys(packs).filter((k) => !targetLangs.includes(k));
+            if (strayTopKeys.length > 0) {
+              leaks.push({ lang: 'ALL', scope: 'Cấu trúc NS.i18nPacks', text: `Có ${strayTopKeys.length} khóa bị chèn sai ra ngoài gói ngôn ngữ (VD: ${strayTopKeys.slice(0, 3).join(', ')})`, selector: 'NS.i18nPacks' });
+            }
+            const allowedPackFields = new Set(['meta', 'exact', 'promptExact', 'patterns', 'promptPatterns', 'phrases']);
+            for (const lc of targetLangs) {
+              const pk = packs[lc];
+              if (!pk) continue;
+              const strayKeys = Object.keys(pk).filter((k) => !allowedPackFields.has(k));
+              if (strayKeys.length > 0) {
+                leaks.push({ lang: lc, scope: 'Cấu trúc pack', text: `Có ${strayKeys.length} khóa nằm ngoài exact (VD: ${strayKeys.slice(0, 3).join(', ')})`, selector: `i18nPacks["${lc}"]` });
+              }
+            }
+
+            const pushLeak = (langCode, scopeLabel, rawText, selector) => {
+              const norm = String(rawText || '').replace(/\s+/g, ' ').trim();
+              if (!norm) return false;
+              const dedupeKey = `${langCode}|${norm.slice(0, 90)}`;
+              if (seenLeakKeys.has(dedupeKey)) return false;
+              seenLeakKeys.add(dedupeKey);
+              leaks.push({ lang: langCode, scope: scopeLabel, text: norm.slice(0, 95), selector });
+              return true;
+            };
+
+            const isVietnameseLeak = (rawText) => {
+              const txt = String(rawText || '').replace(/\s+/g, ' ').trim();
+              if (txt.length < 2) return false;
+              const cleanCheck = txt.replace(ALLOWED_BRAND_RE, '').replace(STANDALONE_DANG_RE, '').trim();
+              return cleanCheck.length >= 2 && VN_DIACRITICS_RE.test(cleanCheck);
+            };
+
+            const describeEl = (el) => {
+              if (!el) return 'text';
+              if (el.id) return `#${el.id}`;
+              const parentWithId = el.closest?.('[id]');
+              return parentWithId ? `#${parentWithId.id} ${el.tagName.toLowerCase()}` : el.tagName.toLowerCase();
+            };
+
+            // Quét sâu 100% DOM bao gồm cả Cổng Gate ẩn, 6 Tab, <details> thu gọn, <select><option> và thuộc tính placeholder
+            const scanDomDeepForViLeaks = (langCode, scopeLabel, rootEl, opts = {}) => {
               if (!rootEl) return;
+              const maxPerScope = opts.maxPerScope || 40;
+              const skipTbody = Boolean(opts.skipTbody);
+              let foundInScope = 0;
+
               const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT);
               let node = walker.nextNode();
-              let foundInScope = 0;
-              while (node && foundInScope < 8) {
+              while (node && foundInScope < maxPerScope) {
                 const txt = String(node.nodeValue || '').replace(/\s+/g, ' ').trim();
-                const cleanCheck = txt.replace(ALLOWED_BRAND_RE, '').replace(STANDALONE_DANG_RE, '').trim();
-                if (cleanCheck.length >= 3 && VN_DIACRITICS_RE.test(cleanCheck)) {
+                if (isVietnameseLeak(txt)) {
                   const el = node.parentElement;
-                  if (el && !el.closest(SKIP_ANCESTOR_SEL)) {
-                    const ownerHtml = el instanceof HTMLElement ? el : el.closest?.('svg')?.parentElement;
-                    const isShown = ownerHtml
-                      ? (ownerHtml.offsetParent !== null && (!ownerHtml.checkVisibility || ownerHtml.checkVisibility()))
-                      : false;
-                    if (isShown) {
-                      const st = globalScope.getComputedStyle?.(el);
-                      if (st && st.display !== 'none' && st.visibility !== 'hidden') {
-                        leaks.push({ lang: langCode, scope: scopeLabel, text: txt.slice(0, 70), selector: el.id ? `#${el.id}` : el.tagName.toLowerCase() });
+                  if (el && !el.closest(SKIP_ANCESTOR_SEL) && !(skipTbody && el.closest('tbody'))) {
+                    const isUserDynamicData = Boolean(
+                      el.closest('#chapter-list-container, #s14-bible-char-list, #s14-bible-rel-list, #s14-bible-secret-list, #s14-bible-clue-list, #s14-scene-markers-list, #mod27-chat-messages-box, #ai-output-display, #mod42-world-clocks-list, #mod42-weather-cities-grid') ||
+                      (el.tagName === 'BUTTON' && el.closest('#rag-search-results'))
+                    );
+                    if (!isUserDynamicData) {
+                      if (pushLeak(langCode, scopeLabel, txt, describeEl(el))) {
                         foundInScope += 1;
                       }
                     }
@@ -1570,51 +1612,100 @@
                 }
                 node = walker.nextNode();
               }
+
+              if (foundInScope < maxPerScope && typeof rootEl.querySelectorAll === 'function') {
+                const attrEls = rootEl.querySelectorAll('[placeholder], option');
+                for (let i = 0; i < attrEls.length && foundInScope < maxPerScope; i++) {
+                  const el = attrEls[i];
+                  if (el.closest(SKIP_ANCESTOR_SEL) || (skipTbody && el.closest('tbody'))) continue;
+                  if (el.tagName === 'OPTION') {
+                    const oTxt = String(el.textContent || '').trim();
+                    if (isVietnameseLeak(oTxt)) {
+                      if (pushLeak(langCode, `${scopeLabel} <option>`, oTxt, describeEl(el))) foundInScope += 1;
+                    }
+                    continue;
+                  }
+                  const ph = el.getAttribute('placeholder');
+                  if (ph && isVietnameseLeak(ph)) {
+                    if (pushLeak(langCode, `${scopeLabel} [placeholder]`, ph, describeEl(el))) foundInScope += 1;
+                  }
+                }
+              }
             };
 
             try {
               for (const lang of targetLangs) {
                 if (ctx.isAborted()) return null;
-                AT.driver.recordBreadcrumb(`Kiểm tra dịch thuật ngôn ngữ: ${lang.toUpperCase()}`);
+                AT.driver.recordBreadcrumb(`Quét sâu dịch thuật 100% DOM: ${lang.toUpperCase()}`);
                 i18n.setLanguage(lang, { persist: false, silent: true });
+                // Ép đồng bộ cả các khu vực ẩn (Gate, 6 Tab) thay vì chờ deferred timer
+                if (typeof i18n.translateSubtree === 'function') {
+                  const gateEl = document.getElementById('entry-connection-gate');
+                  if (gateEl) i18n.translateSubtree(gateEl);
+                  const mainWs = document.getElementById('app-main-workspace');
+                  if (mainWs) i18n.translateSubtree(mainWs);
+                }
                 await AT.sleep(160);
-                // 1. Quét giao diện chính đang hiển thị
-                scanDomForViLeaks(lang, 'Màn hình chính', document.body);
-                // 2. Mở cửa sổ Giờ Quốc Tế / Thời Tiết / Đầu tư / 20p Thông thái (Mod 42)
+
+                // 1. Quét sâu Cổng Vào (Gate) kể cả khi đang ẩn trong Guest Mode
+                const gateEl = document.getElementById('entry-connection-gate');
+                if (gateEl) scanDomDeepForViLeaks(lang, 'Cổng Gate', gateEl);
+
+                // 2. Quét sâu Toàn bộ 6 Tab + <option> + <details> thu gọn + kho âm thanh mod21
+                const wsEl = document.getElementById('app-main-workspace') || document.body;
+                scanDomDeepForViLeaks(lang, 'Workspace 6 Tab', wsEl);
+
+                // 3. Mở cửa sổ Giờ Quốc Tế / Thời Tiết / Đầu tư / 30p Thông thái (Mod 42)
                 if (globalScope.NoirStudio?.worldClockStudio?.openModal) {
                   globalScope.NoirStudio.worldClockStudio.openModal('timezone');
                   await AT.sleep(120);
-                  scanDomForViLeaks(lang, 'Pop-up Mod42', document.getElementById('mod42-world-clock-modal'));
+                  scanDomDeepForViLeaks(lang, 'Pop-up Mod42', document.getElementById('mod42-world-clock-modal'));
                   globalScope.NoirStudio.worldClockStudio.closeModal();
                 }
-                // 3. Mở ĐăngLovePDF Hub (Mod 46)
+
+                // 4. Mở ĐăngLovePDF Hub (Mod 46)
                 if (globalScope.NoirStudio?.dangLovePdf?.openDangLovePdfStudio) {
                   globalScope.NoirStudio.dangLovePdf.openDangLovePdfStudio();
                   await AT.sleep(120);
-                  scanDomForViLeaks(lang, 'Pop-up ĐăngLovePDF', document.getElementById('modal-mod46-danglovepdf-studio'));
+                  scanDomDeepForViLeaks(lang, 'Pop-up ĐăngLovePDF', document.getElementById('modal-mod46-danglovepdf-studio'));
                   document.getElementById('btn-mod46-close-studio')?.click();
                 }
-                await AT.sleep(60);
+
+                // 5. Kiểm tra khung UI của Mod 51 (Học Ngoại Ngữ — chỉ quét khung giao diện, bỏ qua dữ liệu học trong tbody & câu hỏi đa ngôn ngữ mẫu)
+                if (lang === 'en' || lang === 'zh-CN') {
+                  if (globalScope.NoirStudio?.langLearningStudio?.open) {
+                    try {
+                      await globalScope.NoirStudio.langLearningStudio.open();
+                      await AT.sleep(120);
+                      const mod51El = document.getElementById('modal-mod51-lang-studio');
+                      if (mod51El) scanDomDeepForViLeaks(lang, 'Mod51 Học Ngoại Ngữ', mod51El, { skipTbody: true, maxPerScope: 20 });
+                      globalScope.NoirStudio.langLearningStudio.close?.();
+                    } catch (_e51) {}
+                  }
+                }
+                await AT.sleep(50);
               }
             } finally {
               i18n.setLanguage(origLang, { persist: false, silent: true });
               await AT.sleep(100);
             }
 
+            globalScope.__AUTOTESTER_LAST_I18N_LEAKS__ = leaks.slice();
+
             if (leaks.length > 0) {
-              const sample = leaks.slice(0, 12).map((x) => `[${x.lang.toUpperCase()} · ${x.scope}] "${x.text}" (${x.selector})`).join('\n');
+              const sample = leaks.slice(0, 24).map((x) => `[${x.lang.toUpperCase()} · ${x.scope}] "${x.text}" (${x.selector})`).join('\n');
               return makeIssue('i18n_full_5_languages_audit', 'visual_smooth_i18n', 'ERR_I18N_UNTRANSLATED', {
                 selector: leaks[0].selector,
-                moduleRef: `i18n_lang_${leaks[0].lang}.js`,
-                techDetail: `Phát hiện ${leaks.length} chuỗi tiếng Việt chưa dịch trên 5 ngôn ngữ:\n${sample}`,
+                moduleRef: leaks[0].lang === 'ALL' ? 'i18n_lang_en.js' : `i18n_lang_${leaks[0].lang}.js`,
+                techDetail: `Phát hiện ${leaks.length} chuỗi tiếng Việt chưa dịch (đã quét sâu Gate + 6 Tab + <option> + <details> + Mod 42/46/51):\n${sample}`,
               });
             }
 
             return makePass(
               'i18n_full_5_languages_audit',
               'visual_smooth_i18n',
-              'Đạt chuẩn dịch thuật toàn diện cả 5 ngôn ngữ (EN / 简体 / 繁體 / KO / JA)',
-              'Đã chuyển lần lượt 5 ngôn ngữ và quét sạch giao diện chính + pop-up Mod 42 & ĐăngLovePDF — 0 chữ tiếng Việt bị sót.',
+              'Đạt chuẩn dịch thuật sâu 100% cả 5 ngôn ngữ (EN / 简中 / 繁中 / KO / JA)',
+              'Đã kiểm tra cấu trúc gói ngôn ngữ + quét sâu Gate, 6 Tab, mọi <option>, <details> thu gọn, Mod 42, ĐăngLovePDF & Mod 51 — 0 chữ tiếng Việt bị sót.',
               'mod30_master_bootloader_and_integrity_guard.js',
               'visual'
             );

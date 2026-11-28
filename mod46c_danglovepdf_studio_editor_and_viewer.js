@@ -1243,9 +1243,9 @@
           }
         } catch (_eOut) {}
 
-        if (thumbsList) {
+        if (thumbsList && pdfDoc && !isClosed) {
           thumbsList.innerHTML = '';
-          const limit = Math.min(pdfDoc.numPages, 50);
+          const limit = Math.min(pdfDoc?.numPages || 0, 50);
           for (let i = 1; i <= limit; i++) {
             if (isClosed || !pdfDoc || !pv.isConnected) break;
             try {
@@ -1393,7 +1393,7 @@
                   <option value="auto" selected>🎯 Tự khớp font gốc (Ưu tiên)</option>
                   <option value='"Times New Roman", Georgia, serif'>Times New Roman</option>
                   <option value='Arial, Helvetica, sans-serif'>Arial / Helvetica</option>
-                  <option value='"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif'>Segoe UI / Hiện đại</option>
+                  <option value='"Be Vietnam Pro", "Noto Sans SC", "Noto Sans TC", "Noto Sans JP", "Noto Sans KR", system-ui, sans-serif'>Be Vietnam Pro / Hiện đại</option>
                   <option value='Georgia, "Times New Roman", serif'>Georgia (Sách)</option>
                   <option value='Tahoma, Verdana, sans-serif'>Tahoma / Verdana</option>
                   <option value='"Courier New", Consolas, monospace'>Courier New (Mã số)</option>

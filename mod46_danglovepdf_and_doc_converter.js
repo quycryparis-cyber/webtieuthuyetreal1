@@ -2116,8 +2116,13 @@
           attachFileBlob: f0?.file || (f0?.bytes ? new Blob([f0.bytes]) : null),
           applyBtnLabel: '✅ Đóng gói kết quả & Xuất file ngay',
           onApplyPasted: async (pastedText) => {
-            const parsedStruct = gBridge?.parseStructuredOcrIcrReply ? gBridge.parseStructuredOcrIcrReply(pastedText, taskKey) : null;
-            const cleanOut = String(parsedStruct?.isStructuredJson ? parsedStruct.fullText : (pastedText || '')).trim();
+            const auditCommentMatch = String(pastedText || '').match(/<!--\s*AUDIT_FIXES:\s*([\s\S]*?)-->/i);
+            const strippedInput = String(pastedText || '').replace(/<!--\s*AUDIT_FIXES:[\s\S]*?-->\s*/gi, '').trim();
+            const parsedStruct = gBridge?.parseStructuredOcrIcrReply ? gBridge.parseStructuredOcrIcrReply(strippedInput, taskKey) : null;
+            if (auditCommentMatch?.[1]?.trim()) {
+              this.toast(`🔍 Gemini đã soi & sửa lỗi quét thô: ${auditCommentMatch[1].trim().slice(0, 140)}`, 'success', 4800);
+            }
+            const cleanOut = String(parsedStruct?.isStructuredJson ? parsedStruct.fullText : strippedInput).trim();
             const outs = [];
             if (outKind === 'xlsx' || outKind === 'csv') {
               const XLSX = await ensureXlsx();
@@ -2173,20 +2178,22 @@
         });
       };
 
-      body.querySelector('#btn-pro-manual-ai-icr')?.addEventListener('click', () => {
+      body.querySelector('#btn-pro-manual-ai-icr')?.addEventListener('click', async () => {
         const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
         const mode = body.querySelector('#opt-pro-icr-mode')?.value || 'handwriting_general';
         const out = body.querySelector('#opt-pro-icr-out')?.value || 'docx';
         const f0 = this.files[0];
-        const promptTxt = gBridge?.buildTaskManualPrompt?.('icr_handwriting', { fileName: f0?.name || 'VietTay.jpg', icrMode: mode }) || '';
+        const rawSample = /\.pdf$/i.test(f0?.name || '') ? await extractQuickPdfSampleText(6).catch(() => '') : '';
+        const promptTxt = gBridge?.buildTaskManualPrompt?.('icr_handwriting', { fileName: f0?.name || 'VietTay.jpg', icrMode: mode, text: rawSample }) || '';
         openManualToolPackageOutput('icr_handwriting', `ICR Chữ Viết Tay (${mode}) — AI Thủ công 0-Token`, f0, promptTxt, out);
       });
-      body.querySelector('#btn-pro-manual-ai-ocr')?.addEventListener('click', () => {
+      body.querySelector('#btn-pro-manual-ai-ocr')?.addEventListener('click', async () => {
         const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
         const out = body.querySelector('#opt-ocr-out-fmt')?.value === 'md' ? 'md' : (body.querySelector('#opt-ocr-out-fmt')?.value === 'txt' ? 'txt' : 'docx');
         const f0 = this.files[0];
-        const promptTxt = gBridge?.buildTaskManualPrompt?.('ocr_fast', { fileName: f0?.name || 'Scan.pdf' }) || '';
-        openManualToolPackageOutput('ocr_fast', 'OCR Nhận Diện Chữ — AI Thủ công 0-Token', f0, promptTxt, out);
+        const rawSample = /\.pdf$/i.test(f0?.name || '') ? await extractQuickPdfSampleText(8).catch(() => '') : '';
+        const promptTxt = gBridge?.buildTaskManualPrompt?.('ocr_fast', { fileName: f0?.name || 'Scan.pdf', text: rawSample }) || '';
+        openManualToolPackageOutput('ocr_fast', 'OCR Nhận Diện & Sửa Lỗi — AI Thủ công 0-Token', f0, promptTxt, out);
       });
 
       // Nút ⚡ Chạy OCR Siêu Tốc bằng AI (Gemini 3.8 Flash + Tiền nhận diện ảnh + response_schema JSON) nằm DƯỚI nút Chạy OCR 5 bước ngay
@@ -2459,19 +2466,21 @@
         }
       });
 
-      body.querySelector('#btn-pro-manual-ai-p2d')?.addEventListener('click', () => {
+      body.querySelector('#btn-pro-manual-ai-p2d')?.addEventListener('click', async () => {
         const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
         const out = body.querySelector('#opt-p2d-out')?.value || 'docx';
         const f0 = this.files[0];
-        const promptTxt = gBridge?.buildTaskManualPrompt?.('pdf_to_docx', { fileName: f0?.name || 'TaiLieu.pdf' }) || '';
-        openManualToolPackageOutput('pdf_to_docx', 'PDF → Word / Markdown — AI Thủ công 0-Token', f0, promptTxt, out === 'json' ? 'txt' : out);
+        const rawSample = await extractQuickPdfSampleText(10).catch(() => '');
+        const promptTxt = gBridge?.buildTaskManualPrompt?.('pdf_to_docx', { fileName: f0?.name || 'TaiLieu.pdf', text: rawSample }) || '';
+        openManualToolPackageOutput('pdf_to_docx', 'PDF → Word / Markdown (Soi & Sửa lỗi quét thô) — AI Thủ công', f0, promptTxt, out === 'json' ? 'txt' : out);
       });
-      body.querySelector('#btn-pro-manual-ai-p2x')?.addEventListener('click', () => {
+      body.querySelector('#btn-pro-manual-ai-p2x')?.addEventListener('click', async () => {
         const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
         const out = body.querySelector('#opt-pro-p2x-out')?.value || 'xlsx';
         const f0 = this.files[0];
-        const promptTxt = gBridge?.buildTaskManualPrompt?.('pdf_to_excel', { fileName: f0?.name || 'BangDuLieu.pdf' }) || '';
-        openManualToolPackageOutput('pdf_to_excel', 'PDF → Excel / CSV — AI Thủ công 0-Token', f0, promptTxt, out);
+        const rawSample = await extractQuickPdfSampleText(10).catch(() => '');
+        const promptTxt = gBridge?.buildTaskManualPrompt?.('pdf_to_excel', { fileName: f0?.name || 'BangDuLieu.pdf', text: rawSample }) || '';
+        openManualToolPackageOutput('pdf_to_excel', 'PDF → Excel / CSV (Soi & Sửa lệch bảng) — AI Thủ công', f0, promptTxt, out);
       });
       body.querySelector('#btn-pro-manual-ai-toc')?.addEventListener('click', async () => {
         const gBridge = global.NoirGeminiBridge || NS.geminiBridge;
@@ -3929,7 +3938,10 @@
                   const truncNote = merged.parseMeta?.truncated
                     ? ` ⚠️ (JSON bị cắt cụt sau trang ${merged.parseMeta.lastCompletedPage || '?'} — đã khôi phục phần hoàn chỉnh!)`
                     : '';
-                  this.toast(`✅ Hợp nhất 3 Tầng xong (${st.headingsApplied || 0} tiêu đề, xóa ${st.orphanTailsRemoved || 0} đuôi mồ côi/${st.droppedBlocks || 0} rác, ${st.tablesCaptioned || 0} bảng, nối ${st.tablesStitched || 0} bảng vắt trang, ${st.formulasFixed || 0} công thức)!${truncNote}`, merged.parseMeta?.truncated ? 'warning' : 'success', 5200);
+                  const patchNote = (st.textPatched || st.tableCellsFixed)
+                    ? `, vá ${st.textPatched || 0} lỗi chữ/dấu & ${st.tableCellsFixed || 0} ô bảng quét thô`
+                    : '';
+                  this.toast(`✅ Hợp nhất & Sửa lỗi xong (${st.headingsApplied || 0} tiêu đề, xóa ${st.orphanTailsRemoved || 0} đuôi mồ côi/${st.droppedBlocks || 0} rác, ${st.tablesCaptioned || 0} bảng, nối ${st.tablesStitched || 0} bảng vắt trang, ${st.formulasFixed || 0} công thức${patchNote})!${truncNote}`, merged.parseMeta?.truncated ? 'warning' : 'success', 5600);
                   return;
                 }
               }
@@ -3999,8 +4011,13 @@
                   errOv?.showError?.('⚠️ Không thể đọc tự động qua API', String(err?.message || err), {
                     onRetry: () => execVision(),
                     manualFallback: {
-                      taskTitle: 'Định Vị Cấu Trúc 10 Theme — Dán JSON/Markdown từ Gemini Web',
-                      promptText: geminiBridge.buildTaskManualPrompt('theme10_beautify', { fileName: primaryFile?.name || 'Tai_lieu.pdf' }),
+                      taskTitle: 'Định Vị & Sửa Lỗi Quét Thô 10 Theme — Dán JSON/Markdown từ Gemini Web',
+                      promptText: (() => {
+                        const skelFb = typeof geminiBridge.buildCompactSkeletonForAi === 'function' && this.theme10OverrideBlocks?.length
+                          ? geminiBridge.buildCompactSkeletonForAi(this.theme10OverrideBlocks, { confidenceMatrix: cm }).skeletonText
+                          : '';
+                        return geminiBridge.buildTaskManualPrompt('theme10_beautify', { fileName: primaryFile?.name || 'Tai_lieu.pdf', text: skelFb });
+                      })(),
                       attachFileName: primaryFile?.name || '',
                       attachFileBlob: primaryFile?.file || (primaryFile?.bytes ? new Blob([primaryFile.bytes]) : null),
                       applyBtnLabel: '✅ Khớp Bản Đồ AI vào 100% Văn Bản Gốc',

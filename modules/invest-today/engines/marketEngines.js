@@ -510,7 +510,115 @@
     };
   }
 
-  // Lấy tin rao thực tế Chợ Tốt Nhà Đất (chạy trực tiếp trên Electron/Worker) + tiện ích hạ tầng quanh tọa độ GPS (OpenStreetMap Overpass CORS=*)
+  // ==========================================================================
+  // BỘ ĐỌC NỘI DUNG BÀI BÁO THẬT (ELECTRON DIRECT -> JINA READ MODE CORS=*)
+  // Giúp lấy 550–900 ký tự thân bài & số liệu thật để Gemini đọc và trích dẫn!
+  // ==========================================================================
+  function cleanArticleBodyToExcerpt(rawText, maxChars = 780) {
+    const str = String(rawText || '').replace(/\r\n?/g, '\n');
+    if (!str.trim()) return '';
+    // Bỏ phần header metadata của r.jina.ai ("Title:", "URL Source:", "Markdown Content:")
+    const mdSplit = str.split(/Markdown Content:\s*\n/i);
+    const bodyRaw = mdSplit.length > 1 ? mdSplit.slice(1).join('\n') : str;
+    // Strip HTML tags nếu đọc trực tiếp HTML
+    const noHtml = bodyRaw
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+      .replace(/\[([^\]]{1,160})\]\([^)]+\)/g, '$1')
+      .replace(/^#+\s*/gm, '')
+      .replace(/[*_`~>]+/g, '');
+    const lines = noHtml
+      .split('\n')
+      .map((l) => l.replace(/\s+/g, ' ').trim())
+      .filter((l) => {
+        if (l.length < 48) return false;
+        if (/^(cookie|privacy|subscribe|sign in|log in|menu|navigation|share|facebook|twitter|zalo|quảng cáo|đăng nhập|đăng ký|xem thêm|tin liên quan|theo dõi|bản quyền|copyright|all rights reserved)/i.test(l)) return false;
+        if (/^https?:\/\//i.test(l)) return false;
+        return true;
+      });
+    const picked = [];
+    let total = 0;
+    for (const ln of lines) {
+      if (picked.includes(ln)) continue;
+      picked.push(ln);
+      total += ln.length + 1;
+      if (total >= maxChars || picked.length >= 5) break;
+    }
+    return picked.join(' ').slice(0, maxChars).trim();
+  }
+
+  async function fetchArticleBodyExcerpt(articleUrl, signal, opts = {}) {
+    const url = String(articleUrl || '').trim();
+    const maxChars = Number(opts.maxChars || 780);
+    const timeoutMs = Number(opts.timeoutMs || 5500);
+    if (!/^https?:\/\//i.test(url)) return '';
+    // Bỏ qua link Google News redirect opaque khó đọc trực tiếp khi không resolve, vẫn thử nếu có
+    if (/news\.google\.com\/rss\/articles\//i.test(url)) {
+      // r.jina.ai đôi khi resolve redirect Google News được, dùng timeout ngắn hơn
+    }
+    // Tầng 1: Electron Desktop trực tiếp (0 CORS)
+    if (globalScope.NoirDesktopLocalEngine?.fetchUrl) {
+      try {
+        const res = await globalScope.NoirDesktopLocalEngine.fetchUrl(url);
+        if (res?.ok && res.text) {
+          const ex = cleanArticleBodyToExcerpt(res.text, maxChars);
+          if (ex.length >= 120) return ex;
+        }
+      } catch (_eEl) {}
+    }
+    // Tầng 2: Jina Read Mode (`https://r.jina.ai/<url>` — CORS=* trả Markdown sạch của bài báo)
+    try {
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), timeoutMs);
+      const onAb = () => ctrl.abort();
+      if (signal) signal.addEventListener('abort', onAb, { once: true });
+      try {
+        const resp = await fetch(`https://r.jina.ai/${url}`, {
+          signal: ctrl.signal,
+          headers: { Accept: 'text/plain, text/markdown;q=0.9' },
+        });
+        if (resp.ok) {
+          const txt = await resp.text();
+          const ex = cleanArticleBodyToExcerpt(txt, maxChars);
+          if (ex.length >= 100) return ex;
+        }
+      } finally {
+        clearTimeout(tmr);
+        if (signal) signal.removeEventListener('abort', onAb);
+      }
+    } catch (_eJina) {}
+    return '';
+  }
+
+  // Rút trích các con số giá nhà đất / giá thuê / lãi suất vay thực tế từ bài báo đã đọc
+  function extractRealEstatePriceSignals(articles) {
+    const signals = [];
+    const seen = new Set();
+    const pricePattern = /((?:giá|bán|rao|trung bình|dao động|từ|khoảng|đạt|mức|thuê|lãi suất|đấu giá)[^.;!\n]{0,45}\b\d+(?:[.,]\d+)?(?:\s*[-–đến]\s*\d+(?:[.,]\d+)?)?\s*(?:triệu\s*đồng\/m2|triệu\/m2|triệu\/m²|tr\/m2|tr\/m²|tỷ\s*đồng\/căn|tỷ\/căn|tỷ\s*đồng|triệu\/tháng|%\s*\/\s*năm|%\/năm)[^.;!\n]{0,40})/gi;
+    for (const art of (Array.isArray(articles) ? articles : [])) {
+      const text = `${art.title || ''}. ${art.fullExcerpt || art.snippet || ''}`;
+      let m;
+      while ((m = pricePattern.exec(text)) !== null) {
+        const quote = m[1].replace(/\s+/g, ' ').trim();
+        const key = quote.toLowerCase().slice(0, 48);
+        if (quote.length >= 14 && !seen.has(key)) {
+          seen.add(key);
+          signals.push({
+            quote: quote.slice(0, 140),
+            source: art.source || 'Báo chí BĐS Live',
+            date: art.date || INV.utils.todayIso(),
+            url: art.url || '',
+          });
+          if (signals.length >= 8) return signals;
+        }
+      }
+    }
+    return signals;
+  }
+
+  // Lấy tin rao thực tế Chợ Tốt Nhà Đất + Quét 5 luồng báo chí BĐS & Đọc thân bài (chạy cả Web lẫn Electron!)
   async function enrichRealEstateLiveMetrics(baseObj, signal) {
     const liveAds = [];
     let medianPpm2 = NaN;
@@ -519,10 +627,11 @@
     let avgRentMo = NaN;
 
     const shortArea = String(baseObj.areaLabel || '').replace(/Thành phố\s+|Đường\s+|Phường\s+/gi, '').split(',').slice(-2).join(' ').trim();
-    if (shortArea) {
+    const chototPromise = (async () => {
+      if (!shortArea) return;
       try {
         const chototUrl = `https://gateway.chotot.com/v1/public/ad-listing?cg=1000&limit=12&q=${encodeURIComponent(shortArea)}`;
-        const res = await INV.networkAdapter.fetchJson(chototUrl, { signal, timeoutMs: 7000 });
+        const res = await INV.networkAdapter.fetchJson(chototUrl, { signal, timeoutMs: 6500 });
         const ads = Array.isArray(res?.data?.ads) ? res.data.ads : [];
         const salePpm2 = [];
         const rents = [];
@@ -552,11 +661,17 @@
           avgRentMo = rents.reduce((s, x) => s + x, 0) / rents.length;
         }
       } catch (_eCt) {}
-    }
+    })();
+
+    const newsPromise = fetchRealEstate5StreamNews(baseObj.areaLabel || shortArea || 'Việt Nam', signal).catch(() => []);
+    const [, rssNews] = await Promise.all([chototPromise, newsPromise]);
+    const livePriceSignals = extractRealEstatePriceSignals(rssNews);
 
     return {
       ...baseObj,
       liveAds,
+      rssNews: Array.isArray(rssNews) ? rssNews : [],
+      livePriceSignals,
       liveStats: Number.isFinite(medianPpm2)
         ? { minPpm2, medianPpm2, maxPpm2, avgRentMo, sampleCount: liveAds.length }
         : null,
@@ -1169,11 +1284,48 @@
     const canBypassCors = Boolean(
       INV.networkAdapter.hasElectronBridge?.() || INV.storageAdapter.getPrefs()?.proxyUrl
     );
-    if (!canBypassCors) return [];
+    const stripSimple = (s) =>
+      String(s || '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;|&apos;/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+
     const settled = await Promise.allSettled(
       streams.map(async (st) => {
-        const res = await INV.networkAdapter.fetchText(st.url, { signal, timeoutMs: 7000 });
-        return parseRssXmlVerbatim(res?.text || '', st.category);
+        if (canBypassCors) {
+          try {
+            const res = await INV.networkAdapter.fetchText(st.url, { signal, timeoutMs: 7000 });
+            const parsed = parseRssXmlVerbatim(res?.text || '', st.category);
+            if (parsed.length) return parsed;
+          } catch (_eDir) {}
+        }
+        // Chạy 100% trên trình duyệt Web tĩnh qua rss2json (CORS=*)!
+        const r2jUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(st.url)}`;
+        const jRes = await INV.networkAdapter.fetchJson(r2jUrl, { signal, timeoutMs: 7000, preferDirect: true });
+        const items = Array.isArray(jRes?.data?.items) ? jRes.data.items : [];
+        return items.slice(0, 4).map((it, idx) => {
+          const title = stripSimple(it.title || '');
+          const link = String(it.link || it.guid || '').trim();
+          const rawPub = String(it.pubDate || '').trim();
+          const ts = rawPub ? Date.parse(rawPub.replace(' ', 'T') + (rawPub.includes('Z') || rawPub.includes('+') ? '' : 'Z')) : NaN;
+          const isoDate = Number.isFinite(ts) ? new Date(ts).toISOString().slice(0, 10) : INV.utils.todayIso();
+          return title && /^https?:\/\//i.test(link)
+            ? {
+                id: `r2j_${st.category}_${idx}_${title.slice(0, 12)}`,
+                category: st.category,
+                title,
+                snippet: stripSimple(it.description || it.content || '').slice(0, 260),
+                source: st.sourceLabel || jRes?.data?.feed?.title || 'Báo chí BĐS Live',
+                url: link,
+                imageUrl: /^https?:\/\//i.test(String(it.thumbnail || it.enclosure?.link || '')) ? (it.thumbnail || it.enclosure.link) : '',
+                date: isoDate,
+                selected_for_prompt: true,
+              }
+            : null;
+        }).filter(Boolean);
       })
     );
     const seen = new Set();
@@ -1192,16 +1344,30 @@
   }
 
   async function fetchRealEstate5StreamNews(areaLabel, signal) {
-    const qArea = String(areaLabel || 'Việt Nam').trim();
+    const qArea = String(areaLabel || 'Việt Nam').replace(/Thành phố\s+|Tỉnh\s+/gi, '').split(',').slice(-2).join(' ').trim() || 'Việt Nam';
     const mkGNews = (q) => `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=vi&gl=VN&ceid=VN:vi`;
     const streams = [
-      { category: 'quy_hoach', url: mkGNews(`"${qArea}" ("quy hoạch" OR "sử dụng đất" OR "phân khu")`) },
-      { category: 'ha_tang', url: mkGNews(`"${qArea}" ("hạ tầng" OR "đầu tư công" OR "giải phóng mặt bằng" OR "khởi công")`) },
-      { category: 'dau_gia', url: mkGNews(`"${qArea}" ("đấu giá đất" OR "bảng giá đất" OR "tách thửa")`) },
-      { category: 'thi_truong', url: mkGNews(`"${qArea}" ("bất động sản" OR "nhà đất" OR "cắt lỗ" OR "chung cư")`) },
-      { category: 'kinh_te_fdi', url: mkGNews(`"${qArea}" ("GRDP" OR "FDI" OR "khu công nghiệp" OR "ngập lụt")`) },
+      { category: 'gia_nha_dat', sourceLabel: `Giá Nhà Đất & Căn Hộ ${qArea} (Live)`, url: mkGNews(`"${qArea}" ("giá nhà đất" OR "giá chung cư" OR "triệu/m2" OR "giá thuê nhà") when:30d`) },
+      { category: 'bang_gia_dau_gia', sourceLabel: `Bảng Giá Đất & Đấu Giá ${qArea} (Live)`, url: mkGNews(`"${qArea}" ("đấu giá đất" OR "bảng giá đất" OR "tách thửa" OR "lãi suất vay mua nhà") when:30d`) },
+      { category: 'quy_hoach', sourceLabel: `Quy Hoạch & Hạ Tầng ${qArea} (Live)`, url: mkGNews(`"${qArea}" ("quy hoạch" OR "hạ tầng" OR "đầu tư công" OR "khởi công") when:30d`) },
+      { category: 'thi_truong', sourceLabel: 'VnExpress Bất Động Sản (Chính thống · Live)', url: 'https://vnexpress.net/rss/bat-dong-san.rss' },
+      { category: 'kinh_te_fdi', sourceLabel: `Kinh tế & FDI ${qArea} (Live)`, url: mkGNews(`"${qArea}" ("GRDP" OR "FDI" OR "khu công nghiệp" OR "bất động sản") when:30d`) },
     ];
-    return fetchVerbatimRssStreams(streams, signal);
+    const items = await fetchVerbatimRssStreams(streams, signal);
+    // Đọc thân bài thật cho tối đa 4 bài BĐS ưu tiên (VnExpress/báo trực tiếp trước để r.jina.ai đọc siêu chuẩn!)
+    const readableCandidates = items
+      .filter((it) => /^https?:\/\//i.test(it.url) && !/news\.google\.com\/rss\/articles/i.test(it.url))
+      .slice(0, 4);
+    await Promise.allSettled(
+      readableCandidates.map(async (art) => {
+        const ex = await fetchArticleBodyExcerpt(art.url, signal, { maxChars: 750, timeoutMs: 5000 });
+        if (ex && ex.length >= 100) {
+          art.fullExcerpt = ex;
+          art.articleReadOk = true;
+        }
+      })
+    );
+    return items;
   }
 
   async function checkSourcesHealth(signal) {
@@ -1264,6 +1430,9 @@
   INV.intelHelpers = {
     parseRssXmlVerbatim,
     fetchVerbatimRssStreams,
+    fetchArticleBodyExcerpt,
+    cleanArticleBodyToExcerpt,
+    extractRealEstatePriceSignals,
     checkSourcesHealth,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

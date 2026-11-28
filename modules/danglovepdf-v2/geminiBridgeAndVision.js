@@ -208,6 +208,50 @@
             required: ['page', 'rawText', 'normalizedUnicode'],
           },
         },
+        text_patches: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              page: { type: 'INTEGER' },
+              block_id: { type: 'STRING' },
+              error_type: { type: 'STRING' },
+              wrong_raw: { type: 'STRING' },
+              fixed_text: { type: 'STRING' },
+              reason: { type: 'STRING' },
+            },
+            required: ['fixed_text'],
+          },
+        },
+        table_cell_fixes: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              table_id: { type: 'STRING' },
+              page: { type: 'INTEGER' },
+              row_index: { type: 'INTEGER' },
+              col_index: { type: 'INTEGER' },
+              wrong_raw: { type: 'STRING' },
+              fixed_value: { type: 'STRING' },
+            },
+            required: ['fixed_value'],
+          },
+        },
+        scan_audit_fixes: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              page: { type: 'INTEGER' },
+              block_id: { type: 'STRING' },
+              error_type: { type: 'STRING' },
+              wrong_raw: { type: 'STRING' },
+              fixed_text: { type: 'STRING' },
+              reason: { type: 'STRING' },
+            },
+          },
+        },
         drop_blocks: { type: 'ARRAY', items: { type: 'STRING' } },
       },
       required: ['headings', 'tables', 'figures', 'formulas'],
@@ -1847,7 +1891,7 @@
         applied: false,
         blocks,
         parseMeta,
-        stats: { headingsApplied: 0, orphanTailsRemoved: 0, droppedBlocks: 0, tablesCaptioned: 0, tablesStitched: 0, figuresCaptioned: 0, formulasFixed: 0, symbolsFixed: 0 },
+        stats: { headingsApplied: 0, orphanTailsRemoved: 0, droppedBlocks: 0, tablesCaptioned: 0, tablesStitched: 0, figuresCaptioned: 0, formulasFixed: 0, symbolsFixed: 0, textPatched: 0, tableCellsFixed: 0, auditFixesCount: 0, auditNotes: [] },
       };
     }
 
@@ -1860,6 +1904,10 @@
       figuresCaptioned: 0,
       formulasFixed: 0,
       symbolsFixed: 0,
+      textPatched: 0,
+      tableCellsFixed: 0,
+      auditFixesCount: 0,
+      auditNotes: [],
     };
     const consumedIndices = new Set();
 
@@ -2169,6 +2217,125 @@
           blocks[i].text = b.text.split(raw).join(uni);
           stats.symbolsFixed += 1;
         }
+      }
+    }
+
+    // 6. TẦNG HẬU KIỂM & VÁ LỖI QUÉT THÔ (text_patches + scan_audit_fixes + table_cell_fixes)
+    // Khi Gemini đối chiếu tệp gốc với bản Code quét thô và phát hiện sai dấu/vỡ chữ/lệch số liệu/lệch ô bảng,
+    // Code sẽ áp dụng trực tiếp từng bản vá vào đúng block_id hoặc chuỗi bị sai mà KHÔNG làm mất cấu trúc!
+    const combinedPatches = [
+      ...(Array.isArray(bp.text_patches) ? bp.text_patches : []),
+      ...(Array.isArray(bp.scan_audit_fixes) ? bp.scan_audit_fixes : []),
+    ];
+    const seenPatchKey = new Set();
+    for (const pt of combinedPatches) {
+      if (!pt || typeof pt !== 'object') continue;
+      const bidKey = String(pt.block_id || pt.blockId || '').trim().toUpperCase();
+      const wrongRaw = String(pt.wrong_raw || pt.wrong_snippet || pt.raw || '').trim();
+      const fixedTxt = String(pt.fixed_text || pt.fixed || '').trim();
+      const targetPg = Number(pt.page) || 0;
+      const reason = String(pt.reason || pt.error_type || '').trim();
+      if (!fixedTxt || (wrongRaw && wrongRaw === fixedTxt)) continue;
+
+      const dedupKey = `${bidKey}|${wrongRaw.slice(0, 40)}|${fixedTxt.slice(0, 40)}`;
+      if (seenPatchKey.has(dedupKey)) continue;
+      seenPatchKey.add(dedupKey);
+
+      let appliedHere = false;
+      // Ưu tiên 1: Khớp đích danh Block-ID (Pxx_Byy)
+      if (bidKey && idToIdx.has(bidKey)) {
+        const idx = idToIdx.get(bidKey);
+        if (!consumedIndices.has(idx) && blocks[idx] && typeof blocks[idx].text === 'string') {
+          if (wrongRaw && blocks[idx].text.includes(wrongRaw)) {
+            blocks[idx].text = blocks[idx].text.split(wrongRaw).join(fixedTxt);
+            appliedHere = true;
+          } else if (!wrongRaw || fixedTxt.length >= Math.max(8, blocks[idx].text.length * 0.45)) {
+            blocks[idx].text = fixedTxt;
+            appliedHere = true;
+          }
+          if (appliedHere) blocks[idx].aiAudited = true;
+        }
+      }
+
+      // Ưu tiên 2: Quét tìm chuỗi `wrong_raw` bị lỗi trong các block cùng trang (±1) hoặc toàn tài liệu
+      if (!appliedHere && wrongRaw && wrongRaw.length >= 3) {
+        for (let pass = 0; pass < 2 && !appliedHere; pass++) {
+          for (let i = 0; i < blocks.length; i++) {
+            if (consumedIndices.has(i)) continue;
+            const b = blocks[i];
+            if (!b) continue;
+            if (pass === 0 && targetPg && b.pageNo && Math.abs(Number(b.pageNo) - targetPg) > 1) continue;
+            if (typeof b.text === 'string' && b.text.includes(wrongRaw)) {
+              blocks[i].text = b.text.split(wrongRaw).join(fixedTxt);
+              blocks[i].aiAudited = true;
+              appliedHere = true;
+              break;
+            }
+            if (b.type === 'table' && Array.isArray(b.rows)) {
+              let tableHit = false;
+              for (let r = 0; r < b.rows.length; r++) {
+                if (!Array.isArray(b.rows[r])) continue;
+                for (let c = 0; c < b.rows[r].length; c++) {
+                  const cellVal = String(b.rows[r][c] || '');
+                  if (cellVal.includes(wrongRaw)) {
+                    b.rows[r][c] = cellVal.split(wrongRaw).join(fixedTxt);
+                    tableHit = true;
+                    stats.tableCellsFixed += 1;
+                  }
+                }
+              }
+              if (tableHit) {
+                appliedHere = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      if (appliedHere) {
+        stats.textPatched += 1;
+        stats.auditFixesCount += 1;
+        if (stats.auditNotes.length < 15) {
+          stats.auditNotes.push(`${bidKey ? `[${bidKey}] ` : (targetPg ? `[Tr.${targetPg}] ` : '')}${reason ? `${reason}: ` : ''}${wrongRaw ? `"${wrongRaw.slice(0, 32)}" → ` : ''}"${fixedTxt.slice(0, 42)}"`);
+        }
+      }
+    }
+
+    // 6B. Vá trực tiếp từng ô bảng bị Code tách/gộp nhầm (`table_cell_fixes[]`)
+    const cellFixes = Array.isArray(bp.table_cell_fixes) ? bp.table_cell_fixes : [];
+    const tableBlocks = blocks.filter((b, i) => !consumedIndices.has(i) && b?.type === 'table' && Array.isArray(b.rows));
+    for (const cf of cellFixes) {
+      if (!cf || typeof cf !== 'object') continue;
+      const fixedVal = String(cf.fixed_value ?? cf.fixed_text ?? '').trim();
+      const wrongVal = String(cf.wrong_raw ?? '').trim();
+      if (!fixedVal && !wrongVal) continue;
+      const targetPg = Number(cf.page) || 0;
+      const rIdx = Number.isInteger(Number(cf.row_index)) ? Number(cf.row_index) : -1;
+      const cIdx = Number.isInteger(Number(cf.col_index)) ? Number(cf.col_index) : -1;
+      let patched = false;
+      for (const tb of tableBlocks) {
+        if (targetPg && tb.pageNo && Math.abs(Number(tb.pageNo) - targetPg) > 1) continue;
+        if (rIdx >= 0 && cIdx >= 0 && tb.rows[rIdx] && cIdx < tb.rows[rIdx].length) {
+          tb.rows[rIdx][cIdx] = fixedVal;
+          patched = true;
+          break;
+        }
+        if (wrongVal) {
+          for (let r = 0; r < tb.rows.length; r++) {
+            for (let c = 0; c < (tb.rows[r]?.length || 0); c++) {
+              if (String(tb.rows[r][c] || '').includes(wrongVal)) {
+                tb.rows[r][c] = String(tb.rows[r][c]).split(wrongVal).join(fixedVal);
+                patched = true;
+              }
+            }
+          }
+          if (patched) break;
+        }
+      }
+      if (patched) {
+        stats.tableCellsFixed += 1;
+        stats.auditFixesCount += 1;
       }
     }
 
@@ -2666,29 +2833,47 @@
    */
   function buildTaskManualPrompt(taskId, ctx = {}) {
     const fileName = ctx.fileName || 'Tai_lieu';
-    const rawText = String(ctx.text || '').trim();
+    const rawText = String(ctx.text || ctx.rawScanText || '').trim();
+    const AUDIT_HEADER = [
+      '🔍 GIAO THỨC PHỐI HỢP 2 TẦNG (CODE QUÉT THÔ + GEMINI KIỂM ĐỊNH & SỬA LỖI):',
+      '1. Phần mềm trên máy chỉ chạy thuật toán QUÉT THÔ (Raw Code Scan), nên rất dễ mắc các lỗi: vỡ dấu tiếng Việt, dính chữ/tách từ sai, rớt đuôi tiêu đề sang dòng dưới, gộp/tách sai cột bảng, nhận nhầm số liệu/ký hiệu toán học, hoặc sót nội dung từ trang scan/ảnh.',
+      '2. NHIỆM VỤ BẮT BUỘC CỦA BẠN (GEMINI): KHÔNG ĐƯỢC chỉ lặp lại máy móc bản quét thô! Bạn PHẢI ĐỌC TRỰC TIẾP TỆP GỐC TÔI ĐÍNH KÈM, ĐỐI CHIẾU TỪNG TRANG VỚI BẢN QUÉT THÔ CỦA CODE BÊN DƯỚI để TỰ PHÁT HIỆN, CHỈ RÕ VÀ SỬA TRIỆT ĐỂ MỌI SAI SÓT CỦA CODE!',
+    ].join('\n');
+
     switch (taskId) {
       case 'theme10_beautify':
         return [
-          'BẠN LÀ BỘ ĐỊNH VỊ CẤU TRÚC TÀI LIỆU (AI-LOCATOR · PDF MAGIC V1) PHỐI HỢP VỚI CODE CỦA ĐĂNGLOVEPDF.',
-          '⚠️ QUY TẮC SỐNG CÒN: TUYỆT ĐỐI KHÔNG viết lại toàn bộ văn bản từ A đến Z! Code đã trích xuất nguyên vẹn 100% văn xuôi và gắn mã định danh khối `[Pxx_Byy]` cho từng dòng.',
-          'Bạn CHỈ trả về ĐÚNG 1 đối tượng JSON chuẩn (`pdf_magic_v1`) chứa chỉ mục định vị chính xác theo mã khối `Pxx_Byy` để Bộ Hợp Nhất 3 Tầng của Code dựng PDF không vỡ:',
+          'BẠN LÀ CHUYÊN GIA KIỂM ĐỊNH & HIỆU ĐÍNH CẤU TRÚC TÀI LIỆU (AI AUDITOR + LOCATOR · PDF MAGIC V1) PHỐI HỢP VỚI CODE CỦA ĐĂNGLOVEPDF.',
+          AUDIT_HEADER,
           '',
-          `TỆP ĐÍNH KÈM: "${fileName}".`,
-          'HÃY TRẢ VỀ ĐÚNG 1 KHỐI JSON THEO SCHEMA SAU (KHÔNG thêm văn bản giải thích ngoài JSON):',
+          `TỆP GỐC ĐÍNH KÈM: "${fileName}".`,
+          'QUY TRÌNH BẮT BUỘC 2 BƯỚC:',
+          '• BƯỚC A (SOI LỖI QUÉT THÔ): Đọc kỹ tệp gốc tôi gửi kèm, so sánh đối chiếu với [BẢN QUÉT THÔ KÈM MÃ KHỐI Pxx_Byy] bên dưới để phát hiện TẤT CẢ lỗi mà Code quét sai: (1) tiêu đề bị cắt rớt 1 dòng đuôi sang khối kế tiếp, (2) bảng bị tách dòng tiêu đề hoặc lệch cột/sai số liệu ô, (3) chữ bị mất dấu tiếng Việt/dính từ/vỡ font ký tự đặc biệt, (4) công thức toán học/tài chính bị bẹp mất phân số/chỉ số, (5) header/footer/số trang/dòng mục lục chấm `.....55` bị lọt vào nội dung.',
+          '• BƯỚC B (TRẢ BẢN VÁ JSON CHUẨN `pdf_magic_v1`): Để Code giữ 100% các đoạn văn xuôi đúng và TỰ ĐỘNG VÁ CHÍNH XÁC mọi chỗ Code quét sai (qua `headings`, `tables`, `text_patches`, `table_cell_fixes`, `formulas`, `specialSymbols`, `drop_blocks`, `scan_audit_fixes`).',
+          '',
+          'HÃY TRẢ VỀ ĐÚNG 1 KHỐI JSON THEO SCHEMA SAU (Code sẽ tự đọc & vá trực tiếp vào tài liệu, không bị mất chữ):',
           '```json',
           '{',
           '  "schema_version": "pdf_magic_v1",',
-          '  "document_meta": { "title": "Tên tài liệu chính", "subtitle": "Phụ đề/Tổ chức (nếu có)", "language": "vi", "has_toc_pages": [2] },',
+          '  "document_meta": { "title": "Tên tài liệu chính chuẩn xác từ file gốc", "subtitle": "Phụ đề/Tổ chức (nếu có)", "language": "vi", "has_toc_pages": [2] },',
+          '  "scan_audit_fixes": [',
+          '    { "page": 3, "block_id": "P03_B05", "error_type": "vo_dau_tieng_viet|cat_duoi_tieu_de|lech_bang|sai_so_lieu|vo_cong_thuc", "wrong_raw": "đoạn chữ Code quét sai", "fixed_text": "đoạn chữ đúng 100% theo tệp gốc", "reason": "Giải thích ngắn lỗi Code đã quét sai" }',
+          '  ],',
+          '  "text_patches": [',
+          '    { "page": 3, "block_id": "P03_B05", "wrong_raw": "chuỗi sai trong bản quét thô", "fixed_text": "chuỗi đúng sau khi đối chiếu tệp gốc", "reason": "Sửa lỗi dính chữ / sai số / mất dấu" }',
+          '  ],',
+          '  "table_cell_fixes": [',
+          '    { "table_id": "T1", "page": 5, "row_index": 0, "col_index": 1, "wrong_raw": "tên cột bị cắt nửa", "fixed_value": "Tên cột đầy đủ chuẩn theo tệp gốc" }',
+          '  ],',
           '  "headings": [',
           '    { "page": 1, "level": 1, "block_ids": ["P01_B01"], "anchor_text": "6-10 từ đầu gốc", "clean_title": "CHƯƠNG 1. ..." },',
-          '    { "page": 4, "level": 2, "block_ids": ["P04_B02", "P04_B03"], "anchor_text": "2.1 Phân tích...", "clean_title": "2.1. Phân tích đa chiều (gộp đủ 2 dòng bị gãy thành 1 tiêu đề sạch)" }',
+          '    { "page": 4, "level": 2, "block_ids": ["P04_B02", "P04_B03"], "anchor_text": "2.1 Phân tích...", "clean_title": "2.1. Phân tích đa chiều (gộp đủ các dòng bị gãy & sửa sạch dấu)" }',
           '  ],',
           '  "tables": [',
-          '    { "table_id": "T1", "page": 5, "caption_block": "P05_B04", "caption": "Bảng 1: Tên bảng (tự đặt chuẩn khoa học nếu gốc chưa có)", "start_block": "P05_B05", "header_rows": 1, "continued_from_prev": false, "headers": ["Cột 1", "Cột 2"] }',
+          '    { "table_id": "T1", "page": 5, "caption_block": "P05_B04", "caption": "Bảng 1: Tên bảng chuẩn", "start_block": "P05_B05", "header_rows": 1, "continued_from_prev": false, "headers": ["Cột 1", "Cột 2"], "matrix": [["Hàng 1 Cột 1", "Hàng 1 Cột 2"]] }',
           '  ],',
           '  "figures": [',
-          '    { "page": 6, "block_id": "P06_B03", "caption": "Hình 1: Tên hình/biểu đồ (tự đặt nếu chưa có)", "nearAnchor": "đoạn ngay sát hình" }',
+          '    { "page": 6, "block_id": "P06_B03", "caption": "Hình 1: Tên hình/biểu đồ chính xác", "nearAnchor": "đoạn ngay sát hình" }',
           '  ],',
           '  "formulas": [',
           '    { "page": 4, "block_id": "P04_B08", "mode": "display", "anchor_text": "chuỗi công thức thô bị vỡ", "latex": "WACC = \\\\frac{E}{V} R_e + \\\\frac{D}{V} R_d (1 - T_c)" }',
@@ -2699,25 +2884,32 @@
           '  "drop_blocks": ["P02_B01", "P03_B19"]',
           '}',
           '```',
-          '- Quy tắc bắt buộc:',
+          '- QUY TẮC KIỂM ĐỊNH BẮT BUỘC:',
           '  1. Nếu 1 tiêu đề bị gãy thành 2-3 khối liên tiếp (VD `P04_B02` + `P04_B03`), liệt kê TẤT CẢ vào `block_ids[]` và ghi tên đầy đủ vào `clean_title` để Code tự gộp & xóa sạch dòng đuôi mồ côi!',
-          '  2. Nếu 1 bảng kéo dài sang trang sau, đánh `"continued_from_prev": true` ở mảnh trang sau để Code nối liền 1 bảng duy nhất.',
-          '  3. Đưa mã khối rác (số trang cũ, watermark, dòng mục lục chấm `.....55`) vào `drop_blocks[]` và số trang mục lục cũ vào `has_toc_pages[]`.',
-          '  4. KHÔNG biến các bước tính số (`1. EBIT = 62.500`) thành heading; giữ nguyên tiền tệ `$28.40` (không đưa vào `formulas`).',
-          rawText ? `\n--- KHUNG XƯƠNG TÀI LIỆU KÈM MÃ KHỐI Pxx_Byy DO CODE ĐÃ QUÉT ---\n${rawText.slice(0, 17500)}` : '',
+          '  2. Nếu bảng bị Code tách đôi dòng tiêu đề hoặc lệch cột, điền đủ `headers[]` và `matrix[][]` (hoặc `table_cell_fixes[]`) đúng như tệp gốc; bảng kéo dài sang trang sau đánh `"continued_from_prev": true`.',
+          '  3. MỌI lỗi chính tả/dấu tiếng Việt/số liệu/dính chữ do Code quét sai PHẢI đưa vào `text_patches[]` và `scan_audit_fixes[]` để Code tự vá thẳng vào văn bản thật!',
+          '  4. Đưa mã khối rác (số trang cũ, watermark, dòng mục lục chấm `.....55`) vào `drop_blocks[]` và số trang mục lục cũ vào `has_toc_pages[]`.',
+          '  5. KHÔNG biến bước tính số (`1. EBIT = 62.500`) thành heading; giữ nguyên tiền tệ `$28.40` (không đưa vào `formulas`).',
+          rawText
+            ? `\n--- BẢN QUÉT THÔ CỦA CODE KÈM MÃ KHỐI Pxx_Byy (HÃY ĐỐI CHIẾU VỚI TỆP GỐC ĐỂ SOI & VÁ MỌI LỖI) ---\n${rawText.slice(0, 17500)}`
+            : '\n(Lưu ý: Bạn chưa đính kèm bản quét thô — hãy đọc trực tiếp 100% tệp gốc đính kèm và xuất toàn bộ cấu trúc + nội dung chuẩn xác vào JSON hoặc Markdown GFM đầy đủ, không bỏ sót bất kỳ chữ nào!)',
         ].filter(Boolean).join('\n');
 
       case 'auto_toc':
         return [
-          'Bạn là bộ tạo Mục Lục tự động (Auto TOC · Block-ID Pxx_Byy) của hệ thống ĐăngLovePDF.',
-          `Tệp: "${fileName}".`,
-          'YÊU CẦU ĐỊNH DẠNG BẮT BUỘC (chọn 1 trong 2 định dạng chuẩn sau để code đọc tức thì):',
-          '- Ưu tiên 1 (JSON chuẩn): `{"entries": [{"title": "CHƯƠNG 1. MỞ ĐẦU", "level": 1, "page": 3}, {"title": "1.1. Bối cảnh", "level": 2, "page": 4}]}`',
-          '- Hoặc dạng dòng: `Tên mục | Số trang` (ví dụ: `CHƯƠNG 1. MỞ ĐẦU | 3`).',
-          '- Gộp trọn vẹn các tiêu đề bị gãy xuống 2 dòng thành 1 tên mục hoàn chỉnh; giữ đúng phân cấp Chương, Phần, I., II., 1., 1.1., 1.1.1.',
-          '- TUYỆT ĐỐI LOẠI BỎ các dòng mục lục cũ có dấu chấm kéo dài (như `KHẢO........55`), tên Bảng/Hình, số trang và đoạn văn thường.',
-          '- Không viết giải thích ngoài danh sách/JSON.',
-          rawText ? `\n--- KHUNG XƯƠNG ỨNG VIÊN TIÊU ĐỀ (Pxx_Byy) ---\n${rawText.slice(0, 14000)}` : '',
+          'BẠN LÀ CHUYÊN GIA KIỂM ĐỊNH & TẠO MỤC LỤC CHUẨN (AUTO TOC AUDITOR · BLOCK-ID Pxx_Byy) CỦA ĐĂNGLOVEPDF.',
+          AUDIT_HEADER,
+          `TỆP GỐC ĐÍNH KÈM: "${fileName}".`,
+          'NHIỆM VỤ BẮT BUỘC:',
+          '1. Đối chiếu trực tiếp TỆP GỐC với danh sách ứng viên tiêu đề mà Code quét thô bên dưới.',
+          '2. TỰ PHÁT HIỆN & SỬA HẾT các lỗi Code quét sai: tiêu đề bị thiếu, tiêu đề bị cắt rớt đuôi xuống dòng 2, sai cấp bậc (H1/H2/H3/H4), nhầm số trang, nhầm dòng văn bản/tên bảng/dòng mục lục chấm cũ `.....55` thành mục lục.',
+          '3. ĐỊNH DẠNG TRẢ VỀ CHUẨN (để Code nạp thẳng 1 chạm):',
+          '```json',
+          '{ "scan_audit_notes": ["Đã gộp 3 tiêu đề bị gãy dòng", "Đã bổ sung mục 2.3 bị Code bỏ sót ở trang 12", "Đã loại 4 dòng rác mục lục cũ"], "entries": [{"title": "CHƯƠNG 1. MỞ ĐẦU", "level": 1, "page": 3}, {"title": "1.1. Bối cảnh", "level": 2, "page": 4}] }',
+          '```',
+          '(Hoặc danh sách từng dòng `Tên mục đầy đủ đã sửa lỗi | Số trang`).',
+          '- TUYỆT ĐỐI LOẠI BỎ các dòng mục lục cũ có dấu chấm kéo dài, tên Bảng/Hình, số trang rác.',
+          rawText ? `\n--- KẾT QUẢ QUÉT THÔ & ỨNG VIÊN TIÊU ĐỀ (Pxx_Byy) CỦA CODE (HÃY KIỂM TRA & SỬA LỖI) ---\n${rawText.slice(0, 14000)}` : '',
         ].filter(Boolean).join('\n');
 
       case 'icr_handwriting': {
@@ -2728,128 +2920,158 @@
           math_notes_latex: 'Chuyển toàn bộ công thức Toán/Tài chính viết tay sang trường latex chuẩn kèm lời giải chữ viết tay.',
         };
         return [
-          'Bạn là chuyên gia ICR (Intelligent Character Recognition) đọc chữ viết tay phối hợp với Code của ĐăngLovePDF.',
-          `Tệp viết tay tôi đính kèm: "${fileName}".`,
-          `CHẾ ĐỘ: ${modeDesc[ctx.icrMode] || modeDesc.handwriting_general}`,
-          'ĐỊNH DẠNG BẮT BUỘC (JSON chuẩn để Code đọc thẳng vào DOCX / XLSX / PDF):',
+          'BẠN LÀ CHUYÊN GIA KIỂM ĐỊNH & SỐ HÓA CHỮ VIẾT TAY (ICR AUDITOR) PHỐI HỢP VỚI CODE CỦA ĐĂNGLOVEPDF.',
+          AUDIT_HEADER,
+          `TỆP VIẾT TAY GỐC ĐÍNH KÈM: "${fileName}".`,
+          `CHẾ ĐỘ CHUYÊN SÂU: ${modeDesc[ctx.icrMode] || modeDesc.handwriting_general}`,
+          'NHIỆM VỤ BẮT BUỘC: Đọc trực tiếp từng nét chữ trong ảnh/PDF gốc, tự suy luận ngữ cảnh tiếng Việt/Anh để sửa các chữ mờ/viết ngoáy/dấu sai (nếu có bản OCR thô của Code bên dưới, hãy đối chiếu sửa toàn bộ lỗi nhận diện sai của Code và ghi tóm tắt vào `scan_audit_fixes`).',
+          'ĐỊNH DẠNG BẮT BUỘC (JSON chuẩn để Code đọc thẳng ra DOCX / XLSX / PDF):',
           '```json',
-          '{ "documentType": "handwriting", "pages": [{ "pageNumber": 1, "confidence": 0.98, "items": [{ "type": "heading|paragraph|checkbox|formula", "text": "...", "checkboxState": "checked|unchecked|none", "latex": "", "uncertainNote": "" }], "tables": [{ "caption": "Bảng 1", "rows": [["Cột 1", "Cột 2"]] }], "fullText": "Toàn văn đã số hóa đầy đủ dấu tiếng Việt" }] }',
+          '{ "documentType": "handwriting", "scan_audit_fixes": [{ "wrong_raw": "từ Code đoán sai (nếu có)", "fixed_text": "từ đúng đọc từ nét bút gốc", "reason": "Sửa lỗi nét chữ/dấu" }], "pages": [{ "pageNumber": 1, "confidence": 0.98, "items": [{ "type": "heading|paragraph|checkbox|formula", "text": "...", "checkboxState": "checked|unchecked|none", "latex": "", "uncertainNote": "" }], "tables": [{ "caption": "Bảng 1", "rows": [["Cột 1", "Cột 2"]] }], "fullText": "Toàn văn đã số hóa & hiệu đính đầy đủ dấu tiếng Việt" }] }',
           '```',
-          'QUY TẮC: Không tóm tắt, không bỏ sót bất kỳ chữ nào. Chỉ trả đúng khối JSON trên.',
-        ].join('\n');
+          'QUY TẮC: Không tóm tắt, không bỏ sót bất kỳ chữ hay con số nào.',
+          rawText ? `\n--- BẢN NHẬN DIỆN THÔ CỦA CODE (HÃY ĐỐI CHIẾU VỚI ẢNH GỐC ĐỂ SỬA LỖI) ---\n${rawText.slice(0, 10000)}` : '',
+        ].filter(Boolean).join('\n');
       }
 
       case 'ocr_fast':
         return [
-          'Bạn là động cơ OCR siêu chính xác phối hợp với Code của ĐăngLovePDF.',
-          `Hãy đọc toàn bộ tệp PDF/Ảnh scan tôi đính kèm ("${fileName}") và trả về ĐÚNG 1 khối JSON chuẩn (response_schema) để Code tự dựng DOCX / MD / TXT / PDF 2 lớp:`,
+          'BẠN LÀ CHUYÊN GIA KIỂM ĐỊNH & SỬA LỖI OCR (OCR AUDITOR + VISION) PHỐI HỢP VỚI CODE CỦA ĐĂNGLOVEPDF.',
+          AUDIT_HEADER,
+          `TỆP PDF/ẢNH SCAN GỐC ĐÍNH KÈM: "${fileName}".`,
+          'NHIỆM VỤ BẮT BUỘC: Đọc trực tiếp hình ảnh/PDF gốc tôi gửi kèm. Nếu bên dưới có bản quét thô từ Code (PDF.js/Tesseract), hãy ĐỐI CHIẾU TỪNG DÒNG để PHÁT HIỆN & SỬA 100% lỗi sai dấu tiếng Việt, nhầm số (`0/O`, `1/l`, `5/S`), mất cột bảng, vỡ công thức toán và liệt kê các lỗi quan trọng đã sửa vào `scan_audit_fixes[]`.',
+          'TRẢ VỀ ĐÚNG 1 KHỐI JSON CHUẨN để Code dựng ngay DOCX / MD / TXT / PDF 2 lớp:',
           '```json',
-          '{ "detectedLanguage": "vi", "pages": [{ "pageNumber": 1, "confidence": 0.99, "blocks": [{ "type": "heading|paragraph|table|formula", "text": "...", "latex": "" }], "fullText": "Toàn văn trang 1 đầy đủ dấu tiếng Việt, giữ bảng GFM" }] }',
+          '{ "detectedLanguage": "vi", "scan_audit_fixes": [{ "page": 1, "wrong_raw": "chữ/số Code quét sai", "fixed_text": "chữ/số đúng 100%", "reason": "Sửa lỗi OCR" }], "pages": [{ "pageNumber": 1, "confidence": 0.99, "blocks": [{ "type": "heading|paragraph|table|formula", "text": "...", "latex": "" }], "tables": [{ "caption": "Bảng 1", "rows": [["Cột 1", "Cột 2"]] }], "fullText": "Toàn văn trang 1 đã hiệu đính đầy đủ dấu tiếng Việt, giữ bảng GFM" }] }',
           '```',
-          'Không thêm lời giải thích ngoài JSON; giữ nguyên 100% số liệu & dấu tiếng Việt.',
-        ].join('\n');
+          'QUY TẮC: Giữ nguyên 100% số liệu, dấu tiếng Việt và thứ tự trang; không tóm tắt.',
+          rawText ? `\n--- BẢN QUÉT THÔ CỦA CODE (HÃY ĐỐI CHIẾU TỆP GỐC ĐỂ SOI & SỬA LỖI) ---\n${rawText.slice(0, 12000)}` : '',
+        ].filter(Boolean).join('\n');
 
       case 'pdf_to_docx':
         return [
-          'Bạn là bộ chuyển đổi PDF → Word/Markdown chuẩn hóa của ĐăngLovePDF.',
-          `Hãy đọc tệp "${fileName}" tôi đính kèm (hoặc văn bản bên dưới), nối liền các dòng bị ngắt sai, sửa lỗi tách dấu/dính chữ tiếng Việt, giữ chuẩn đề mục # / ## / ### và bảng GFM.`,
-          'Tuyệt đối KHÔNG tóm tắt hay làm mất số liệu. Chỉ xuất nội dung hoàn chỉnh.',
-          rawText ? `\n--- VĂN BẢN THÔ TỪ PDF ---\n${rawText.slice(0, 12000)}` : '',
+          'BẠN LÀ CHUYÊN GIA HIỆU ĐÍNH & CHUYỂN ĐỔI PDF → WORD/MARKDOWN CỦA ĐĂNGLOVEPDF.',
+          AUDIT_HEADER,
+          `TỆP GỐC ĐÍNH KÈM: "${fileName}".`,
+          'NHIỆM VỤ BẮT BUỘC:',
+          '1. Đọc trực tiếp TỆP GỐC và đối chiếu với bản quét thô của Code bên dưới (nếu có).',
+          '2. TỰ PHÁT HIỆN & SỬA TRIỆT ĐỂ mọi lỗi quét thô của Code: dòng văn bị ngắt cụt giữa câu, tiêu đề bị cắt rớt 2 dòng, lỗi tách dấu/dính chữ tiếng Việt, mất bảng/lệch cột bảng, sót đoạn văn ở trang ảnh scan, lẫn số trang/header-footer rác.',
+          '3. Tái cấu trúc thành văn bản Markdown chuẩn (# / ## / ###, bảng GFM sạch cột, công thức LaTeX chuẩn) đầy đủ 100% nội dung và số liệu (TUYỆT ĐỐI KHÔNG tóm tắt).',
+          '4. Mở đầu bằng 1 khối comment HTML `<!-- AUDIT_FIXES: tóm tắt các lỗi quét thô bạn đã phát hiện & sửa cho Code -->` (Code sẽ tự lược bỏ khi đóng gói Word nhưng giúp kiểm chứng), sau đó là toàn văn đã sửa hoàn chỉnh.',
+          rawText ? `\n--- BẢN QUÉT THÔ CỦA CODE TỪ PDF (HÃY ĐỐI CHIẾU TỆP GỐC ĐỂ PHÁT HIỆN & SỬA LỖI) ---\n${rawText.slice(0, 13000)}` : '',
         ].filter(Boolean).join('\n');
 
       case 'pdf_to_excel':
         return [
-          'Bạn là bộ bóc bảng PDF → Excel của ĐăngLovePDF.',
-          `Hãy đọc tất cả bảng dữ liệu trong tệp "${fileName}" tôi đính kèm (hoặc dữ liệu bên dưới).`,
-          'QUY TẮC QUAN TRỌNG: Gộp gọn các ô bị xuống dòng lẻ thành 1 ô duy nhất cùng hàng; giữ nguyên 100% số liệu.',
-          'ĐỊNH DẠNG TRẢ VỀ: Bảng Markdown GFM `| Cột 1 | Cột 2 | ... |` HOẶC mảng JSON 2D `[["Cột 1","Cột 2"],...]`. Không giải thích thêm.',
-          rawText ? `\n--- DỮ LIỆU THÔ QUÉT TỪ PDF ---\n${rawText.slice(0, 12000)}` : '',
+          'BẠN LÀ CHUYÊN GIA KIỂM ĐỊNH & BÓC TÁCH BẢNG BIỂU PDF → EXCEL CỦA ĐĂNGLOVEPDF.',
+          AUDIT_HEADER,
+          `TỆP GỐC ĐÍNH KÈM: "${fileName}".`,
+          'NHIỆM VỤ BẮT BUỘC:',
+          '1. Đối chiếu trực tiếp CÁC BẢNG TRONG TỆP GỐC với dữ liệu quét thô của Code bên dưới.',
+          '2. TỰ PHÁT HIỆN & SỬA TRIỆT ĐỂ mọi lỗi Code bóc bảng hay mắc phải: dòng tiêu đề bảng bị tách thành 2 hàng, 1 ô bị rớt dòng thành nhiều hàng giả, 2 cột bị dính làm 1, số liệu bị lệch cột/sai dấu phẩy-chấm thập phân, thiếu hàng cuối bảng vắt trang.',
+          '3. Gộp gọn mọi ô bị xuống dòng về ĐÚNG 1 ô duy nhất cùng hàng; giữ chính xác 100% số liệu & đơn vị.',
+          '4. ĐỊNH DẠNG TRẢ VỀ (chọn 1 trong 2 dạng chuẩn Code đọc thẳng ra file `.xlsx`/`.csv`):',
+          '   - Bảng Markdown GFM chuẩn: `| Cột 1 | Cột 2 | ... |`',
+          '   - HOẶC JSON cấu trúc: `{ "scan_audit_fixes": ["Đã gộp lại header bị tách 2 hàng", "Sửa 4 ô bị lệch cột"], "pages": [{ "pageNumber": 1, "tables": [{ "caption": "Bảng 1", "rows": [["Cột 1", "Cột 2"], ["Giá trị 1", "Giá trị 2"]] }] }] }`',
+          rawText ? `\n--- DỮ LIỆU BẢNG QUÉT THÔ CỦA CODE (HÃY ĐỐI CHIẾU TỆP GỐC ĐỂ SỬA LỆCH CỘT/HÀNG) ---\n${rawText.slice(0, 13000)}` : '',
         ].filter(Boolean).join('\n');
 
       case 'redact_pii':
         return [
-          'Bạn là trợ lý Che Đen Bảo Mật (True Redaction PII) của ĐăngLovePDF.',
-          'Hãy liệt kê CHÍNH XÁC các chuỗi thông tin cá nhân nhạy cảm (SĐT, CCCD/CMND, Email, Số tài khoản, Địa chỉ nhà riêng, Tên/Lương bí mật) có trong văn bản dưới đây.',
-          'ĐỊNH DẠNG BẮT BUỘC: 1 dòng duy nhất, các chuỗi ngăn cách bởi dấu phẩy `, ` (VD: `0912345678, 079099001234, an@gmail.com`). Không giải thích thêm.',
-          `\n--- VĂN BẢN PDF ---\n${rawText.slice(0, 12000)}`,
+          'BẠN LÀ CHUYÊN GIA KIỂM TOÁN BẢO MẬT & RÀ SOÁT PII (TRUE REDACTION AUDITOR) CỦA ĐĂNGLOVEPDF.',
+          AUDIT_HEADER,
+          `TỆP GỐC ĐÍNH KÈM: "${fileName}".`,
+          'NHIỆM VỤ BẮT BUỘC: Soát kỹ CẢ TỆP GỐC LẪN VĂN BẢN CODE QUÉT THÔ bên dưới để không bỏ sót BẤT KỲ thông tin nhạy cảm nào (kể cả thông tin bị Code tách dòng/vỡ khoảng trắng như `0912 345 678`, CCCD/CMND, Hộ chiếu, Email, STK ngân hàng, Mã số thuế, Địa chỉ nhà riêng, Mức lương/Giá hợp đồng bí mật, Chữ ký/Tên nhân sự mật).',
+          'ĐỊNH DẠNG BẮT BUỘC: 1 dòng duy nhất, các chuỗi nhạy cảm ngăn cách bởi dấu phẩy `, ` (VD: `0912345678, 0912 345 678, 079099001234, an@gmail.com`). Bao gồm CẢ biến thể viết liền lẫn viết cách đúng như xuất hiện trong PDF để Code che đen tuyệt đối 100%.',
+          `\n--- VĂN BẢN QUÉT THÔ TỪ PDF ---\n${rawText.slice(0, 12000)}`,
         ].join('\n');
 
       case 'metadata_seo':
         return [
-          'Bạn là trợ lý tạo Siêu dữ liệu PDF (Metadata) của ĐăngLovePDF.',
-          'Từ nội dung trang đầu tài liệu dưới đây, hãy trả về ĐÚNG 1 đối tượng JSON duy nhất:',
-          '{"title": "Tiêu đề chuẩn gọn", "author": "Tác giả hoặc Tổ chức", "keywords": "từ khóa 1, từ khóa 2, từ khóa 3"}',
-          `\n--- NỘI DUNG TRANG ĐẦU ---\n${rawText.slice(0, 10000)}`,
+          'BẠN LÀ CHUYÊN GIA CHUẨN HÓA SIÊU DỮ LIỆU PDF (METADATA AUDITOR) CỦA ĐĂNGLOVEPDF.',
+          'Hãy đối chiếu TỆP GỐC (nếu có đính kèm) với đoạn văn quét thô trang đầu bên dưới — tự sửa lỗi dấu tiếng Việt/vỡ chữ nếu Code quét sai tên tài liệu hoặc tác giả — và trả về ĐÚNG 1 đối tượng JSON duy nhất:',
+          '{"title": "Tiêu đề chuẩn gọn đã sửa sạch lỗi dấu", "author": "Tác giả hoặc Tổ chức chính xác", "keywords": "từ khóa 1, từ khóa 2, từ khóa 3, từ khóa 4"}',
+          `\n--- NỘI DUNG QUÉT THÔ TRANG ĐẦU ---\n${rawText.slice(0, 10000)}`,
         ].join('\n');
 
       case 'split_keyword':
         return [
-          'Bạn là trợ lý Tách PDF thông minh theo từ khóa của ĐăngLovePDF.',
-          'Hãy tìm 1 cụm từ khóa tiêu đề ngắn xuất hiện lặp lại ở đầu mỗi hồ sơ/hóa đơn/chương trong văn bản sau để hệ thống tự động tách tệp.',
+          'BẠN LÀ CHUYÊN GIA TÁCH PDF THÔNG MINH THEO TỪ KHÓA CỦA ĐĂNGLOVEPDF.',
+          'Hãy đối chiếu tệp gốc và văn bản quét thô bên dưới để tìm ĐÚNG 1 cụm từ khóa tiêu đề ngắn xuất hiện lặp lại ổn định ở đầu mỗi hồ sơ/hóa đơn/chương (tránh chọn cụm bị vỡ dấu trong lớp text PDF để Code khớp chính xác 100% từng điểm ngắt).',
           'Chỉ trả về ĐÚNG cụm từ khóa đó trên 1 dòng duy nhất, không dấu ngoặc kép, không giải thích.',
-          `\n--- VĂN BẢN PDF ---\n${rawText.slice(0, 10000)}`,
+          `\n--- VĂN BẢN QUÉT THÔ TỪ PDF ---\n${rawText.slice(0, 10000)}`,
         ].join('\n');
 
       case 'form_fill':
         return [
-          'Bạn là trợ lý Điền Biểu Mẫu AcroForm của ĐăngLovePDF.',
-          'Hãy chuyển đoạn ghi chú thông tin cá nhân sau thành danh sách các dòng chuẩn `TenTruong=GiaTri` (TenTruong viết liền không dấu, mỗi dòng 1 mục, không giải thích):',
-          `\n--- GHI CHÚ ---\n${rawText.slice(0, 8000)}`,
+          'BẠN LÀ CHUYÊN GIA CHUẨN HÓA & ĐIỀN BIỂU MẪU ACROFORM CỦA ĐĂNGLOVEPDF.',
+          'Hãy đọc ghi chú thông tin cá nhân bên dưới (và đối chiếu biểu mẫu PDF gốc nếu đính kèm), tự phát hiện & sửa lỗi chính tả/định dạng ngày tháng/số giấy tờ, rồi chuyển thành danh sách chuẩn `TenTruong=GiaTri` (TenTruong viết liền không dấu khớp tên trường Form, mỗi dòng 1 mục, không giải thích):',
+          `\n--- GHI CHÚ THÔ ---\n${rawText.slice(0, 8000)}`,
         ].join('\n');
 
       case 'compare_diff':
         return [
-          'Bạn là chuyên gia đối chiếu hợp đồng & tài liệu của ĐăngLovePDF.',
-          'Hãy tóm tắt ngắn gọn thành gạch đầu dòng các điểm thay đổi QUAN TRỌNG NHẤT (số liệu, giá tiền, điều khoản pháp lý, thời hạn, tên riêng) giữa Bản cũ (#1) và Bản mới (#2):',
-          `\n--- DANH SÁCH THAY ĐỔI ---\n${rawText.slice(0, 12000)}`,
+          'BẠN LÀ CHUYÊN GIA PHÁP LÝ & KIỂM TOÁN ĐỐI CHIẾU 2 TỆP PDF (DIFF AUDITOR) CỦA ĐĂNGLOVEPDF.',
+          AUDIT_HEADER,
+          'NHIỆM VỤ BẮT BUỘC:',
+          '1. Đọc trực tiếp CẢ 2 TỆP GỐC (#1 Bản cũ & #2 Bản mới) nếu tôi đính kèm, đồng thời đối chiếu với bản trích thô bên dưới.',
+          '2. TỰ PHÁT HIỆN & LOẠI BỎ "khác biệt giả" (do Code quét thô bị ngắt dòng khác nhau/vỡ font) VÀ PHÁT HIỆN SÂU mọi thay đổi THẬT SỰ QUAN TRỌNG mà Code quét thô dễ bỏ sót (thay đổi số tiền, % lãi suất, ngày hiệu lực, trách nhiệm bồi thường, phụ lục, bảng biểu, chữ ký/con dấu).',
+          '3. Trình bày rõ theo 3 phần: (A) Tóm tắt rủi ro cốt lõi, (B) Bảng đối chiếu chi tiết [Trang | Bản cũ #1 | Bản mới #2 | Mức độ rủi ro], (C) Các lỗi quét thô đã lọc bỏ & Khuyến nghị hành động.',
+          `\n--- BẢN TRÍCH THÔ TỪ CODE ĐỂ ĐỐI CHIẾU ---\n${rawText.slice(0, 12000)}`,
         ].join('\n');
 
       case 'viewer_summary':
         return [
-          `Bạn là trợ lý đọc hiểu PDF của ĐăngLovePDF. Hãy tóm tắt cô đọng, dễ hiểu tài liệu "${fileName}" theo đúng 3 mục:`,
-          '1. Tổng quan nhanh (2 câu)',
-          '2. 5 điểm / số liệu cốt lõi nhất',
-          '3. Kết luận & Hành động gợi ý',
-          rawText ? `\n--- NỘI DUNG TÀI LIỆU ---\n${rawText.slice(0, 14000)}` : '',
+          `BẠN LÀ CHUYÊN GIA ĐỌC HIỂU & KIỂM ĐỊNH TÀI LIỆU PDF ("${fileName}") CỦA ĐĂNGLOVEPDF.`,
+          'Hãy đọc trực tiếp tệp gốc (nếu đính kèm) kết hợp văn bản quét thô bên dưới — tự bỏ qua rác OCR/ngắt dòng sai — và trả lời cô đọng, trích dẫn ĐÚNG SỐ LIỆU & TRANG theo 4 mục:',
+          '1. Tổng quan cốt lõi (2-3 câu)',
+          '2. 5 điểm / số liệu / điều khoản quan trọng nhất (ghi rõ số trang nếu thấy)',
+          '3. Điểm bất thường / rủi ro / lỗi cần lưu ý trong tài liệu (nếu có)',
+          '4. Kết luận & Hành động đề xuất ngay',
+          rawText ? `\n--- VĂN BẢN QUÉT THÔ TỪ PDF ---\n${rawText.slice(0, 14000)}` : '',
         ].filter(Boolean).join('\n');
 
       case 'editor_polish':
         return [
-          'Bạn là trợ lý sửa chính tả trực tiếp trên PDF Editor của ĐăngLovePDF.',
-          'Sửa lỗi dính chữ/tách dấu/chính tả cho từng dòng có chỉ số `[i]`. CHỈ trả về JSON array `[{"i": 0, "t": "chuỗi đã sửa"}]` cho các dòng cần sửa:',
+          'BẠN LÀ CHUYÊN GIA HIỆU ĐÍNH VĂN BẢN TRỰC TIẾP TRÊN PDF EDITOR CỦA ĐĂNGLOVEPDF.',
+          'Code đã quét thô từng dòng `[i]` của trang PDF (rất dễ bị lỗi dính chữ, tách dấu tiếng Việt, sai chính tả, nhầm ký tự OCR).',
+          'Hãy kiểm tra kỹ từng dòng `[i]` (đối chiếu ảnh/tệp gốc nếu có đính kèm), PHÁT HIỆN & SỬA MỌI LỖI mà vẫn giữ độ dài tương đương để vừa khung PDF. CHỈ trả về JSON array `[{"i": 0, "t": "chuỗi đã sửa chuẩn", "reason": "lỗi đã sửa"}]` cho những dòng thật sự cần sửa:',
           `\n${rawText.slice(0, 12000)}`,
         ].join('\n');
 
       case 'editor_translate':
         return [
-          `Bạn là trợ lý dịch thuật PDF Editor của ĐăngLovePDF. Hãy dịch tự nhiên, gọn gàng từng dòng \`[i]\` sang ${ctx.targetLang || 'English'} sao cho vừa khung trang PDF.`,
-          'CHỈ trả về JSON array `[{"i": 0, "t": "bản dịch"}]`:',
+          `BẠN LÀ CHUYÊN GIA DỊCH THUẬT & HIỆU ĐÍNH PDF EDITOR CỦA ĐĂNGLOVEPDF.`,
+          `Trước khi dịch sang ${ctx.targetLang || 'English'}, hãy TỰ HIỂU ĐÚNG ngữ nghĩa các dòng \`[i]\` bị Code quét thô dính chữ/vỡ dấu, rồi dịch tự nhiên, chính xác thuật ngữ và gọn gàng vừa khung trang PDF.`,
+          'CHỈ trả về JSON array `[{"i": 0, "t": "bản dịch chuẩn xác"}]`:',
           `\n${rawText.slice(0, 12000)}`,
         ].join('\n');
 
       case 'editor_redact':
         return [
-          'Bạn là trợ lý Che Đen PII trên PDF Editor của ĐăngLovePDF.',
-          'Tìm chỉ số các dòng `[i]` chứa thông tin nhạy cảm (SĐT, CCCD, Email, STK, Địa chỉ nhà, Lương bí mật). CHỈ trả về JSON array các chỉ số, VD `[2, 5]`:',
+          'BẠN LÀ CHUYÊN GIA RÀ SOÁT PII BẢO MẬT TRÊN PDF EDITOR CỦA ĐĂNGLOVEPDF.',
+          'Kiểm tra kỹ mọi dòng `[i]` (kể cả chuỗi bị ngắt khoảng trắng/vỡ OCR) để không bỏ sót bất kỳ thông tin cá nhân/mật nào (SĐT, CCCD, Email, STK, Địa chỉ nhà, Lương/Giá mật). CHỈ trả về JSON array các chỉ số cần che đen, VD `[2, 5]`:',
           `\n${rawText.slice(0, 12000)}`,
         ].join('\n');
 
       case 'editor_summary':
         return [
-          'Tóm tắt trang tài liệu sau thành TỐI ĐA 3 dòng ngắn (mỗi dòng <= 48 ký tự, bắt đầu bằng `• `) để dán Sticky Note lên góc trang PDF:',
+          'Tóm tắt chính xác nội dung cốt lõi (tự bỏ qua lỗi dính chữ/rác quét thô) của trang tài liệu sau thành TỐI ĐA 3 dòng ngắn (mỗi dòng <= 48 ký tự, bắt đầu bằng `• `) để dán Sticky Note lên góc trang PDF:',
           `\n${rawText.slice(0, 8000)}`,
         ].join('\n');
 
       case 'editor_table':
         return [
-          'Trích xuất toàn bộ bảng biểu từ các mảnh chữ có tọa độ `[x=...,y=...]` sau thành JSON array 2D `[["Cột 1","Cột 2"],...]`. Gộp các ô bị xuống dòng về cùng hàng:',
+          'BẠN LÀ CHUYÊN GIA BÓC TÁCH & SỬA LỖI BẢNG TRÊN PDF EDITOR CỦA ĐĂNGLOVEPDF.',
+          'Code chỉ quét thô tọa độ `[x=...,y=...]` nên dễ bị tách dòng/lệch cột. Hãy đối chiếu ngữ nghĩa & tệp gốc (nếu đính kèm), tự sửa lỗi dấu/gộp ô bị rớt dòng về cùng hàng, giữ nguyên 100% số liệu và trả về JSON array 2D `[["Cột 1","Cột 2"],...]`:',
           `\n${rawText.slice(0, 12000)}`,
         ].join('\n');
 
       case 'editor_ocr':
         return [
-          `Tôi đính kèm ảnh/trang scan của tệp "${fileName}". Hãy đọc toàn bộ dòng chữ từ trên xuống dưới và trả về JSON array duy nhất:`,
-          '[{"yPct": 5, "xPct": 10, "wPct": 70, "text": "nội dung dòng"}] (tọa độ ước lượng theo % từ 0 đến 100).',
+          `BẠN LÀ CHUYÊN GIA OCR TRỰC QUAN CHO PDF EDITOR CỦA ĐĂNGLOVEPDF.`,
+          `Tôi đính kèm ảnh/trang scan của tệp "${fileName}". Hãy đọc chính xác 100% từng dòng chữ (đủ dấu tiếng Việt, đúng số liệu, không lặp rác) từ trên xuống dưới và trả về JSON array duy nhất:`,
+          '[{"yPct": 5, "xPct": 10, "wPct": 70, "text": "nội dung dòng chuẩn xác"}] (tọa độ ước lượng theo % từ 0 đến 100).',
         ].join('\n');
 
       default:

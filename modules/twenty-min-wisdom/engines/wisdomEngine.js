@@ -320,6 +320,78 @@
   }
 
   /**
+   * ĐỌC THÂN BÀI BÁO THẬT (550–850 ký tự) qua Electron Direct / Jina Read Mode (CORS=*)
+   * Giúp trích xuất nội dung & con số cụ thể từ bài báo thật để Gemini đọc và phân tích thay vì nói suông!
+   */
+  function cleanWisdomArticleBody(rawText, maxChars = 760) {
+    const str = String(rawText || '').replace(/\r\n?/g, '\n');
+    if (!str.trim()) return '';
+    const mdSplit = str.split(/Markdown Content:\s*\n/i);
+    const bodyRaw = mdSplit.length > 1 ? mdSplit.slice(1).join('\n') : str;
+    const cleaned = bodyRaw
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+      .replace(/\[([^\]]{1,160})\]\([^)]+\)/g, '$1')
+      .replace(/^#+\s*/gm, '')
+      .replace(/[*_`~>]+/g, '');
+    const lines = cleaned
+      .split('\n')
+      .map((l) => l.replace(/\s+/g, ' ').trim())
+      .filter((l) => {
+        if (l.length < 48) return false;
+        if (/^(cookie|privacy|subscribe|sign in|log in|menu|share|facebook|twitter|zalo|quảng cáo|đăng nhập|đăng ký|xem thêm|tin liên quan|bản quyền|copyright|all rights reserved)/i.test(l)) return false;
+        if (/^https?:\/\//i.test(l)) return false;
+        return true;
+      });
+    const picked = [];
+    let total = 0;
+    for (const ln of lines) {
+      if (picked.includes(ln)) continue;
+      picked.push(ln);
+      total += ln.length + 1;
+      if (total >= maxChars || picked.length >= 5) break;
+    }
+    return picked.join(' ').slice(0, maxChars).trim();
+  }
+
+  async function fetchRealArticleBodyExcerpt(articleUrl, signal, maxChars = 760) {
+    const url = String(articleUrl || '').trim();
+    if (!/^https?:\/\//i.test(url)) return '';
+    if (globalScope.NoirDesktopLocalEngine?.fetchUrl) {
+      try {
+        const res = await globalScope.NoirDesktopLocalEngine.fetchUrl(url);
+        if (res?.ok && res.text) {
+          const ex = cleanWisdomArticleBody(res.text, maxChars);
+          if (ex.length >= 110) return ex;
+        }
+      } catch (_eEl) {}
+    }
+    try {
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), 5200);
+      const onAb = () => ctrl.abort();
+      if (signal) signal.addEventListener('abort', onAb, { once: true });
+      try {
+        const resp = await fetch(`https://r.jina.ai/${url}`, {
+          signal: ctrl.signal,
+          headers: { Accept: 'text/plain, text/markdown;q=0.9' },
+        });
+        if (resp.ok) {
+          const txt = await resp.text();
+          const ex = cleanWisdomArticleBody(txt, maxChars);
+          if (ex.length >= 100) return ex;
+        }
+      } finally {
+        clearTimeout(tmr);
+        if (signal) signal.removeEventListener('abort', onAb);
+      }
+    } catch (_eJina) {}
+    return '';
+  }
+
+  /**
    * Trích xuất bài báo thật từ Jina Read Mode (r.jina.ai) — 200 OK · CORS=* cho mọi trang báo chính thống!
    */
   function parseJinaReadModeArticles(mdText, sourceName, maxItems = 4) {
@@ -717,21 +789,31 @@
 
     // 5) ĐỌC TRỰC TIẾP BÀI BÁO THẬT HÔM NAY TỪ BÁO CHÍ CHÍNH THỐNG & GOOGLE NEWS NGÀY HIỆN TẠI (13 PHÚT / 30 PHÚT)
     const pLivePress = (async () => {
-      const localQueryArea = encodeURIComponent(`${loc.cityLabel || profile.name} tin mới hôm nay when:2d`);
-      const gnewsWorldToday = `https://news.google.com/rss/search?q=${encodeURIComponent('world geopolitics OR economy OR science breakthrough when:2d')}&hl=en-US&gl=US&ceid=US:en`;
+      const localCityClean = String(loc.cityLabel || profile.name).replace(/Thành phố\s+|Tỉnh\s+/gi, '').trim();
+      const localQueryArea = encodeURIComponent(`${localCityClean} tin mới hôm nay when:2d`);
+      const gnewsWorldToday = `https://news.google.com/rss/search?q=${encodeURIComponent('world geopolitics OR economy OR inflation OR oil price OR science breakthrough when:2d')}&hl=en-US&gl=US&ceid=US:en`;
+      const gnewsMacroToday = `https://news.google.com/rss/search?q=${encodeURIComponent('biến động vĩ mô OR lạm phát CPI OR lãi suất Fed OR tỷ giá USD OR giá dầu Brent OR giá vàng when:7d')}&hl=vi&gl=VN&ceid=VN:vi`;
+      const gnewsLocalRePrice = `https://news.google.com/rss/search?q=${encodeURIComponent(`"${localCityClean}" ("giá nhà đất" OR "giá chung cư" OR "bảng giá đất" OR "đấu giá đất" OR "hạ tầng") when:14d`)}&hl=vi&gl=VN&ceid=VN:vi`;
       const gnewsLocalToday = profile.code === 'VN'
         ? `https://news.google.com/rss/search?q=${localQueryArea}&hl=vi&gl=VN&ceid=VN:vi`
-        : `https://news.google.com/rss/search?q=${encodeURIComponent(`${loc.cityLabel || profile.name} news today when:2d`)}&hl=en-US&gl=US&ceid=US:en`;
+        : `https://news.google.com/rss/search?q=${encodeURIComponent(`${localCityClean} news economy housing today when:2d`)}&hl=en-US&gl=US&ceid=US:en`;
       const feedJobs = [
         { cat: 'world_geo', name: 'Google News Thế giới (Hôm nay)', url: gnewsWorldToday, preferJina: false, max: 4 },
         { cat: 'world_geo', name: 'BBC News World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml', preferJina: false, max: 4 },
         { cat: 'tech_science', name: 'BBC Technology', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml', preferJina: false, max: 3 },
         { cat: 'economy_markets', name: 'BBC Business', url: 'https://feeds.bbci.co.uk/news/business/rss.xml', preferJina: false, max: 3 },
-        { cat: 'local_region', name: `Google News ${loc.cityLabel || profile.name} (Hôm nay)`, url: gnewsLocalToday, preferJina: false, max: 5 },
+        { cat: 'economy_markets', name: 'Vĩ mô, CPI, Dầu & Lãi suất (Live)', url: gnewsMacroToday, preferJina: false, max: 4 },
+        ...(profile.code === 'VN'
+          ? [
+              { cat: 'economy_markets', name: 'VnExpress Kinh doanh', url: 'https://vnexpress.net/rss/kinh-doanh.rss', preferJina: false, max: 4 },
+              { cat: 'local_region', name: `Giá Nhà Đất & Hạ Tầng ${localCityClean} (Live)`, url: gnewsLocalRePrice, preferJina: false, max: 4 },
+              { cat: 'local_region', name: 'VnExpress Bất động sản', url: 'https://vnexpress.net/rss/bat-dong-san.rss', preferJina: false, max: 4 },
+            ]
+          : []),
+        { cat: 'local_region', name: `Google News ${localCityClean} (Hôm nay)`, url: gnewsLocalToday, preferJina: false, max: 5 },
         { cat: 'local_region', name: profile.code === 'VN' ? 'VnExpress Thời sự' : 'AP News', url: profile.code === 'VN' ? 'https://vnexpress.net/rss/tin-moi-nhat.rss' : 'https://apnews.com/world-news', preferJina: profile.code !== 'VN', max: 6 },
         ...(profile.code === 'VN'
           ? [
-              { cat: 'local_region', name: 'VnExpress Kinh doanh', url: 'https://vnexpress.net/rss/kinh-doanh.rss', preferJina: false, max: 5 },
               { cat: 'local_region', name: 'Tuổi Trẻ Online', url: 'https://tuoitre.vn/rss/tin-moi-nhat.rss', preferJina: false, max: 5 },
               { cat: 'local_region', name: 'Thanh Niên Thời sự', url: 'https://thanhnien.vn/rss/thoi-su.rss', preferJina: false, max: 4 },
             ]
@@ -937,6 +1019,37 @@
 
     await Promise.allSettled([pEcon, pWb, pPubMed, pCrossref, pLivePress, pLocalTelemetry, pChecklist]);
 
+    // ĐỌC THÂN BÀI BÁO THẬT CHO TỐI ĐA 8 BÀI BÁO TRỌNG YẾU TRÊN CÁC TRỤ CỘT (đặc biệt Kinh tế/Vĩ mô & Khu vực/Giá nhà đất!)
+    // Để Gemini đọc trực tiếp nội dung bài báo & trích số liệu cụ thể khi phân tích (chấm dứt tình trạng nói suông!)
+    const deepReadTargets = [];
+    const pickReadable = (catId, quota) => {
+      const list = (categoriesData[catId] || []).filter(
+        (it) => it && it.isLiveArticle && !it.isPortalLink && /^https?:\/\//i.test(it.url) && !/news\.google\.com\/rss\/articles/i.test(it.url)
+      );
+      for (const it of list.slice(0, quota)) {
+        if (deepReadTargets.length < 8) deepReadTargets.push(it);
+      }
+    };
+    pickReadable('local_region', 3);
+    pickReadable('economy_markets', 2);
+    pickReadable('world_geo', 1);
+    pickReadable('tech_science', 1);
+    pickReadable('law_society', 1);
+    if (deepReadTargets.length) {
+      await Promise.allSettled(
+        deepReadTargets.map(async (art) => {
+          const bodyEx = await fetchRealArticleBodyExcerpt(art.url, signal, 720);
+          if (bodyEx && bodyEx.length >= 100) {
+            art.fullExcerpt = bodyEx;
+            art.excerptVerified = true;
+            if (/chế độ Read Mode từ/i.test(art.summary || '')) {
+              art.summary = bodyEx.slice(0, 240);
+            }
+          }
+        })
+      );
+    }
+
     const totalItems = Object.values(categoriesData).reduce((sum, arr) => sum + arr.length, 0);
     return {
       scannedAt: new Date().toISOString(),
@@ -967,16 +1080,17 @@
     }
     lines.push('');
     lines.push('⚠️ QUY TẮC CỐT LÕI (BẮT BUỘC — VI PHẠM SẼ BỊ TỪ CHỐI):');
-    lines.push('1. TUYỆT ĐỐI CẤM VIẾT CHUNG CHUNG kiểu "được cập nhật tại Reuters/VnExpress/WHO..." hay "hãy xem nguồn này nguồn kia"! MỌI TRỤ CỘT TỪ 1 ĐẾN 8 ĐỀU PHẢI NÊU SỰ KIỆN CỤ THỂ, CON SỐ THẬT, CHÍNH SÁCH/CÔNG TRÌNH THẬT ĐANG DIỄN RA HÔM NAY!');
+    lines.push('1. TUYỆT ĐỐI CẤM NÓI SUÔNG / VIẾT CHUNG CHUNG kiểu "được cập nhật tại Reuters/VnExpress/WHO..." hay nhận xét sách giáo khoa! BẠN BẮT BUỘC ĐỌC KỸ NỘI DUNG TRÍCH TỪ CÁC BÀI BÁO THẬT `[Bài #1]..[Bài #N]` BÊN DƯỚI (và mở đọc thêm link gốc qua công cụ tìm kiếm nếu cần) để TRÍCH DẪN ĐÍCH DANH `[Bài #k]`, CON SỐ THẬT, GIÁ NHÀ ĐẤT/GIÁ CẢ, BIẾN ĐỘNG VĨ MÔ, TÊN CHÍNH SÁCH & SỰ KIỆN ĐANG DIỄN RA HÔM NAY ở đủ 8 Trụ cột!');
     lines.push('2. CHỈ trích dẫn BÁO CHÍ CHÍNH THỐNG HẠNG 1 & CƠ QUAN CHÍNH THỨC (Reuters, AP, BBC, FT, Bloomberg, VnExpress, Tuổi Trẻ, Thanh Niên, Báo Chính Phủ, Tổng cục Thống kê, Open-Meteo, WHO, IMF, World Bank, NIH/PubMed, Nature, Science, NASA, HBR). TUYỆT ĐỐI CẤM Wikipedia, blog cá nhân hay mạng xã hội!');
-    lines.push(`3. HÃY DÙNG CÔNG CỤ TÌM KIẾM WEB TRỰC TIẾP CỦA BẠN (Google Search) để đào sâu đặc biệt cho TRỤ CỘT 4 (13 PHÚT RIÊNG BIỆT) về tin nóng 24–72 giờ tại ${locStr} (kinh tế địa phương, quy hoạch/hạ tầng, việc làm, giá cả sinh hoạt, dịch vụ công, thời tiết/AQI), cùng với 7 trụ cột còn lại tính tới (${scanResult.dateLabel}).`);
-    lines.push('4. HÌNH ẢNH & TRÍCH DẪN TỰ ĐỘNG TRONG PDF (ÁP DỤNG MỌI CHẾ ĐỘ): Bạn KHÔNG cần tự chèn link ảnh Markdown hay tự chép tay lại hết tất cả URL bài báo ở cuối câu trả lời — chỉ cần trình bày đề mục rõ ràng (`PHẦN 1:`, `PHẦN 2:`, `I.`, `II.`, `1.`, `2.`) để hệ thống tự động bố trí khu vực Hình ảnh / Thẻ xem trước bài báo và tự động đính kèm ĐẦY ĐỦ 100% trích dẫn bài báo mà code đã dò ra vào cuối file PDF!');
+    lines.push(`3. HÃY DÙNG CÔNG CỤ TÌM KIẾM WEB TRỰC TIẾP CỦA BẠN (Google Search) để đọc sâu & đối chiếu thêm cho TRỤ CỘT 3 (Kinh tế, Biến động Vĩ mô, Lãi suất, Dầu/Vàng) và TRỤ CỘT 4 (13 PHÚT RIÊNG BIỆT) về tin nóng 24–72 giờ tại ${locStr} (giá nhà đất/căn hộ/bảng giá đất, quy hoạch/hạ tầng, việc làm, chi phí sinh hoạt, dịch vụ công, thời tiết/AQI), cùng với 6 trụ cột còn lại tính tới (${scanResult.dateLabel}).`);
+    lines.push('4. HÌNH ẢNH & TRÍCH DẪN TỰ ĐỘNG TRONG PDF (ÁP DỤNG MỌI CHẾ ĐỘ): Bạn KHÔNG cần tự chèn link ảnh Markdown hay tự chép tay lại hết tất cả URL bài báo ở cuối câu trả lời — chỉ cần trích rõ `[Bài #k — Tên báo]` trong thân bài phân tích và trình bày đề mục rõ ràng (`PHẦN 1:`, `PHẦN 2:`, `I.`, `II.`, `1.`, `2.`) để hệ thống tự động bố trí khu vực Hình ảnh / Thẻ xem trước bài báo và tự động đính kèm ĐẦY ĐỦ 100% trích dẫn bài báo mà code đã dò ra vào cuối file PDF!');
     lines.push('');
-    lines.push('=== BÀI BÁO THẬT & SỐ LIỆU CHÍNH THỨC ĐÃ TRÍCH XUẤT HÔM NAY (8 TRỤ CỘT) ===');
+    lines.push('=== BÀI BÁO THẬT (ĐÃ ĐỌC NỘI DUNG TRÍCH DẪN) & SỐ LIỆU CHÍNH THỨC HÔM NAY (8 TRỤ CỘT) ===');
     lines.push(
       `• Số liệu sống: USD/${m.localCurrency || 'VND'}=${m.usdToLocal || 'N/A'} | Vàng LBMA=${m.goldUsdOz ? '$' + m.goldUsdOz.toFixed(0) + '/oz' : 'N/A'} | BTC=${m.btcUsd ? '$' + m.btcUsd.toFixed(0) : 'N/A'} | Nợ công Mỹ (U.S. Treasury)=${m.usDebtTrillion ? '$' + m.usDebtTrillion + 'T' : 'N/A'} | GDP (World Bank)=${m.countryGdpPct ?? 'N/A'}% | CPI=${m.countryCpiPct ?? 'N/A'}% | Thời tiết/AQI sở tại=${m.localWeatherDesc || 'N/A'} (AQI ${m.localAqi ?? 'N/A'})`
     );
 
+    let globalArticleIdx = 0;
     for (const cat of CATEGORIES) {
       const allCat = scanResult.categoriesData?.[cat.id] || [];
       // Ưu tiên đưa bài báo thật & số liệu sống lên trước (riêng Trụ cột 4 đưa tới 9 mục chuyên sâu 13p!)
@@ -984,8 +1098,12 @@
       const chosen = concrete.length ? concrete : allCat;
       const limit = cat.id === 'local_region' ? 9 : 4;
       lines.push(`\n[${cat.title} — ${cat.minutes}p/30p] (${chosen.length} tin/số liệu cụ thể):`);
-      chosen.slice(0, limit).forEach((it, idx) => {
-        lines.push(`  ${idx + 1}. ${it.title} — ${String(it.summary || '').slice(0, 170)} (Nguồn: ${it.source} | ${it.url})`);
+      chosen.slice(0, limit).forEach((it) => {
+        globalArticleIdx += 1;
+        const bodyNote = it.fullExcerpt
+          ? `\n     ↳ [NỘI DUNG THẬT ĐÃ ĐỌC TỪ BÀI #${globalArticleIdx}]: "${String(it.fullExcerpt).slice(0, 680)}"`
+          : ` — ${String(it.summary || '').slice(0, 210)}`;
+        lines.push(`  [Bài #${globalArticleIdx}] ${it.title} (Nguồn: ${it.source} | ${it.url})${bodyNote}`);
       });
     }
 
@@ -1256,6 +1374,8 @@
   W20.detectUserLocationByGps = detectUserLocationByGps;
   W20.isFreshNewsItem = isFreshNewsItem;
   W20.scanDailyWisdom = scanDailyWisdom;
+  W20.fetchRealArticleBodyExcerpt = fetchRealArticleBodyExcerpt;
+  W20.cleanWisdomArticleBody = cleanWisdomArticleBody;
   W20.buildGeminiWisdomPrompt = buildGeminiWisdomPrompt;
   W20.parseGeminiWisdomReply = parseGeminiWisdomReply;
   W20.buildDefaultChartDataFromRaw = buildDefaultChartDataFromRaw;

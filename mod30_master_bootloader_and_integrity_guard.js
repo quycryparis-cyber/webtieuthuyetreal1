@@ -2985,7 +2985,8 @@
         '#tab4-bible-structure-template',
         '#tab4-banned-cliches-input',
         '#mod27-chat-messages-box',
-        '#rag-search-results',
+        '#rag-search-results button',
+        '#rag-search-results .rag-snippet-body',
         '#version-preview-content-box',
         '#scratchpad-textarea',
         '#chapter-tree-container .chapter-title-text',
@@ -3701,15 +3702,16 @@
       }
 
       // 13. Bộ đếm chương/từ Tab 6, tiêu đề trang động (— Noir Studio), và nhãn Cục bộ (Ngoại tuyến)
-      const mChapWordCnt = norm.match(/^(\d+)\s*chương\s*\(([\d.,]+)\s*từ\)$/i);
+      const mChapWordCnt = norm.match(/^(📚\s*)?(\d+)\s*chương\s*\(([\d.,]+)\s*từ\)$/iu);
       if (mChapWordCnt) {
-        const [, chN, wdN] = mChapWordCnt;
+        const ico = mChapWordCnt[1] || '';
+        const [, , chN, wdN] = mChapWordCnt;
         const map = {
-          en: `${chN} chapters (${wdN} words)`,
-          'zh-CN': `${chN} 章（${wdN} 字）`,
-          'zh-TW': `${chN} 章（${wdN} 字）`,
-          ko: `${chN}장 (${wdN}단어)`,
-          ja: `${chN}章（${wdN}語）`
+          en: `${ico}${chN} chapters (${wdN} words)`,
+          'zh-CN': `${ico}${chN} 章（${wdN} 字）`,
+          'zh-TW': `${ico}${chN} 章（${wdN} 字）`,
+          ko: `${ico}${chN}장 (${wdN}단어)`,
+          ja: `${ico}${chN}章（${wdN}語）`
         };
         if (map[code]) return lead + map[code] + trail;
       }
@@ -3757,6 +3759,308 @@
           'zh-TW': `🛡️ ${okN}/${totN} 模組就緒`,
           ko: `🛡️ ${okN}/${totN} 모듈 준비됨`,
           ja: `🛡️ ${okN}/${totN} モジュール稼働中`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      // 14. Dynamic templates for Loading Splash, Mod 21 5-Cluster Sound Library, Mod 33/51 AI Voice & Mod 51 Tabs
+      const mSplashLoad = norm.match(/^⏳\s*Đang tải toàn bộ tài nguyên & (\d+) module Studio \(v(\d+)\)\.\.\.$/i);
+      if (mSplashLoad) {
+        const [, modN, verN] = mSplashLoad;
+        const map = {
+          en: `⏳ Loading all assets & ${modN} Studio modules (v${verN})...`,
+          'zh-CN': `⏳ 正在加载全部资源与 ${modN} 个工作室模块 (v${verN})…`,
+          'zh-TW': `⏳ 正在載入全部資源與 ${modN} 個工作室模組 (v${verN})…`,
+          ko: `⏳ 전체 리소스 및 ${modN}개 스튜디오 모듈 로딩 중 (v${verN})...`,
+          ja: `⏳ 全アセットと ${modN} 個のスタジオモジュールを読み込み中 (v${verN})…`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mSoundDeckHdr = norm.match(/^🎬\s*Kho Âm Thanh & Bối Cảnh 5 Cụm\s*\((\d+)\s*âm thanh\s*·\s*0 MB\)$/i);
+      if (mSoundDeckHdr) {
+        const cnt = mSoundDeckHdr[1];
+        const map = {
+          en: `🎬 5-Cluster Sound & Ambient Library (${cnt} sounds · 0 MB)`,
+          'zh-CN': `🎬 5组声景与环境音效库（${cnt} 种音效 · 0 MB）`,
+          'zh-TW': `🎬 5組聲景與環境音效庫（${cnt} 種音效 · 0 MB）`,
+          ko: `🎬 5개 그룹 사운드 & 환경음 라이브러리 (${cnt}개 · 0 MB)`,
+          ja: `🎬 5クラスター環境音・サウンド庫（${cnt}種 · 0 MB）`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mOpen5Clusters = norm.match(/^▼\s*Mở 5 cụm âm thanh\s*\((\d+)\)$/i);
+      if (mOpen5Clusters) {
+        const cnt = mOpen5Clusters[1];
+        const map = {
+          en: `▼ Expand 5 Sound Clusters (${cnt})`,
+          'zh-CN': `▼ 展开 5 组音效 (${cnt})`,
+          'zh-TW': `▼ 展開 5 組音效 (${cnt})`,
+          ko: `▼ 5개 사운드 그룹 펼치기 (${cnt})`,
+          ja: `▼ 5つの音響グループを開く (${cnt})`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mClusterItems = norm.match(/^\((\d+)\s*mục\)$/i);
+      if (mClusterItems) {
+        const cnt = mClusterItems[1];
+        const map = {
+          en: `(${cnt} items)`,
+          'zh-CN': `(${cnt} 项)`,
+          'zh-TW': `(${cnt} 項)`,
+          ko: `(${cnt}개)`,
+          ja: `(${cnt}件)`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mSoundPlaying = norm.match(/^Đang phát:\s*(.+)$/i);
+      if (mSoundPlaying) {
+        const inner = this.translateText(mSoundPlaying[1].trim(), code);
+        const map = {
+          en: `Playing: ${inner}`,
+          'zh-CN': `正在播放：${inner}`,
+          'zh-TW': `正在播放：${inner}`,
+          ko: `재생 중: ${inner}`,
+          ja: `再生中：${inner}`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mAiCloudTts = norm.match(/^🌐\s*(?:AI Cloud TTS|Google Dịch TTS)\s*\(([^)]+?)\s*—\s*Chuẩn 6 Ngôn Ngữ\)$/i);
+      if (mAiCloudTts) {
+        const lbl = mAiCloudTts[1].trim();
+        const map = {
+          en: `🌐 AI Cloud TTS (${lbl} — 6 Languages Ready)`,
+          'zh-CN': `🌐 AI 云端语音 (${lbl} — 6语种标准)`,
+          'zh-TW': `🌐 AI 雲端語音 (${lbl} — 6語種標準)`,
+          ko: `🌐 AI 클라우드 TTS (${lbl} — 6개 언어 지원)`,
+          ja: `🌐 AI クラウド音声 (${lbl} — 6言語対応)`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mGttsReady = norm.match(/^🌐\s*(?:AI Cloud TTS|Google Dịch TTS)\s*\(([^)]+)\)\s*—\s*Sẵn sàng phát trực tiếp$/i);
+      if (mGttsReady) {
+        const lbl = mGttsReady[1].trim();
+        const map = {
+          en: `🌐 AI Cloud TTS (${lbl}) — Ready to speak`,
+          'zh-CN': `🌐 AI 云端语音 (${lbl}) — 随时可播放`,
+          'zh-TW': `🌐 AI 雲端語音 (${lbl}) — 隨時可播放`,
+          ko: `🌐 AI 클라우드 TTS (${lbl}) — 바로 재생 가능`,
+          ja: `🌐 AI クラウド音声 (${lbl}) — 再生準備完了`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mLl51Start = norm.match(/^🚀\s*Vào Bảng Từ Vựng, Ngữ Pháp & Flashcard\s*\((\d+)\s*ngoại ngữ\)\s*➔$/i);
+      if (mLl51Start) {
+        const n = mLl51Start[1];
+        const map = {
+          en: `🚀 Enter Vocabulary, Grammar & Flashcards (${n} languages) ➔`,
+          'zh-CN': `🚀 进入词汇表、语法与闪卡工作室（${n} 种外语）➔`,
+          'zh-TW': `🚀 進入詞彙表、文法與閃卡工作室（${n} 種外語）➔`,
+          ko: `🚀 어휘·문법·플래시카드 스튜디오 입장 (${n}개 언어) ➔`,
+          ja: `🚀 単語・文法・単語帳スタジオへ（${n}言語）➔`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mLl51VocabTab = norm.match(/^📖\s*Bảng Từ Vựng\s*\((\d+)\)$/i);
+      if (mLl51VocabTab) {
+        const n = mLl51VocabTab[1];
+        const map = {
+          en: `📖 Vocabulary Table (${n})`,
+          'zh-CN': `📖 词汇表 (${n})`,
+          'zh-TW': `📖 詞彙表 (${n})`,
+          ko: `📖 어휘 표 (${n})`,
+          ja: `📖 単語リスト (${n})`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mLl51FcTab = norm.match(/^🃏\s*Flashcard 6 Chế Độ\s*\((\d+)\s*bộ\)$/i);
+      if (mLl51FcTab) {
+        const n = mLl51FcTab[1];
+        const map = {
+          en: `🃏 6-Mode Flashcards (${n} decks)`,
+          'zh-CN': `🃏 6模式闪卡 (${n} 套)`,
+          'zh-TW': `🃏 6模式閃卡 (${n} 套)`,
+          ko: `🃏 6모드 플래시카드 (${n}세트)`,
+          ja: `🃏 6モード単語帳 (${n}セット)`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mLl51StarBtn = norm.match(/^⭐\s*Chỉ hiện từ yêu thích\s*\((\d+)\)$/i);
+      if (mLl51StarBtn) {
+        const n = mLl51StarBtn[1];
+        const map = {
+          en: `⭐ Starred Only (${n})`,
+          'zh-CN': `⭐ 仅看收藏 (${n})`,
+          'zh-TW': `⭐ 僅看收藏 (${n})`,
+          ko: `⭐ 즐겨찾기만 (${n})`,
+          ja: `⭐ お気に入りのみ (${n})`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mLl51SelCnt = norm.match(/^✅\s*Đã chọn:\s*(\d+)\/(\d+)$/i);
+      if (mLl51SelCnt) {
+        const [, a, b] = mLl51SelCnt;
+        const map = {
+          en: `✅ Selected: ${a}/${b}`,
+          'zh-CN': `✅ 已选：${a}/${b}`,
+          'zh-TW': `✅ 已選：${a}/${b}`,
+          ko: `✅ 선택됨: ${a}/${b}`,
+          ja: `✅ 選択済：${a}/${b}`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mModeOutTitle = norm.match(/^📄\s*Đầu ra riêng:\s*Chế độ\s*(\d+)(?::\s*(.+))?$/i);
+      if (mModeOutTitle) {
+        const n = mModeOutTitle[1];
+        const sub = mModeOutTitle[2] ? `: ${this.translateText(mModeOutTitle[2].trim(), code)}` : '';
+        const map = {
+          en: `📄 Dedicated Output: Mode ${n}${sub}`,
+          'zh-CN': `📄 独立输出：模式 ${n}${sub}`,
+          'zh-TW': `📄 獨立輸出：模式 ${n}${sub}`,
+          ko: `📄 전용 출력: 모드 ${n}${sub}`,
+          ja: `📄 専用出力：モード ${n}${sub}`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mRagHintDot = norm.match(/^Nhập từ khóa bên trên để tìm nhanh chi tiết, nhân vật hoặc phục bút trong toàn bộ\s*(\d[\d.,]*)\s*đoạn ký ức\.+$/i);
+      if (mRagHintDot) {
+        const cnt = mRagHintDot[1];
+        const map = {
+          en: `Enter keywords above to quickly search details, characters, or clues across all ${cnt} memory chunks.`,
+          'zh-CN': `在上方输入关键词，即可快速检索全部 ${cnt} 条记忆片段中的细节、角色与伏笔。`,
+          'zh-TW': `在上方輸入關鍵詞，即可快速檢索全部 ${cnt} 條記憶片段中的細節、角色與伏筆。`,
+          ko: `위 입력창에 키워드를 입력하면 전체 ${cnt}개 기억 조각에서 세부 내용·인물·복선을 즉시 검색합니다.`,
+          ja: `上にキーワードを入力すると、全 ${cnt} 件の記憶チャンクから詳細・登場人物・伏線を即時検索できます。`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mAsciiSlot = norm.match(/^(\d+)\.\s*Khung\s*(\d+):\s*(.+)$/i);
+      if (mAsciiSlot) {
+        const [, idxN, slotN, titlePart] = mAsciiSlot;
+        const tLoc = this.translateText(titlePart.trim(), code);
+        const map = {
+          en: `${idxN}. Slot ${slotN}: ${tLoc}`,
+          'zh-CN': `${idxN}. 槽位 ${slotN}：${tLoc}`,
+          'zh-TW': `${idxN}. 槽位 ${slotN}：${tLoc}`,
+          ko: `${idxN}. 슬롯 ${slotN}: ${tLoc}`,
+          ja: `${idxN}. スロット ${slotN}：${tLoc}`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mGeminiOptPrefix = norm.match(/^((?:💎|⭐|🚀|⚡)\s+)((?:🧪|⚡|🌟|👑|💎|🔥|🪶)\s*Gemini\s+[\s\S]+)$/);
+      if (mGeminiOptPrefix) {
+        const innerTr = this.translateText(mGeminiOptPrefix[2].trim(), code);
+        if (innerTr && innerTr !== mGeminiOptPrefix[2].trim()) {
+          return lead + mGeminiOptPrefix[1] + innerTr + trail;
+        }
+      }
+
+      const mMod39WaitSec = norm.match(/^⏱️\s*Đang dò & đệm luồng:\s*(\d+)s$/i);
+      if (mMod39WaitSec) {
+        const sec = mMod39WaitSec[1];
+        const map = {
+          en: `⏱️ Probing & buffering stream: ${sec}s`,
+          'zh-CN': `⏱️ 正在探测并缓冲流：${sec}秒`,
+          'zh-TW': `⏱️ 正在探測並緩衝串流：${sec}秒`,
+          ko: `⏱️ 스트림 탐색 및 버퍼링 중: ${sec}초`,
+          ja: `⏱️ ストリーム探索・バッファ中：${sec}秒`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      // 15. Mod 47 Performance & RAM Manager dynamic pills
+      const mMod47Ram = norm.match(/^(📊\s*)?RAM trình duyệt:\s*([\d.]+)\s*MB\s*\/\s*([\d.]+)\s*MB$/i);
+      if (mMod47Ram) {
+        const ico = mMod47Ram[1] || '';
+        const [, , used, lim] = mMod47Ram;
+        const map = {
+          en: `${ico}Browser RAM: ${used} MB / ${lim} MB`,
+          'zh-CN': `${ico}浏览器内存：${used} MB / ${lim} MB`,
+          'zh-TW': `${ico}瀏覽器記憶體：${used} MB / ${lim} MB`,
+          ko: `${ico}브라우저 RAM: ${used} MB / ${lim} MB`,
+          ja: `${ico}ブラウザRAM：${used} MB / ${lim} MB`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mMod47Disabled = norm.match(/^Đang tắt\s*(\d+)\/(\d+)\s*hiệu ứng phụ\s*·\s*Tự ngủ khi thoát:?$/i);
+      if (mMod47Disabled) {
+        const [, offN, totN] = mMod47Disabled;
+        const map = {
+          en: `Disabled ${offN}/${totN} extra effects · Auto-sleep on hide:`,
+          'zh-CN': `已关闭 ${offN}/${totN} 项附加特效 · 切后台自动休眠：`,
+          'zh-TW': `已關閉 ${offN}/${totN} 項附加特效 · 切背景自動休眠：`,
+          ko: `부가 효과 ${offN}/${totN}개 꺼짐 · 이탈 시 자동 절전:`,
+          ja: `追加エフェクト ${offN}/${totN} 停止中 · 非表示時自動スリープ：`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mMod47Ess = norm.match(/^((?:🎵|📺|🍅|⏰|🛡️)\s+)?(.+?)\s*·\s*(Đang chờ|Đang chạy|Đang bật|Luôn bảo vệ)$/iu);
+      if (mMod47Ess) {
+        const ico = mMod47Ess[1] || '';
+        const svcTr = this.translateText(mMod47Ess[2].trim(), code);
+        const stTr = this.translateText(mMod47Ess[3].trim(), code);
+        return lead + `${ico}${svcTr} · ${stTr}` + trail;
+      }
+
+      const mMod31Encyc = norm.match(/^📚\s*Bách Khoa Tính Năng\s*\((\d+)\/(\d+)\)$/iu);
+      if (mMod31Encyc) {
+        const [, a, b] = mMod31Encyc;
+        const map = {
+          en: `📚 Feature Encyclopedia (${a}/${b})`,
+          'zh-CN': `📚 功能百科 (${a}/${b})`,
+          'zh-TW': `📚 功能百科 (${a}/${b})`,
+          ko: `📚 기능 백과 (${a}/${b})`,
+          ja: `📚 機能百科 (${a}/${b})`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mMod31BulletTitle = norm.match(/^▸\s*(.+)$/);
+      if (mMod31BulletTitle) {
+        const inner = this.translateText(mMod31BulletTitle[1].trim(), code);
+        if (inner && inner !== mMod31BulletTitle[1].trim()) {
+          return lead + `▸ ${inner}` + trail;
+        }
+      }
+
+      const mMod38Quota = norm.match(/^Đang đo dung lượng bộ nhớ trình duyệt\.+\s*\(LocalStorage:\s*([\d.,]+\s*[A-Z]+)\s*qua\s*(\d+)\s*khóa\)$/i);
+      if (mMod38Quota) {
+        const [, sz, keys] = mMod38Quota;
+        const map = {
+          en: `Measuring browser storage quota... (LocalStorage: ${sz} across ${keys} keys)`,
+          'zh-CN': `正在测量浏览器存储容量……（LocalStorage：${sz}，共 ${keys} 个键值）`,
+          'zh-TW': `正在測量瀏覽器儲存容量……（LocalStorage：${sz}，共 ${keys} 個鍵值）`,
+          ko: `브라우저 저장소 용량 측정 중... (LocalStorage: ${sz}, ${keys}개 키)`,
+          ja: `ブラウザ保存容量を計測中…（LocalStorage：${sz}・${keys}キー）`
+        };
+        if (map[code]) return lead + map[code] + trail;
+      }
+
+      const mModeCmdTitle = norm.match(/^🗂️\s*Ô lệnh riêng:\s*Chế độ\s*(\d+)$/i);
+      if (mModeCmdTitle) {
+        const n = mModeCmdTitle[1];
+        const map = {
+          en: `🗂️ Dedicated Command Box: Mode ${n}`,
+          'zh-CN': `🗂️ 独立指令框：模式 ${n}`,
+          'zh-TW': `🗂️ 獨立指令框：模式 ${n}`,
+          ko: `🗂️ 전용 명령 상자: 모드 ${n}`,
+          ja: `🗂️ 専用コマンド欄：モード ${n}`
         };
         if (map[code]) return lead + map[code] + trail;
       }
@@ -4139,6 +4443,14 @@
               return FILTER_REJECT;
             }
             if (
+              node.hasAttribute('placeholder') ||
+              node.hasAttribute('title') ||
+              node.hasAttribute('aria-label') ||
+              node.hasAttribute('data-noir-hover-title')
+            ) {
+              self.processElementAttributes(node);
+            }
+            if (
               tag === 'TEXTAREA' ||
               tag === 'CODE' ||
               tag === 'PRE' ||
@@ -4147,14 +4459,6 @@
               (node.matches && node.matches(self.excludedSelector))
             ) {
               return FILTER_REJECT;
-            }
-            if (
-              node.hasAttribute('placeholder') ||
-              node.hasAttribute('title') ||
-              node.hasAttribute('aria-label') ||
-              node.hasAttribute('data-noir-hover-title')
-            ) {
-              self.processElementAttributes(node);
             }
             return FILTER_SKIP;
           }

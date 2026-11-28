@@ -232,6 +232,37 @@
   // ==========================================================================
   // RENDER SETUP WIZARD (6 THỨ TIẾNG NGĂN CÁCH BỞI /)
   // ==========================================================================
+  function renderVoiceStudioBarHtml() {
+    const engineMode = LL._voiceEngineMode || 'auto';
+    const rateVal = String(LL._voiceRate || 0.94);
+    const hasGeminiKey = Boolean(NS.neuralVoice?._resolveGeminiApiKey?.());
+    return `
+      <div class="ll51-card space-y-2 border-cyan-500/40 bg-cyan-950/15">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="text-xs font-bold text-cyan-300">🎙️ Giọng Đọc AI 6 Ngôn Ngữ (Tiếng Việt · English · 中文 · 한국어 · 日本語)</div>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <select id="ll51-voice-engine-sel" class="ll51-select text-xs py-1">
+              <option value="auto" ${engineMode === 'auto' ? 'selected' : ''}>🤖 Tự động AI 6 Ngôn Ngữ (Cloud AI + Neural)</option>
+              <option value="cloud_ai" ${engineMode === 'cloud_ai' ? 'selected' : ''}>🌐 AI Cloud TTS 4 Cổng (VI · KO · JA · EN · ZH)</option>
+              ${hasGeminiKey ? `<option value="gemini_ai" ${engineMode === 'gemini_ai' ? 'selected' : ''}>✨ Gemini AI Voice Studio (API Key)</option>` : ''}
+              <option value="os_voice" ${engineMode === 'os_voice' ? 'selected' : ''}>💻 Giọng Hệ Thống (Offline)</option>
+            </select>
+            <select id="ll51-voice-rate-sel" class="ll51-select text-xs py-1">
+              <option value="0.78" ${rateVal === '0.78' ? 'selected' : ''}>🐢 0.78x Chậm dễ nghe</option>
+              <option value="0.94" ${rateVal === '0.94' ? 'selected' : ''}>⚡ 0.94x Tự nhiên</option>
+              <option value="1.12" ${rateVal === '1.12' ? 'selected' : ''}>🚀 1.12x Nhanh</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5" data-ll51-keep-orig="true">
+          ${LL.LANGUAGES.map((l) => `
+            <button type="button" data-ll51-test-voice="${l.code}" class="ll51-btn text-[11px] py-1 px-2 border-cyan-500/40 hover:border-cyan-300" title="Nghe thử giọng AI ${esc(l.name)}">🔊 ${l.flag} ${esc(l.short)}</button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   function renderSetupWizardHtml() {
     const q1All6 = LL.LANGUAGES.map((l) => l.qNative).join(' / ');
     const remaining5 = LL.LANGUAGES.filter((l) => l.code !== state.nativeLang);
@@ -241,8 +272,8 @@
       <div class="max-w-4xl mx-auto space-y-5 py-2">
         <div class="ll51-card space-y-3 border-sky-500/45">
           <div class="text-xs font-black uppercase tracking-wider text-sky-400">BƯỚC 1 / STEP 1 / 步骤 1</div>
-          <h3 class="text-sm sm:text-base font-black leading-relaxed text-white">${esc(q1All6)}</h3>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+          <h3 data-ll51-keep-orig="true" class="text-sm sm:text-base font-black leading-relaxed text-white">${esc(q1All6)}</h3>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1" data-ll51-keep-orig="true">
             ${LL.LANGUAGES.map((l) => {
               const active = l.code === state.nativeLang;
               return `
@@ -257,13 +288,13 @@
 
         <div class="ll51-card space-y-3 border-violet-500/45">
           <div class="text-xs font-black uppercase tracking-wider text-violet-300">BƯỚC 2 / STEP 2 (CHỌN 1 HOẶC NHIỀU NGÔN NGỮ CÙNG LÚC)</div>
-          <h3 class="text-sm sm:text-base font-black leading-relaxed text-white">${esc(q2Rem5)}</h3>
+          <h3 data-ll51-keep-orig="true" class="text-sm sm:text-base font-black leading-relaxed text-white">${esc(q2Rem5)}</h3>
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
             ${remaining5.map((l) => {
               const picked = state.targetLangs.includes(l.code);
               return `
                 <button type="button" data-ll51-target="${l.code}" class="p-3 rounded-2xl border-2 text-left transition cursor-pointer flex items-center justify-between gap-2 ${picked ? 'border-violet-400 bg-violet-500/25 text-white' : 'border-slate-700 bg-slate-900/80 text-slate-300 hover:border-violet-400/60'}">
-                  <span class="flex items-center gap-2 font-extrabold text-sm"><span>${l.flag}</span><span>${esc(l.name)}</span></span>
+                  <span data-ll51-keep-orig="true" class="flex items-center gap-2 font-extrabold text-sm"><span>${l.flag}</span><span>${esc(l.name)}</span></span>
                   <span class="text-xs font-black px-2 py-0.5 rounded ${picked ? 'bg-violet-500 text-white' : 'bg-slate-800 text-slate-400'}">${picked ? '✓ Học' : '+ Chọn'}</span>
                 </button>
               `;
@@ -765,11 +796,33 @@
       });
     });
 
-    // Global speak buttons
+    // Global speak buttons & 6-language AI Voice Bar
     root.querySelectorAll('[data-ll51-speak-lang]').forEach((b) => {
       b.addEventListener('click', (ev) => {
         ev.stopPropagation();
         LL.speakText(b.getAttribute('data-ll51-speak-lang'), b.getAttribute('data-ll51-speak-text'));
+      });
+    });
+    root.querySelector('#ll51-voice-engine-sel')?.addEventListener('change', (ev) => {
+      LL._voiceEngineMode = ev.target.value || 'auto';
+      try { localStorage.setItem('noir_mod51_voice_engine', LL._voiceEngineMode); } catch (_e) {}
+    });
+    root.querySelector('#ll51-voice-rate-sel')?.addEventListener('change', (ev) => {
+      LL._voiceRate = Number(ev.target.value || 0.94);
+      try { localStorage.setItem('noir_mod51_voice_rate', String(LL._voiceRate)); } catch (_e) {}
+    });
+    root.querySelectorAll('[data-ll51-test-voice]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const lc = b.getAttribute('data-ll51-test-voice') || 'vi';
+        const samples = LL.VOICE_SAMPLES_6LANG || {
+          vi: 'Xin chào! Đây là giọng đọc AI tiếng Việt chuẩn tự nhiên.',
+          en: 'Hello! This is the natural AI English pronunciation voice.',
+          zh_cn: '你好！这是标准自然的中文普通话 AI 语音朗读。',
+          zh_tw: '你好！這是標準自然的繁體中文 AI 語音朗讀。',
+          ko: '안녕하세요! 자연스러운 한국어 AI 발음 음성입니다.',
+          ja: 'こんにちは！自然な日本語のAI発音音声です。',
+        };
+        LL.speakText(lc, samples[lc] || samples.vi);
       });
     });
 
@@ -1301,6 +1354,7 @@
     const bodyHtml = isStudio
       ? `
         <div class="space-y-4">
+          ${renderVoiceStudioBarHtml()}
           <div class="flex flex-wrap gap-2">
             <button type="button" data-ll51-tab="vocab" class="ll51-tab ${state.activeTab === 'vocab' ? 'is-active' : ''}">📖 Bảng Từ Vựng (${state.vocabList.length})</button>
             <button type="button" data-ll51-tab="grammar" class="ll51-tab ${state.activeTab === 'grammar' ? 'is-active' : ''}">📐 Bảng Ngữ Pháp (10 Cấu trúc)</button>
@@ -1324,13 +1378,21 @@
             <h2 class="text-sm sm:text-base font-black text-white">🎓 Học Ngoại Ngữ Qua Trang Web · 6 Languages &amp; Flashcards Studio</h2>
             <div class="text-xs text-sky-200/85">Từ vựng thật từ giao diện web · Phiên âm &amp; Giọng đọc 6 thứ tiếng · Ngữ pháp đối chiếu · Xuất PDF &amp; Flashcard</div>
           </div>
-          <button type="button" id="ll51-btn-close" data-at-id="ll51-modal-close" data-at-expect="closes:#modal-ll51-studio" aria-label="Đóng studio học ngoại ngữ" class="ll51-btn ll51-btn-rose text-xs shrink-0 whitespace-nowrap">✕ Đóng</button>
+          <button type="button" id="ll51-btn-close" data-at-id="ll51-modal-close" data-at-expect="closes:#modal-mod51-lang-studio" aria-label="Đóng studio học ngoại ngữ" class="ll51-btn ll51-btn-rose text-xs shrink-0 whitespace-nowrap">✕ Đóng</button>
         </div>
         <div class="ll51-body">${bodyHtml}</div>
       </div>
     `;
     bindEvents();
-    if (isStudio) applyNativeUiChrome(state.modalEl, state.nativeLang);
+    const curSiteLang = String(NS.i18n?.getLanguage?.() || 'vi');
+    const normChromeLang = curSiteLang === 'zh-CN' ? 'zh_cn' : curSiteLang === 'zh-TW' ? 'zh_tw' : curSiteLang;
+    const effectiveChromeLang = normChromeLang !== 'vi' ? normChromeLang : state.nativeLang;
+    if (curSiteLang !== 'vi' && NS.i18n?.translateElement) {
+      // Dịch toàn bộ khung giao diện Mod 51 trước bằng từ điển toàn cục (chừa tbody & [data-ll51-keep-orig])
+      state.modalEl.querySelectorAll('tbody, [data-ll51-keep-orig="true"]').forEach((el) => el.setAttribute('data-i18n-ignore', 'true'));
+      NS.i18n.translateElement(state.modalEl);
+    }
+    applyNativeUiChrome(state.modalEl, effectiveChromeLang);
     const newBody = state.modalEl.querySelector('.ll51-body');
     const newTable = state.modalEl.querySelector('.ll51-table-wrap');
     if (newBody && prevBodyScroll > 0) newBody.scrollTop = prevBodyScroll;
@@ -1339,13 +1401,18 @@
 
   LL.open = function open() {
     hydrateState();
+    try {
+      const savedEng = localStorage.getItem('noir_mod51_voice_engine');
+      const savedRate = Number(localStorage.getItem('noir_mod51_voice_rate') || 0);
+      if (savedEng) LL._voiceEngineMode = savedEng;
+      if (savedRate >= 0.7 && savedRate <= 1.5) LL._voiceRate = savedRate;
+    } catch (_e) {}
     let modal = document.getElementById(MODAL_ID);
     if (!modal) {
       modal = document.createElement('div');
       modal.id = MODAL_ID;
       modal.setAttribute('role', 'dialog');
       modal.setAttribute('aria-modal', 'true');
-      modal.setAttribute('data-i18n-ignore', 'true'); // Giữ nguyên chữ gốc đa ngôn ngữ để học không bị ghi đè!
       document.body.appendChild(modal);
     }
     state.modalEl = modal;

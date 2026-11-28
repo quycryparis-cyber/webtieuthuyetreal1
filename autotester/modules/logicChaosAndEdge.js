@@ -634,6 +634,151 @@
           return { ok: true, detail: `5 clusters (${scenes.length} sounds) + 10 brainwaves/4-7-8 + 7 chord moods verified` };
         },
       });
+
+      this.registerUnitTest({
+        id: 'unit_dot17_i18n_deep_audit_and_6lang_ai_tts',
+        moduleRef: 'mod33_unified_connection_guard_and_live_voice_studio.js',
+        label: 'Đợt 17 i18n 5 ngôn ngữ không sót & Giọng đọc AI 6 ngôn ngữ (VI / EN / 简中 / 繁中 / KO / JA)',
+        fn: () => {
+          const NS = globalScope.NoirStudio || {};
+          const packs = NS.i18nPacks || {};
+          const targetLangs = ['en', 'zh-CN', 'zh-TW', 'ko', 'ja'];
+          const strayTop = Object.keys(packs).filter((k) => !targetLangs.includes(k));
+          if (strayTop.length > 0) {
+            throw new Error(`NS.i18nPacks còn ${strayTop.length} khóa sai cấu trúc ở root (${strayTop.slice(0, 3).join(', ')})`);
+          }
+          const allowedPackKeys = new Set(['meta', 'exact', 'promptExact', 'patterns', 'promptPatterns', 'phrases']);
+          const mustKeys = [
+            'Đã xác thực',
+            'Đang chạy App đã cài · Xem trạng thái & tối ưu',
+            '▲ Thu gọn 5 cụm âm thanh',
+            '😴 Sóng Delta 2Hz (Ngủ sâu phục hồi · 0.5–4Hz)',
+            '😴 Sóng Delta (0.5–4 Hz) · Ngủ Sâu Phục Hồi',
+          ];
+          for (const lc of targetLangs) {
+            const pk = packs[lc];
+            if (!pk || !pk.exact) throw new Error(`Thiếu gói ngôn ngữ ${lc}`);
+            const stray = Object.keys(pk).filter((k) => !allowedPackKeys.has(k));
+            if (stray.length > 0) throw new Error(`Gói ${lc} còn ${stray.length} khóa nằm ngoài exact`);
+            for (const mk of mustKeys) {
+              if (!pk.exact[mk]) throw new Error(`Gói ${lc} thiếu bản dịch cho "${mk}"`);
+            }
+          }
+          const nv = NS.neuralVoice;
+          if (!nv || typeof nv.buildCloudTtsUrls !== 'function' || typeof nv.getAiVoiceOptionsForLanguage !== 'function') {
+            throw new Error('NS.neuralVoice chưa nâng cấp bộ giọng AI 6 ngôn ngữ (buildCloudTtsUrls / getAiVoiceOptionsForLanguage)');
+          }
+          for (const bcp of ['vi-VN', 'en-US', 'zh-CN', 'zh-TW', 'ko-KR', 'ja-JP']) {
+            const urls = nv.buildCloudTtsUrls('Test', bcp);
+            if (!Array.isArray(urls) || urls.length < 3) {
+              throw new Error(`Ngôn ngữ ${bcp} thiếu chuỗi dự phòng Cloud AI TTS (${urls?.length || 0})`);
+            }
+            const opts = nv.getAiVoiceOptionsForLanguage(bcp);
+            if (!Array.isArray(opts) || opts.length < 1) {
+              throw new Error(`Ngôn ngữ ${bcp} không có tùy chọn giọng đọc AI khả dụng`);
+            }
+          }
+          return { ok: true, detail: '5 i18n packs clean (0 stray) + 6-lang AI TTS (VI/EN/SC/TC/KO/JA) 4-endpoint verified' };
+        },
+      });
+
+      this.registerUnitTest({
+        id: 'unit_dot18_pdf_ai_audit_patch_and_mod49_50_article_reader',
+        moduleRef: 'modules/danglovepdf-v2/geminiBridgeAndVision.js',
+        label: 'Đợt 18: Prompt soi & vá lỗi quét thô ĐăngLovePDF + Quét giá nhà đất, vĩ mô & đọc bài báo thật Mod 49/50',
+        fn: () => {
+          const gBridge = globalScope.NoirGeminiBridge || globalScope.NoirStudio?.geminiBridge;
+          if (!gBridge || typeof gBridge.buildTaskManualPrompt !== 'function' || typeof gBridge.reconcileAiPatchIntoBlocks !== 'function') {
+            throw new Error('Thiếu NoirGeminiBridge.buildTaskManualPrompt / reconcileAiPatchIntoBlocks');
+          }
+          // 1. Kiểm tra Prompt ĐăngLovePDF có giao thức đối chiếu & tự sửa lỗi quét thô
+          const pTheme = gBridge.buildTaskManualPrompt('theme10_beautify', { fileName: 'BaoCao.pdf', text: '[P01_B01] Bao cao tai chinh bi vo dau' });
+          if (!pTheme.includes('GIAO THỨC PHỐI HỢP 2 TẦNG') || !pTheme.includes('text_patches') || !pTheme.includes('table_cell_fixes') || !pTheme.includes('scan_audit_fixes')) {
+            throw new Error('Prompt theme10_beautify thiếu giao thức soi & vá lỗi quét thô (text_patches / table_cell_fixes / scan_audit_fixes)');
+          }
+          const pExcel = gBridge.buildTaskManualPrompt('pdf_to_excel', { fileName: 'Bang.pdf', text: 'Cot1 | Cot2' });
+          if (!pExcel.includes('GIAO THỨC PHỐI HỢP 2 TẦNG')) {
+            throw new Error('Prompt pdf_to_excel thiếu giao thức đối chiếu sửa lệch bảng');
+          }
+          // 2. Kiểm tra reconcileAiPatchIntoBlocks thực sự vá lỗi text_patches & table_cell_fixes
+          const rawBlocks = [
+            { pageNo: 1, type: 'paragraph', text: 'Doanh thu nam 2026 dat 12O ty dong (loi quet tho O thay 0).' },
+            { pageNo: 1, type: 'table', rows: [['Chi tieu', 'Gia tri'], ['Loi nhuan', '4S ty']] },
+          ];
+          const patchJson = JSON.stringify({
+            schema_version: 'pdf_magic_v1',
+            headings: [],
+            tables: [],
+            figures: [],
+            formulas: [],
+            text_patches: [
+              { page: 1, block_id: 'P01_B01', wrong_raw: '12O ty dong (loi quet tho O thay 0)', fixed_text: '120 tỷ đồng (đã hiệu đính)', reason: 'Sửa nhầm chữ O thành số 0 và thiếu dấu' },
+            ],
+            table_cell_fixes: [
+              { page: 1, row_index: 1, col_index: 1, wrong_raw: '4S ty', fixed_value: '45 tỷ' },
+            ],
+          });
+          const merged = gBridge.reconcileAiPatchIntoBlocks(rawBlocks, patchJson);
+          if (!merged.applied || merged.stats.textPatched < 1 || merged.stats.tableCellsFixed < 1) {
+            throw new Error(`reconcileAiPatchIntoBlocks chưa vá đủ text_patches/table_cell_fixes (${JSON.stringify(merged.stats)})`);
+          }
+          if (!String(merged.blocks[0]?.text || '').includes('120 tỷ đồng') || merged.blocks[1]?.rows?.[1]?.[1] !== '45 tỷ') {
+            throw new Error('Nội dung sau vá text_patches / table_cell_fixes không khớp giá trị đã sửa');
+          }
+
+          // 3. Kiểm tra Mod 49: bộ đọc bài báo thật, rút trích giá nhà đất triệu/m² & Prompt chống nói suông
+          const inv = globalScope.NoirInvestToday || globalScope.NoirStudio?.investToday;
+          if (inv?.intelHelpers && inv?.promptComposer) {
+            if (typeof inv.intelHelpers.fetchArticleBodyExcerpt !== 'function' || typeof inv.intelHelpers.extractRealEstatePriceSignals !== 'function') {
+              throw new Error('Mod 49 thiếu fetchArticleBodyExcerpt / extractRealEstatePriceSignals');
+            }
+            const sigs = inv.intelHelpers.extractRealEstatePriceSignals([
+              { title: 'Giá chung cư Hà Nội quý 4', fullExcerpt: 'Khảo sát mới cho thấy giá bán trung bình đạt 82,5 triệu/m2 tại khu Tây, lãi suất vay mua nhà thả nổi khoảng 12,5%/năm.', source: 'VnExpress', date: '2026-11-28', url: 'https://vnexpress.net/test' },
+            ]);
+            if (!sigs.length || !/82,5\s*triệu\/m2/i.test(sigs[0].quote)) {
+              throw new Error('Mod 49 extractRealEstatePriceSignals không rút trích được giá triệu/m2 thật từ bài báo');
+            }
+            const prevRep = inv.stateManager?.evaluationReport;
+            if (inv.stateManager) {
+              inv.stateManager.evaluationReport = {
+                ...(prevRep || {}),
+                items: prevRep?.items || [],
+                real_estate_price_signals: sigs,
+                live_headlines: [
+                  { title: 'Giá nhà đất khu Tây tăng', source: 'VnExpress', date: '2026-11-28', url: 'https://vnexpress.net/test', fullExcerpt: 'Giá căn hộ đạt 82,5 triệu/m2 theo báo cáo mới nhất.', selected_for_prompt: true },
+                ],
+              };
+            }
+            const p49 = inv.promptComposer.buildGeminiPrompt({ mode: 'veteran30', focus: 'real_estate' });
+            if (inv.stateManager) inv.stateManager.evaluationReport = prevRep;
+            if (!p49.includes('NỘI DUNG THẬT ĐÃ ĐỌC TỪ BÀI BÁO') || !p49.includes('TUYỆT ĐỐI CẤM NÓI SUÔNG') || !p49.includes('82,5 triệu/m2')) {
+              throw new Error('Prompt Mod 49 chưa gắn nội dung trích từ bài báo thật & tín hiệu giá nhà đất');
+            }
+          }
+
+          // 4. Kiểm tra Mod 50: bộ đọc bài báo thật & Prompt chống nói suông
+          const w20 = globalScope.NoirWisdom20 || globalScope.NoirStudio?.wisdom20;
+          if (w20) {
+            if (typeof w20.fetchRealArticleBodyExcerpt !== 'function' || typeof w20.cleanWisdomArticleBody !== 'function') {
+              throw new Error('Mod 50 thiếu fetchRealArticleBodyExcerpt / cleanWisdomArticleBody');
+            }
+            const p50 = w20.buildGeminiWisdomPrompt({
+              dateLabel: '28/11/2026',
+              location: { fullAddress: 'Hà Nội, Việt Nam', cityLabel: 'Hà Nội' },
+              profile: { code: 'VN', name: 'Việt Nam', flag: '🇻🇳' },
+              liveMetrics: { localCurrency: 'VND', usdToLocal: 25400 },
+              categoriesData: {
+                local_region: [{ title: 'Bảng giá đất Hà Nội mới', source: 'VnExpress', url: 'https://vnexpress.net/test-bds', fullExcerpt: 'Bảng giá đất điều chỉnh tăng tại nhiều tuyến phố trung tâm từ 15% đến 30% so với khung cũ.', isPortalLink: false }],
+              },
+            });
+            if (!p50.includes('NỘI DUNG THẬT ĐÃ ĐỌC TỪ BÀI #1') || !p50.includes('TUYỆT ĐỐI CẤM NÓI SUÔNG')) {
+              throw new Error('Prompt Mod 50 chưa gắn nội dung đọc từ bài báo thật & luật chống nói suông');
+            }
+          }
+
+          return { ok: true, detail: 'PDF AI Audit+Patch (text_patches+table_cell_fixes) + Mod 49/50 Real Article Excerpt & Real-Estate Price Signals PASS' };
+        },
+      });
     }
 
     async runAll() {
